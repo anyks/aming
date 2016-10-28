@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<!-- saved from url=(0042)https://ejz.ru/63/node-js-http-https-proxy -->
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>HTTP и HTTPS прокси на Node.js / Ejz</title>
+
+<meta http-equiv="Content-Language" content="ru">
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link rel="shortcut icon" href="https://ejz.ru/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="./HTTP и HTTPS прокси на Node.js _ Ejz_files/style.css" type="text/css">
+<script type="text/javascript" src="./HTTP и HTTPS прокси на Node.js _ Ejz_files/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="./HTTP и HTTPS прокси на Node.js _ Ejz_files/script.js"></script>
+<script type="text/javascript" src="./HTTP и HTTPS прокси на Node.js _ Ejz_files/openapi.js"></script>
+<script type="text/javascript">
+VK.init({apiId: 3644885, onlyWidgets: true});
+</script>
+<link rel="alternate" type="application/rss+xml" title="Блог Ejz" href="http://ejz.ru/rss.xml">
+</head>
+<body>
+<div id="wrap">
+<div id="container">
+<div id="header">
+<div id="caption">
+<h1 id="title"><a style="visibility:hidden;"></a></h1>
+<div id="tagline">Пусть лучше над тобой смеются, чем плачут!</div>
+</div>
+<div class="fixed"></div>
+</div>
+<!-- MENU BEGIN -->
+<div id="navigation">
+    <ul id="menus">
+        <li class="page_item">
+    <a href="https://ejz.ru/" title="Главная" class="home"></a></li>
+    <li class="page_item"><a href="https://ejz.ru/links/" title="Запросы">Запросы</a></li>
+    <li class="page_item"><a href="https://ejz.ru/service/" title="Службы">Службы</a></li>
+    <li class="page_item"><a href="https://ejz.ru/connect/" title="Связь">Связь</a></li>
+    <li><a class="lastmenu"></a></li>
+    </ul>
+    <div id="searchbox">
+    <div><form method="get" action="https://ejz.ru/search/">
+    <input tabindex="1" autocomplete="off" type="text" value="" size="24" name="q" class="textfield searchtip">
+    <input id="btn_search" type="submit" value="" class="button"></form>
+    </div>
+    </div>
+    <div class="fixed"></div>
+</div>
+<!-- MENU END -->
+<div id="content" style="position:relative;">
+<div id="main">
+<!-- ========== -->
+<!-- BODY BEGIN -->
+<!-- ========== -->
+    <div class="post">
+<h2 style="text-shadow:1px 1px 2px #bbbbbb;">
+<a class="nohover" style="text-decoration:none;">HTTP и HTTPS прокси на Node.js</a>
+<div style="float:right; font-size:11px; line-height:18px;">
+10.12.2013</div>
+<img width="22px" height="22px" src="./HTTP и HTTPS прокси на Node.js _ Ejz_files/calen.gif" style="float:right; margin-top:-2px; margin-right:1px;">
+</h2>
+<div class="content" style="font-family:segoe ui,Tahoma,Verdana,Arial,sans-serif; border-bottom:1px solid #ccc; padding-bottom:6px;">
+<p>В данной статье рассмотрим создание HTTP и HTTPS прокси...</p>
+
+<div>
+
+
+<p>С HTTP все очень просто.</p>
+
+<pre><code># nano -w proxy1.js
+var http = require('http')
+var url = require('url')
+var server = http.createServer(function(request, response) {
+    console.log(request.url)
+    var ph = url.parse(request.url)
+    var options = {
+        port: ph.port,
+        hostname: ph.hostname,
+        method: request.method,
+        path: ph.path,
+        headers: request.headers
+    }
+    var proxyRequest = http.request(options)
+    proxyRequest.on('response', function(proxyResponse) {
+        proxyResponse.on('data', function(chunk) {
+            response.write(chunk, 'binary')
+        })
+        proxyResponse.on('end', function() { response.end() })
+        response.writeHead(proxyResponse.statusCode, proxyResponse.headers)
+    })
+    request.on('data', function(chunk) {
+        proxyRequest.write(chunk, 'binary')
+    })
+    request.on('end', function() { proxyRequest.end() })
+}).listen(8080)
+</code></pre>
+
+<p>Тестируем...</p>
+
+<pre><code># node proxy1.js
+http://ejz.ru/
+</code></pre>
+
+<pre><code># http_proxy='127.0.0.1:8080' wget -q -O - 'http://ejz.ru/' | grep -i meta
+&lt;meta http-equiv="Content-Type" content="text/html;charset=utf-8" /&gt;
+&lt;meta name="description" content="Блог Ejz" /&gt;
+</code></pre>
+
+<p>Отлично! С HTTP запросами разобрались. С HTTPS протоколом прокси работает через CONNECT. Это означает, что после CONNECT метода прокси соединяется с запрошенным хостом и начинает туннелировать через себя весь трафик между клиентом и хостом (в том числе и обмен сертификатами).</p>
+
+<p>На уровне кода это выглядит как обработка события 'connect' с последующим созданием туннелирующего сокета.</p>
+
+<pre><code># nano -w proxy2.js
+var http = require('http')
+var net = require('net')
+var url = require('url')
+var server = http.createServer(function(request, response) {
+    console.log(request.url)
+    var ph = url.parse(request.url)
+    var options = {
+        port: ph.port,
+        hostname: ph.hostname,
+        method: request.method,
+        path: ph.path,
+        headers: request.headers
+    }
+    var proxyRequest = http.request(options)
+    proxyRequest.on('response', function(proxyResponse) {
+        proxyResponse.on('data', function(chunk) {
+            response.write(chunk, 'binary')
+        })
+        proxyResponse.on('end', function() { response.end() })
+        response.writeHead(proxyResponse.statusCode, proxyResponse.headers)
+    })
+    request.on('data', function(chunk) {
+        proxyRequest.write(chunk, 'binary')
+    })
+    request.on('end', function() { proxyRequest.end() })
+}).on('connect', function(request, socketRequest, head) {
+    console.log(request.url)
+    var ph = url.parse('http://' + request.url)
+    var socket = net.connect(ph.port, ph.hostname, function() {
+        socket.write(head)
+        // Сказать клиенту, что соединение установлено
+        socketRequest.write("HTTP/" + request.httpVersion + " 200 Connection established\r\n\r\n")
+    })
+    // Туннелирование к хосту
+    socket.on('data', function(chunk) { socketRequest.write(chunk) })
+    socket.on('end', function() { socketRequest.end() })
+    socket.on('error', function() {
+        // Сказать клиенту, что произошла ошибка
+        socketRequest.write("HTTP/" + request.httpVersion + " 500 Connection error\r\n\r\n")
+        socketRequest.end()
+    })
+    // Туннелирование к клиенту
+    socketRequest.on('data', function(chunk) { socket.write(chunk) })
+    socketRequest.on('end', function() { socket.end() })
+    socketRequest.on('error', function() { socket.end() })
+}).listen(8080)
+</code></pre>
+
+<p>Проверим отработку...</p>
+
+<pre><code># node proxy2.js
+http://ipdb.at/
+ipdb.at:443
+</code></pre>
+
+<pre><code># http_proxy='127.0.0.1:8080' https_proxy='127.0.0.1:8080' wget -q -O - 'http://ipdb.at/' | grep -i 'your ip'
+&lt;div id="status-bar"&gt;Your IP is &lt;span&gt;10.20.0.1&lt;/span&gt;&lt;/div&gt;
+</code></pre>
+
+<p>Первым ответом был 302 редирект. Далее, обратите внимание, при CONNECT методе прокси сервер не знает полностью запрашиваемый урл, урл уже передается по шифрованному туннелю.</p>
+
+<p>Давайте усложним задачу. Представим, что наш прокси-сервис должен перенаправлять запросы на другой прокси (например, для балансировки трафика). Трафик идет раздельно, HTTP идет по HTTP, HTTPS идет CONNECT'ом. На пользовательский request вещается 'connect' обработчик. Т.о. можно при успешном соединении на шлюз можно трафик из сокета шлюза кидать на сокет запроса.</p>
+
+
+<pre><code># nano -w proxy3.js
+var assert = require('assert')
+var gateway = 'proxy://login:passwd@10.20.30.40:3128/' // Прокси для редиректа
+var http = require('http')
+var net = require('net')
+var url = require('url')
+var server = http.createServer(function(request, response) {
+    console.log(request.url)
+    var ph = url.parse(request.url)
+    var gw = url.parse(gateway)
+    var options = {
+        port: parseInt(gw.port),
+        hostname: gw.hostname,
+        method: request.method,
+        path: request.url,
+        headers: request.headers || {}
+    }
+    if(gw.auth)
+        options.headers['Proxy-Authorization'] = 'Basic ' + new Buffer(gw.auth).toString('base64')
+    // console.log(options)
+    var gatewayRequest = http.request(options)
+    gatewayRequest.on('error', function(err) { console.log('[error] ' + err) ; response.end() })
+    gatewayRequest.on('response', function(gatewayResponse) {
+        if(gatewayResponse.statusCode === 407) {
+            console.log('[error] AUTH REQUIRED')
+            process.exit()
+        }
+        gatewayResponse.on('data', function(chunk) {
+            response.write(chunk, 'binary')
+        })
+        gatewayResponse.on('end', function() { response.end() })
+        response.writeHead(gatewayResponse.statusCode, gatewayResponse.headers)
+    })
+    request.on('data', function(chunk) {
+        gatewayRequest.write(chunk, 'binary')
+    })
+    request.on('end', function() { gatewayRequest.end() })
+    gatewayRequest.end()
+}).on('connect', function(request, socketRequest, head) {
+    console.log(request.url)
+    var ph = url.parse('http://' + request.url)
+    var gw = url.parse(gateway)
+    var options = {
+        port: gw.port,
+        hostname: gw.hostname,
+        method: 'CONNECT',
+        path: ph.hostname + ':' + (ph.port || 80),
+        headers: request.headers || {}
+    }
+    if(gw.auth)
+        options.headers['Proxy-Authorization'] = 'Basic ' + new Buffer(gw.auth).toString('base64')
+    // console.log(options)
+    var gatewayRequest = http.request(options)
+    gatewayRequest.on('error', function(err) { console.log('[error] ' + err) ; process.exit() })
+    gatewayRequest.on('connect', function(res, socket, head) {
+        assert.equal(res.statusCode, 200)
+        assert.equal(head.length, 0)
+        socketRequest.write("HTTP/" + request.httpVersion + " 200 Connection established\r\n\r\n")
+        // Туннелирование к хосту
+        socket.on('data', function(chunk) { socketRequest.write(chunk, 'binary') })
+        socket.on('end', function() { socketRequest.end() })
+        socket.on('error', function() {
+            // Сказать клиенту, что произошла ошибка
+            socketRequest.write("HTTP/" + request.httpVersion + " 500 Connection error\r\n\r\n")
+            socketRequest.end()
+        })
+        // Туннелирование к клиенту
+        socketRequest.on('data', function(chunk) { socket.write(chunk, 'binary') })
+        socketRequest.on('end', function() { socket.end() })
+        socketRequest.on('error', function() { socket.end() })
+    }).end()
+}).listen(8080)
+</code></pre>
+
+<p>Проверка работоспособности...</p>
+
+<pre><code># node proxy3.js
+http://ipdb.at/
+ipdb.at:443
+</code></pre>
+
+<pre><code># http_proxy='127.0.0.1:8080' https_proxy='127.0.0.1:8080' wget -q -O - 'http://ipdb.at/' | grep -i 'your ip'
+&lt;div id="status-bar"&gt;Your IP is &lt;span&gt;10.20.30.40&lt;/span&gt;&lt;/div&gt;
+</code></pre>
+
+<p>Выходным IP должен быть IP-адрес прокси-шлюза. Весь код <a href="https://github.com/Ejz/Common/tree/master/node-proxy">здесь</a>. Успехов!</p></div>
+
+</div>
+    <div style="border:0px; border-bottom:1px solid #ccc; padding-bottom:5px; padding-top:5px; margin:0px; width:100%;">
+    <div id="vk_comments" style="margin: 0px auto; height: 413px; width: 600px; background: none;"><iframe name="fXD7312e" frameborder="0" src="./HTTP и HTTPS прокси на Node.js _ Ejz_files/widget_comments.html" width="600" height="133" scrolling="no" id="vkwidget1" style="overflow: hidden; height: 413px;"></iframe></div>
+    </div>
+    <script type="text/javascript">
+    VK.Widgets.Comments("vk_comments", {limit: 10, width: "600", attach: "*"}, 63);
+    </script>
+</div>
+<div style="margin-bottom:15px;">
+<div class="tag_list" style="font-size:10px; height:16px; padding-left:5px; line-height:16px; float:left;">
+Теги →
+<a rel="nofollow" href="https://ejz.ru/search/?q=node">node</a>
+<a rel="nofollow" href="https://ejz.ru/search/?q=http">http</a>
+<a rel="nofollow" href="https://ejz.ru/search/?q=https">https</a>
+<a rel="nofollow" href="https://ejz.ru/search/?q=proxy">proxy</a>
+<a rel="nofollow" href="https://ejz.ru/search/?q=linux">linux</a>
+</div>
+<div style="clear:both;"></div>
+</div>
+<!-- ======== -->
+<!-- BODY END -->
+<!-- ======== -->
+</div>
+</div>
+    <div id="footer">
+    <div class="st_1">Copyright © 2016</div>
+    <div class="st_2">
+    <!-- COUNTER BEGIN -->
+    <script type="text/javascript">
+        document.write(
+            "<a href='http://www.liveinternet.ru/click' " +
+            "target='_blank'><img src='//counter.yadro.ru/hit?t26.3;r" +
+            escape(document.referrer) + ";u" + escape(document.URL) +
+            ";" + Math.random() +
+            "' alt='' title='Число посетителей за сегодня' " +
+            "border='0' width='88' height='15'><\/a>"
+        )
+    </script><a href="http://www.liveinternet.ru/click" target="_blank"><img src="./HTTP и HTTPS прокси на Node.js _ Ejz_files/hit" alt="" title="Число посетителей за сегодня" border="0" width="88" height="15"></a>
+    <!-- COUNTER END -->
+    </div>
+    </div>
+</div>
+</div>
+
+
+</body></html>

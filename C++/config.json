@@ -1,0 +1,8 @@
+{
+	"name": "anyks",
+	"delay": 0,
+	"host": "127.0.0.1",
+	"port": 5555,
+	"maxcon": 5,
+	"piddir": "/var/run"
+}
