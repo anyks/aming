@@ -1,6 +1,6 @@
 // sudo lsof -i | grep -E LISTEN
-//  g++ -o socks5 socks5.cpp -lpthread
-//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -o socks5 proxy.cpp
+//  g++ -o socks5 http.cpp -lpthread
+//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -o http proxy.cpp
 
 #include <cstdlib>
 #include <cstring>
@@ -31,76 +31,14 @@
 #include <sys/resource.h>
 
 
-#include <execinfo.h>
-
+// #include <sstream>
+#include <vector>
 
 using namespace std;
-
-// Байты команд подключения
-#define CMD_CONNECT			0x01
-#define CMD_BIND			0x02
-#define CMD_UDP_ASSOCIATIVE	0x03
-
-// Байты типа запрашиваемого адреса
-#define ATYP_IPV4	0x01
-#define ATYP_DNAME	0x03
-#define ATYP_IPV6	0x04
-
-// Байты ответов сервера для запроса авторизации
-#define METHOD_NOAUTH		0x00
-#define METHOD_AUTH			0x02
-#define METHOD_NOTAVAILABLE	0xff
-
-// Байты ответа сервера для обработки запроса
-#define RESP_SUCCEDED		0x00
-#define RESP_GEN_ERROR		0x01
 
 // Приведение типа -Wint-to-void-pointer-cast
 // Или нужно установить параметр сборки: -Wno-int-to-void-pointer-cast
 #define INTTOVOID_POINTER(i) ((char *) NULL + (i))
-
-/* Handshake */
-
-// Структура для идентификации входящего запроса клиента
-struct MethodIdentificationPacket {
-	uint8_t version, nmethods;
-	/* uint8_t methods[nmethods]; */
-} __attribute__((packed));
-
-// Структура для чтения данных с сокета клиента
-struct MethodSelectionPacket {
-	uint8_t version, method;
-	MethodSelectionPacket(uint8_t met) : version(5), method(met) {}
-} __attribute__((packed));
-
-/* Requests */
-
-// Структура заголовков запроса socks5
-struct SOCKS5RequestHeader {
-	uint8_t version, cmd, rsv /* = 0x00 */, atyp;
-} __attribute__((packed));
-
-// Структура ip адреса и порта для запроса socks5
-struct SOCK5IP4RequestBody {
-	uint32_t ip_dst;
-	uint16_t port;
-} __attribute__((packed));
-
-// Структура доменного имени для запроса socks5
-struct SOCK5DNameRequestBody {
-	uint8_t length;
-	uint8_t dname;
-} __attribute__((packed));
-
-/* Responses */
-
-// Структура содержащий данные ответа socks5
-struct SOCKS5Response {
-	uint8_t version, cmd, rsv /* = 0x00 */, atyp;
-	uint32_t ip_src;
-	uint16_t port_src;
-	SOCKS5Response(bool succeded = true) : version(5), cmd(succeded ? RESP_SUCCEDED : RESP_GEN_ERROR), rsv(0), atyp(ATYP_IPV4) {}
-} __attribute__((packed));
 
 // Структура для передачи идентификатора сокета между процессами
 typedef struct fbuff {
@@ -155,7 +93,7 @@ TServer get_host_lock;	// Блокировки запроса данных с х
 TClient client_lock;	// Событие подключения клиента
 
 // Временный каталог для файлов
-string nameSystem	= "anyksProxy";
+string nameSystem	= "anyksHttp";
 string piddir		= "/var/run";
 
 // Количество подключенных клиентов и максимально возможное количество подключений
@@ -205,198 +143,84 @@ int send_sock(int sock, const char * buffer, uint32_t size){
 	return index;
 }
 
-// Функция преобразования integer в string
-string int_to_str(uint32_t ip){
-	// Создаем поток для преобразования байтов
-	ostringstream oss;
-	// Выполняем переход по всем байтам
-	for(unsigned i = 0; i < 4; i++){
-		// Выполняем смещение байтов
-		oss << ((ip >> (i * 8) ) & 0xFF);
-		// Получаем точку
-		if(i != 3) oss << '.';
+// Функция разбиения строки на указанные составляющие
+std::vector<std::string> split(const std::string str, const char * delim){
+	// Начальный символ для обрезки строки
+	int i = 0;
+	// Результирующий вектор
+	std::vector<std::string> result;
+	// Строка в которой производим поиск
+	std::string s = str.c_str();
+	// Позиция разделителя в строке
+	int pos = s.find(delim);
+	// Перебираем строку до тех пор пока не переберем её целиком
+	while(pos != std::string::npos){
+		// Добавляем найденную позицию в строке
+		result.push_back(s.substr(i, pos - i));
+		// Запоминаем новую позицию
+		i = strlen(delim) + pos;
+		// Выполняем поиск новой позиции
+		pos = s.find(delim, i);
+		// Если позиция достигнута тогда продолжаем дальше
+		if(pos == std::string::npos) result.push_back(s.substr(i, s.length()));
 	}
 	// Выводим результат
-	return oss.str();
+	return result;
 }
 
-// Функция чтения из сокета указанного количества байтов
-int read_variable_string(int sock, uint8_t *buffer, uint8_t max_sz){
-	if(recv_sock(sock, (char *) buffer, 1) != 1 || buffer[0] > max_sz) return false;
-	uint8_t sz = buffer[0];
-	if(recv_sock(sock, (char *) buffer, sz) != sz) return -1;
-	return sz;
-}
+/*
+void writeToclientSocket(const char* buff_to_server,int sockfd,int buff_length)
+{
 
-// Функция подключения к удаленному хосту
-int connect_to_host(uint32_t ip, uint16_t port){
-	// Структура определяющая тип адреса
-	struct sockaddr_in serv_addr;
-	// Структура определяющая параметры удаленного сервера
-	struct hostent * server;
-	// Выполняем создание сокета для подключения к удаленному серверу
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	// Если сокет не создан тогда выходим
-	if(sockfd < 0) return -1;
-	// Заполняем структуру типа адреса нулями
-	bzero((char *) &serv_addr, sizeof(serv_addr));
-	// Устанавливаем что удаленный адрес это ИНТЕРНЕТ
-	serv_addr.sin_family = AF_INET;
-	// Преобразуем хост адрес в виде числа в строку
-	string ip_string = int_to_str(ip);
-	// Блокируем поток для получения ip адреса
-	get_host_lock.lock();
-	// Получаем данные хоста удаленного сервера по его названию
-	server = gethostbyname(ip_string.c_str());
-	// Если хост не получен тогда разблокируем поток и выходим
-	if(!server){
-		// Разблокируем поток
-		get_host_lock.unlock();
-		// Сообщаем что коннект не удался
-		return -1;
+	string temp;
+
+	temp.append(buff_to_server);
+
+	int totalsent = 0;
+
+	int senteach;
+
+	while (totalsent < buff_length) {
+		if ((senteach = send(sockfd, (void *) (buff_to_server + totalsent), buff_length - totalsent, 0)) < 0) {
+			fprintf (stderr," Error in sending to server ! \n");
+				exit (1);
+		}
+		totalsent += senteach;
+
 	}
-	// Выполняем копирование данных типа подключения
-	bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
-	// Разблокируем поток
-	get_host_lock.unlock();
-	// Устанавливаем порт для подключения к удаленному серверу
-	serv_addr.sin_port = htons(port);
-	// Выполняем коннект к серверу и получаем из него данные
-	return (!connect(sockfd, (const sockaddr *) &serv_addr, sizeof(serv_addr)) ? sockfd : -1);
-}
 
-// Функция установки fd сокетам
-void set_fds(int sock1, int sock2, fd_set *fds){
-	// Очищаем набор файловых дескрипторов
-	FD_ZERO(fds);
-	// Устанавливаем файловые дескрипторы для сокетов
-	FD_SET(sock1, fds);
-	FD_SET(sock2, fds);
 }
+*/
 
-// Функция передачи полученных данных с сервера запросов, клиенту который подключился через прокси
-void do_proxy(int client, int conn, char * buffer){
-	fd_set readfds; // Создаем набор файловых дескрипторов
-	// Определяем количество файловых дескрипторов
-	int result, nfds = max(client, conn) + 1;
-	// Добавляем в набор файловый дескриптор
-	set_fds(client, conn, &readfds);
-	// Перебираем все файловые дескрипторы из набора
-	while((result = select(nfds, &readfds, 0, 0, 0)) > 0){
-		// Если файловый дескриптор существует
-		if(FD_ISSET(client, &readfds)){
-			// Считываем данные из сокета удаленного клиента в буфер
-			int recvd = recv(client, buffer, 256, 0);
-			// Если ничего не считано то выходим
-			if(recvd <= 0) return;
-			// Отправляем удаленному клиенту полученный буфер данных
-			send_sock(conn, buffer, recvd);
-		}
-		// Если файловый дескриптор для сокета сервера существует
-		if(FD_ISSET(conn, &readfds)){
-			// Считываем данные из сокета подключившегося клиента в буфер
-			int recvd = recv(conn, buffer, 256, 0);
-			// Если ничего не считано то выходим
-			if(recvd <= 0) return;
-			// Отправляем подключившемуся клиенту полученный буфер данных
-			send_sock(client, buffer, recvd);
-		}
-		// Добавляем в набор файловый дескриптор
-		set_fds(client, conn, &readfds);
-	}
-}
-
-// Функция запроса данных с сервера
-bool handle_request(int sock, char * buffer){
-	// Создаем заголовки запроса socks5
-	SOCKS5RequestHeader header;
-	// Запонляем их данными из сокета
-	recv_sock(sock, (char *) &header, sizeof(SOCKS5RequestHeader));
-	// Проверяем правильность заполненных заголовков
-	if(header.version != 5 || header.cmd != CMD_CONNECT || header.rsv != 0) return false;
-	// Создаем клиентский сокет для запроса данных с удаленного сервера
-	int client_sock = -1;
-	// Проверяем какой тип подключения у нас требуют
-	switch(header.atyp){
-		// Если это IPv4 адрес
-		case ATYP_IPV4: {
-			// Создаем структуру запроса
-			SOCK5IP4RequestBody req;
-			// Заполняем структуру данными по ip адресу и порту
-			if(recv_sock(sock, (char *) &req, sizeof(SOCK5IP4RequestBody)) != sizeof(SOCK5IP4RequestBody)) break;
-			// Выполняем подключение к удаленному серверу
-			client_sock = connect_to_host(req.ip_dst, ntohs(req.port));
-			// Выходим
-			break;
-		}
-		// Если запрос идет по домену
-		case ATYP_DNAME: {
-			// Создаем структуру запроса
-			SOCK5DNameRequestBody req;
-			// Заполняем структуру данными домена
-			if(recv_sock(sock, (char *) &req, sizeof(SOCK5DNameRequestBody)) != sizeof(SOCK5DNameRequestBody)) break;
-			// Выполняем подключение к удаленному серверу
-			client_sock = connect_to_host(req.dname, ntohs(80));
-			// Выходим
-			break;
-		}
-		// Для всех ост
-		default: return false;
-	}
-	if(client_sock == -1) return false;
-	// Создаем структуру ответа
-	SOCKS5Response response;
-	// Устанавливаем ip адрес нашего сервера
-	response.ip_src = inet_addr("127.0.0.1");
-	// Устанавливаем порт нашего сервера
-	response.port_src = htons(5555);
-	// Отправляем клиенту ответа
-	send_sock(sock, (const char *) &response, sizeof(SOCKS5Response));
-	// Отправляем клиенту данные полученные с сайта
-	do_proxy(client_sock, sock, buffer);
-	// Отключаемся от стороннего сервера который выдает контент
-	shutdown(client_sock, SHUT_RDWR);
-	// Отключаем сокет клиента для подключения к внешнему серверу с контентом
-	close(client_sock);
-	// Сообщаем что все удачно
-	return true;
-}
-
-// Функция проверки логина и пароля
-bool check_auth(int sock){
-	// Логин
-	const char * username = "TNjFZRCZ3C";
-	// Проль
-	const char * password = "techhost@agro24.ru";
-	// Буфер для входящих данных
-	uint8_t buffer[128];
-	// Считываем данные из сокета, если не верные то валидация не пройдена
-	if(recv_sock(sock, (char *) buffer, 1) != 1 || buffer[0] != 1) return false;
-	// Считываем логин пользователя
-	int sz = read_variable_string(sock, buffer, 127);
-	// Если логин не передан тогда авторизация не пройдена
-	if(sz == -1) return false;
-	// Устанавливаем нулевой последний байт
-	buffer[sz] = 0;
-	// Проверяем логин
-	if(strcmp((char *) buffer, username)) return false;
-	// Считываем пароль пользователя
-	sz = read_variable_string(sock, buffer, 127);
-	// Если пароль не передан тогда авторизация не пройдена
-	if(sz == -1) return false;
-	// Устанавливаем нулевой последний байт
-	buffer[sz] = 0;
-	// Проверяем пароль
-	if(strcmp((char *) buffer, password)) return false;
-	// Создаем буфер ответа
-	buffer[0] = 0x01;
-	buffer[1] = 0x00;
-	// Сообщаем сокету что все удачно
-	return send_sock(sock, (const char *) buffer, 2) == 2;
-}
 
 // Функция обработки входящих данных с клиента
 bool handle_handshake(int sock, char * buffer){
+	// Количество считанных данных из буфера
+	int bits_size = 0;
+	// Считываем данные из сокета
+	while(strstr(buffer, "\r\n\r\n") == NULL){
+		// Считываем данные из буфера
+		bits_size += recv(sock, &buffer[bits_size], 256, 0);
+		// Устанавливаем завершение строки
+		buffer[bits_size] = '\0';
+	}
+
+	std::cout << " -------- " << buffer << " bites " << bits_size << endl;
+
+	std::vector <std::string> x = split(buffer, "\r\n");
+
+	for(int i = 0; i < (x.size() - 2); i++){
+		std::cout << " i = " << i << " string = " << x[i] << endl;
+	}
+
+	//const char * dd = "HTTP/1.1 200 Connection established\r\n\r\n";
+	// writeToclientSocket(dd, sock, strlen(dd));
+
+	// Очищаем память выделенную для вектора
+	std::vector <std::string> ().swap(x);
+
+	return false;
+	/*
 	// Структура данных для чтения входящих параметров
 	MethodIdentificationPacket packet;
 	// Считываем данные из сокета
@@ -418,6 +242,7 @@ bool handle_handshake(int sock, char * buffer){
 	if(send_sock(sock, (const char *) &response, sizeof(MethodSelectionPacket)) != sizeof(MethodSelectionPacket) || response.method == METHOD_NOTAVAILABLE) return false;
 	// Выполняем проверку авторизации
 	return ((response.method == METHOD_AUTH) ? check_auth(sock) : true);
+	*/
 }
 
 // Функция обработки данных из потока
@@ -425,9 +250,10 @@ void * handle_connection(void * arg){
 	// Создаем сокет
 	int sock = (uint64_t) arg;
 	// Создаем буфер
-	char * buffer = new char[256];
+	char * buffer = new char[5000];
 	// Выполняем проверку авторизации и спрашиваем что надо клиенту, если удачно то делаем запрос на получение данных
-	if(handle_handshake(sock, buffer)) handle_request(sock, buffer);
+	handle_handshake(sock, buffer);
+	// if(handle_handshake(sock, buffer)) handle_request(sock, buffer);
 	// Выключаем подключение
 	shutdown(sock, SHUT_RDWR);
 	// Закрываем сокет
@@ -505,9 +331,9 @@ int create_listen_socket(){
 	// Указываем что это сетевой протокол Internet/IP
 	echoserver.sin_family = AF_INET;
 	// Указываем адрес прокси сервера
-	echoserver.sin_addr.s_addr = inet_addr("127.0.0.1"); // htonl(INADDR_ANY);
+	echoserver.sin_addr.s_addr = htonl(INADDR_ANY); // inet_addr("127.0.0.1");
 	// Указываем порт сервера
-	echoserver.sin_port = htons(5555); // htons(SERVER_PORT);
+	echoserver.sin_port = htons(5556); // htons(SERVER_PORT);
 	// Выполняем биндинг сокета // ::bind (для мака)
 	if(::bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0){
 		std::cout << "[-] Bind error.\n";
