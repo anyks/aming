@@ -89,6 +89,282 @@ class TClient {
 		inline void wait(){pthread_cond_wait(&condition, &mutex);}
 };
 
+// Класс содержит данные заголовков
+class Headers {
+	private:
+		// Структура подключения
+		struct connect {
+			char * host		= NULL;	// Хост
+			char * port		= NULL;	// Порт
+			char * protocol	= NULL;	// Протокол
+		};
+		// Основные переменные
+		char * query	= NULL;	// Исходный запрос
+		char * command	= NULL;	// Команда запроса
+		char * method	= NULL;	// Метод запроса
+		char * host		= NULL;	// Хост запроса
+		char * port		= NULL;	// Порт запроса
+		char * path		= NULL;	// Путь запроса
+		char * protocol	= NULL;	// Протокол запроса
+		char * version	= NULL;	// Версия протокола
+		char * auth		= NULL;	// Тип авторизации
+		char * login	= NULL;	// Логин
+		char * password	= NULL;	// Пароль
+		// Массив заголовков
+		std::vector <std::string> headers;
+		// Функция разбиения строки на указанные составляющие
+		std::vector<std::string> split(const std::string str, const char * delim){
+			// Начальный символ для обрезки строки
+			int i = 0;
+			// Результирующий вектор
+			std::vector<std::string> result;
+			// Строка в которой производим поиск
+			std::string s = str.c_str();
+			// Позиция разделителя в строке
+			int pos = s.find(delim);
+			// Перебираем строку до тех пор пока не переберем её целиком
+			while(pos != std::string::npos){
+				// Добавляем найденную позицию в строке
+				result.push_back(s.substr(i, pos - i));
+				// Запоминаем новую позицию
+				i = strlen(delim) + pos;
+				// Выполняем поиск новой позиции
+				pos = s.find(delim, i);
+				// Если позиция достигнута тогда продолжаем дальше
+				if(pos == std::string::npos) result.push_back(s.substr(i, s.length()));
+			}
+			// Выводим результат
+			return result;
+		}
+		// Функция установки текстовой переменной
+		void setVar(const char * str, char * &var){
+			// Создаем новую пустую строку
+			var = new char[strlen(str) + 1];
+			// Выполняем копирование строки
+			std::strcpy(var, str);
+		}
+		// Функция перевода в нижний регистр
+		std::string toLowerCase(std::string str){
+			// Переводим все в нижний регистр
+			std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+			// Выводим результат
+			return str;
+		}
+		// Функция перевода в верхний регистр
+		std::string toUpperCase(std::string str){
+			// Переводим все в верхний регистр
+			std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+			// Выводим результат
+			return str;
+		}
+		// Функция извлечения данных подключения
+		connect getConnection(const char * str){
+			// Полученные данные подключения
+			connect data;
+			// Создаем временную строковую переменную
+			std::string s = str;
+			// Выполняем поиск протокола
+			size_t pos = s.find("://");
+			// Размеры данных
+			size_t size;
+			// Если протокол найден
+			if(pos != std::string::npos){
+				// Выполняем разделение на протокол
+				std::vector<std::string> prt = split(s.c_str(), "://");
+				// Запоминаем размер массива
+				size = prt.size();
+				// Если протокол найден
+				if(size){
+					// Запоминаем версию протокола
+					setVar(prt[0].c_str(), data.protocol);
+					// Запоминаем оставшуюся часть строки
+					s = prt[1];
+				}
+				// Очищаем память выделенную для вектора
+				std::vector <std::string> ().swap(prt);
+			// Устанавливаем протокол по умолчанию
+			} else setVar(protocol, data.protocol);
+			// Выполняем поиск порта и хоста
+			pos = s.find(":");
+			// Если хост и порт найдены
+			if(pos != std::string::npos){
+				// Выполняем разделение на протокол
+				std::vector<std::string> prt = split(s.c_str(), ":");
+				// Запоминаем размер массива
+				size = prt.size();
+				// Если порт и хост найдены
+				if(size){
+					// Запоминаем хост
+					setVar(prt[0].c_str(), data.host);
+					// Запоминаем порт
+					setVar(prt[1].c_str(), data.port);
+				}
+				// Очищаем память выделенную для вектора
+				std::vector <std::string> ().swap(prt);
+			// Если хост и порт не найдены
+			} else {
+				// Запоминаем хост
+				setVar(s.c_str(), data.host);
+				// Запоминаем порт
+				setVar("80", data.port);
+			}
+			// Устанавливаем номер порта в зависимости от типа протокола
+			if(!strcmp(toLowerCase(data.protocol).c_str(), "https")) setVar("443", data.port);
+			// Устанавливаем версию протокола в зависимости от порта
+			else if(!strcmp(toLowerCase(data.port).c_str(), "443")) setVar("https", data.protocol);
+			// Запоминаем найденный хост
+			s = data.host;
+			// Выполняем поиск дирректории в хосте
+			pos = s.find("/");
+			// Если дирректория найдена значит это не хост
+			if(pos != std::string::npos){
+				// Извлекаем название домена
+				s = s.substr(0, pos);
+				// Выполняем поиск точки в домене
+				pos = s.find(".");
+				// Если это домен
+				if(pos != std::string::npos) setVar(s.c_str(), data.host);
+				// Если это не домен то устанавливаем что это корень
+				else setVar("/", data.host);
+			}
+			// Выводим результат
+			return data;
+		}
+	public:
+		// Конструктор
+		Headers(const char * buffer){
+			// Если буфер верный
+			if(strlen(buffer)){
+				// Запоминаем первоначальный запрос
+				setVar(buffer, query);
+				// Выполняем парсинг заголовков
+				headers = split(query, "\r\n");
+				// Размеры данных
+				size_t size = headers.size();
+				// Если заголовки найдены
+				if(size){
+					// Запоминаем команду запроса
+					setVar(headers[0].c_str(), command);
+					// Разделяем на составляющие команду
+					std::vector<std::string> cmd = split(command, " ");
+					// Получаем размер массива
+					size = cmd.size();
+					// Если комманда существует
+					if(size && (size == 3)){
+						// Запоминаем метод запроса
+						setVar(toLowerCase(cmd[0]).c_str(), method);
+						// Запоминаем путь запроса
+						setVar(cmd[1].c_str(), path);
+						// Разбиваем протокол и тип протокола на части
+						std::vector<std::string> prt = split(cmd[2].c_str(), "/");
+						// Получаем размер массива
+						size = prt.size();
+						// Если данные найдены
+						if(size && (size == 2)){
+							// Запоминаем протокол запроса
+							setVar(toLowerCase(prt[0]).c_str(), protocol);
+							// Запоминаем версию протокола
+							setVar(prt[1].c_str(), version);
+						}
+						// Очищаем память выделенную для вектора
+						std::vector <std::string> ().swap(prt);
+						// Выполняем получение параметров подключения
+						connect gcon = getConnection(path);
+
+						std::cout << " protocol = " << gcon.protocol << ", host = " << gcon.host << ", port = " << gcon.port << endl;
+					}
+					// Очищаем память выделенную для вектора
+					std::vector <std::string> ().swap(cmd);
+
+
+
+				}
+			}
+		}
+		// Деструктор
+		~Headers(){
+			// Очищаем выделенную память под переменные
+			delete [] query;
+			delete [] command;
+			delete [] method;
+			delete [] host;
+			delete [] port;
+			delete [] path;
+			delete [] protocol;
+			delete [] version;
+			delete [] auth;
+			delete [] login;
+			delete [] password;
+			// Очищаем память выделенную для вектора
+			std::vector <std::string> ().swap(headers);
+		}
+		// Функция вывода список заголовков
+		std::vector <std::string> getHeaders(){
+			// Выводим список заголовков
+			return headers;
+		}
+		// Функция получения всего запроса
+		const char * getQuery(){
+			// Выводим значение переменной
+			return (strlen(query) ? query : NULL);
+		}
+		// Функция получения команды запроса
+		const char * getCommand(){
+			// Выводим значение переменной
+			return (strlen(command) ? command : NULL);
+		}
+		// Функция получения метода запроса
+		const char * getMethod(){
+			// Выводим значение переменной
+			return (strlen(method) ? method : NULL);
+		}
+		// Функция получения хоста запроса
+		const char * getHost(){
+			// Выводим значение переменной
+			return (strlen(host) ? host : NULL);
+		}
+		// Функция получения порта запроса
+		const char * getPort(){
+			// Выводим значение переменной
+			return (strlen(port) ? port : NULL);
+		}
+		// Функция получения пути запроса
+		const char * getPath(){
+			// Выводим значение переменной
+			return (strlen(path) ? path : NULL);
+		}
+		// Функция получения протокола запроса
+		const char * getProtocol(){
+			// Выводим значение переменной
+			return (strlen(protocol) ? protocol : NULL);
+		}
+		// Функция получения версии протокола запроса
+		const char * getVersion(){
+			// Выводим значение переменной
+			return (strlen(version) ? version : NULL);
+		}
+		// Функция получения метода авторизации запроса
+		const char * getAuth(){
+			// Выводим значение переменной
+			return (strlen(auth) ? auth : NULL);
+		}
+		// Функция получения логина авторизации запроса
+		const char * getLogin(){
+			// Выводим значение переменной
+			return (strlen(login) ? login : NULL);
+		}
+		// Функция получения пароля авторизации запроса
+		const char * getPassword(){
+			// Выводим значение переменной
+			return (strlen(password) ? password : NULL);
+		}
+		/*
+		friend Headers operator + (){
+
+		}
+		*/
+};
+
 TServer get_host_lock;	// Блокировки запроса данных с хоста
 TClient client_lock;	// Событие подключения клиента
 
@@ -143,31 +419,6 @@ int send_sock(int sock, const char * buffer, uint32_t size){
 	return index;
 }
 
-// Функция разбиения строки на указанные составляющие
-std::vector<std::string> split(const std::string str, const char * delim){
-	// Начальный символ для обрезки строки
-	int i = 0;
-	// Результирующий вектор
-	std::vector<std::string> result;
-	// Строка в которой производим поиск
-	std::string s = str.c_str();
-	// Позиция разделителя в строке
-	int pos = s.find(delim);
-	// Перебираем строку до тех пор пока не переберем её целиком
-	while(pos != std::string::npos){
-		// Добавляем найденную позицию в строке
-		result.push_back(s.substr(i, pos - i));
-		// Запоминаем новую позицию
-		i = strlen(delim) + pos;
-		// Выполняем поиск новой позиции
-		pos = s.find(delim, i);
-		// Если позиция достигнута тогда продолжаем дальше
-		if(pos == std::string::npos) result.push_back(s.substr(i, s.length()));
-	}
-	// Выводим результат
-	return result;
-}
-
 /*
 void writeToclientSocket(const char* buff_to_server,int sockfd,int buff_length)
 {
@@ -207,17 +458,23 @@ bool handle_handshake(int sock, char * buffer){
 
 	std::cout << " -------- " << buffer << " bites " << bits_size << endl;
 
-	std::vector <std::string> x = split(buffer, "\r\n");
+	Headers * headers = new Headers(buffer);
+
+	std::vector <std::string> x = headers->getHeaders();
+
 
 	for(int i = 0; i < (x.size() - 2); i++){
 		std::cout << " i = " << i << " string = " << x[i] << endl;
 	}
 
+	// std::cout << " command = " << headers->getCommand() << " method = " << headers->getMethod() << " host = " << headers->getHost() << " port = " << headers->getPort() << " path = " << headers->getPath() << " protocol = " << headers->getProtocol() << " version = " << headers->getVersion() << " auth = " << headers->getAuth() << " login = " << headers->getLogin() << " password = " << headers->getPassword() << endl;
+	std::cout << " command = " << headers->getCommand() << " method = " << headers->getMethod() << " path = " << headers->getPath() << " protocol = " << headers->getProtocol() << " version = " << headers->getVersion() << endl;
+
+	// reinterpret_cast <const char *> (buffer)
 	//const char * dd = "HTTP/1.1 200 Connection established\r\n\r\n";
 	// writeToclientSocket(dd, sock, strlen(dd));
 
-	// Очищаем память выделенную для вектора
-	std::vector <std::string> ().swap(x);
+	delete headers;
 
 	return false;
 	/*
