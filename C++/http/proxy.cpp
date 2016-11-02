@@ -1,6 +1,6 @@
 // sudo lsof -i | grep -E LISTEN
 //  g++ -o socks5 http.cpp -lpthread
-//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -o http proxy.cpp
+//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -o http base64.cpp proxy.cpp
 
 #include <cstdlib>
 #include <cstring>
@@ -33,6 +33,8 @@
 
 // #include <sstream>
 #include <vector>
+
+#include "base64.h"
 
 using namespace std;
 
@@ -89,8 +91,8 @@ class TClient {
 		inline void wait(){pthread_cond_wait(&condition, &mutex);}
 };
 
-// Класс содержит данные заголовков
-class Headers {
+// Класс содержит данные парсинга http запроса
+class Http {
 	private:
 		// Структура подключения
 		struct connect {
@@ -99,17 +101,25 @@ class Headers {
 			char * protocol	= NULL;	// Протокол
 		};
 		// Основные переменные
-		char * query	= NULL;	// Исходный запрос
-		char * command	= NULL;	// Команда запроса
-		char * method	= NULL;	// Метод запроса
-		char * host		= NULL;	// Хост запроса
-		char * port		= NULL;	// Порт запроса
-		char * path		= NULL;	// Путь запроса
-		char * protocol	= NULL;	// Протокол запроса
-		char * version	= NULL;	// Версия протокола
-		char * auth		= NULL;	// Тип авторизации
-		char * login	= NULL;	// Логин
-		char * password	= NULL;	// Пароль
+		int socket			= 0;	// Идентификатор сокета
+		char * query		= NULL;	// Исходный запрос
+		char * command		= NULL;	// Команда запроса
+		char * method		= NULL;	// Метод запроса
+		char * host			= NULL;	// Хост запроса
+		char * port			= NULL;	// Порт запроса
+		char * path			= NULL;	// Путь запроса
+		char * protocol		= NULL;	// Протокол запроса
+		char * version		= NULL;	// Версия протокола
+		char * connection	= NULL; // Заголовок connection
+		char * pconnection	= NULL;	// Заголовок proxy-connection
+		char * useragent	= NULL;	// UserAgent браузера
+		char * auth			= NULL;	// Тип авторизации
+		char * login		= NULL;	// Логин
+		char * password		= NULL;	// Пароль
+		char * entitybody	= NULL;	// Данные запроса для POST метода
+		char * head			= NULL;	// Результирующий заголовок для запроса
+		// Массив остальных заголовков которые для нас не имеют значения
+		std::vector <std::string> other;
 		// Массив заголовков
 		std::vector <std::string> headers;
 		// Функция разбиения строки на указанные составляющие
@@ -138,6 +148,8 @@ class Headers {
 		}
 		// Функция установки текстовой переменной
 		void setVar(const char * str, char * &var){
+			// Если данные там уже есть, очищаем память
+			if(var != NULL) delete [] var;
 			// Создаем новую пустую строку
 			var = new char[strlen(str) + 1];
 			// Выполняем копирование строки
@@ -154,6 +166,53 @@ class Headers {
 		std::string toUpperCase(std::string str){
 			// Переводим все в верхний регистр
 			std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+			// Выводим результат
+			return str;
+		}
+		// Функция удаления пробелов и переносов строк
+		std::string trim(std::string &str){
+			str.erase(0, str.find_first_not_of(" "));	// Начальный пробел
+			str.erase(str.find_last_not_of(" ") + 1);	// Конечный пробел
+			// Выводим результат
+			return str;
+		}
+		// Функция получения содержимое заголовка
+		std::string getHeaderParam(const char * head, const char * param){
+			// Запоминаем переданные параметры
+			std::string str, h = head, p = std::string(param) + ":";
+			// Выполняем поиск заголовка
+			size_t pos = toLowerCase(h).find(toLowerCase(p).c_str());
+			// Если заголовок найден
+			if(pos != std::string::npos){
+				// Извлекаем данные
+				str = h.substr(pos + p.length(), (h.length() - (pos + p.length())));
+				// Вырезаем пробелы
+				trim(str);
+			}
+			// Выводим результат
+			return str;
+		}
+		// Функция поиска значение заголовка
+		std::string findHeaderParam(const char * st, const char * buf){
+			// Результирующая строка
+			std::string str, istr = toLowerCase(st) + ":";
+			// Ищем начало заголовка Content-length
+			size_t pos1 = toLowerCase(buf).find(istr.c_str());
+			// Ищем конец заголовка Content-length
+			size_t pos2 = toLowerCase(buf).find("\r\n", pos1);
+			// Если заголовок найден
+			if((pos1 != std::string::npos) && (pos2 != std::string::npos)){
+				// Получаем размер всей строки
+				int length = strlen(buf);
+				// Определяем начальную позицию
+				int start = pos1 + istr.length();
+				// Определяем конечную позицию
+				int end = length - ((length - start) + (length - pos2));
+				// Извлекаем данные заголовка
+				str = std::string(buf).substr(start, end);
+				// Вырезаем пробелы
+				trim(str);
+			}
 			// Выводим результат
 			return str;
 		}
@@ -230,9 +289,8 @@ class Headers {
 			// Выводим результат
 			return data;
 		}
-	public:
-		// Конструктор
-		Headers(const char * buffer){
+		// Функция парсера http запроса
+		void parser(const char * buffer){
 			// Если буфер верный
 			if(strlen(buffer)){
 				// Запоминаем первоначальный запрос
@@ -265,24 +323,203 @@ class Headers {
 							setVar(toLowerCase(prt[0]).c_str(), protocol);
 							// Запоминаем версию протокола
 							setVar(prt[1].c_str(), version);
+							// Перебираем остальные заголовки
+							for(int i = 1; i < headers.size(); i++){
+								// Если все заголовки считаны тогда выходим
+								if(headers[i].length()){
+									// Получаем данные заголовок хоста
+									std::string hst = getHeaderParam(headers[i].c_str(), "Host");
+									// Получаем данные юзерагента
+									std::string usg = getHeaderParam(headers[i].c_str(), "User-Agent");
+									// Получаем данные заголовока коннекта
+									std::string cnn = getHeaderParam(headers[i].c_str(), "Connection");
+									// Получаем данные заголовока коннекта для прокси
+									std::string pcn = getHeaderParam(headers[i].c_str(), "Proxy-Connection");
+									// Получаем данные авторизации
+									std::string ath = getHeaderParam(headers[i].c_str(), "Proxy-Authorization");
+									// Если заголовок хоста найден
+									if(hst.length()){
+										// Выполняем получение параметров подключения
+										connect gcon = getConnection(path);
+										// Выполняем получение параметров подключения
+										connect scon = getConnection(hst.c_str());
+										// Создаем полный адрес запроса
+										std::string fulladdr1 = std::string(scon.protocol) + std::string("://") + scon.host;
+										std::string fulladdr2 = fulladdr1 + "/";
+										std::string fulladdr3 = fulladdr1 + std::string(":") + scon.port;
+										std::string fulladdr4 = fulladdr3 + "/";
+										// Определяем путь
+										if(strcmp(toLowerCase(method).c_str(), "connect")
+										&& (!strcmp(toLowerCase(path).c_str(), toLowerCase(hst).c_str())
+										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr1).c_str())
+										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr2).c_str())
+										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr3).c_str())
+										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr4).c_str()))) setVar("/", path);
+										// Запоминаем хост
+										setVar(toLowerCase(scon.host).c_str(), host);
+										// Запоминаем порт
+										if(strcmp(scon.port, gcon.port) && !strcmp(gcon.port, "80")){
+											// Запоминаем протокол
+											setVar(toLowerCase(scon.protocol).c_str(), protocol);
+											// Уделяем предпочтение 443 порту
+											setVar(scon.port, port);
+										// Запоминаем порт такой какой он есть
+										} else {
+											// Запоминаем порт
+											setVar(gcon.port, port);
+											// Запоминаем протокол
+											setVar(toLowerCase(gcon.protocol).c_str(), protocol);
+										}
+									// Если авторизация найдена
+									} else if(ath.length()){
+										// Выполняем разделение на тип и данные авторизации
+										std::vector<std::string> lgn = split(ath.c_str(), " ");
+										// Запоминаем размер массива
+										size = lgn.size();
+										// Если данные получены
+										if(size){
+											// Запоминаем тип авторизации
+											setVar(toLowerCase(lgn[0]).c_str(), auth);
+											// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
+											if(!strcmp(auth, "basic")){
+												// Выполняем декодирование логина и пароля
+												std::string dauth = base64_decode(lgn[1].c_str());
+												// Выполняем поиск авторизационных данных
+												size_t pos = dauth.find(":");
+												// Если протокол найден
+												if(pos != std::string::npos){
+													// Выполняем разделение на логин и пароль
+													std::vector<std::string> lp = split(dauth.c_str(), ":");
+													// Запоминаем размер массива
+													size = lp.size();
+													// Если данные получены
+													if(size){
+														// Запоминаем логин
+														setVar(lp[0].c_str(), login);
+														// Запоминаем пароль
+														setVar(lp[1].c_str(), password);
+													}
+													// Очищаем память выделенную для вектора
+													std::vector <std::string> ().swap(lp);
+												}
+											}
+										}
+										// Очищаем память выделенную для вектора
+										std::vector <std::string> ().swap(lgn);
+									// Если юзерагент найден
+									} else if(usg.length()) setVar(usg.c_str(), useragent);
+									// Если заголовок коннекта прокси найден
+									else if(pcn.length()) setVar(toLowerCase(pcn).c_str(), pconnection);
+									// Если заголовок коннекта найден
+									else if(cnn.length()) setVar(toLowerCase(cnn).c_str(), connection);
+									// Если это все остальные заголовки то просто добавляем их в список
+									else if(headers[i].length()) other.push_back(headers[i]);
+								// Иначе выходим из цикла
+								} else break;
+							}
 						}
 						// Очищаем память выделенную для вектора
 						std::vector <std::string> ().swap(prt);
-						// Выполняем получение параметров подключения
-						connect gcon = getConnection(path);
-
-						std::cout << " protocol = " << gcon.protocol << ", host = " << gcon.host << ", port = " << gcon.port << endl;
 					}
 					// Очищаем память выделенную для вектора
 					std::vector <std::string> ().swap(cmd);
-
-
-
 				}
 			}
 		}
+		/**
+		 * Если версия протокола 1.0 то там нет keep-alive и должен выставлять значение clone (идет запрос, ответ и отсоединение)
+		 * Если версия протокола 1.1 и там установлен keep-alive то отсоединение должно быть по таймеру которое выставлено на ожидание соединения (время жизни например 30 секунд)
+		 */
+		// Функция получения сформированного заголовка запроса
+		void createHead(){
+			// Если это не метод CONNECT то меняем заголовок Connection на close
+			if((entitybody == NULL) && !strcmp(version, "1.0")) setVar("close", connection);
+			// Переменная с заголовком
+			std::string str = std::string(command) + "\r\n";
+			// Добавляем данные хоста
+			str += std::string("Host: ") + std::string(host) + std::string(":") + std::string(port) + "\r\n";
+			// Добавляем useragent
+			if(useragent != NULL) str += std::string("User-Agent: ") + std::string(useragent) + "\r\n";
+			// Добавляем остальные заголовки
+			for(int i = 0; i < other.size(); i++){
+				// Если это не заголовок контента, то добавляем в список остальные заголовки
+				if(toLowerCase(other[i]).find("content-length:") == std::string::npos) str += (other[i] + "\r\n");
+			}
+			// Добавляем заголовок connection
+			if(connection != NULL) str += std::string("Connection: ") + std::string(connection) + "\r\n";
+			// Если тело запроса существует то добавляем размер тела
+			if(entitybody != NULL) str += std::string("Content-Length: ") + std::to_string(strlen(entitybody)) + "\r\n";
+			// Добавляем конец запроса
+			str += "\r\n";
+			// Если существует тело запроса то добавляем его
+			if(entitybody != NULL) str += std::string(entitybody);
+			// Устанавливаем значение переменной
+			setVar(str.c_str(), head);
+		}
+		// Функция чтения данных данных из сокета
+		void readSocket(int sock){
+			// Если сокет верный
+			if(sock > -1){
+				// Запоминаем сокет
+				socket = sock;
+				// Создаем буфер
+				char * buffer = new char[4096];
+				// Количество считанных данных из буфера
+				int bits_size = 0;
+				// Размер передаваемых в теле данных
+				std::string len_data;
+				// Выполняем чтение данных из сокета
+				while(true){
+					// Считываем данные из буфера
+					size_t size = recv(socket, &buffer[bits_size], 256, 0);
+					// Запоминаем количество считанных байтов
+					bits_size += size;
+					// Устанавливаем завершение строки
+					buffer[bits_size] = '\0';
+					// Выполняем поиск значения размера данных
+					if(!len_data.length()){
+						// Выполняем поиск размера передаваемых данных
+						len_data = findHeaderParam("Content-length", buffer);
+						// Если все данные переданы то выходим
+						if(!len_data.length() && (strstr(buffer, "\r\n\r\n") != NULL)) break;
+					// Сообщаем что размер найден
+					} else if(strstr(buffer, "\r\n\r\n") != NULL) {
+						// Запоминаем полученный буфер
+						std::string str = buffer, result;
+						// Позиция конца заголовков
+						int pos = str.find("\r\n\r\n");
+						// Выполняем чтение данных
+						result = str.substr(pos, str.length() - pos);
+						// Удаляем все переносы строк
+						result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
+						result.erase(std::remove(result.begin(), result.end(), '\n'), result.end());
+						// Вырезаем пробелы
+						trim(result);
+						// Если все байты считаны
+						if(result.length() >= atoi(len_data.c_str())){
+							// Запоминаем данные тела запроса
+							setVar(result.c_str(), entitybody);
+							// Выходим из функции
+							break;
+						}
+					}
+				}
+				// Выполняем парсинг заголовков http запроса
+				parser(buffer);
+				// Выполняем генерацию результирующего запроса
+				createHead();
+				// Удаляем буфер
+				delete [] buffer;
+			}
+		}
+	public:
+		// Конструктор
+		Http(int sock){
+			// Выполняем чтение из сокета
+			readSocket(sock);
+		}
 		// Деструктор
-		~Headers(){
+		~Http(){
 			// Очищаем выделенную память под переменные
 			delete [] query;
 			delete [] command;
@@ -292,77 +529,131 @@ class Headers {
 			delete [] path;
 			delete [] protocol;
 			delete [] version;
+			delete [] connection;
+			delete [] pconnection;
+			delete [] useragent;
 			delete [] auth;
 			delete [] login;
 			delete [] password;
+			delete [] entitybody;
+			delete [] head;
 			// Очищаем память выделенную для вектора
+			std::vector <std::string> ().swap(other);
 			std::vector <std::string> ().swap(headers);
 		}
-		// Функция вывода список заголовков
-		std::vector <std::string> getHeaders(){
-			// Выводим список заголовков
-			return headers;
-		}
-		// Функция получения всего запроса
-		const char * getQuery(){
-			// Выводим значение переменной
-			return (strlen(query) ? query : NULL);
-		}
-		// Функция получения команды запроса
-		const char * getCommand(){
-			// Выводим значение переменной
-			return (strlen(command) ? command : NULL);
-		}
-		// Функция получения метода запроса
+		// Метод получения метода запроса
 		const char * getMethod(){
 			// Выводим значение переменной
-			return (strlen(method) ? method : NULL);
+			return (method != NULL ? method : "");
 		}
-		// Функция получения хоста запроса
+		// Метод получения хоста запроса
 		const char * getHost(){
 			// Выводим значение переменной
-			return (strlen(host) ? host : NULL);
+			return (host != NULL ? host : "");
 		}
-		// Функция получения порта запроса
+		// Метод получения порта запроса
 		const char * getPort(){
 			// Выводим значение переменной
-			return (strlen(port) ? port : NULL);
+			return (port != NULL ? port : "");
 		}
-		// Функция получения пути запроса
+		// Метод получения пути запроса
 		const char * getPath(){
 			// Выводим значение переменной
-			return (strlen(path) ? path : NULL);
+			return (path != NULL ? path : "");
 		}
-		// Функция получения протокола запроса
+		// Метод получения протокола запроса
 		const char * getProtocol(){
 			// Выводим значение переменной
-			return (strlen(protocol) ? protocol : NULL);
+			return (protocol != NULL ? protocol : "");
 		}
-		// Функция получения версии протокола запроса
+		// Метод получения версии протокола запроса
 		const char * getVersion(){
 			// Выводим значение переменной
-			return (strlen(version) ? version : NULL);
+			return (version != NULL ? version : "");
 		}
-		// Функция получения метода авторизации запроса
+		// Метод получения метода авторизации запроса
 		const char * getAuth(){
 			// Выводим значение переменной
-			return (strlen(auth) ? auth : NULL);
+			return (auth != NULL ? auth : "");
 		}
-		// Функция получения логина авторизации запроса
+		// Метод получения логина авторизации запроса
 		const char * getLogin(){
 			// Выводим значение переменной
-			return (strlen(login) ? login : NULL);
+			return (login != NULL ? login : "");
 		}
-		// Функция получения пароля авторизации запроса
+		// Метод получения пароля авторизации запроса
 		const char * getPassword(){
 			// Выводим значение переменной
-			return (strlen(password) ? password : NULL);
+			return (password != NULL ? password : "");
 		}
-		/*
-		friend Headers operator + (){
-
+		// Метод получения юзерагента запроса
+		const char * getUseragent(){
+			// Выводим значение переменной
+			return (useragent != NULL ? useragent : "");
 		}
-		*/
+		// Метод установки метода запроса
+		void setMethod(const char * str){
+			// Запоминаем данные
+			setVar(str, method);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод установки хоста запроса
+		void setHost(const char * str){
+			// Запоминаем данные
+			setVar(str, host);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод установки порта запроса
+		void setPort(const char * str){
+			// Запоминаем данные
+			setVar(str, port);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод установки пути запроса
+		void setPath(const char * str){
+			// Запоминаем данные
+			setVar(str, path);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод установки протокола запроса
+		void setProtocol(const char * str){
+			// Запоминаем данные
+			setVar(str, protocol);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод установки версии протокола запроса
+		void setVersion(const char * str){
+			// Запоминаем данные
+			setVar(str, version);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод установки метода авторизации запроса
+		void setAuth(const char * str){
+			// Запоминаем данные
+			setVar(str, auth);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод установки юзерагента запроса
+		void setUseragent(const char * str){
+			// Запоминаем данные
+			setVar(str, useragent);
+			// Выполняем генерацию результирующего запроса
+			createHead();
+		}
+		// Метод определения нужно ли держать соединение для прокси
+		bool isAlive(){
+			// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
+			if(!strcmp(version, "1.1") && (pconnection != NULL)
+			&& !strcmp(toLowerCase(pconnection).c_str(), "keep-alive")) return true;
+			else return false;
+		}
 };
 
 TServer get_host_lock;	// Блокировки запроса данных с хоста
@@ -445,36 +736,24 @@ void writeToclientSocket(const char* buff_to_server,int sockfd,int buff_length)
 
 
 // Функция обработки входящих данных с клиента
-bool handle_handshake(int sock, char * buffer){
-	// Количество считанных данных из буфера
-	int bits_size = 0;
-	// Считываем данные из сокета
-	while(strstr(buffer, "\r\n\r\n") == NULL){
-		// Считываем данные из буфера
-		bits_size += recv(sock, &buffer[bits_size], 256, 0);
-		// Устанавливаем завершение строки
-		buffer[bits_size] = '\0';
-	}
+bool handle_handshake(int sock){
 
-	std::cout << " -------- " << buffer << " bites " << bits_size << endl;
+	Http * http = new Http(sock);
 
-	Headers * headers = new Headers(buffer);
+	// std::cout << ", method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << endl;
+	std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
 
-	std::vector <std::string> x = headers->getHeaders();
+	std::cout << (http->isAlive() ? " Постоянное подключение к прокси " : " Запрос - ответа ") << endl;
 
+	http->setUseragent("Test user agent");
 
-	for(int i = 0; i < (x.size() - 2); i++){
-		std::cout << " i = " << i << " string = " << x[i] << endl;
-	}
-
-	// std::cout << " command = " << headers->getCommand() << " method = " << headers->getMethod() << " host = " << headers->getHost() << " port = " << headers->getPort() << " path = " << headers->getPath() << " protocol = " << headers->getProtocol() << " version = " << headers->getVersion() << " auth = " << headers->getAuth() << " login = " << headers->getLogin() << " password = " << headers->getPassword() << endl;
-	std::cout << " command = " << headers->getCommand() << " method = " << headers->getMethod() << " path = " << headers->getPath() << " protocol = " << headers->getProtocol() << " version = " << headers->getVersion() << endl;
+	std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
 
 	// reinterpret_cast <const char *> (buffer)
 	//const char * dd = "HTTP/1.1 200 Connection established\r\n\r\n";
 	// writeToclientSocket(dd, sock, strlen(dd));
 
-	delete headers;
+	delete http;
 
 	return false;
 	/*
@@ -506,17 +785,13 @@ bool handle_handshake(int sock, char * buffer){
 void * handle_connection(void * arg){
 	// Создаем сокет
 	int sock = (uint64_t) arg;
-	// Создаем буфер
-	char * buffer = new char[5000];
 	// Выполняем проверку авторизации и спрашиваем что надо клиенту, если удачно то делаем запрос на получение данных
-	handle_handshake(sock, buffer);
+	handle_handshake(sock);
 	// if(handle_handshake(sock, buffer)) handle_request(sock, buffer);
 	// Выключаем подключение
 	shutdown(sock, SHUT_RDWR);
 	// Закрываем сокет
 	close(sock);
-	// Удаляем буфер
-	delete[] buffer;
 	// Блокируем поток клиента
 	client_lock.lock();
 	// Уменьшаем количество подключенных клиентов
