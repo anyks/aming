@@ -122,13 +122,14 @@ class Http {
 		std::vector <std::string> other;
 		// Массив заголовков
 		std::vector <std::string> headers;
-
-		char * html[12] = {
+		// Шаблоны ответов
+		const char * html[12] = {
+			// Подключение разрешено [0]
 			"HTTP/1.0 200 Connection established\r\n"
 			"Proxy-agent: ProxyApp/1.1\r\n\r\n",
-
+			// Продолжить подключение [1]
 			"HTTP/1.1 100 Continue\r\n\r\n",
-
+			// Требуется авторизация в прокси [2]
 			"HTTP/1.0 407 Proxy Authentication Required\r\n"
 			"Proxy-agent: ProxyApp/1.1\r\n"
 			"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
@@ -136,8 +137,10 @@ class Http {
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
 			"<html><head><title>407 Proxy Authentication Required</title></head>\r\n"
-			"<body><h2>407 Proxy Authentication Required</h2><h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3></body></html>\r\n",
-			
+			"<body><h2>407 Proxy Authentication Required</h2>\r\n"
+			"<h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3>\r\n"
+			"</body></html>\r\n",
+			// Ошибка запроса [3]
 			"HTTP/1.0 400 Bad Request\r\n"
 			"Proxy-agent: ProxyApp/1.1\r\n"
 			"Proxy-Connection: close\r\n"
@@ -145,55 +148,7 @@ class Http {
 			"\r\n"
 			"<html><head><title>400 Bad Request</title></head>\r\n"
 			"<body><h2>400 Bad Request</h2></body></html>\r\n",
-
-			"HTTP/1.0 502 Bad Gateway\r\n"
-			"Proxy-agent: ProxyApp/1.1\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>502 Bad Gateway</title></head>\r\n"
-			"<body><h2>502 Bad Gateway</h2><h3>Host Not Found or connection failed</h3></body></html>\r\n",
-
-			"HTTP/1.0 503 Service Unavailable\r\n"
-			"Proxy-agent: ProxyApp/1.1\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>503 Service Unavailable</title></head>\r\n"
-			"<body><h2>503 Service Unavailable</h2><h3>You have exceeded your traffic limit</h3></body></html>\r\n",
-
-			"HTTP/1.0 503 Service Unavailable\r\n"
-			"Proxy-agent: ProxyApp/1.1\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>503 Service Unavailable</title></head>\r\n"
-			"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n",
-
-			"HTTP/1.0 501 Not Implemented\r\n"
-			"Proxy-agent: ProxyApp/1.1\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>501 Not Implemented</title></head>\r\n"
-			"<body><h2>501 Not Implemented</h2><h3>Required action is not supported by proxy server</h3></body></html>\r\n",
-
-			"HTTP/1.0 502 Bad Gateway\r\n"
-			"Proxy-agent: ProxyApp/1.1\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>502 Bad Gateway</title></head>\r\n"
-			"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n",
-
-			"HTTP/1.0 500 Internal Error\r\n"
-			"Proxy-agent: ProxyApp/1.1\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>500 Internal Error</title></head>\r\n"
-			"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n",
-
+			// Страница не найдена [4]
 			"HTTP/1.0 404 Not Found\r\n"
 			"Proxy-agent: ProxyApp/1.1\r\n"
 			"Proxy-Connection: close\r\n"
@@ -201,16 +156,63 @@ class Http {
 			"\r\n"
 			"<html><head><title>404 Not Found</title></head>\r\n"
 			"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n",
-
+			// Доступ закрыт [5]
 			"HTTP/1.0 403 Forbidden\r\n"
 			"Proxy-agent: ProxyApp/1.1\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
 			"<html><head><title>403 Access Denied</title></head>\r\n"
-			"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n"
+			"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n",
+			// Шлюз не доступен (хост не найден или ошибка подключения) [6]
+			"HTTP/1.0 502 Bad Gateway\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>502 Bad Gateway</title></head>\r\n"
+			"<body><h2>502 Bad Gateway</h2><h3>Host Not Found or connection failed</h3></body></html>\r\n",
+			// Сервис не доступен (вы исчерпали свой трафик) [7]
+			"HTTP/1.0 503 Service Unavailable\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>503 Service Unavailable</title></head>\r\n"
+			"<body><h2>503 Service Unavailable</h2><h3>You have exceeded your traffic limit</h3></body></html>\r\n",
+			// Сервис не доступен (обнаружена рекурсия) [8]
+			"HTTP/1.0 503 Service Unavailable\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>503 Service Unavailable</title></head>\r\n"
+			"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n",
+			// Сервис не доступен (Требуемое действие не поддерживается прокси-сервером) [9]
+			"HTTP/1.0 501 Not Implemented\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>501 Not Implemented</title></head>\r\n"
+			"<body><h2>501 Not Implemented</h2><h3>Required action is not supported by proxy server</h3></body></html>\r\n",
+			// Сервис не доступен (Не удалось подключится к родительской прокси) [10]
+			"HTTP/1.0 502 Bad Gateway\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>502 Bad Gateway</title></head>\r\n"
+			"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n",
+			// Внутренняя ошибка [11]
+			"HTTP/1.0 500 Internal Error\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>500 Internal Error</title></head>\r\n"
+			"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
 		};
-
 		// Функция разбиения строки на указанные составляющие
 		std::vector<std::string> split(const std::string str, const char * delim){
 			// Начальный символ для обрезки строки
@@ -245,18 +247,20 @@ class Http {
 			std::strcpy(var, str);
 		}
 		// Функция перевода в нижний регистр
-		std::string toLowerCase(std::string str){
-			// Переводим все в нижний регистр
-			std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+		const char * toCase(const char * str, bool flag = false){
+			// Индекс массива
+			size_t i = 0;
+			// Выполняем копирование строки
+			char * ptr = strdup(str);
+			// Выполняем перебор всего массива символов
+			while(ptr[i] != '\0'){
+				// Выполняем приведение к нижнему регистру
+				ptr[i] = (flag ? toupper(ptr[i], std::locale()) : tolower(ptr[i], std::locale()));
+				// Выполняем сдвиг массива
+				i++;
+			}
 			// Выводим результат
-			return str;
-		}
-		// Функция перевода в верхний регистр
-		std::string toUpperCase(std::string str){
-			// Переводим все в верхний регистр
-			std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-			// Выводим результат
-			return str;
+			return ptr;
 		}
 		// Функция удаления пробелов и переносов строк
 		std::string trim(std::string &str){
@@ -270,7 +274,7 @@ class Http {
 			// Запоминаем переданные параметры
 			std::string str, h = head, p = std::string(param) + ":";
 			// Выполняем поиск заголовка
-			size_t pos = toLowerCase(h).find(toLowerCase(p).c_str());
+			size_t pos = std::string(toCase(h.c_str())).find(toCase(p.c_str()));
 			// Если заголовок найден
 			if(pos != std::string::npos){
 				// Извлекаем данные
@@ -284,11 +288,11 @@ class Http {
 		// Функция поиска значение заголовка
 		std::string findHeaderParam(const char * st, const char * buf){
 			// Результирующая строка
-			std::string str, istr = toLowerCase(st) + ":";
+			std::string str, istr = std::string(toCase(st)) + ":";
 			// Ищем начало заголовка Content-length
-			size_t pos1 = toLowerCase(buf).find(istr.c_str());
+			size_t pos1 = std::string(toCase(buf)).find(istr.c_str());
 			// Ищем конец заголовка Content-length
-			size_t pos2 = toLowerCase(buf).find("\r\n", pos1);
+			size_t pos2 = std::string(toCase(buf)).find("\r\n", pos1);
 			// Если заголовок найден
 			if((pos1 != std::string::npos) && (pos2 != std::string::npos)){
 				// Получаем размер всей строки
@@ -357,9 +361,9 @@ class Http {
 				setVar("80", data.port);
 			}
 			// Устанавливаем номер порта в зависимости от типа протокола
-			if(!strcmp(toLowerCase(data.protocol).c_str(), "https")) setVar("443", data.port);
+			if(!strcmp(toCase(data.protocol), "https")) setVar("443", data.port);
 			// Устанавливаем версию протокола в зависимости от порта
-			else if(!strcmp(toLowerCase(data.port).c_str(), "443")) setVar("https", data.protocol);
+			else if(!strcmp(toCase(data.port), "443")) setVar("https", data.protocol);
 			// Запоминаем найденный хост
 			s = data.host;
 			// Выполняем поиск дирректории в хосте
@@ -399,7 +403,7 @@ class Http {
 					// Если комманда существует
 					if(size && (size == 3)){
 						// Запоминаем метод запроса
-						setVar(toLowerCase(cmd[0]).c_str(), method);
+						setVar(toCase(cmd[0].c_str()), method);
 						// Запоминаем путь запроса
 						setVar(cmd[1].c_str(), path);
 						// Разбиваем протокол и тип протокола на части
@@ -409,7 +413,7 @@ class Http {
 						// Если данные найдены
 						if(size && (size == 2)){
 							// Запоминаем протокол запроса
-							setVar(toLowerCase(prt[0]).c_str(), protocol);
+							setVar(toCase(prt[0].c_str()), protocol);
 							// Запоминаем версию протокола
 							setVar(prt[1].c_str(), version);
 							// Перебираем остальные заголовки
@@ -438,18 +442,18 @@ class Http {
 										std::string fulladdr3 = fulladdr1 + std::string(":") + scon.port;
 										std::string fulladdr4 = fulladdr3 + "/";
 										// Определяем путь
-										if(strcmp(toLowerCase(method).c_str(), "connect")
-										&& (!strcmp(toLowerCase(path).c_str(), toLowerCase(hst).c_str())
-										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr1).c_str())
-										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr2).c_str())
-										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr3).c_str())
-										|| !strcmp(toLowerCase(path).c_str(), toLowerCase(fulladdr4).c_str()))) setVar("/", path);
+										if(strcmp(toCase(method), "connect")
+										&& (!strcmp(toCase(path), toCase(hst.c_str()))
+										|| !strcmp(toCase(path), toCase(fulladdr1.c_str()))
+										|| !strcmp(toCase(path), toCase(fulladdr2.c_str()))
+										|| !strcmp(toCase(path), toCase(fulladdr3.c_str()))
+										|| !strcmp(toCase(path), toCase(fulladdr4.c_str())))) setVar("/", path);
 										// Запоминаем хост
-										setVar(toLowerCase(scon.host).c_str(), host);
+										setVar(toCase(scon.host), host);
 										// Запоминаем порт
 										if(strcmp(scon.port, gcon.port) && !strcmp(gcon.port, "80")){
 											// Запоминаем протокол
-											setVar(toLowerCase(scon.protocol).c_str(), protocol);
+											setVar(toCase(scon.protocol), protocol);
 											// Уделяем предпочтение 443 порту
 											setVar(scon.port, port);
 										// Запоминаем порт такой какой он есть
@@ -457,7 +461,7 @@ class Http {
 											// Запоминаем порт
 											setVar(gcon.port, port);
 											// Запоминаем протокол
-											setVar(toLowerCase(gcon.protocol).c_str(), protocol);
+											setVar(toCase(gcon.protocol), protocol);
 										}
 									// Если авторизация найдена
 									} else if(ath.length()){
@@ -468,7 +472,7 @@ class Http {
 										// Если данные получены
 										if(size){
 											// Запоминаем тип авторизации
-											setVar(toLowerCase(lgn[0]).c_str(), auth);
+											setVar(toCase(lgn[0].c_str()), auth);
 											// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
 											if(!strcmp(auth, "basic")){
 												// Выполняем декодирование логина и пароля
@@ -498,9 +502,9 @@ class Http {
 									// Если юзерагент найден
 									} else if(usg.length()) setVar(usg.c_str(), useragent);
 									// Если заголовок коннекта прокси найден
-									else if(pcn.length()) setVar(toLowerCase(pcn).c_str(), pconnection);
+									else if(pcn.length()) setVar(toCase(pcn.c_str()), pconnection);
 									// Если заголовок коннекта найден
-									else if(cnn.length()) setVar(toLowerCase(cnn).c_str(), connection);
+									else if(cnn.length()) setVar(toCase(cnn.c_str()), connection);
 									// Если это все остальные заголовки то просто добавляем их в список
 									else if(headers[i].length()) other.push_back(headers[i]);
 								// Иначе выходим из цикла
@@ -532,7 +536,7 @@ class Http {
 			// Добавляем остальные заголовки
 			for(int i = 0; i < other.size(); i++){
 				// Если это не заголовок контента, то добавляем в список остальные заголовки
-				if(toLowerCase(other[i]).find("content-length:") == std::string::npos) str += (other[i] + "\r\n");
+				if(std::string(toCase(other[i].c_str())).find("content-length:") == std::string::npos) str += (other[i] + "\r\n");
 			}
 			// Добавляем заголовок connection
 			if(connection != NULL) str += std::string("Connection: ") + std::string(connection) + "\r\n";
@@ -579,22 +583,13 @@ class Http {
 			std::vector <std::string> ().swap(other);
 			std::vector <std::string> ().swap(headers);
 		}
-		
-		// Метод неудачной авторизации
-		const char * faultAuth(){
-			return html[11];
+		// Метод определения нужно ли держать соединение для прокси
+		bool isAlive(){
+			// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
+			if(!strcmp(version, "1.1") && (pconnection != NULL)
+			&& !strcmp(toCase(pconnection), "keep-alive")) return true;
+			else return false;
 		}
-	
-		// Метод запроса ввода логина и пароля
-		const char * requiredAuth(){
-			return html[2];
-		}
-	
-		// Метод подтверждения авторизации
-		const char * authSuccess(){
-			return html[0];
-		}
-
 		// Функция проверки на то http это или нет
 		bool isHttp(const char * buffer){
 			// Если буфер существует
@@ -608,7 +603,7 @@ class Http {
 				// Устанавливаем завершающий символ
 				buf[3] = '\0';
 				// Переходим по всему массиву команд
-				for(int i = 0; i < 8; i++) if(!strcmp(toLowerCase(buf).c_str(), cmds[i])) return true;
+				for(int i = 0; i < 8; i++) if(!strcmp(toCase(buf), cmds[i])) return true;
 			}
 			// Сообщаем что это не http
 			return false;
@@ -656,12 +651,20 @@ class Http {
 			// Возвращаем что ничего еще не найдено
 			return false;
 		}
-		// Метод определения нужно ли держать соединение для прокси
-		bool isAlive(){
-			// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
-			if(!strcmp(version, "1.1") && (pconnection != NULL)
-			&& !strcmp(toLowerCase(pconnection).c_str(), "keep-alive")) return true;
-			else return false;
+		// Метод неудачной авторизации
+		const char * faultAuth(){
+			// Выводим шаблон сообщения о неудачной авторизации
+			return html[5];
+		}
+		// Метод запроса ввода логина и пароля
+		const char * requiredAuth(){
+			// Выводим шаблон сообщения о требовании авторизации
+			return html[2];
+		}
+		// Метод подтверждения авторизации
+		const char * authSuccess(){
+			// Выводим шаблон сообщения о том что авторизация пройдена
+			return html[0];
 		}
 		// Метод получения метода запроса
 		const char * getMethod(){
@@ -714,7 +717,7 @@ class Http {
 			return (port != NULL ? ::atoi(port) : 0);
 		}
 		// Метод получения версии протокола запроса
-		double getVersion(){
+		float getVersion(){
 			// Выводим значение переменной
 			return (version != NULL ? ::atof(version) : 0);
 		}
