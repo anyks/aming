@@ -919,17 +919,6 @@ void handle_handshake(int sock){
 					// Выходим
 					break;
 				}
-				
-				/*
-				// Если это не метод connect
-				if(strcmp(http->getMethod(), "connect")){
-					// Определяем статус подключения
-					if(!http->isAlive()) break;
-					else {
-						std::cout << " Держим подключение!!! " << endl; 2695
-					}
-				}
-				*/
 			// Если это шифрованное сообщение тогда отправляем шифрованные данные
 			} else if(ssl && !ishttp) {
 				// Выводим сообщение
