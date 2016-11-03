@@ -101,7 +101,7 @@ class Http {
 			char * protocol	= NULL;	// Протокол
 		};
 		// Основные переменные
-		int socket			= 0;	// Идентификатор сокета
+		char * name			= NULL;	// Название прокси сервера
 		char * query		= NULL;	// Исходный запрос
 		char * command		= NULL;	// Команда запроса
 		char * method		= NULL;	// Метод запроса
@@ -122,6 +122,95 @@ class Http {
 		std::vector <std::string> other;
 		// Массив заголовков
 		std::vector <std::string> headers;
+
+		char * html[12] = {
+			"HTTP/1.0 200 Connection established\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n\r\n",
+
+			"HTTP/1.1 100 Continue\r\n\r\n",
+
+			"HTTP/1.0 407 Proxy Authentication Required\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>407 Proxy Authentication Required</title></head>\r\n"
+			"<body><h2>407 Proxy Authentication Required</h2><h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3></body></html>\r\n",
+			
+			"HTTP/1.0 400 Bad Request\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>400 Bad Request</title></head>\r\n"
+			"<body><h2>400 Bad Request</h2></body></html>\r\n",
+
+			"HTTP/1.0 502 Bad Gateway\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>502 Bad Gateway</title></head>\r\n"
+			"<body><h2>502 Bad Gateway</h2><h3>Host Not Found or connection failed</h3></body></html>\r\n",
+
+			"HTTP/1.0 503 Service Unavailable\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>503 Service Unavailable</title></head>\r\n"
+			"<body><h2>503 Service Unavailable</h2><h3>You have exceeded your traffic limit</h3></body></html>\r\n",
+
+			"HTTP/1.0 503 Service Unavailable\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>503 Service Unavailable</title></head>\r\n"
+			"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n",
+
+			"HTTP/1.0 501 Not Implemented\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>501 Not Implemented</title></head>\r\n"
+			"<body><h2>501 Not Implemented</h2><h3>Required action is not supported by proxy server</h3></body></html>\r\n",
+
+			"HTTP/1.0 502 Bad Gateway\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>502 Bad Gateway</title></head>\r\n"
+			"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n",
+
+			"HTTP/1.0 500 Internal Error\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>500 Internal Error</title></head>\r\n"
+			"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n",
+
+			"HTTP/1.0 404 Not Found\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>404 Not Found</title></head>\r\n"
+			"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n",
+
+			"HTTP/1.0 403 Forbidden\r\n"
+			"Proxy-agent: ProxyApp/1.1\r\n"
+			"Proxy-Connection: close\r\n"
+			"Content-type: text/html; charset=utf-8\r\n"
+			"\r\n"
+			"<html><head><title>403 Access Denied</title></head>\r\n"
+			"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n"
+		};
+
 		// Функция разбиения строки на указанные составляющие
 		std::vector<std::string> split(const std::string str, const char * delim){
 			// Начальный символ для обрезки строки
@@ -456,71 +545,20 @@ class Http {
 			// Устанавливаем значение переменной
 			setVar(str.c_str(), head);
 		}
-		// Функция чтения данных данных из сокета
-		void readSocket(int sock){
-			// Если сокет верный
-			if(sock > -1){
-				// Запоминаем сокет
-				socket = sock;
-				// Создаем буфер
-				char * buffer = new char[4096];
-				// Количество считанных данных из буфера
-				int bits_size = 0;
-				// Размер передаваемых в теле данных
-				std::string len_data;
-				// Выполняем чтение данных из сокета
-				while(true){
-					// Считываем данные из буфера
-					size_t size = recv(socket, &buffer[bits_size], 256, 0);
-					// Запоминаем количество считанных байтов
-					bits_size += size;
-					// Устанавливаем завершение строки
-					buffer[bits_size] = '\0';
-					// Выполняем поиск значения размера данных
-					if(!len_data.length()){
-						// Выполняем поиск размера передаваемых данных
-						len_data = findHeaderParam("Content-length", buffer);
-						// Если все данные переданы то выходим
-						if(!len_data.length() && (strstr(buffer, "\r\n\r\n") != NULL)) break;
-					// Сообщаем что размер найден
-					} else if(strstr(buffer, "\r\n\r\n") != NULL) {
-						// Запоминаем полученный буфер
-						std::string str = buffer, result;
-						// Позиция конца заголовков
-						int pos = str.find("\r\n\r\n");
-						// Выполняем чтение данных
-						result = str.substr(pos, str.length() - pos);
-						// Удаляем все переносы строк
-						result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
-						result.erase(std::remove(result.begin(), result.end(), '\n'), result.end());
-						// Вырезаем пробелы
-						trim(result);
-						// Если все байты считаны
-						if(result.length() >= atoi(len_data.c_str())){
-							// Запоминаем данные тела запроса
-							setVar(result.c_str(), entitybody);
-							// Выходим из функции
-							break;
-						}
-					}
-				}
-				// Выполняем парсинг заголовков http запроса
-				parser(buffer);
-				// Выполняем генерацию результирующего запроса
-				createHead();
-				// Удаляем буфер
-				delete [] buffer;
-			}
-		}
 	public:
 		// Конструктор
-		Http(int sock){
-			// Выполняем чтение из сокета
-			readSocket(sock);
+		Http(const char * str){
+			// Если имя передано то запоминаем его
+			if((str != NULL) && strlen(str))
+				// Устанавливаем название прокси
+				setVar(str, name);
+			// Устанавливаем название по умолчанию
+			else setVar("AnyksProxy", name);
 		}
 		// Деструктор
 		~Http(){
 			// Очищаем выделенную память под переменные
+			delete [] name;
 			delete [] query;
 			delete [] command;
 			delete [] method;
@@ -541,6 +579,90 @@ class Http {
 			std::vector <std::string> ().swap(other);
 			std::vector <std::string> ().swap(headers);
 		}
+		
+		// Метод неудачной авторизации
+		const char * faultAuth(){
+			return html[11];
+		}
+	
+		// Метод запроса ввода логина и пароля
+		const char * requiredAuth(){
+			return html[2];
+		}
+	
+		// Метод подтверждения авторизации
+		const char * authSuccess(){
+			return html[0];
+		}
+
+		// Функция проверки на то http это или нет
+		bool isHttp(const char * buffer){
+			// Если буфер существует
+			if(strlen(buffer)){
+				// Создаем новый буфер
+				char buf[4];
+				// Шаблон основных комманд
+				char cmds[8][4] = {"get", "hea", "pos", "put", "pat", "del", "tra", "con"};
+				// Копируем нужное количество символов
+				strncpy(buf, buffer, 3);
+				// Устанавливаем завершающий символ
+				buf[3] = '\0';
+				// Переходим по всему массиву команд
+				for(int i = 0; i < 8; i++) if(!strcmp(toLowerCase(buf).c_str(), cmds[i])) return true;
+			}
+			// Сообщаем что это не http
+			return false;
+		}
+		// Функция получения статуса
+		bool parse(const char * buffer){
+			// Выполняем поиск размера передаваемых данных
+			std::string len_data = findHeaderParam("Content-length", buffer);
+			// Символы завершения ввода заголовков
+			const char * endPos = strstr(buffer, "\r\n\r\n");
+			// Если все данные переданы то выходим
+			if(!len_data.length() && (endPos != NULL)){
+				// Выполняем парсинг заголовков http запроса
+				parser(buffer);
+				// Выполняем генерацию результирующего запроса
+				createHead();
+				// Выходим
+				return true;
+			// Сообщаем что размер найден
+			} else if(endPos != NULL) {
+				// Получаем длину передаваемых данных
+				const int len = ::atoi(len_data.c_str());
+				// Создаем новый буфер с данными
+				char * buf = new char[len + 1];
+				// Выполдняем копирование найденных данных в буфер
+				strncpy(buf, endPos + 4, len);
+				// Устанавливаем конец строки
+				buf[len] = '\0';
+				// Если все байты считаны
+				if(strlen(buf) >= len){
+					// Запоминаем данные тела запроса
+					setVar(buf, entitybody);
+					// Выполняем парсинг заголовков http запроса
+					parser(buffer);
+					// Выполняем генерацию результирующего запроса
+					createHead();
+					// Выполняем удаление неиспользуемого буфера
+					delete [] buf;
+					// Выходим из функции
+					return true;
+				}
+				// Выполняем удаление неиспользуемого буфера
+				delete [] buf;
+			}
+			// Возвращаем что ничего еще не найдено
+			return false;
+		}
+		// Метод определения нужно ли держать соединение для прокси
+		bool isAlive(){
+			// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
+			if(!strcmp(version, "1.1") && (pconnection != NULL)
+			&& !strcmp(toLowerCase(pconnection).c_str(), "keep-alive")) return true;
+			else return false;
+		}
 		// Метод получения метода запроса
 		const char * getMethod(){
 			// Выводим значение переменной
@@ -551,11 +673,6 @@ class Http {
 			// Выводим значение переменной
 			return (host != NULL ? host : "");
 		}
-		// Метод получения порта запроса
-		const char * getPort(){
-			// Выводим значение переменной
-			return (port != NULL ? port : "");
-		}
 		// Метод получения пути запроса
 		const char * getPath(){
 			// Выводим значение переменной
@@ -565,11 +682,6 @@ class Http {
 		const char * getProtocol(){
 			// Выводим значение переменной
 			return (protocol != NULL ? protocol : "");
-		}
-		// Метод получения версии протокола запроса
-		const char * getVersion(){
-			// Выводим значение переменной
-			return (version != NULL ? version : "");
 		}
 		// Метод получения метода авторизации запроса
 		const char * getAuth(){
@@ -590,6 +702,21 @@ class Http {
 		const char * getUseragent(){
 			// Выводим значение переменной
 			return (useragent != NULL ? useragent : "");
+		}
+		// Метод получения http запроса
+		const char * getQuery(){
+			// Выводим значение переменной
+			return (head != NULL ? head : "");
+		}
+		// Метод получения порта запроса
+		int getPort(){
+			// Выводим значение переменной
+			return (port != NULL ? ::atoi(port) : 0);
+		}
+		// Метод получения версии протокола запроса
+		double getVersion(){
+			// Выводим значение переменной
+			return (version != NULL ? ::atof(version) : 0);
 		}
 		// Метод установки метода запроса
 		void setMethod(const char * str){
@@ -647,13 +774,6 @@ class Http {
 			// Выполняем генерацию результирующего запроса
 			createHead();
 		}
-		// Метод определения нужно ли держать соединение для прокси
-		bool isAlive(){
-			// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
-			if(!strcmp(version, "1.1") && (pconnection != NULL)
-			&& !strcmp(toLowerCase(pconnection).c_str(), "keep-alive")) return true;
-			else return false;
-		}
 };
 
 TServer get_host_lock;	// Блокировки запроса данных с хоста
@@ -682,103 +802,148 @@ void sigterm_handler(int signal){
 	exit(0); // Выходим
 }
 
-// Функция получения данных из сокета
-int recv_sock(int sock, char * buffer, uint32_t size){
-	int index = 0, ret;
-	while(size){
-		if((ret = recv(sock, &buffer[index], size, 0)) <= 0) return (!ret) ? index : -1;
-		index += ret;
-		size -= ret;
+// Функция отправки данных клиенту
+bool sendClient(int sock, const char * buffer){
+	// Общее количество отправленных байт
+	int total = 0, bytes = 1;
+	// Получаем размер байтов для отправки
+	size_t size = strlen(buffer);
+	// Отправляем данные до тех пор пока не уйдут
+	while(total < size){
+		// Если произошла ошибка отправки то сообщаем об этом и выходим
+		if((bytes = send(sock, (void *) (buffer + total), size - total, 0)) < 0) return false;
+		// Считаем количество отправленных байт
+		total += bytes;
 	}
-
-	std::cout << " buffer read " << buffer << endl;
-
-	return index;
+	// Сообщаем что все удачно отправлено
+	return true;
 }
 
-// Функция отправки данных в сокет
-int send_sock(int sock, const char * buffer, uint32_t size){
-	int index = 0, ret;
-	
-	std::cout << " buffer write " << buffer << endl;
 
-	while(size){
-		if((ret = send(sock, &buffer[index], size, 0)) <= 0) return (!ret) ? index : -1;
-		index += ret;
-		size -= ret;
-	}
-	return index;
+// Функция проверки логина и пароля
+bool check_auth(Http * &http){
+	// Логин
+	const char * username = "zdD786KeuS";
+	// Проль
+	const char * password = "k.frolovv@gmail.com";
+	// Проверяем логин и пароль
+	if(!strcmp(http->getLogin(), username)
+	&& !strcmp(http->getPassword(), password)) return true;
+	else return false;
 }
-
-/*
-void writeToclientSocket(const char* buff_to_server,int sockfd,int buff_length)
-{
-
-	string temp;
-
-	temp.append(buff_to_server);
-
-	int totalsent = 0;
-
-	int senteach;
-
-	while (totalsent < buff_length) {
-		if ((senteach = send(sockfd, (void *) (buff_to_server + totalsent), buff_length - totalsent, 0)) < 0) {
-			fprintf (stderr," Error in sending to server ! \n");
-				exit (1);
-		}
-		totalsent += senteach;
-
-	}
-
-}
-*/
-
 
 // Функция обработки входящих данных с клиента
-bool handle_handshake(int sock){
+void handle_handshake(int sock){
+	// Создаем объект для работы с http заголовками
+	Http * http = new Http("anyks");
+	// Максимальный размер буфера
+	size_t max_bufsize = 4096;
+	// Создаем буфер
+	char * buffer = new char[(const size_t) max_bufsize];
+	// Количество считанных данных из буфера
+	int bits_size = 0, size = 0;
+	// Прошла ли авторизация
+	bool auth = false, ssl = false, ishttp = false;
+	// Выполняем чтение данных из сокета
+	while(true){
+		// Выполняем чтение данных из сокета
+		if((size = recv(sock, &buffer[bits_size], 255, 0)) < 0){
+			// Сообщаем что произошла ошибка
+			std::cout << " Error in read socket!" << endl;
+			// Выходим
+			break;
+		// Если все норм то продолжаем работу
+		} else {
+			// Выполняем проверку на тип запроса
+			ishttp = http->isHttp(buffer);
+			// Запоминаем количество считанных байтов
+			bits_size += size;
+			// Устанавливаем завершение строки
+			if(ishttp) buffer[bits_size] = '\0';
+			// Если количество передаваемых данных превысило заложенный то расширяем максимальный размер
+			if(bits_size > max_bufsize){
+				// Увеличиваем размер буфера
+				max_bufsize *= 2;
+				// Выделяем еще памяти под буфер
+				buffer = (char *) realloc(buffer, max_bufsize);
+				// Если память выделить нельзя то выводим ошибку и выходим
+				if(buffer == NULL){
+					// Выводим сообщение об ошибке
+					std::cout << "Error in memory re-allocation!" << endl;
+					// Выходим
+					break;
+				}
+			}
+			// Выполняем парсинг полученных данных
+			if(http->parse(buffer)){
+				// Если это метод коннект
+				bool connect = false;
+				// Запоминаем метод подключения
+				if(!strcmp(http->getMethod(), "connect")) connect = true;
+				// Если авторизация не прошла
+				if(!auth){
+					// Если авторизация удачная
+					if(check_auth(http)){
+						// Запоминаем что авторизация прошла
+						auth = true;
+						// Определяем порт, если это шифрованное сообщение то будем считывать данные целиком
+						if(connect){
+							// Запоминаем что авторизация прошла удачно
+							ssl = true;
+							// Сообщаем что авторизация удачная
+							sendClient(sock, http->authSuccess());
+						}
+					// Если нужно запросить пароль
+					} else if(!strlen(http->getLogin()) || !strlen(http->getPassword())) {
+						// Сообщаем что нужна авторизация
+						sendClient(sock, http->requiredAuth());
+						// Выходим
+						break;
+					// Сообщаем что авторизация не удачная
+					} else {
+						// Сообщаем что авторизация не удачная
+						sendClient(sock, http->faultAuth());
+						// Выходим
+						break;
+					}
+				}
+				// Если это коннект то обнуляем буфер для чтения новых данных
+				if(connect) bits_size = 0;
+				// Иначе делаем запрос на получение данных
+				else {
+					// Выводим сообщение
+					std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
 
-	Http * http = new Http(sock);
+					// http сервис
+					std::cout << "Делаем запрос на получение данных (http):\n" << http->getQuery() << endl;
+					// Выходим
+					break;
+				}
+				
+				/*
+				// Если это не метод connect
+				if(strcmp(http->getMethod(), "connect")){
+					// Определяем статус подключения
+					if(!http->isAlive()) break;
+					else {
+						std::cout << " Держим подключение!!! " << endl; 2695
+					}
+				}
+				*/
+			// Если это шифрованное сообщение тогда отправляем шифрованные данные
+			} else if(ssl && !ishttp) {
+				// Выводим сообщение
+				std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
 
-	// std::cout << ", method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << endl;
-	std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
-
-	std::cout << (http->isAlive() ? " Постоянное подключение к прокси " : " Запрос - ответа ") << endl;
-
-	http->setUseragent("Test user agent");
-
-	std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
-
-	// reinterpret_cast <const char *> (buffer)
-	//const char * dd = "HTTP/1.1 200 Connection established\r\n\r\n";
-	// writeToclientSocket(dd, sock, strlen(dd));
-
-	delete http;
-
-	return false;
-	/*
-	// Структура данных для чтения входящих параметров
-	MethodIdentificationPacket packet;
-	// Считываем данные из сокета
-	int read_size = recv_sock(sock, (char *) &packet, sizeof(MethodIdentificationPacket));
-	// Если считано данных не достаточно или версия пртокола не 5 то выходим
-	if(read_size != sizeof(MethodIdentificationPacket) || packet.version != 5) return false;
-	// Считываем данные в буфер, с указанным методом
-	if(recv_sock(sock, buffer, packet.nmethods) != packet.nmethods) return false;
-	// Создаем структуру для отправки клиенту
-	MethodSelectionPacket response(METHOD_NOTAVAILABLE);
-	// Устанавливаем тип авторизации
-	for(unsigned i(0); i < packet.nmethods; ++i){
-		// Сообщаем что авторизация не требуется
-		if(buffer[i] == METHOD_NOAUTH) response.method = METHOD_NOAUTH;
-		// Сообщаем что авторизация требуется
-		// if(buffer[i] == METHOD_AUTH) response.method = METHOD_AUTH;
+				// https сервис
+				std::cout << "Делаем запрос на получение данных (https)" << endl;
+				// Выходим
+				break;
+			}
+		}
 	}
-	// Отправляем требование клиенту
-	if(send_sock(sock, (const char *) &response, sizeof(MethodSelectionPacket)) != sizeof(MethodSelectionPacket) || response.method == METHOD_NOTAVAILABLE) return false;
-	// Выполняем проверку авторизации
-	return ((response.method == METHOD_AUTH) ? check_auth(sock) : true);
-	*/
+	// Удаляем объект
+	delete http;
 }
 
 // Функция обработки данных из потока
@@ -787,7 +952,6 @@ void * handle_connection(void * arg){
 	int sock = (uint64_t) arg;
 	// Выполняем проверку авторизации и спрашиваем что надо клиенту, если удачно то делаем запрос на получение данных
 	handle_handshake(sock);
-	// if(handle_handshake(sock, buffer)) handle_request(sock, buffer);
 	// Выключаем подключение
 	shutdown(sock, SHUT_RDWR);
 	// Закрываем сокет
