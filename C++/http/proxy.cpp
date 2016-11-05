@@ -214,11 +214,11 @@ class Http {
 			"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
 		};
 		// Функция разбиения строки на указанные составляющие
-		std::vector<std::string> split(const std::string str, const char * delim){
+		std::vector <std::string> split(const std::string str, const char * delim){
 			// Начальный символ для обрезки строки
 			int i = 0;
 			// Результирующий вектор
-			std::vector<std::string> result;
+			std::vector <std::string> result;
 			// Строка в которой производим поиск
 			std::string s = str.c_str();
 			// Позиция разделителя в строке
@@ -244,7 +244,9 @@ class Http {
 			// Создаем новую пустую строку
 			var = new char[strlen(str) + 1];
 			// Выполняем копирование строки
-			std::strcpy(var, str);
+			strcpy(var, str);
+			// Добавляем конец строки
+			var[strlen(var)] = '\0';
 		}
 		// Функция перевода в нижний регистр
 		const char * toCase(const char * str, bool flag = false){
@@ -263,34 +265,60 @@ class Http {
 			return ptr;
 		}
 		// Функция удаления пробелов и переносов строк
-		std::string trim(std::string &str){
-			str.erase(0, str.find_first_not_of(" "));	// Начальный пробел
-			str.erase(str.find_last_not_of(" ") + 1);	// Конечный пробел
+		const char * trim(const char * str){
+			// Получаем временную строку
+			char * ttr = strdup(str);
+			// Убираем все пробелы с начала строки
+			while(isspace((unsigned char) * ttr)) ttr++;
+			// Если это конец строки тогда выходим
+			if(* ttr == 0) return ttr;
+			// Определяем конец строки
+			char * end = ttr + strlen(ttr) - 1;
+			// Убираем все пробелы с конца строки
+			while((end > ttr) && isspace((unsigned char) * end)) end--;
+			// Устанавливаем конец строки
+			* (end + 1) = 0;
 			// Выводим результат
-			return str;
+			return ttr;
 		}
 		// Функция получения содержимое заголовка
 		std::string getHeaderParam(const char * head, const char * param){
 			// Запоминаем переданные параметры
-			std::string str, h = head, p = std::string(param) + ":";
+			std::string str, h = head;
+			// Создаем новый буфер памяти
+			char * p = new char[strlen(param) + 2];
+			// Выполняем копирование строки
+			strcpy(p, param);
+			// Копируем остальные символы
+			strcat(p, ":");
+			// Устанавливаем завершение строки
+			p[strlen(p)] = '\0';
 			// Выполняем поиск заголовка
-			size_t pos = std::string(toCase(h.c_str())).find(toCase(p.c_str()));
+			size_t pos = std::string(toCase(h.c_str())).find(toCase(p));
 			// Если заголовок найден
 			if(pos != std::string::npos){
 				// Извлекаем данные
-				str = h.substr(pos + p.length(), (h.length() - (pos + p.length())));
-				// Вырезаем пробелы
-				trim(str);
+				str = trim(h.substr(pos + strlen(p), (h.length() - (pos + strlen(p)))).c_str());
 			}
+			// Удаляем выделенную ранее память
+			delete [] p;
 			// Выводим результат
 			return str;
 		}
 		// Функция поиска значение заголовка
 		std::string findHeaderParam(const char * st, const char * buf){
 			// Результирующая строка
-			std::string str, istr = std::string(toCase(st)) + ":";
+			std::string str;
+			// Создаем новый буфер памяти
+			char * istr = new char[strlen(st) + 2];
+			// Выполняем копирование строки
+			strcpy(istr, toCase(st));
+			// Копируем остальные символы
+			strcat(istr, ":");
+			// Устанавливаем завершение строки
+			istr[strlen(istr)] = '\0';
 			// Ищем начало заголовка Content-length
-			size_t pos1 = std::string(toCase(buf)).find(istr.c_str());
+			size_t pos1 = std::string(toCase(buf)).find(istr);
 			// Ищем конец заголовка Content-length
 			size_t pos2 = std::string(toCase(buf)).find("\r\n", pos1);
 			// Если заголовок найден
@@ -298,14 +326,14 @@ class Http {
 				// Получаем размер всей строки
 				int length = strlen(buf);
 				// Определяем начальную позицию
-				int start = pos1 + istr.length();
+				int start = pos1 + strlen(istr);
 				// Определяем конечную позицию
 				int end = length - ((length - start) + (length - pos2));
 				// Извлекаем данные заголовка
-				str = std::string(buf).substr(start, end);
-				// Вырезаем пробелы
-				trim(str);
+				str = trim(std::string(buf).substr(start, end).c_str());
 			}
+			// Удаляем выделенную ранее память
+			delete [] istr;
 			// Выводим результат
 			return str;
 		}
@@ -322,7 +350,7 @@ class Http {
 			// Если протокол найден
 			if(pos != std::string::npos){
 				// Выполняем разделение на протокол
-				std::vector<std::string> prt = split(s.c_str(), "://");
+				std::vector <std::string> prt = split(s.c_str(), "://");
 				// Запоминаем размер массива
 				size = prt.size();
 				// Если протокол найден
@@ -341,7 +369,7 @@ class Http {
 			// Если хост и порт найдены
 			if(pos != std::string::npos){
 				// Выполняем разделение на протокол
-				std::vector<std::string> prt = split(s.c_str(), ":");
+				std::vector <std::string> prt = split(s.c_str(), ":");
 				// Запоминаем размер массива
 				size = prt.size();
 				// Если порт и хост найдены
@@ -385,7 +413,7 @@ class Http {
 		// Функция парсера http запроса
 		void parser(const char * buffer){
 			// Если буфер верный
-			if(strlen(buffer)){
+			if((buffer != NULL) && strlen(buffer)){
 				// Запоминаем первоначальный запрос
 				setVar(buffer, query);
 				// Выполняем парсинг заголовков
@@ -397,7 +425,7 @@ class Http {
 					// Запоминаем команду запроса
 					setVar(headers[0].c_str(), command);
 					// Разделяем на составляющие команду
-					std::vector<std::string> cmd = split(command, " ");
+					std::vector <std::string> cmd = split(command, " ");
 					// Получаем размер массива
 					size = cmd.size();
 					// Если комманда существует
@@ -407,7 +435,7 @@ class Http {
 						// Запоминаем путь запроса
 						setVar(cmd[1].c_str(), path);
 						// Разбиваем протокол и тип протокола на части
-						std::vector<std::string> prt = split(cmd[2].c_str(), "/");
+						std::vector <std::string> prt = split(cmd[2].c_str(), "/");
 						// Получаем размер массива
 						size = prt.size();
 						// Если данные найдены
@@ -448,6 +476,15 @@ class Http {
 										|| !strcmp(toCase(path), toCase(fulladdr2.c_str()))
 										|| !strcmp(toCase(path), toCase(fulladdr3.c_str()))
 										|| !strcmp(toCase(path), toCase(fulladdr4.c_str())))) setVar("/", path);
+										// Выполняем удаление из адреса доменного имени
+										else if(strstr(path, fulladdr1.c_str()) != NULL){
+											// Запоминаем текущий путь
+											std::string tmp_path = path;
+											// Вырезаем домер из пути
+											tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
+											// Если путь существует
+											if(tmp_path.length()) setVar(tmp_path.c_str(), path);
+										}
 										// Запоминаем хост
 										setVar(toCase(scon.host), host);
 										// Запоминаем порт
@@ -466,7 +503,7 @@ class Http {
 									// Если авторизация найдена
 									} else if(ath.length()){
 										// Выполняем разделение на тип и данные авторизации
-										std::vector<std::string> lgn = split(ath.c_str(), " ");
+										std::vector <std::string> lgn = split(ath.c_str(), " ");
 										// Запоминаем размер массива
 										size = lgn.size();
 										// Если данные получены
@@ -482,7 +519,7 @@ class Http {
 												// Если протокол найден
 												if(pos != std::string::npos){
 													// Выполняем разделение на логин и пароль
-													std::vector<std::string> lp = split(dauth.c_str(), ":");
+													std::vector <std::string> lp = split(dauth.c_str(), ":");
 													// Запоминаем размер массива
 													size = lp.size();
 													// Если данные получены
@@ -527,27 +564,76 @@ class Http {
 		void createHead(){
 			// Если это не метод CONNECT то меняем заголовок Connection на close
 			if((entitybody == NULL) && !strcmp(version, "1.0")) setVar("close", connection);
-			// Переменная с заголовком
-			std::string str = std::string(command) + "\r\n";
-			// Добавляем данные хоста
-			str += std::string("Host: ") + std::string(host) + std::string(":") + std::string(port) + "\r\n";
+			// Формируем размер буфера
+			size_t size = 0
+				// Размеря для строки запроса
+				+ strlen(method) + strlen(path) + strlen(version) + 9
+				// Размер заголовка Host
+				+ strlen(host) + strlen(port) + 9;
 			// Добавляем useragent
-			if(useragent != NULL) str += std::string("User-Agent: ") + std::string(useragent) + "\r\n";
+			if(useragent != NULL) size += strlen(useragent) + 14;
 			// Добавляем остальные заголовки
 			for(int i = 0; i < other.size(); i++){
 				// Если это не заголовок контента, то добавляем в список остальные заголовки
-				if(std::string(toCase(other[i].c_str())).find("content-length:") == std::string::npos) str += (other[i] + "\r\n");
+				if(std::string(toCase(other[i].c_str())).find("content-length:") == std::string::npos) size += other[i].length() + 2;
 			}
 			// Добавляем заголовок connection
-			if(connection != NULL) str += std::string("Connection: ") + std::string(connection) + "\r\n";
+			if(connection != NULL) size += (strlen(connection) + 14);
 			// Если тело запроса существует то добавляем размер тела
-			if(entitybody != NULL) str += std::string("Content-Length: ") + std::to_string(strlen(entitybody)) + "\r\n";
+			if(entitybody != NULL) size += ::atoi(std::to_string(strlen(entitybody)).c_str()) + strlen(entitybody) + 18;
 			// Добавляем конец запроса
-			str += "\r\n";
+			size += 3;
+			// Создаем новый буфер памяти
+			char * str = new char[(size_t) size];
+			// Выполняем копирование строки
+			strcpy(str, toCase(method, true));
+			// Копируем остальные символы
+			strcat(str, " ");
+			strcat(str, path);
+			strcat(str, " ");
+			strcat(str, "HTTP/");
+			strcat(str, version);
+			strcat(str, "\r\n");
+			strcat(str, "Host: ");
+			strcat(str, host);
+			strcat(str, ":");
+			strcat(str, port);
+			strcat(str, "\r\n");
+			// Добавляем useragent
+			if(useragent != NULL){
+				strcat(str, "User-Agent: ");
+				strcat(str, useragent);
+				strcat(str, "\r\n");
+			}
+			// Добавляем остальные заголовки
+			for(int i = 0; i < other.size(); i++){
+				// Если это не заголовок контента, то добавляем в список остальные заголовки
+				if(std::string(toCase(other[i].c_str())).find("content-length:") == std::string::npos){
+					strcat(str, other[i].c_str());
+					strcat(str, "\r\n");
+				}
+			}
+			// Добавляем заголовок connection
+			if(connection != NULL){
+				strcat(str, "Connection: ");
+				strcat(str, connection);
+				strcat(str, "\r\n");
+			}
+			// Если тело запроса существует то добавляем размер тела
+			if(entitybody != NULL){
+				strcat(str, "Content-Length: ");
+				strcat(str, std::to_string(strlen(entitybody)).c_str());
+				strcat(str, "\r\n");
+			}
+			strcat(str, "\r\n");
 			// Если существует тело запроса то добавляем его
-			if(entitybody != NULL) str += std::string(entitybody);
+			if(entitybody != NULL) strcat(str, entitybody);
+			// Устанавливаем завершение строки
+			str[strlen(str)] = '\0';
 			// Устанавливаем значение переменной
-			setVar(str.c_str(), head);
+			setVar(str, head);
+			// Удаляем выделенную ранее память
+			delete [] str;
 		}
 	public:
 		// Конструктор
@@ -557,7 +643,7 @@ class Http {
 				// Устанавливаем название прокси
 				setVar(str, name);
 			// Устанавливаем название по умолчанию
-			else setVar("AnyksProxy", name);
+			else setVar("ANYKS", name);
 		}
 		// Деструктор
 		~Http(){
@@ -593,7 +679,7 @@ class Http {
 		// Функция проверки на то http это или нет
 		bool isHttp(const char * buffer){
 			// Если буфер существует
-			if(strlen(buffer)){
+			if((buffer != NULL) && strlen(buffer)){
 				// Создаем новый буфер
 				char buf[4];
 				// Шаблон основных комманд
@@ -807,16 +893,19 @@ void sigterm_handler(int signal){
 
 // Функция отправки данных клиенту
 bool sendClient(int sock, const char * buffer){
-	// Общее количество отправленных байт
-	int total = 0, bytes = 1;
-	// Получаем размер байтов для отправки
-	size_t size = strlen(buffer);
-	// Отправляем данные до тех пор пока не уйдут
-	while(total < size){
-		// Если произошла ошибка отправки то сообщаем об этом и выходим
-		if((bytes = send(sock, (void *) (buffer + total), size - total, 0)) < 0) return false;
-		// Считаем количество отправленных байт
-		total += bytes;
+	// Если данные переданы верные
+	if((sock > -1) && (buffer != NULL)){
+		// Общее количество отправленных байт
+		int total = 0, bytes = 1;
+		// Получаем размер байтов для отправки
+		size_t size = strlen(buffer);
+		// Отправляем данные до тех пор пока не уйдут
+		while(total < size){
+			// Если произошла ошибка отправки то сообщаем об этом и выходим
+			if((bytes = send(sock, (void *) (buffer + total), size - total, 0)) < 0) return false;
+			// Считаем количество отправленных байт
+			total += bytes;
+		}
 	}
 	// Сообщаем что все удачно отправлено
 	return true;
