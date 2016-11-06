@@ -565,11 +565,11 @@ class Http {
 			// Если это не метод CONNECT то меняем заголовок Connection на close
 			if((entitybody == NULL) && !strcmp(version, "1.0")) setVar("close", connection);
 			// Формируем размер буфера
-			size_t size = 0
-				// Размеря для строки запроса
-				+ strlen(method) + strlen(path) + strlen(version) + 9
-				// Размер заголовка Host
-				+ strlen(host) + strlen(port) + 9;
+			size_t size = 0;
+			// Размеря для строки запроса
+			size += strlen(method) + strlen(path) + strlen(version) + 9;
+			// Размер заголовка Host
+			size += strlen(host) + strlen(port) + 9;
 			// Добавляем useragent
 			if(useragent != NULL) size += strlen(useragent) + 14;
 			// Добавляем остальные заголовки
@@ -737,6 +737,16 @@ class Http {
 			// Возвращаем что ничего еще не найдено
 			return false;
 		}
+		// Метод неудачного отправленного запроса
+		const char * brokenRequest(){
+			// Выводим шаблон сообщения о неудачном отправленном запросе
+			return html[9];
+		}
+		// Метод неудачного подключения к удаленному серверу
+		const char * faultConnect(){
+			// Выводим шаблон сообщения о неудачном подключении
+			return html[6];
+		}
 		// Метод неудачной авторизации
 		const char * faultAuth(){
 			// Выводим шаблон сообщения о неудачной авторизации
@@ -891,27 +901,6 @@ void sigterm_handler(int signal){
 	exit(0); // Выходим
 }
 
-// Функция отправки данных клиенту
-bool sendClient(int sock, const char * buffer){
-	// Если данные переданы верные
-	if((sock > -1) && (buffer != NULL)){
-		// Общее количество отправленных байт
-		int total = 0, bytes = 1;
-		// Получаем размер байтов для отправки
-		size_t size = strlen(buffer);
-		// Отправляем данные до тех пор пока не уйдут
-		while(total < size){
-			// Если произошла ошибка отправки то сообщаем об этом и выходим
-			if((bytes = send(sock, (void *) (buffer + total), size - total, 0)) < 0) return false;
-			// Считаем количество отправленных байт
-			total += bytes;
-		}
-	}
-	// Сообщаем что все удачно отправлено
-	return true;
-}
-
-
 // Функция проверки логина и пароля
 bool check_auth(Http * &http){
 	// Логин
@@ -924,10 +913,168 @@ bool check_auth(Http * &http){
 	else return false;
 }
 
+// Функция отправки данных клиенту
+bool sendClient(int sock, const char * buffer, size_t length){
+	// Если данные переданы верные
+	if((sock > -1) && (buffer != NULL)){
+		// Общее количество отправленных байт
+		int total = 0, bytes = 1;
+		// Отправляем данные до тех пор пока не уйдут
+		while(total < length){
+			// Если произошла ошибка отправки то сообщаем об этом и выходим
+			if((bytes = send(sock, (void *) (buffer + total), length - total, 0)) < 0) return false;
+			// Считаем количество отправленных байт
+			total += bytes;
+		}
+	}
+	// Сообщаем что все удачно отправлено
+	return true;
+}
+
+// Функция отправки данных из сокета сервера в сокет клиенту
+bool writeToClient(int client_socket, int server_socket){
+	// Количество загруженных байтов
+	int bytes;
+	// Максимальный размер буфера
+	const size_t max_bufsize = 4096;
+	// Буфер для чтения данных из сокета
+	char buffer[max_bufsize];
+	// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
+	while((bytes = recv(server_socket, buffer, max_bufsize, 0)) > 0){
+		// Выполняем отправку данных на сокет клиента
+		sendClient(client_socket, buffer, bytes);
+		// Заполняем буфер нулями
+		memset(buffer, 0, sizeof(buffer));
+	}
+	// Если байты считаны не правильно то сообщаем об этом
+	if(bytes < 0){
+		// Выводим сообщение об ошибке
+		std::cout << "Yo..!! Error while recieving from server!" << endl;
+		// Сообщаем что произошла ошибка
+		return false;
+	}
+	// Сообщаем что все удачно
+	return true;
+}
+
+// Функция записи в сокет сервера запроса
+bool writeToServerSocket(int socket, const char * buffer, size_t length){
+	// Количество загруженных байтов
+	int bytes;
+	// Общее количество загруженных байтов
+	size_t total = 0;
+	// Выполняем отправку до тех пор пока все не отдадим
+	while(total < length){
+		// Если данные не отправились то сообщаем об этом
+		if((bytes = send(socket, (void *) (buffer + total), length - total, 0)) < 0){
+			std::cout << "Error in sending to server!" << endl;
+			return false;
+		}
+		// Увеличиваем количество отправленных данных
+		total += bytes;
+	}
+	// Сообщаем что все удачно
+	return true;
+}
+
+// Функция создания сокета для подключения к удаленному серверу
+int createServerSocket(const char * host, int port){
+	// Сокет подключения
+	int sock = 0;
+	// Структура параметров подключения
+	struct addrinfo param;
+	// Указатель на результаты
+	struct addrinfo * req;
+	// Убедимся, что структура пуста
+	memset(&param, 0, sizeof(param));
+	// Неважно, IPv4 или IPv6
+	param.ai_family = AF_UNSPEC;
+	// TCP stream-sockets
+	param.ai_socktype = SOCK_STREAM;
+	// Если формат подключения указан не верно то сообщаем об этом
+	if(getaddrinfo(host, std::to_string(port).c_str(), &param, &req) != 0){
+		std::cout << "Error in server address format!" << endl;
+		return -1;
+	}
+	// Создаем сокет, если сокет не создан то сообщаем об этом
+	if((sock = socket(req->ai_family, req->ai_socktype, req->ai_protocol)) < 0){
+		std::cout << "Error in creating socket to server!" << endl;
+		return -1;
+	}
+	// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
+	if(connect(sock, req->ai_addr, req->ai_addrlen) < 0){
+		std::cout << "Error in connecting to server!" << endl;
+		return -1;
+	}
+	// И освобождаем связанный список
+	freeaddrinfo(req);
+	// Выводим созданный нами сокет
+	return sock;
+}
+
+
+// Функция установки fd сокетам
+void set_fds(int sock1, int sock2, fd_set *fds){
+	// Очищаем набор файловых дескрипторов
+	FD_ZERO(fds);
+	// Устанавливаем файловые дескрипторы для сокетов
+	FD_SET(sock1, fds);
+	FD_SET(sock2, fds);
+}
+
+// Функция отправки данных в сокет
+int send_sock(int sock, const char * buffer, uint32_t size){
+	int index = 0, ret;
+	
+	std::cout << " buffer write " << buffer << endl;
+
+	while(size){
+		if((ret = send(sock, &buffer[index], size, 0)) <= 0) return (!ret) ? index : -1;
+		index += ret;
+		size -= ret;
+	}
+	return index;
+}
+
+// Функция передачи полученных данных с сервера запросов, клиенту который подключился через прокси
+void do_proxy(int client, int conn, char * buffer){
+	fd_set readfds; // Создаем набор файловых дескрипторов
+	// Определяем количество файловых дескрипторов
+	int result, nfds = max(client, conn) + 1;
+	// Добавляем в набор файловый дескриптор
+	set_fds(client, conn, &readfds);
+	// Перебираем все файловые дескрипторы из набора
+	while((result = select(nfds, &readfds, 0, 0, 0)) > 0){
+		// Если файловый дескриптор существует
+		if(FD_ISSET(client, &readfds)){
+			// Считываем данные из сокета удаленного клиента в буфер
+			int recvd = recv(client, buffer, 256, 0);
+			// Если ничего не считано то выходим
+			if(recvd <= 0) return;
+			// Отправляем удаленному клиенту полученный буфер данных
+			send_sock(conn, buffer, recvd);
+		}
+		// Если файловый дескриптор для сокета сервера существует
+		if(FD_ISSET(conn, &readfds)){
+			// Считываем данные из сокета подключившегося клиента в буфер
+			int recvd = recv(conn, buffer, 256, 0);
+			// Если ничего не считано то выходим
+			if(recvd <= 0) return;
+			// Отправляем подключившемуся клиенту полученный буфер данных
+			send_sock(client, buffer, recvd);
+		}
+		// Добавляем в набор файловый дескриптор
+		set_fds(client, conn, &readfds);
+	}
+}
+
+
 // Функция обработки входящих данных с клиента
 void handle_handshake(int sock){
 	// Создаем объект для работы с http заголовками
 	Http * http = new Http("anyks");
+	// Сокет сервера
+	int srv_sock;
 	// Максимальный размер буфера
 	size_t max_bufsize = 4096;
 	// Создаем буфер
@@ -939,7 +1086,7 @@ void handle_handshake(int sock){
 	// Выполняем чтение данных из сокета
 	while(true){
 		// Выполняем чтение данных из сокета
-		if((size = recv(sock, &buffer[bits_size], 255, 0)) < 0){
+		if((size = recv(sock, &buffer[bits_size], 256, 0)) < 0){
 			// Сообщаем что произошла ошибка
 			std::cout << " Error in read socket!" << endl;
 			// Выходим
@@ -982,47 +1129,95 @@ void handle_handshake(int sock){
 						if(connect){
 							// Запоминаем что авторизация прошла удачно
 							ssl = true;
+							// Выполняем подключение к серверу
+							srv_sock = createServerSocket(http->getHost(), http->getPort());
 							// Сообщаем что авторизация удачная
-							sendClient(sock, http->authSuccess());
+							if(srv_sock > -1) sendClient(sock, http->authSuccess(), strlen(http->authSuccess()));
+							// Если подключение не удачное то сообщаем об этом
+							else sendClient(sock, http->faultConnect(), strlen(http->faultConnect()));
 						}
 					// Если нужно запросить пароль
 					} else if(!strlen(http->getLogin()) || !strlen(http->getPassword())) {
 						// Сообщаем что нужна авторизация
-						sendClient(sock, http->requiredAuth());
+						sendClient(sock, http->requiredAuth(), strlen(http->requiredAuth()));
 						// Выходим
 						break;
 					// Сообщаем что авторизация не удачная
 					} else {
 						// Сообщаем что авторизация не удачная
-						sendClient(sock, http->faultAuth());
+						sendClient(sock, http->faultAuth(), strlen(http->faultAuth()));
 						// Выходим
 						break;
 					}
 				}
 				// Если это коннект то обнуляем буфер для чтения новых данных
-				if(connect) bits_size = 0;
+				if(connect){
+					// Обнуляем размер буфера
+					bits_size = 0;
+					// Заполняем буфер нулями
+					memset(buffer, 0, max_bufsize);
 				// Иначе делаем запрос на получение данных
-				else {
-					// Выводим сообщение
-					std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
-
-					// http сервис
-					std::cout << "Делаем запрос на получение данных (http):\n" << http->getQuery() << endl;
+				} else {
+					// Выполняем подключение к серверу
+					srv_sock = createServerSocket(http->getHost(), http->getPort());
+					// Сообщаем что авторизация удачная
+					if(srv_sock > -1){
+						// Выполняем отправку запроса
+						if(!writeToServerSocket(srv_sock, http->getQuery(), strlen(http->getQuery()))){
+							// Сообщаем что сервис не доступен
+							sendClient(sock, http->brokenRequest(), strlen(http->brokenRequest()));
+						// Отправляем результат клиенту
+						} else if(!writeToClient(sock, srv_sock)) {
+							// Сообщаем что сервис не доступен
+							sendClient(sock, http->brokenRequest(), strlen(http->brokenRequest()));
+						}
+					// Если подключение не удачное то сообщаем об этом
+					} else sendClient(sock, http->faultConnect(), strlen(http->faultConnect()));
 					// Выходим
 					break;
 				}
 			// Если это шифрованное сообщение тогда отправляем шифрованные данные
 			} else if(ssl && !ishttp) {
-				// Выводим сообщение
-				std::cout << "method = " << http->getMethod() << ", path = " << http->getPath() << ", protocol = " << http->getProtocol() << ", version = " << http->getVersion() << ", host = " << http->getHost() << ", port = " << http->getPort() << ", useragent = " << http->getUseragent() << ", auth = " << http->getAuth() << ", login = " << http->getLogin() << ", password = " << http->getPassword() << endl;
-
 				// https сервис
 				std::cout << "Делаем запрос на получение данных (https)" << endl;
+
+				buffer[bits_size] = '\0';
+
+				for(int i = 0; i < bits_size; i++) std::cout << "--------" << (short) buffer[i] << endl;
+
+				/*
+				writeToServerSocket(srv_sock, buffer, bits_size);
+				writeToClient(sock, srv_sock);
+				*/
+			
+				do_proxy(srv_sock, sock, buffer);
+
+				/*
+				// Выполняем отправку запроса
+				if(!writeToServerSocket(srv_sock, buffer, size)){
+					
+					std::cout << " -----1 " << endl;
+
+					// Сообщаем что сервис не доступен
+					sendClient(sock, http->brokenRequest(), strlen(http->brokenRequest()));
+				// Отправляем результат клиенту
+				} else if(!writeToClient(sock, srv_sock)) {
+					std::cout << " -----2 " << endl;
+
+					// Сообщаем что сервис не доступен
+					sendClient(sock, http->brokenRequest(), strlen(http->brokenRequest()));
+				}
+				*/
+				
 				// Выходим
 				break;
 			}
 		}
 	}
+	// Выключаем подключение
+	shutdown(srv_sock, SHUT_RDWR);
+	// Закрываем сокет
+	close(srv_sock);
 	// Удаляем объект
 	delete http;
 }
