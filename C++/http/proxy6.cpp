@@ -115,24 +115,22 @@ class BufferHttpProxy {
 					total	= 0;		// Общее количество данных в буфере
 		};
 	public:
-		Http			* parser;						// Объект парсера
-		const char		* response;						// Ответ системы
-		Buffer			request;						// Данные запроса
-		int				pid			= -1;				// Пид процесса
-		bool			auth		= false,			// Флаг авторизации
-						ishttps		= false;			// Флаг зашифрованного соединения
-		evutil_socket_t	socServer	= -1,				// Сокет сервера
-						socClient	= -1;				// Сокет клиента
-		struct event	* evClient = new struct event,	// Событие клиента
-						* evServer = new struct event;	// Событие сервера
+		struct event_base	* base = NULL;			// База событий
+		Http				* parser = 0x00;		// Объект парсера
+		string				response;				// Ответ системы
+		Buffer				request;				// Данные запроса
+		bool				auth		= false,	// Флаг авторизации
+							ishttps		= false;	// Флаг зашифрованного соединения
+		int					pid			= -1;		// Пид процесса
+		evutil_socket_t		socServer	= -1,		// Сокет сервера
+							socClient	= -1;		// Сокет клиента
+		struct event		* evClient = NULL,		// Событие клиента
+							* evServer = NULL;		// Событие сервера
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param [string] name имя ресурса
 		 */
 		BufferHttpProxy(const char * name){
-			
-			cout << " ПРисваниваем " << endl;
-
 			// Создаем объект для работы с http заголовками
 			parser = new Http(name);
 		}
@@ -152,14 +150,22 @@ class BufferHttpProxy {
 				socClient = -1;
 			}
 			// Удаляем события
-			if((evServer != 0x00) && (evServer->ev_base != 0x00)) event_free(evServer);
-			else if((evServer != 0x00) && (evServer->ev_base == 0x00)) delete evServer;
-			if((evClient != 0x00) && (evClient->ev_base != 0x00)) event_free(evClient);
-			else if((evClient != 0x00) && (evClient->ev_base == 0x00)) delete evClient;
+			if((evServer != NULL) && (evServer->ev_base != NULL)) event_free(evServer);
+			else if((evServer != NULL) && (evServer->ev_base == NULL)) delete evServer;
+			if((evClient != NULL) && (evClient->ev_base != NULL)) event_free(evClient);
+			else if((evClient != NULL) && (evClient->ev_base == NULL)) delete evClient;
+			// Удаляем указатели
+			evServer = NULL;
+			evClient = NULL;
 			// Очищаем строку
 			request.data.clear();
-			// Удаляем парсер
-			delete parser;
+			// Если парсер не удален
+			if(parser != NULL){
+				// Удаляем парсер
+				delete parser;
+				// Запоминаем что данные удалены
+				parser = NULL;
+			}
 		}
 		/**
 		 * parse Метод парсинга данных
@@ -167,7 +173,7 @@ class BufferHttpProxy {
 		 */
 		bool parse(){
 			// Выполняем парсинг данных
-			return parser->parse(request.data.c_str());
+			return parser->parse(request.data);
 		}
 };
 
@@ -457,21 +463,10 @@ int send_sock(int sock, const char * buffer, uint32_t size){
 	return index;
 }
 
-
-void on_request(int fd, short event, void * arg){
+// Handle server request {{{
+void serve_proxy(int fd, short event, void * arg){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
-
-	cout << " connect " << http->socClient << endl;
-
-	delete http;
-
-	/*
-
-	std::shared_ptr<BufferHttpProxy> http(reinterpret_cast <BufferHttpProxy *> (arg));
-
-	cout << " connect " << http->socClient << endl;
-
 	// Если подключение не передано
 	if(!http){
 		// Отключаем клиента
@@ -481,12 +476,184 @@ void on_request(int fd, short event, void * arg){
 		// Выходим
 		return;
 	}
+	// Если это таймаут
+	if(event == 1){
+		cout << " Таймаут сервер!!!! " << endl;
+		// Если данные еще не удалены
+		if(http != NULL){
+			// Удаляем объект данных
+			delete http;
+			// Присваиваем пустой адрес
+			http = NULL;
+		}
+		// Выходим
+		return;
+	// Если это чтение данных
+	} else if(event == 2){
+		// Создаем буфер для чтения данных
+		vector <char> buffer(256);
+		// Выполняем чтение данных из сокета
+		int len = recv(fd, buffer.data(), 256, 0);
+		// Если данные не считаны значит клиент отключился
+		if(len <= 0){
+			cout << "Server disconnected." << " socket = " << fd << endl;
+			// Если данные еще не удалены
+			if(http != NULL){
+				// Удаляем объект данных
+				delete http;
+				// Присваиваем пустой адрес
+				http = NULL;
+			}
+			// Выходим
+			return;
+		// Если данные считаны нормально
+		} else if(http->socClient) {
+			// Записываем данные полученные из сокета
+			http->request.data.append(buffer.cbegin(), buffer.cend());
+			// Отправляем удаленному клиенту полученный буфер данных
+			send(http->socClient, http->request.data.c_str(), len, 0);
+			// Очищаем буфер
+			http->request.data.clear();
+		}
+	}
+}
 
+// Handle client request {{{
+void clien_proxy(int fd, short event, void * arg){
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
+	// Если подключение не передано
+	if(!http){
+		// Отключаем клиента
+		shutdown(fd, SHUT_RDWR);
+		// Закрываем сокет
+		close(fd);
+		// Выходим
+		return;
+	}
+	// Если это таймаут
+	if(event == 1){
+		cout << " Таймаут клиент!!!! " << endl;
+		// Если данные еще не удалены
+		if(http != NULL){
+			// Удаляем объект данных
+			delete http;
+			// Присваиваем пустой адрес
+			http = NULL;
+		}
+		// Выходим
+		return;
+	// Если это чтение данных
+	} else if(event == 2){
+		// Создаем буфер для чтения данных
+		vector <char> buffer(256);
+		// Выполняем чтение данных из сокета
+		int len = recv(fd, buffer.data(), 256, 0);
+		// Если данные не считаны значит клиент отключился
+		if(len <= 0){
+			cout << "Client disconnected." << " socket = " << fd << endl;
+			// Если данные еще не удалены
+			if(http != NULL){
+				// Удаляем объект данных
+				delete http;
+				// Присваиваем пустой адрес
+				http = NULL;
+			}
+			// Выходим
+			return;
+		// Если данные считаны нормально
+		} else if(http->socServer) {
+			// Записываем данные полученные из сокета
+			http->request.data.append(buffer.cbegin(), buffer.cend());
+			// Отправляем удаленному клиенту полученный буфер данных
+			send(http->socServer, http->request.data.c_str(), len, 0);
+			// Очищаем буфер
+			http->request.data.clear();
+		}
+	}
+}
+
+// Handle client responce {{{
+void client_write(int fd, short event, void * arg){
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
+	// Если подключение не передано
+	if(!http){
+		// Отключаем клиента
+		shutdown(fd, SHUT_RDWR);
+		// Закрываем сокет
+		close(fd);
+		// Выходим
+		return;
+	}
+	// Send data to client
+	size_t len = write(fd, http->response.c_str() + http->request.offset, http->response.length() - http->request.offset);
+	// Выполняем отправку данных до тех пор пока все не отправим
+	if(len < (http->response.length() - http->request.offset)){
+		// Failed to send rest data, need to reschedule
+		http->request.offset += len;
+	// Если мы все отправили
+	} else {
+		// Если это не зашифрованное соединение то просто выходим
+		if(!http->ishttps){
+			// Если данные еще не удалены
+			if(http != NULL){
+				// Удаляем объект данных
+				delete http;
+				// Присваиваем пустой адрес
+				http = NULL;
+			}
+			// Выходим
+			return;
+		// Если это зашифрованное соединение
+		} else {
+			// Устанавливаем таймаут ожидания запроса в 3 секунды
+			struct timeval timeout = {3, 0};
+			// Обнуляем размер буфера
+			http->request.total = 0;
+			// Очищаем буфер данных
+			http->request.data.clear();
+			// Очищаем событие для клиента
+			if(http->evClient != NULL){
+				// Удаляем событие
+				event_free(http->evClient);
+				// Обнуляем событие
+				http->evClient = NULL;
+			}
+			// Создаем новое событие для клиента
+			http->evClient = event_new(http->base, http->socClient, EV_TIMEOUT | EV_READ | EV_PERSIST, clien_proxy, http);
+			http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, serve_proxy, http);
+			// Активируем события
+			event_add(http->evClient, &timeout);
+			event_add(http->evServer, &timeout);
+		}
+	}
+	return;
+}
+//}}}
+
+void on_request(int fd, short event, void * arg){
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
+	// Если подключение не передано
+	if(!http){
+		// Отключаем клиента
+		shutdown(fd, SHUT_RDWR);
+		// Закрываем сокет
+		close(fd);
+		// Выходим
+		return;
+	}
 	// Если сработал таймаут
 	if(event == 1){
 		cout << "Timeout to client" << " socket = " << fd << endl;
-		// Удаляем объект данных
-		//delete http;
+		// Если данные еще не удалены
+		if(http != NULL){
+			// Удаляем объект данных
+			delete http;
+			// Присваиваем пустой адрес
+			http = NULL;
+		}
 		// Выходим
 		return;
 	// Если это не таймаут то продолжаем работу
@@ -498,29 +665,31 @@ void on_request(int fd, short event, void * arg){
 		// Если данные не считаны значит клиент отключился
 		if(len == 0){
 			cout << "Client disconnected." << " socket = " << fd << endl;
-			// Удаляем объект данных
-			//delete http;
+			// Если данные еще не удалены
+			if(http != NULL){
+				// Удаляем объект данных
+				delete http;
+				// Присваиваем пустой адрес
+				http = NULL;
+			}
 			// Выходим
 			return;
 		// Если данные вообще не считаны тогда также выходим
 		} else if(len < 0){
 			cout << "Socket failure, disconnecting client." << " socket = " << fd << endl;
-			// Удаляем объект данных
-			//delete http;
+			// Если данные еще не удалены
+			if(http != NULL){
+				// Удаляем объект данных
+				delete http;
+				// Присваиваем пустой адрес
+				http = NULL;
+			}
 			// Выходим
 			return;
 		// Если данные считаны нормально тогда продолжаем
 		} else {
 			// Записываем данные полученные из сокета
 			http->request.data.append(buffer.cbegin(), buffer.cend());
-
-			cout << " Получены данные " << http->request.data.c_str() << endl;
-
-			//delete http;
-			//exit(1);
-			// Выходим
-			return;
-
 			// Устанавливаем параметры по умолчанию
 			http->response			= "";
 			http->request.total		+= len;
@@ -528,11 +697,11 @@ void on_request(int fd, short event, void * arg){
 			// Выполняем парсинг полученных данных
 			if(http->parse()){
 				// Если это метод коннект
-				bool methodConnect = (strcmp(http->parser->getMethod(), "connect") ? false : true);
+				bool methodConnect = (strcmp(http->parser->getMethod().c_str(), "connect") ? false : true);
 				// Если авторизация не прошла
 				if(!http->auth) http->auth = check_auth(http->parser);
 				// Если нужно запросить пароль
-				if(!http->auth && (!strlen(http->parser->getLogin()) || !strlen(http->parser->getPassword()))){
+				if(!http->auth && (!http->parser->getLogin().length() || !http->parser->getPassword().length())){
 					// Формируем ответ клиенту
 					http->response = http->parser->requiredAuth();
 				// Сообщаем что авторизация не удачная
@@ -544,7 +713,7 @@ void on_request(int fd, short event, void * arg){
 					// Определяем порт, если это шифрованное сообщение то будем считывать данные целиком
 					if(methodConnect){
 						// Выполняем подключение к серверу
-						http->socServer = createServerSocket(http->parser->getHost(), http->parser->getPort());
+						http->socServer = createServerSocket(http->parser->getHost().c_str(), http->parser->getPort());
 						// Если сокет существует
 						if(http->socServer > -1){
 							// Формируем ответ клиенту
@@ -555,31 +724,28 @@ void on_request(int fd, short event, void * arg){
 						} else http->response = http->parser->faultConnect();
 					// Иначе делаем запрос на получение данных
 					} else {
-
+						cout << " Отправляем запрос на незашифрованное соединение!!!" << endl;
 					}
 				}
 				// Ответ готов
-				if(strlen(http->response)){
-
-					
-					
-					cout << " Выводим ответ " << http->parser->getQuery() << " response = " << http->response << endl;
-					
-					// Удаляем объект данных
-					//delete http;
-					// Выходим
-					return;
-					//
-					struct timeval timeout = { 10, 0 };
-					event_free(data->heap);
-					data->heap = event_new(data->base, fd, EV_WRITE | EV_PERSIST, client_write, data);
-					event_add(data->heap, &timeout);
-					//
+				if(http->response.length()){
+					// Устанавливаем таймаут для клиента 3 секунды
+					struct timeval timeout = {3, 0};
+					// Очищаем событие для клиента
+					if(http->evClient != NULL){
+						// Удаляем событие
+						event_free(http->evClient);
+						// Обнуляем событие
+						http->evClient = NULL;
+					}
+					// Создаем новое событие для клиента
+					http->evClient = event_new(http->base, fd, EV_TIMEOUT | EV_READ | EV_PERSIST, client_write, http);
+					// Активируем события
+					event_add(http->evClient, &timeout);
 				}
 			}
 		}
 	}
-	*/
 	// Выходим
 	return;
 }
@@ -596,47 +762,40 @@ void sighup_function(int fd, short event, void * arg){
  * @param arg   объект данных подключения
  */
 void on_connect(int fd, short event, void * arg){
+	// Время ожидания следующего запроса
+	//float ttl = 0.5; // 5;
+	// Устанавливаем таймаут
+	//sleep(ttl);
 	// Структуры получения данных сокета
 	socklen_t	len = 0;
 	sockaddr_in	client_addr;
-	// Ожидаем подключение 10 секунд и 0 микросекунд
-	struct timeval timeout = {10, 0};
-
-	//sleep(5);
-
+	// Ожидаем подключение 3 секунд и 0 микросекунд
+	struct timeval timeout = {3, 0};
 	// Accept incoming connection
 	evutil_socket_t sock = accept(fd, reinterpret_cast <sockaddr *> (&client_addr), &len);
 	// Если сокет не создан тогда выходим
 	if(sock < 1) return;
-
-	cout << " Подключение разрешено! " << sock << endl;
-
+	/* Set the client socket to non-blocking mode. */
+	if(setnonblock(sock) < 0) cout << "Failed to set client socket non-blocking" << endl;
 	// Получаем объект базы событий
 	struct event_base * base = reinterpret_cast <struct event_base *> (arg);
 	// Создаем новый объект подключения
 	BufferHttpProxy * http = new BufferHttpProxy("anyks");
-	
-	// std::shared_ptr<BufferHttpProxy> http(new BufferHttpProxy("anyks"));
-
+	// Запоминаем базу событий
+	http->base = base;
 	// Запоминаем сокет подключения
 	http->socClient = sock;
-
-	// std::shared_ptr<struct event> evnt(new struct event);
-	std::cout << " ++++ " << http << " ==== " << &http  <<  " ---- " << *&http << endl;
-
 	// Добавляем событие в базу
 	http->evClient = event_new(base, http->socClient, EV_READ | EV_PERSIST, on_request, http);
+	/*
 	struct event * sign = evsignal_new(base, SIGHUP, sighup_function, NULL);
 	event_add(sign, NULL);
-
-
+	*/
 	// Активируем событие
 	event_add(http->evClient, &timeout);
 	// Выходим
 	return;
 }
-
-
 
 // Функция установки количество разрешенных файловых дескрипторов
 int set_fd_limit(int maxfd){
@@ -649,12 +808,6 @@ int set_fd_limit(int maxfd){
 	// установим указанное кол-во
 	return setrlimit(RLIMIT_NOFILE, &lim);
 }
-
-/*
-void my_function(int fd, short event, void * arg){
-	cout << " timer " << endl;
-}
-*/
 
 int main(int argc, char * argv[]){
 	/*
@@ -672,15 +825,13 @@ int main(int argc, char * argv[]){
 	// Максимальное количество файловых дескрипторов
 	int maxfd = 1024; // (по дефолту в системе 1024)
 	// Максимальное количество воркеров
-	const size_t max_works = 2;//4;
+	const size_t max_works = 4;
 	// Наши ID процесса и сессии
 	pid_t pid[max_works], sid;
 	// Структура для клиента
 	//struct sockaddr_in echoclient;
 	// Установим максимальное кол-во дискрипторов которое можно открыть
 	set_fd_limit(maxfd);
-	// Время ожидания следующего запроса
-	float ttl = 0.5; // 5;
 	// Ответвляемся от родительского процесса
 	// pid[0] = fork();
 	// Если пид не создан тогда выходим
@@ -756,11 +907,11 @@ int main(int argc, char * argv[]){
 				// Добавляем событие в базу
 				struct event * evnt = event_new(base, fork_buf.socket, EV_READ | EV_PERSIST, on_connect, base);
 
-				struct event * sign = evsignal_new(base, SIGHUP, sighup_function, NULL);
+				// struct event * sign = evsignal_new(base, SIGHUP, sighup_function, NULL);
 
 				// Активируем событие
 				event_add(evnt, NULL);
-				event_add(sign, NULL);
+				// event_add(sign, NULL);
 				// Активируем перебор базы событий
 				event_base_loop(base, EVLOOP_NO_EXIT_ON_EMPTY);
 
@@ -769,7 +920,7 @@ int main(int argc, char * argv[]){
 				// Закрываем сокет
 				close(fork_buf.socket);
 				event_free(evnt);
-				event_free(sign);
+				//event_free(sign);
 				event_base_free(base);
 
 
