@@ -278,11 +278,11 @@ void set_fds(int sock1, int sock2, fd_set *fds){
 void do_proxy(int client, int conn, char * buffer){
 	fd_set readfds; // Создаем набор файловых дескрипторов
 	// Определяем количество файловых дескрипторов
-	int result, nfds = max(client, conn) + 1;
+	int nfds = max(client, conn) + 1;
 	// Добавляем в набор файловый дескриптор
 	set_fds(client, conn, &readfds);
 	// Перебираем все файловые дескрипторы из набора
-	while((result = select(nfds, &readfds, 0, 0, 0)) > 0){
+	while(select(nfds, &readfds, 0, 0, 0) > 0){
 		// Если файловый дескриптор существует
 		if(FD_ISSET(client, &readfds)){
 			// Считываем данные из сокета удаленного клиента в буфер
@@ -350,7 +350,7 @@ bool handle_request(int sock, char * buffer){
 	response.ip_src = inet_addr("127.0.0.1");
 	// Устанавливаем порт нашего сервера
 	response.port_src = htons(5555);
-	// Отправляем клиенту ответа
+	// Отправляем клиенту ответ
 	send_sock(sock, (const char *) &response, sizeof(SOCKS5Response));
 	// Отправляем клиенту данные полученные с сайта
 	do_proxy(client_sock, sock, buffer);

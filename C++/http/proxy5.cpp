@@ -1,11 +1,15 @@
 // sudo lsof -i | grep -E LISTEN
-//  g++ -o socks5 http.cpp -lpthread
-//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -o http base64.cpp proxy.cpp
-//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -levent -I/usr/local/include -L/usr/local/lib -o http base64.cpp proxy.cpp = dynamic
-//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a -o http base64.cpp proxy.cpp = static
+// otool -L http5
+//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -levent -I/usr/local/include -L/usr/local/lib -o http5 base64.cpp proxy5.cpp = dynamic
+//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a -o http5 base64.cpp proxy5.cpp = static
+
+// MacOS X
+// export EVENT_NOKQUEUE=1
+// brew uninstall --force tmux
+// brew install --HEAD tmux
 
 #include <cstdlib>
-#include <cstring>
+//#include <cstring>
 #include <unistd.h>
 #include <stdint.h>
 #include <signal.h>
@@ -32,6 +36,11 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 
+//#include <event.h>
+#include <event2/event.h>
+#include <event2/event_struct.h>
+
+
 #include <errno.h>
 #include <list>
 #include <fcntl.h>
@@ -43,17 +52,6 @@
 #include "base64.h"
 
 using namespace std;
-
-
-// Приведение типа -Wint-to-void-pointer-cast
-// Или нужно установить параметр сборки: -Wno-int-to-void-pointer-cast
-#define INTTOVOID_POINTER(i) ((char *) NULL + (i))
-
-// Структура для передачи идентификатора сокета между процессами
-typedef struct fbuff {
-	long type;
-	int socket;
-} fmess;
 
 // Класс для работы с сервером
 class TServer {
@@ -98,30 +96,11 @@ class TClient {
 		inline void wait(){pthread_cond_wait(&condition, &mutex);}
 };
 
-struct Buffer {
-		char	* data;
-		ssize_t	len;
-		ssize_t pos;
+TServer get_host_lock;	// Блокировки запроса данных с хоста
+TClient client_lock;	// Событие подключения клиента
 
-		Buffer(const char * bytes, ssize_t nbytes){
-			pos		= 0;
-			len		= nbytes;
-			data	= new char[nbytes];
-			memcpy(data, bytes, nbytes);
-		}
-
-		virtual ~Buffer(){
-			delete [] data;
-		}
-
-		char * dpos(){
-			return data + pos;
-		}
-
-		ssize_t nbytes(){
-			return len - pos;
-		}
-};
+// Количество подключенных клиентов и максимально возможное количество подключений
+uint32_t client_count = 0, max_clients = 100;
 
 // Класс содержит данные парсинга http запроса
 class Http {
@@ -907,399 +886,175 @@ class Http {
 		}
 };
 
-TServer get_host_lock;	// Блокировки запроса данных с хоста
-TClient client_lock;	// Событие подключения клиента
+struct ConnectionData {
+	struct event	ev, eva, evb, evc, evd;
+	struct event * heap = NULL, * heap1 = NULL, * heap2 = NULL;
+	struct event_base *base;
+	Http			* http;
+	char			* buf;
+	size_t			offset = 0;
+	size_t			size = 0;
+	size_t			total = 0;
+	size_t			ans_size = 0;
+	const char		* ans;
+	int				srv_sock = -1;
+	int				cli_sock = -1;
+	bool			ssl = false;
+	bool			auth = false;
+	bool			flag = false;
+	size_t			bsize = 4096;
+	// Конструктор
+	ConnectionData(const char * name){
+		// Создаем объект для работы с http заголовками
+		http = new Http(name);
+		// Создаем буфер
+		buf = new char[(const size_t) bsize];
+
+		event_enable_debug_mode();
+
+		base = event_base_new();
+	}
+
+	// Деструктор
+	~ConnectionData(){
+		
+
+
+		cout << "Delete buffers = " << cli_sock << endl;
+
+		
+
+		shutdown(srv_sock, SHUT_RDWR);
+
+		cout << " Delete process 1 = " << cli_sock << endl;
+
+		shutdown(cli_sock, SHUT_RDWR);
+
+		cout << " Delete process 2 = " << cli_sock << endl;
+
+		close(srv_sock);
+
+		cout << " Delete process 3 = " << cli_sock << endl;
+
+		close(cli_sock);
+
+		cout << " Delete process 4 = " << cli_sock << endl;
+		
+		if((heap != NULL) && dynamic_cast<struct event *>(heap)) event_free(heap);
+
+		cout << " Delete process 5 = " << cli_sock << endl;
+
+		if((heap1 != NULL) && dynamic_cast<struct event *>(heap1)) event_free(heap1);
+
+		cout << " Delete process 6 = " << cli_sock << endl;
+
+		if((heap2 != NULL) && dynamic_cast<struct event *>(heap2)) event_free(heap2);
+
+		cout << " Delete process 7 = " << cli_sock << endl;
+
+		event_base_free(base);
+
+		cout << " Delete process 8 = " << cli_sock << endl;
+
+		/*
+		if(ev.ev_flags) event_del(&ev);
+		if(eva.ev_flags) event_del(&eva);
+		if(evb.ev_flags) event_del(&evb);
+		if(evc.ev_flags) event_del(&evc);
+		if(evd.ev_flags) event_del(&evd);
+		*/
+	
+		
+
+
+		delete [] buf;
+
+		cout << " Delete process 9 = " << cli_sock << endl;
+
+		delete http;
+
+		cout << " Delete process 10 = " << cli_sock << endl;
+
+		// Блокируем поток клиента
+		client_lock.lock();
+		// Уменьшаем количество подключенных клиентов
+		client_count--;
+		// Если количество подключенных клиентов достигла предела то сообщаем об этом
+		if(client_count == max_clients - 1) client_lock.signal();
+		// Разблокируем клиента
+		client_lock.unlock();
+
+		cout << " Delete process 11 = " << cli_sock << endl;
+	}
+};
+
+// Приведение типа -Wint-to-void-pointer-cast
+// Или нужно установить параметр сборки: -Wno-int-to-void-pointer-cast
+#define INTTOVOID_POINTER(i) ((char *) NULL + (i))
+
+// Структура для передачи идентификатора сокета между процессами
+typedef struct fbuff {
+	long type;
+	int socket;
+} fmess;
 
 // Временный каталог для файлов
 string nameSystem	= "anyksHttp";
 string piddir		= "/var/run";
 
-// Количество подключенных клиентов и максимально возможное количество подключений
-uint32_t client_count = 0, max_clients = 100;
+std::vector <int> sockets;
 
 void sig_handler(int signum){
-	std::cout << "signum" << signum << endl;
+	//std::cout << "signum" << signum << endl;
+
+	cout << "Сигнал обрыва соединения во время записи!!!!" << endl;
 }
 
 // Функция обработки сигнала о появившемся зомби процессе
 void sigchld_handler(int signal) {
+	
+	cout << " Дочерний процесс убит!!!!" << endl;
+
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 // Функция обработки сигналов завершения процессов
 void sigterm_handler(int signal){
+	
+	cout << "Процесс убит!!!!" << endl;
+
 	// close(client_sock); // Закрываем клиентский сокет
 	// close(server_sock); // Закрываем серверный сокет
 	exit(0); // Выходим
 }
 
-// Функция проверки логина и пароля
-bool check_auth(Http * &http){
-	// Логин
-	const char * username = "zdD786KeuS";
-	// Проль
-	const char * password = "k.frolovv@gmail.com";
-	// Проверяем логин и пароль
-	if(!strcmp(http->getLogin(), username)
-	&& !strcmp(http->getPassword(), password)) return true;
-	else return false;
+
+void sig_handler1(int signum){
+	//std::cout << "signum" << signum << endl;
+
+	cout << "Сигнал обрыва соединения во время записи1!!!!" << endl;
 }
 
-// Функция отправки данных клиенту
-bool sendClient(int sock, const char * buffer, size_t length){
-	// Если данные переданы верные
-	if((sock > -1) && (buffer != NULL)){
-		// Общее количество отправленных байт
-		int total = 0, bytes = 1;
-		// Отправляем данные до тех пор пока не уйдут
-		while(total < length){
-			// Если произошла ошибка отправки то сообщаем об этом и выходим
-			if((bytes = send(sock, (void *) (buffer + total), length - total, 0)) < 0) return false;
-			// Считаем количество отправленных байт
-			total += bytes;
-		}
-	}
-	// Сообщаем что все удачно отправлено
-	return true;
+// Функция обработки сигнала о появившемся зомби процессе
+void sigchld_handler1(int signal) {
+	
+	cout << " Дочерний процесс убит1!!!!" << endl;
+
+	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-// Функция отправки данных из сокета сервера в сокет клиенту
-bool writeToClient(int client_socket, int server_socket){
-	// Количество загруженных байтов
-	int bytes;
-	// Максимальный размер буфера
-	const size_t max_bufsize = 256;
-	// Буфер для чтения данных из сокета
-	char buffer[max_bufsize];
-	// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
-	while((bytes = recv(server_socket, buffer, max_bufsize, 0)) > 0){
-		// Выполняем отправку данных на сокет клиента
-		sendClient(client_socket, buffer, bytes);
-		// Заполняем буфер нулями
-		memset(buffer, 0, sizeof(buffer));
-	}
-	// Если байты считаны не правильно то сообщаем об этом
-	if(bytes < 0){
-		// Выводим сообщение об ошибке
-		std::cout << "Yo..!! Error while recieving from server!" << endl;
-		// Сообщаем что произошла ошибка
-		return false;
-	}
-	// Сообщаем что все удачно
-	return true;
+// Функция обработки сигналов завершения процессов
+void sigterm_handler1(int signal){
+	
+	cout << "Процесс убит1!!!!" << endl;
+
+	// close(client_sock); // Закрываем клиентский сокет
+	// close(server_sock); // Закрываем серверный сокет
+	exit(0); // Выходим
 }
 
-// Функция записи в сокет сервера запроса
-bool writeToServerSocket(int socket, const char * buffer, size_t length){
-	// Количество загруженных байтов
-	int bytes;
-	// Общее количество загруженных байтов
-	size_t total = 0;
-	// Выполняем отправку до тех пор пока все не отдадим
-	while(total < length){
-		// Если данные не отправились то сообщаем об этом
-		if((bytes = send(socket, (void *) (buffer + total), length - total, 0)) < 0){
-			std::cout << "Error in sending to server!" << endl;
-			return false;
-		}
-		// Увеличиваем количество отправленных данных
-		total += bytes;
-	}
-	// Сообщаем что все удачно
-	return true;
-}
-
-// Функция создания сокета для подключения к удаленному серверу
-int createServerSocket(const char * host, int port){
-	// Сокет подключения
-	int sock = 0;
-	// Структура параметров подключения
-	struct addrinfo param;
-	// Указатель на результаты
-	struct addrinfo * req;
-	// Убедимся, что структура пуста
-	memset(&param, 0, sizeof(param));
-	// Неважно, IPv4 или IPv6
-	param.ai_family = AF_UNSPEC;
-	// TCP stream-sockets
-	param.ai_socktype = SOCK_STREAM;
-	// Если формат подключения указан не верно то сообщаем об этом
-	if(getaddrinfo(host, std::to_string(port).c_str(), &param, &req) != 0){
-		std::cout << "Error in server address format!" << endl;
-		return -1;
-	}
-	// Создаем сокет, если сокет не создан то сообщаем об этом
-	if((sock = socket(req->ai_family, req->ai_socktype, req->ai_protocol)) < 0){
-		std::cout << "Error in creating socket to server!" << endl;
-		return -1;
-	}
-	// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
-	if(connect(sock, req->ai_addr, req->ai_addrlen) < 0){
-		std::cout << "Error in connecting to server!" << endl;
-		return -1;
-	}
-	// И освобождаем связанный список
-	freeaddrinfo(req);
-	// Выводим созданный нами сокет
-	return sock;
-}
-
-
-// Функция установки fd сокетам
-void set_fds(int sock1, int sock2, fd_set *fds){
-	//FD_CLR(sock1, fds);
-	//FD_CLR(sock2, fds);
-	// Очищаем набор файловых дескрипторов
-	FD_ZERO(fds);
-	// Устанавливаем файловые дескрипторы для сокетов
-	FD_SET(sock1, fds);
-	FD_SET(sock2, fds);
-}
-
-// Функция отправки данных в сокет
-int send_sock(int sock, const char * buffer, uint32_t size){
-	int index = 0, ret;
-	while(size){
-		if((ret = send(sock, &buffer[index], size, 0)) <= 0) return (!ret) ? index : -1;
-		index += ret;
-		size -= ret;
-	}
-	return index;
-}
-
-
-// Функция получения данных из сокета
-int recv_sock(int sock, char * buffer, uint32_t size){
-	int index = 0, ret;
-	while(size){
-		if((ret = recv(sock, &buffer[index], size, 0)) <= 0) return (!ret) ? index : -1;
-		index += ret;
-		size -= ret;
-	}
-	return index;
-}
-
-
-// Функция передачи полученных данных с сервера запросов, клиенту который подключился через прокси
-void do_proxy(int client, int conn, char * buffer){
-	// Создаем набор файловых дескрипторов (для чтения)
-	fd_set readfds;
-	// Определяем количество файловых дескрипторов
-	int nfds = max(client, conn) + 1;
-	// Добавляем в набор файловый дескриптор
-	set_fds(client, conn, &readfds);
-	// Устанавливаем таймаут
-	struct timeval timeout;
-	timeout.tv_sec	= 5;	// 30 секунд
-	timeout.tv_usec	= 0;	// 0 микросекунд
-	// Перебираем все файловые дескрипторы из набора
-	while(select(nfds, &readfds, 0, 0, &timeout) > 0){
-		// Если файловый дескриптор существует
-		if(FD_ISSET(client, &readfds)){
-			// Считываем данные из сокета удаленного клиента в буфер
-			int recvd = recv(client, buffer, 256, 0);
-
-			for(int i = 0; i < recvd; i++) cout << " read server " << " size = " << recvd << " buffer = " << (int) buffer[i] << endl;
-
-
-			// Если ничего не считано то выходим
-			if(recvd <= 0) return;
-			// Отправляем удаленному клиенту полученный буфер данных
-			send_sock(conn, buffer, recvd);
-		}
-		// Если файловый дескриптор для сокета сервера существует
-		if(FD_ISSET(conn, &readfds)){
-			// Считываем данные из сокета подключившегося клиента в буфер
-			int recvd = recv(conn, buffer, 256, 0);
-
-			for(int i = 0; i < recvd; i++) cout << " read client " << " size = " << recvd << " buffer = " << (int) buffer[i] << endl;
-
-			// Если ничего не считано то выходим
-			if(recvd <= 0) return;
-			// Отправляем подключившемуся клиенту полученный буфер данных
-			send_sock(client, buffer, recvd);
-		}
-		// Добавляем в набор файловый дескриптор
-		set_fds(client, conn, &readfds);
-	}
-}
-
-// Функция обработки входящих данных с клиента
-void handle_handshake(int sock){
-	// Создаем объект для работы с http заголовками
-	Http * http = new Http("anyks");
-	// Сокет сервера
-	int srv_sock;
-	// Максимальный размер буфера
-	size_t max_bufsize = 4096;
-	// Создаем буфер
-	char * buffer = new char[(const size_t) max_bufsize];
-	// Количество считанных данных из буфера
-	int bits_size = 0, size = 0;
-	// Прошла ли авторизация
-	bool auth = false;
-
-
-	//std::list <Buffer *> write_queue;
-
-	// Выполняем чтение данных из сокета
-	while(true){
-		// Выполняем чтение данных из сокета
-		if((size = recv(sock, &buffer[bits_size], 256, 0)) < 0){
-			// Сообщаем что произошла ошибка
-			std::cout << " Error in read socket!" << endl;
-			// Выходим
-			break;
-		// Если все норм то продолжаем работу
-		} else {
-			
-			//write_queue.push_back(new Buffer(buffer, size));
-			/*
-			Buffer* buffer = write_queue.front();
-                ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
-                if (written < 0) {
-                        perror("read error");
-                        return;
-                }
-  
-                buffer->pos += written;
-                if (buffer->nbytes() == 0) {
-                        write_queue.pop_front();
-                        delete buffer;
-                }
-			 */
-
-			// Запоминаем количество считанных байтов
-			bits_size += size;
-			// Устанавливаем завершение строки
-			buffer[bits_size] = '\0';
-			// Если количество передаваемых данных превысило заложенный то расширяем максимальный размер
-			if(bits_size > max_bufsize){
-				// Увеличиваем размер буфера
-				max_bufsize *= 2;
-				// Выделяем еще памяти под буфер
-				buffer = (char *) realloc(buffer, max_bufsize);
-				// Если память выделить нельзя то выводим ошибку и выходим
-				if(buffer == NULL){
-					// Выводим сообщение об ошибке
-					std::cout << "Error in memory re-allocation!" << endl;
-					// Выходим
-					break;
-				}
-			}
-			// Выполняем парсинг полученных данных
-			if(http->parse(buffer)){
-				// Если это метод коннект
-				bool connect = (strcmp(http->getMethod(), "connect") ? false : true);
-				// Если авторизация не прошла
-				if(!auth) auth = check_auth(http);
-				// Если нужно запросить пароль
-				if(!auth && (!strlen(http->getLogin()) || !strlen(http->getPassword()))){
-					// Сообщаем что нужна авторизация
-					sendClient(sock, http->requiredAuth(), strlen(http->requiredAuth()));
-					// Выходим
-					break;
-				// Сообщаем что авторизация не удачная
-				} else if(!auth) {
-					// Сообщаем что авторизация не удачная
-					sendClient(sock, http->faultAuth(), strlen(http->faultAuth()));
-					// Выходим
-					break;
-				}
-				// Определяем порт, если это шифрованное сообщение то будем считывать данные целиком
-				if(connect){
-
-					http->setVersion("1.0");
-
-					// Выполняем подключение к серверу
-					srv_sock = createServerSocket(http->getHost(), http->getPort());
-					// Если сокет существует
-					if(srv_sock > -1){
-						// Сообщаем что авторизация удачная
-						sendClient(sock, http->authSuccess(), strlen(http->authSuccess()));
-						// Обнуляем размер буфера
-						bits_size = 0;
-						// Заполняем буфер нулями
-						memset(buffer, 0, max_bufsize);
-
-						do_proxy(srv_sock, sock, buffer);
-
-						// Проверяем на то нужно ли отключатся
-						if(!http->isAlive()) break;
-					// Если подключение не удачное то сообщаем об этом
-					} else sendClient(sock, http->faultConnect(), strlen(http->faultConnect()));
-				// Иначе делаем запрос на получение данных
-				} else {
-					// Выполняем подключение к серверу
-					srv_sock = createServerSocket(http->getHost(), http->getPort());
-					// Сообщаем что авторизация удачная
-					if(srv_sock > -1){
-
-						http->setVersion("1.0");
-
-						// Выполняем отправку запроса
-						if(!writeToServerSocket(srv_sock, http->getQuery(), strlen(http->getQuery()))){
-							// Сообщаем что сервис не доступен
-							sendClient(sock, http->brokenRequest(), strlen(http->brokenRequest()));
-						// Отправляем результат клиенту
-						} else if(!writeToClient(sock, srv_sock)) {
-							// Сообщаем что сервис не доступен
-							sendClient(sock, http->brokenRequest(), strlen(http->brokenRequest()));
-						}
-					// Если подключение не удачное то сообщаем об этом
-					} else sendClient(sock, http->faultConnect(), strlen(http->faultConnect()));
-					// Выходим
-					break;
-				}
-			}
-		}
-	}
-
-	std::cout << "end" << endl;
-
-	// Выключаем подключение
-	shutdown(srv_sock, SHUT_RDWR);
-	// Выключаем подключение
-	shutdown(sock, SHUT_RDWR);
-	// Закрываем сокет
-	close(srv_sock);
-	// Закрываем сокет
-	close(sock);
-	// Удаляем буфер
-	delete [] buffer;
-	// Удаляем объект
-	delete http;
-}
-
-// Функция обработки данных из потока
-void * handle_connection(void * arg){
-	// Создаем сокет
-	int sock = (uint64_t) arg;
-	// Выполняем проверку авторизации и спрашиваем что надо клиенту, если удачно то делаем запрос на получение данных
-	handle_handshake(sock);
-	// Блокируем поток клиента
-	client_lock.lock();
-	// Уменьшаем количество подключенных клиентов
-	client_count--;
-	// Если количество подключенных клиентов достигла предела то сообщаем об этом
-	if(client_count == max_clients - 1) client_lock.signal();
-	// Разблокируем клиента
-	client_lock.unlock();
-
-	std::cout << "exit" << endl;
-
-	// xit(0);
-	// Сообщаем что все удачно
-	return 0;
-}
-
-// Функция обработки потоков ядра
-bool spawn_thread(pthread_t * thread, void * data){
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, 64 * 1024);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	return !pthread_create(thread, &attr, handle_connection, data);
+void sighup_handler1(int signal){
+	cout << "Терминал потерял связь1!!!" << endl;
 }
 
 /**
@@ -1334,6 +1089,23 @@ void create_pid(pid_t pid){
 	fclose(fh);
 }
 
+/**
+ * Set a socket to non-blocking mode.
+ */
+int setnonblock(int fd){
+	int flags;
+
+	flags = fcntl(fd, F_GETFL);
+
+	if(flags < 0) return flags;
+
+	flags |= O_NONBLOCK;
+
+	if(fcntl(fd, F_SETFL, flags) < 0) return -1;
+
+	return 0;
+}
+
 int create_listen_socket(){
 	// Сокет сервера
 	int serversock;
@@ -1344,7 +1116,7 @@ int create_listen_socket(){
 	// Создаем сокет
 	if((serversock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
 	// if((serversock = socket(PF_INET, SOCK_STREAM, IPPROTO_UDP)) < 0){
-		std::cout << "[-] Could not create socket.\n";
+		cout << "[-] Could not create socket.\n";
 		return -1;
 	}
 	/* Очищаем структуру */
@@ -1357,17 +1129,707 @@ int create_listen_socket(){
 	echoserver.sin_port = htons(5556); // htons(SERVER_PORT);
 	// Выполняем биндинг сокета // ::bind (для мака)
 	if(::bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0){
-		std::cout << "[-] Bind error.\n";
+		cout << "[-] Bind error.\n";
+		return -1;
+	}
+	// Выполняем чтение сокета
+	if(listen(serversock, maxpending) < 0){
+		cout << "[-] Listen error.\n";
 		return -1;
 	}
 	// Указываем что сокет не блокирующий
-	fcntl(serversock, F_SETFL, fcntl(serversock, F_GETFL, 0) | O_NONBLOCK);
-	// Выполняем чтение сокета
-	if(listen(serversock, maxpending) < 0){
-		std::cout << "[-] Listen error.\n";
+	if(setnonblock(serversock) < 0){
+		cout << "[-] Failed to set server socket to non-blocking.\n";
 		return -1;
 	}
 	return serversock;
+}
+
+// Функция проверки логина и пароля
+bool check_auth(Http * &http){
+	// Логин
+	const char * username = "zdD786KeuS";
+	// Проль
+	const char * password = "k.frolovv@gmail.com";
+	// Проверяем логин и пароль
+	if(!strcmp(http->getLogin(), username)
+	&& !strcmp(http->getPassword(), password)) return true;
+	else return false;
+}
+
+
+// Функция создания сокета для подключения к удаленному серверу
+int createServerSocket(const char * host, int port){
+	// Сокет подключения
+	int sock = 0;
+	// Структура параметров подключения
+	struct addrinfo param;
+	// Указатель на результаты
+	struct addrinfo * req;
+	// Убедимся, что структура пуста
+	memset(&param, 0, sizeof(param));
+	// Неважно, IPv4 или IPv6
+	param.ai_family = AF_UNSPEC;
+	// TCP stream-sockets
+	param.ai_socktype = SOCK_STREAM;
+	// Если формат подключения указан не верно то сообщаем об этом
+	if(getaddrinfo(host, std::to_string(port).c_str(), &param, &req) != 0){
+		std::cout << "Error in server address format!" << endl;
+		return -1;
+	}
+	// Создаем сокет, если сокет не создан то сообщаем об этом
+	if((sock = socket(req->ai_family, req->ai_socktype, req->ai_protocol)) < 0){
+		std::cout << "Error in creating socket to server!" << endl;
+		return -1;
+	}
+	// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
+	if(connect(sock, req->ai_addr, req->ai_addrlen) < 0){
+		std::cout << "Error in connecting to server!" << endl;
+		return -1;
+	}
+	// И освобождаем связанный список
+	freeaddrinfo(req);
+	/* Set the client socket to non-blocking mode. */
+	if(setnonblock(sock) < 0) cout << "Failed to set server socket non-blocking" << endl;
+	// Выводим созданный нами сокет
+	return sock;
+}
+
+// Функция отправки данных клиенту
+bool sendClient(int sock, const char * buffer, size_t length){
+	// Если данные переданы верные
+	if((sock > -1) && (buffer != NULL)){
+		// Общее количество отправленных байт
+		int total = 0, bytes = 1;
+		// Отправляем данные до тех пор пока не уйдут
+		while(total < length){
+			// Если произошла ошибка отправки то сообщаем об этом и выходим
+			if((bytes = send(sock, (void *) (buffer + total), length - total, 0)) < 0) return false;
+			// Считаем количество отправленных байт
+			total += bytes;
+		}
+	}
+	// Сообщаем что все удачно отправлено
+	return true;
+}
+
+// Функция записи в сокет сервера запроса
+bool writeToServerSocket(int socket, const char * buffer, size_t length){
+	// Количество загруженных байтов
+	int bytes;
+	// Общее количество загруженных байтов
+	size_t total = 0;
+	// Выполняем отправку до тех пор пока все не отдадим
+	while(total < length){
+		// Если данные не отправились то сообщаем об этом
+		if((bytes = send(socket, (void *) (buffer + total), length - total, 0)) < 0){
+			std::cout << "Error in sending to server!" << endl;
+			return false;
+		}
+		// Увеличиваем количество отправленных данных
+		total += bytes;
+	}
+	// Сообщаем что все удачно
+	return true;
+}
+
+// Функция отправки данных из сокета сервера в сокет клиенту
+bool writeToClient(int client_socket, int server_socket){
+	// Количество загруженных байтов
+	int bytes;
+	// Максимальный размер буфера
+	const size_t max_bufsize = 256;
+	// Буфер для чтения данных из сокета
+	char buffer[max_bufsize];
+	// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
+	while((bytes = recv(server_socket, buffer, max_bufsize, 0)) > 0){
+		// Выполняем отправку данных на сокет клиента
+		sendClient(client_socket, buffer, bytes);
+		// Заполняем буфер нулями
+		memset(buffer, 0, sizeof(buffer));
+	}
+	// Если байты считаны не правильно то сообщаем об этом
+	if(bytes < 0){
+		// Выводим сообщение об ошибке
+		std::cout << "Yo..!! Error while recieving from server!" << endl;
+		// Сообщаем что произошла ошибка
+		return false;
+	}
+	// Сообщаем что все удачно
+	return true;
+}
+
+// Функция отправки данных в сокет
+int send_sock(int sock, const char * buffer, uint32_t size){
+	int index = 0, ret;
+	while(size){
+		if((ret = send(sock, &buffer[index], size, 0)) <= 0) return (!ret) ? index : -1;
+		index += ret;
+		size -= ret;
+	}
+	return index;
+}
+
+
+/*
+void cb_func(evutil_socket_t fd, short what, void *arg)
+{
+        const char *data = reinterpret_cast <const char *> (arg);
+
+        printf("Got an event on socket %d:%s%s%s%s [%s]\r\n\r\n",
+            (int) fd,
+            (what&EV_TIMEOUT) ? " timeout" : "",
+            (what&EV_READ)    ? " read" : "",
+            (what&EV_WRITE)   ? " write" : "",
+            (what&EV_SIGNAL)  ? " signal" : "",
+            data);
+}
+
+void main_loop(evutil_socket_t fd1, evutil_socket_t fd2)
+{
+        struct event *ev1, *ev2;
+        struct timeval five_seconds = {5,0};
+        struct event_base *base = event_base_new();
+
+        // The caller has already set up fd1, fd2 somehow, and make them
+           nonblocking.
+
+        ev1 = event_new(base, fd1, EV_TIMEOUT|EV_READ|EV_PERSIST, cb_func,
+           (char*)"Reading event");
+        ev2 = event_new(base, fd2, EV_WRITE|EV_PERSIST, cb_func,
+           (char*)"Writing event");
+
+        event_add(ev1, &five_seconds);
+        event_add(ev2, NULL);
+        event_base_dispatch(base);
+}
+*/
+
+
+
+void clien_proxy(int fd, short event, void * arg);
+
+void serve_proxy(int fd, short event, void * arg){
+	
+	if(event & EV_SIGNAL){
+		cout << " СИГНАЛ СЕРВЕРА!!!!! " << endl;
+	}
+
+	ConnectionData * data = reinterpret_cast <ConnectionData *> (arg);
+
+	if(!data){
+		return;
+	}
+
+	if((int) fd && (int) fd == data->srv_sock){
+
+	// Устанавливаем таймаут
+	struct timeval timeout;
+	timeout.tv_sec	= 30;	// 30 секунд
+	timeout.tv_usec	= 0;//300000;	// 0 микросекунд (300 милисекунд)
+
+	cout << " event2 " << event << endl;
+
+	cout << " socket number11 = " << fd << endl;
+
+	if(event == 1){
+		
+		cout << " Таймаут сервер!!!! " << endl;
+		cout << " socket number12 = " << fd << endl;
+		delete data;
+		/*
+		// Блокируем поток клиента
+		client_lock.lock();
+		// Уменьшаем количество подключенных клиентов
+		client_count--;
+		// Если количество подключенных клиентов достигла предела то сообщаем об этом
+		if(client_count == max_clients - 1) client_lock.signal();
+		// Разблокируем клиента
+		client_lock.unlock();
+		*/
+		return;
+
+		//delete data;
+		//return;
+		/*
+		data->flag = true;
+		event_del(&data->ev);
+		event_set(&data->ev, data->cli_sock, EV_TIMEOUT | EV_READ | EV_PERSIST, clien_proxy, data);
+		event_add(&data->ev, &timeout);
+		*/
+
+		//event_set(&data->ev, data->cli_sock, EV_TIMEOUT | EV_READ, clien_proxy, data);
+		// Schedule client event
+		//event_add(&data->ev, &timeout1);
+		
+		/*
+		cout << " Таймаут сервер!!!! " << endl;
+		shutdown(data->srv_sock, SHUT_RDWR);
+		//shutdown(data->cli_sock, SHUT_RDWR);
+		close(data->srv_sock);
+		//close(data->cli_sock);
+		//delete data;
+		return;
+		*/
+	}
+
+	if(event == 2 && (int) fd){
+		// Считываем данные из сокета удаленного клиента в буфер
+		int recvd = ((int) fd && (int) fd == data->srv_sock) ? recv(fd, data->buf, 256, 0) : 0;
+		if(recvd <= 0){
+			
+			cout << " Вылетел сервер " << endl;
+			cout << " socket number13 = " << fd << endl;
+			delete data;
+			return;
+		} else {
+			//for(int i = 0; i < recvd; i++) cout << " read server " << " size = " << recvd << " buffer = " << (int) data->buf[i] << endl;
+
+			// Отправляем удаленному клиенту полученный буфер данных
+			// send_sock(data->cli_sock, data->buf, recvd);
+			if((int) fd && (int) fd == data->srv_sock) send(data->cli_sock, data->buf, recvd, 0);
+
+			
+			cout << " socket number14 = " << fd << endl;
+
+
+			// event_set(&data->ev, data->cli_sock, EV_TIMEOUT | EV_READ, clien_proxy, data);
+			
+			//event_set(&data->ev, data->cli_sock, EV_TIMEOUT | EV_READ, clien_proxy, data);
+			//event_set(&data->ev, data->srv_sock, EV_TIMEOUT | EV_READ, serve_proxy, data);
+			//event_set(&data->ev, data->cli_sock, EV_TIMEOUT | EV_READ, clien_proxy, data);
+			// Schedule client event
+			//event_add(&data->ev, &timeout1);
+			//event_add(&data->ev, &timeout2);
+		}
+	}
+	} else delete data;
+}
+
+// Handle client request {{{
+void clien_proxy(int fd, short event, void * arg){
+	
+	if(event & EV_SIGNAL){
+		cout << " СИГНАЛ КЛИЕНТА!!!!! " << endl;
+	}
+
+	ConnectionData * data = reinterpret_cast <ConnectionData *> (arg);
+
+	if(!data){
+		return;
+	}
+
+	if((int) fd && fd == data->cli_sock){
+
+	// Устанавливаем таймаут
+	struct timeval timeout;
+	timeout.tv_sec	= 0;	// 30 секунд
+	timeout.tv_usec	= 300000;	// 0 микросекунд (300 милисекунд)
+
+	cout << " event1 " << event << endl;
+
+	cout << " socket number7 = " << (int) fd << endl;
+
+	if(event == 1){
+		cout << " Таймаут клиент!!!! " << endl;
+
+		cout << " socket number8 = " << fd << endl;
+
+		delete data;
+		/*
+		// Блокируем поток клиента
+		client_lock.lock();
+		// Уменьшаем количество подключенных клиентов
+		client_count--;
+		// Если количество подключенных клиентов достигла предела то сообщаем об этом
+		if(client_count == max_clients - 1) client_lock.signal();
+		// Разблокируем клиента
+		client_lock.unlock();
+		*/
+
+		return;
+		/*
+		if(!data->flag){
+			event_del(&data->evd);
+			event_del(&data->evd);
+			event_set(&data->evd, data->srv_sock, EV_TIMEOUT | EV_READ | EV_PERSIST, serve_proxy, data);
+			event_add(&data->evd, &timeout);
+		} else {
+			delete data;
+			return;
+		}
+		*/
+	}
+
+	if(event == 2 && (int) fd){
+
+		data->flag = false;
+
+		// Считываем данные из сокета удаленного клиента в буфер
+		int recvd = ((int) fd && fd == data->cli_sock) ? recv(fd, data->buf, 256, 0) : 0;
+		if(recvd <= 0){
+			
+			cout << " Вылетел клиент " << endl;
+			cout << " socket number9 = " << fd << endl;
+
+			delete data;
+			return;
+		} else {
+			
+			cout << " socket number10 = " << fd << endl;
+			cout << " Записываем " << endl;
+
+			
+			// Отправляем удаленному клиенту полученный буфер данных
+			// send_sock(data->srv_sock, data->buf, recvd);
+			if((int) fd && fd == data->cli_sock) send(data->srv_sock, data->buf, recvd, 0);
+
+			//for(int i = 0; i < recvd; i++) cout << " read client " << " size = " << recvd << " buffer = " << (int) data->buf[i] << endl;
+
+			
+
+			//event_set(&data->ev, data->cli_sock, EV_TIMEOUT | EV_READ, clien_proxy, data);
+			//event_set(&data->ev2, data->srv_sock, EV_TIMEOUT | EV_READ, serve_proxy, data);
+			// Reschedule server event
+			//event_add(reinterpret_cast <struct event *> (arg), NULL);
+			// Schedule client event
+			//event_add(&data->ev, &timeout1);
+			//event_add(&data->ev2, &timeout2);
+		}
+	}
+	} else delete data;
+}
+
+void client_read(int fd, short event, void * arg);
+
+// Handle client responce {{{
+void client_write(int fd, short event, void * arg){
+	
+	cout << "Записываем данные" << endl;
+
+	if(event & EV_SIGNAL){
+		cout << " СИГНАЛ ЗАПИСИ!!!!! " << endl;
+	}
+
+	ConnectionData * data = reinterpret_cast <ConnectionData *> (arg);
+	if(!data){
+		return;
+	}
+
+	if(fd && fd == data->cli_sock){
+
+	// Send data to client
+	int len = write(fd, data->ans + data->offset, data->ans_size - data->offset);
+
+	if(len < data->ans_size - data->offset){
+		// Failed to send rest data, need to reschedule
+		data->offset += len;
+		/*
+		event_set(&data->ev, fd, EV_WRITE, client_write, data);
+		// Schedule client event
+		event_add(&data->ev, NULL);
+		*/
+		
+		/*
+		event_free(data->heap);
+		
+		data->heap = event_new(data->base, fd, EV_WRITE, client_write, data);
+		event_add(data->heap, NULL);
+		*/
+		// event_active(data->heap, EV_WRITE, 0);
+
+		cout << " socket number3 = " << fd << endl;
+
+	} else {
+
+		cout << " socket number4 = " << fd << endl;
+
+		if(!data->ssl){
+			cout << " socket number5 = " << fd << endl;
+			delete data;
+		} else {
+			/*
+			// Устанавливаем таймаут
+			struct timeval timeout;
+			timeout.tv_sec	= 10;		// 30 секунд
+			timeout.tv_usec	= 0;//300000;	// 0 микросекунд (300 милисекунд)
+			*/
+
+			cout << " socket number6 = " << fd << endl;
+
+			struct timeval timeout = { 10, 0 };
+
+			// Обнуляем размер буфера
+			data->total = 0;
+			// Заполняем буфер нулями
+			// memset(data->buf, 0, data->bsize);
+			data->buf = (char *) realloc(data->buf, 256);
+			// Заполняем буфер нулями
+			memset(data->buf, 0, 256);
+
+			cout << " Начинаем принимать шифрованные данные " << endl;
+
+			cout << " count users " << client_count << endl;
+
+			/*
+			// Set write callback to client socket
+			// event_set(&data->ev, fd, EV_READ, do_proxy, data);
+			
+			if(data->ev.ev_flags) event_del(&data->ev);
+
+			//if(data->ev.ev_flags) event_del(&data->ev);
+			//if(data->evd.ev_flags) event_del(&data->evd);
+			//
+			event_set(&data->eva, data->cli_sock, EV_TIMEOUT | EV_READ | EV_PERSIST, clien_proxy, data);
+			event_set(&data->evb, data->srv_sock, EV_TIMEOUT | EV_READ | EV_PERSIST, serve_proxy, data);
+			// Reschedule server event
+			// event_add(reinterpret_cast <struct event *> (arg), NULL);
+			// Schedule client event
+			event_add(&data->eva, &timeout);
+			event_add(&data->evb, &timeout);
+			*/
+		
+			event_free(data->heap);
+		
+			data->heap1 = event_new(data->base, data->cli_sock, EV_TIMEOUT | EV_READ | EV_PERSIST, clien_proxy, data);
+			data->heap2 = event_new(data->base, data->srv_sock, EV_TIMEOUT | EV_READ | EV_PERSIST, serve_proxy, data);
+			event_add(data->heap1, &timeout);
+			event_add(data->heap2, &timeout);
+		}
+	}
+
+	} else delete data;
+	return;
+}
+//}}}
+
+// Handle client request {{{
+void client_read(int fd, short event, void * arg){
+	ConnectionData * data = reinterpret_cast <ConnectionData *> (arg);
+
+	cout << " event = " << event << ", socket = " << fd << endl;
+
+	if(event & EV_SIGNAL){
+		cout << " СИГНАЛ ЧТЕНИЯ!!!!! " << endl;
+	}
+
+	if(!data){
+		
+		cout << " данные не найдены " << endl;
+
+		shutdown(fd, SHUT_RDWR);
+		close(fd);
+		return;
+	}
+
+	// int len = read(fd, data->buf, data->bsize - 1);
+	int len = recv(fd, &data->buf[data->total], 256, 0);
+
+	
+
+	
+	if(len == 0){
+		cout << "Client disconnected." << endl;
+		delete data;
+		return;
+	}
+
+	if(len < 0){
+		cout << "Socket failure, disconnecting client." << endl;
+		delete data;
+		return;
+	}
+	
+
+	//data->size	= len;
+	data->total		+= len;
+	data->offset	= 0;
+	data->ans_size	= 0;
+	data->ans		= "";
+	data->cli_sock	= fd;
+	if(!data->ssl) data->buf[data->total] = '\0';
+
+	// Если количество передаваемых данных превысило заложенный то расширяем максимальный размер
+	if(data->total > data->bsize){
+		// Увеличиваем размер буфера
+		data->bsize *= 2;
+		// Выделяем еще памяти под буфер
+		data->buf = (char *) realloc(data->buf, data->bsize);
+		// Если память выделить нельзя то выводим ошибку и выходим
+		if(data->buf == NULL){
+			// Выводим сообщение об ошибке
+			cout << "Error in memory re-allocation!" << endl;
+			delete data;
+			// Выходим
+			return;
+		}
+	}
+	// Выполняем парсинг полученных данных
+	if(data->http->parse(data->buf)){
+
+		cout << " ++++++++++++++++ " << data->http->getQuery() << " ssl = " << data->ssl << endl;
+
+		// Если это метод коннект
+		bool connect = (strcmp(data->http->getMethod(), "connect") ? false : true);
+		// Если авторизация не прошла
+		if(!data->auth) data->auth = check_auth(data->http);
+		// Если нужно запросить пароль
+		if(!data->auth && (!strlen(data->http->getLogin()) || !strlen(data->http->getPassword()))){
+			// Формируем ответ клиенту
+			data->ans		= data->http->requiredAuth();
+			data->ans_size	= strlen(data->http->requiredAuth());
+		// Сообщаем что авторизация не удачная
+		} else if(!data->auth) {
+			// Формируем ответ клиенту
+			data->ans		= data->http->faultAuth();
+			data->ans_size	= strlen(data->http->faultAuth());
+		// Если авторизация прошла
+		} else {
+			// Определяем порт, если это шифрованное сообщение то будем считывать данные целиком
+			if(connect){
+				
+				data->http->setVersion("1.0");
+
+				// Выполняем подключение к серверу
+				data->srv_sock = createServerSocket(data->http->getHost(), data->http->getPort());
+				// Если сокет существует
+				if(data->srv_sock > -1){
+
+					// Формируем ответ клиенту
+					data->ans		= data->http->authSuccess();
+					data->ans_size	= strlen(data->http->authSuccess());
+
+					data->ssl = true;
+
+					//main_loop(fd, data->srv_sock);
+
+				// Если подключение не удачное то сообщаем об этом
+				} else {
+					// Формируем ответ клиенту
+					data->ans		= data->http->faultConnect();
+					data->ans_size	= strlen(data->http->faultConnect());
+				}
+			// Иначе делаем запрос на получение данных
+			} else {
+
+				delete data;
+				return;
+
+				cout << " Выполняем запрос на нешифрованные данные " << endl;
+
+				// Выполняем подключение к серверу
+				data->srv_sock = createServerSocket(data->http->getHost(), data->http->getPort());
+				// Сообщаем что авторизация удачная
+				if(data->srv_sock > -1){
+
+					data->http->setVersion("1.0");
+
+					// Выполняем отправку запроса
+					if(!writeToServerSocket(data->srv_sock, data->http->getQuery(), strlen(data->http->getQuery()))){
+						// Формируем ответ клиенту
+						data->ans		= data->http->brokenRequest();
+						data->ans_size	= strlen(data->http->brokenRequest());
+					// Отправляем результат клиенту
+					} else if(!writeToClient(fd, data->srv_sock)) {
+						// Формируем ответ клиенту
+						data->ans		= data->http->brokenRequest();
+						data->ans_size	= strlen(data->http->brokenRequest());
+					} else {
+						delete data;
+						return;
+					}
+
+				// Если подключение не удачное то сообщаем об этом
+				} else {
+					// Формируем ответ клиенту
+					data->ans		= data->http->faultConnect();
+					data->ans_size	= strlen(data->http->faultConnect());
+				}
+			}
+		}
+		// Ответ готов
+		if(data->ans_size){
+
+			// event_active(data->heap, EV_WRITE, 0);
+			
+			cout << " rewrite event = " << event << ", socket = " << fd << endl;
+			
+			struct timeval timeout = { 10, 0 };
+			event_free(data->heap);
+			data->heap = event_new(data->base, fd, EV_WRITE | EV_PERSIST, client_write, data);
+			event_add(data->heap, &timeout);
+		}
+	}
+}
+//}}}
+
+/*
+void client_timeout(int fd, short event, void * arg){
+
+	ConnectionData * data = reinterpret_cast <ConnectionData *> (arg);
+
+	cout << " end timeout " << endl;
+
+	shutdown(fd, SHUT_RDWR);
+	close(fd);
+	if(data) delete data;
+	return;
+}
+*/
+
+// Функция обработки данных из потока
+void * handle_connection(void * arg){
+	// Создаем сокет
+	int sock = (uint64_t) arg;
+
+	if((int) sock){
+
+		cout << " Connect to socket14 = " << sock << endl;
+		/*
+		for(int i = 0; i < sockets.size(); i++){
+			if(sockets[i] == sock){
+				cout << " Вы совсем охренели уже!!!!" << endl;
+				return 0;
+			}
+		}
+
+		sockets.push_back(sock);
+		*/
+
+		// Устанавливаем таймаут
+		struct timeval timeout;
+		timeout.tv_sec	= 1000;	// 30 секунд
+		timeout.tv_usec	= 0;	// 0 микросекунд
+
+		/* Set the client socket to non-blocking mode. */
+		if(setnonblock(sock) < 0) cout << "Failed to set client socket non-blocking" << endl;
+
+		cout << " socket number1 = " << sock << endl;
+
+		// Set read callback to client socket
+		ConnectionData * data = new ConnectionData("anyks");
+
+		// event_get_fd()
+		//EVENT_FD()
+
+		data->heap = event_new(data->base, sock, EV_READ | EV_PERSIST, client_read, data);
+		event_add(data->heap, &timeout);
+
+		//event_base_dispatch(data->base);
+
+		event_base_loop(data->base, 4);
+	}
+	// Сообщаем что все удачно
+	return 0;
+}
+
+// Функция обработки потоков ядра
+bool spawn_thread(pthread_t * thread, void * data){
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 64 * 1024);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	return !pthread_create(thread, &attr, handle_connection, data);
 }
 
 // Функция установки количество разрешенных файловых дескрипторов
@@ -1382,19 +1844,37 @@ int set_fd_limit(int maxfd){
 	return setrlimit(RLIMIT_NOFILE, &lim);
 }
 
+/*
+void my_function(int fd, short event, void * arg){
+	cout << " timer " << endl;
+}
+*/
+
 int main(int argc, char * argv[]){
+	/*
+	struct event ev;
+	struct timeval time;
+	time.tv_sec = 1;
+	time.tv_usec = 0;
+
+	event_init();
+	event_set(&ev, 0, EV_PERSIST, my_function, NULL);
+	evtimer_add(&ev, &time);
+	event_dispatch();
+	*/
+
 	// Максимальное количество файловых дескрипторов
 	int maxfd = 1024; // (по дефолту в системе 1024)
 	// Максимальное количество воркеров
-	const size_t max_works = 4;
+	const size_t max_works = 2;//4;
 	// Наши ID процесса и сессии
 	pid_t pid[max_works], sid;
 	// Структура для клиента
 	struct sockaddr_in echoclient;
-	// Время ожидания следующего запроса
-	float ttl = 0.5; // 5;
 	// Установим максимальное кол-во дискрипторов которое можно открыть
 	set_fd_limit(maxfd);
+	// Время ожидания следующего запроса
+	float ttl = 0.5; // 5;
 	// Ответвляемся от родительского процесса
 	// pid[0] = fork();
 	// Если пид не создан тогда выходим
@@ -1422,7 +1902,7 @@ int main(int argc, char * argv[]){
 	int socket = create_listen_socket();
 	// Проверяем все ли удачно
 	if(socket == -1){
-		std::cout << "[-] Failed to create server\n";
+		cout << "[-] Failed to create server\n";
 		return 1;
 	}
 	// Устанавливаем сигнал установки подключения
@@ -1439,6 +1919,9 @@ int main(int argc, char * argv[]){
 	int lenfork_buf = sizeof(fmess) - sizeof(long);
 	// Освобождаем процесс
 	msgctl(qid, IPC_RMID, 0);
+
+	int status;
+
 	// Создаем дочерние потоки (от 1 потому что 0-й это этот же процесс)
 	for(int i = 1; i < max_works; i++){
 		// Создаем структуру для передачи сокета сервера
@@ -1454,6 +1937,12 @@ int main(int argc, char * argv[]){
 				exit(1);
 			// Если это дочерний поток значит все нормально и продолжаем работу
 			case 0:
+				// Устанавливаем сигнал установки подключения
+				signal(SIGPIPE, sig_handler1);		// Сигнал обрыва соединения во время записи
+				signal(SIGCHLD, sigchld_handler1);	// Дочерний процесс убит
+				signal(SIGTERM, sigterm_handler1);	// Процесс убит
+				signal(SIGHUP, sighup_handler1);	// Терминал потерял связь
+
 				// Выполняем получение данных сокета от родителя
 				msgrcv(qid, &fork_buf, lenfork_buf, 1, 0);
 
@@ -1471,6 +1960,9 @@ int main(int argc, char * argv[]){
 					client_lock.unlock();
 					// Проверяем разрешено ли подключение клиента
 					if((clientsock = accept(fork_buf.socket, (struct sockaddr *) &echoclient, &clientlen)) > 0){
+						
+						cout << " Connect to socket13 = " << clientsock << endl;
+
 						// Выполняем блокировку клиента
 						client_lock.lock();
 						// Увеличиваем количество подключенных клиентов
@@ -1482,7 +1974,7 @@ int main(int argc, char * argv[]){
 						// Выполняем разблокирование клиента
 						client_lock.unlock();
 						// Засыпаем на указанное количество секунд
-						sleep(ttl);
+						//sleep(ttl);
 					}
 				}
 			break;
@@ -1491,7 +1983,14 @@ int main(int argc, char * argv[]){
 		}
 	}
 	// Ждем завершение работы потомка (от 1 потому что 0-й это этот же процесс а он не может ждать завершения самого себя)
-	for(int i = 1; i < max_works; i++) waitpid(pid[i], NULL, 0);
+	for(int i = 1; i < max_works; i++){
+		waitpid(pid[i], &status, 0);
+
+		cout << " status = " << WTERMSIG(status) << endl;
+	}
+
+	cout << " Процессы кончились " << endl;
+
 	// Освобождаем процесс
 	msgctl(qid, IPC_RMID, 0);
 	// Выходим
