@@ -213,6 +213,8 @@ void Http::parser(string buffer){
 		size_t size = headers.size();
 		// Если заголовки найдены
 		if(size){
+			// Очищаем массив заголовков
+			other.clear();
 			// Запоминаем команду запроса
 			command = headers[0];
 			// Разделяем на составляющие команду
@@ -357,7 +359,9 @@ void Http::parser(string buffer){
  */
 void Http::createHead(){
 	// Если это не метод CONNECT то меняем заголовок Connection на close
-	if(!connection.length() && !strcmp(version.c_str(), "1.0")) connection = "close";
+	if(connection.length() && !strcmp(version.c_str(), "1.0")) connection = "close";
+	// Очищаем заголовок
+	head.clear();
 	// Создаем строку запроса
 	head.append(toCase(method, true) + string(" ") + path + string(" ") + string("HTTP/") + version + string("\r\n"));
 	// Устанавливаем заголовок Host:
