@@ -15,10 +15,9 @@ class Http {
 					port,		// Порт
 					protocol;	// Протокол
 		};
-		// Версия системы
-		float appver;
 		// Основные переменные
 		string	appname,		// Название прокси сервера
+				appver,			// Версия системы
 				query,			// Исходный запрос
 				command,		// Команда запроса
 				method,			// Метод запроса
@@ -333,10 +332,14 @@ class Http {
 		 */
 		void setUseragent(const string str);
 		/**
+		 * setClose Метод установки принудительного отключения после запроса
+		 */
+		void setClose();
+		/**
 		 * Http Конструктор
 		 * @param str строка содержащая название сервиса
 		 */
-		Http(const string str = "ANYKS", float ver = 1.0);
+		Http(const string str = "ANYKS", string ver = "1.0");
 		/**
 		 * Http Деструктор
 		 */

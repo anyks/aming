@@ -467,7 +467,7 @@ string Http::brokenRequest(){
 	// Если это домен
 	if(pos != string::npos){
 		// Заменяем дефолтное название на указанное
-		return html[9].replace(pos, defname.length(), appname + string("/") + to_string(appver));
+		return html[9].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о неудачном отправленном запросе
 	return html[9];
@@ -484,7 +484,7 @@ string Http::faultConnect(){
 	// Если это домен
 	if(pos != string::npos){
 		// Заменяем дефолтное название на указанное
-		return html[6].replace(pos, defname.length(), appname + string("/") + to_string(appver));
+		return html[6].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о неудачном подключении
 	return html[6];
@@ -501,7 +501,7 @@ string Http::faultAuth(){
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		return html[5].replace(pos, defname.length(), appname + string("/") + to_string(appver));
+		return html[5].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о неудачной авторизации
 	return html[5];
@@ -518,7 +518,7 @@ string Http::requiredAuth(){
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		return html[2].replace(pos, defname.length(), appname + string("/") + to_string(appver));
+		return html[2].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о требовании авторизации
 	return html[2];
@@ -535,7 +535,7 @@ string Http::authSuccess(){
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		return html[0].replace(pos, defname.length(), appname + string("/") + to_string(appver));
+		return html[0].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о том что авторизация пройдена
 	return html[0];
@@ -689,6 +689,15 @@ void Http::setVersion(const string str){
 	createHead();
 }
 /**
+ * setClose Метод установки принудительного отключения после запроса
+ */
+void Http::setClose(){
+	// Запоминаем данные
+	connection = "close";
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
  * setAuth Метод установки метода авторизации запроса
  * @param str строка с данными для установки
  */
@@ -712,7 +721,7 @@ void Http::setUseragent(const string str){
  * Http Конструктор
  * @param str строка содержащая название сервиса
  */
-Http::Http(const string str, float ver){
+Http::Http(const string str, string ver){
 	// Если имя передано то запоминаем его
 	appname = str;
 	// Устанавливаем версию системы
