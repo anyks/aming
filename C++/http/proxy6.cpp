@@ -1,7 +1,7 @@
 // sudo lsof -i | grep -E LISTEN
 // otool -L http5
-//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -levent -I/usr/local/include -L/usr/local/lib -o http6 base64.cpp proxy6.cpp http.cpp = dynamic
-//  g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -lpthread -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a -o http6 base64.cpp proxy6.cpp http.cpp = static
+//  g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -lpthread -levent -I/usr/local/include -L/usr/local/lib -o http6 base64.cpp proxy6.cpp http.cpp = dynamic
+//  g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -lpthread -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a -o http6 base64.cpp proxy6.cpp http.cpp = static
 
 // MacOS X
 // export EVENT_NOKQUEUE=1
@@ -11,6 +11,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/msg.h>
+#include <sys/stat.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <event2/event.h>
 #include <event2/event_struct.h>
 #include "http.h"
@@ -828,7 +834,7 @@ int main(int argc, char * argv[]){
 	// Освобождаем процесс
 	msgctl(qid, IPC_RMID, 0);
 	// Создаем дочерние потоки (от 1 потому что 0-й это этот же процесс)
-	for(int i = 1; i < max_works; i++){
+	for(u_int i = 1; i < max_works; i++){
 		// Создаем структуру для передачи сокета сервера
 		fork_buf.type	= 1;		// Тип сообщения
 		fork_buf.socket	= socket;	// Сокет сервера
@@ -868,7 +874,7 @@ int main(int argc, char * argv[]){
 		}
 	}
 	// Ждем завершение работы потомка (от 1 потому что 0-й это этот же процесс а он не может ждать завершения самого себя)
-	for(int i = 1; i < max_works; i++){
+	for(u_int i = 1; i < max_works; i++){
 		// Ожидаем завершения процесса
 		waitpid(pid[i], &status, 0);
 		// Выводим в консоль информацию

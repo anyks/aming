@@ -1,6 +1,9 @@
 #include <string>
+#include <cstring>
 #include <vector>
+#include <algorithm>
 #include <stdlib.h>
+#include <sys/types.h>
 #include "base64.h"
 
 // Устанавливаем пространство имен

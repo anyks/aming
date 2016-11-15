@@ -15,7 +15,7 @@ vector <string> Http::split(const string str, const string delim){
 	// Результирующий вектор
 	vector <string> result;
 	// Позиция разделителя в строке
-	int pos = str.find(delim);
+	size_t pos = str.find(delim);
 	// Перебираем строку до тех пор пока не переберем её целиком
 	while(pos != string::npos){
 		// Добавляем найденную позицию в строке
@@ -136,7 +136,7 @@ Http::connect Http::getConnection(string str){
 	// Размеры данных
 	size_t size;
 	// Если протокол найден
-	if(pos != string::npos){
+	if(pos != (size_t) string::npos){
 		// Выполняем разделение на протокол
 		vector <string> prt = split(str, "://");
 		// Запоминаем размер массива
@@ -155,7 +155,7 @@ Http::connect Http::getConnection(string str){
 	// Выполняем поиск порта и хоста
 	pos = str.find(":");
 	// Если хост и порт найдены
-	if(pos != string::npos){
+	if(pos != (size_t) string::npos){
 		// Выполняем разделение на протокол
 		vector <string> prt = split(str, ":");
 		// Запоминаем размер массива
@@ -185,13 +185,13 @@ Http::connect Http::getConnection(string str){
 	// Выполняем поиск дирректории в хосте
 	pos = str.find("/");
 	// Если дирректория найдена значит это не хост
-	if(pos != string::npos){
+	if(pos != (size_t) string::npos){
 		// Извлекаем название домена
 		str = str.substr(0, pos);
 		// Выполняем поиск точки в домене
 		pos = str.find(".");
 		// Если это домен
-		if(pos != string::npos) data.host = str;
+		if(pos != (size_t) string::npos) data.host = str;
 		// Если это не домен то устанавливаем что это корень
 		else data.host = "/";
 	}
@@ -238,7 +238,7 @@ void Http::parser(string buffer){
 					// Запоминаем версию протокола
 					version = prt[1];
 					// Перебираем остальные заголовки
-					for(int i = 1; i < headers.size(); i++){
+					for(u_int i = 1; i < headers.size(); i++){
 						// Если все заголовки считаны тогда выходим
 						if(headers[i].length()){
 							// Получаем данные заголовок хоста
@@ -369,7 +369,7 @@ void Http::createHead(){
 	// Добавляем useragent
 	if(useragent.length()) head.append(string("User-Agent: ") + useragent + string("\r\n"));
 	// Добавляем остальные заголовки
-	for(int i = 0; i < other.size(); i++){
+	for(u_int i = 0; i < other.size(); i++){
 		// Если это не заголовок контента, то добавляем в список остальные заголовки
 		if(toCase(other[i]).find("content-length:") == string::npos) head.append(other[i] + string("\r\n"));
 	}
@@ -435,7 +435,7 @@ bool Http::parse(const string buffer){
 	// Сообщаем что размер найден
 	} else if(endPos != NULL) {
 		// Получаем длину передаваемых данных
-		const int len = ::atoi(len_data.c_str());
+		const u_int len = ::atoi(len_data.c_str());
 		// Создаем новый буфер с данными
 		string buf(endPos + 4);
 		// Урезаем строку до нужных размеров
