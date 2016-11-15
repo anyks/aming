@@ -402,10 +402,10 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 			} break;
 			// Если это чтение данных
 			case 2: {
-				// Создаем буфер для чтения данных
-				vector <char> buffer(256);
+				// Буфер для чтения данных из сокета
+				char buffer[256];
 				// Выполняем чтение данных из сокета
-				int len = recv(fd, buffer.data(), 256, 0);
+				int len = recv(fd, buffer, 256, 0);
 				// Получаем сокет для ответа
 				evutil_socket_t socket = (fd != http->socServer ? http->socServer : http->socClient);
 				// Если данные не считаны значит клиент отключился
@@ -416,12 +416,10 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 					free_data(http);
 				// Если данные считаны нормально
 				} else if(socket > -1) {
-					// Записываем данные полученные из сокета
-					http->request.data.append(buffer.cbegin(), buffer.cend());
-					// Отправляем удаленному клиенту полученный буфер данных
-					send(socket, http->request.data.c_str(), len, 0);
-					// Очищаем буфер
-					http->request.data.clear();
+					// Выполняем отправку данных на сокет клиента
+					send(socket, buffer, len, 0);
+					// Заполняем буфер нулями
+					memset(buffer, 0, sizeof(buffer));
 				}
 			} break;
 		}
