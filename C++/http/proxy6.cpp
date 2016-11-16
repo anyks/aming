@@ -1,7 +1,11 @@
 // sudo lsof -i | grep -E LISTEN
 // otool -L http5
-//  g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -lpthread -levent -I/usr/local/include -L/usr/local/lib -o http6 base64.cpp proxy6.cpp http.cpp = dynamic
-//  g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -lpthread -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a -o http6 base64.cpp proxy6.cpp http.cpp = static
+// MacOS X
+// g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http6 http.cpp base64.cpp proxy6.cpp -I/usr/local/include -lpthread -levent = dynamic
+// g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http6 http.cpp base64.cpp proxy6.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a -lpthread = static
+// Linux
+// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http6 http.cpp base64.cpp proxy6.cpp -levent -lpthread = dynamic
+// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http6 http.cpp base64.cpp proxy6.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a -lpthread = static
 
 // MacOS X
 // export EVENT_NOKQUEUE=1
@@ -782,8 +786,6 @@ int main(int argc, char * argv[]){
 	const size_t max_works = MAX_WORKERS;
 	// Наши ID процесса и сессии
 	pid_t pid[max_works], sid;
-	// Структура для клиента
-	//struct sockaddr_in echoclient;
 	// Установим максимальное кол-во дискрипторов которое можно открыть
 	set_fd_limit(MAX_SOCKETS);
 	// Ответвляемся от родительского процесса
@@ -807,8 +809,6 @@ int main(int argc, char * argv[]){
 	// close(STDERR_FILENO);
 	// Записываем пид процесса в файл
 	create_pid(sid);
-	// Определяем количество возможных передаваемых данных
-	//uint32_t clientlen = sizeof(echoclient);
 	// Получаем сокет
 	evutil_socket_t socket = create_app_socket();
 	// Проверяем все ли удачно
