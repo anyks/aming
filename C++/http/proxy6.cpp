@@ -415,7 +415,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Буфер для чтения данных из сокета
 				char buffer[256];
 				// Выполняем чтение данных из сокета
-				int len = recv(fd, buffer, 255, 0);
+				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Получаем сокет для ответа
 				evutil_socket_t socket = (fd != http->socServer ? http->socServer : http->socClient);
 				// Если данные не считаны значит клиент отключился
@@ -426,12 +426,8 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 					free_data(http);
 				// Если данные считаны нормально
 				} else if(socket > -1) {
-					// Формируем конец строки
-					if(!http->ishttps) buffer[255] = '\0';
 					// Выполняем отправку данных на сокет клиента
 					send(socket, buffer, len, 0);
-					// Заполняем буфер нулями
-					memset(buffer, 0, sizeof(buffer));
 				}
 			} break;
 		}
@@ -495,11 +491,9 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если нужно работать в режиме HTTP/1.0
 				if(!alive){
 					// Буфер для чтения данных из сокета
-					char buffer[256];
+					char buffer[255];
 					// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
-					while((len = recv(fd, buffer, 255, 0)) > 0){
-						// Формируем конец строки
-						buffer[255] = '\0';
+					while((len = recv(fd, buffer, sizeof(buffer), 0)) > 0){
 						// Выполняем отправку данных на сокет клиента
 						send(http->socClient, buffer, len, 0);
 						// Заполняем буфер нулями

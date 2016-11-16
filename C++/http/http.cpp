@@ -371,7 +371,8 @@ void Http::createHead(){
 	// Добавляем остальные заголовки
 	for(u_int i = 0; i < other.size(); i++){
 		// Если это не заголовок контента, то добавляем в список остальные заголовки
-		if(toCase(other[i]).find("content-length:") == string::npos) head.append(other[i] + string("\r\n"));
+		if((toCase(other[i]).find("content-length:") == string::npos)
+		&& (toCase(other[i]).find("gzip") == string::npos)) head.append(other[i] + string("\r\n"));
 	}
 	// Добавляем заголовок connection
 	if(connection.length()) head.append(string("Connection: ") + connection + string("\r\n"));
