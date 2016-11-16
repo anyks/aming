@@ -427,7 +427,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные считаны нормально
 				} else if(socket > -1) {
 					// Формируем конец строки
-					if(!http->ishttps) buffer[255] = '\n';
+					if(!http->ishttps) buffer[255] = '\0';
 					// Выполняем отправку данных на сокет клиента
 					send(socket, buffer, len, 0);
 					// Заполняем буфер нулями
@@ -499,7 +499,7 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 					// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
 					while((len = recv(fd, buffer, 255, 0)) > 0){
 						// Формируем конец строки
-						buffer[255] = '\n';
+						buffer[255] = '\0';
 						// Выполняем отправку данных на сокет клиента
 						send(http->socClient, buffer, len, 0);
 						// Заполняем буфер нулями
