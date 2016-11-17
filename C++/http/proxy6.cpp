@@ -427,7 +427,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные считаны нормально
 				} else if(socket > -1) {
 					// Выполняем отправку данных на сокет клиента
-					send(socket, buffer, len, 0);
+					send(socket, (void *) buffer, len, 0);
 				}
 			} break;
 		}
@@ -495,7 +495,7 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 					// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
 					while((len = recv(fd, buffer, sizeof(buffer), 0)) > 0){
 						// Выполняем отправку данных на сокет клиента
-						send(http->socClient, buffer, len, 0);
+						send(http->socClient, (void *) buffer, len, 0);
 						// Заполняем буфер нулями
 						memset(buffer, 0, sizeof(buffer));
 					}
