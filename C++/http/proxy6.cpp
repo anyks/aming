@@ -453,6 +453,8 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 			} break;
 			// Если это чтение данных
 			case 2: {
+				// Проверяем нужно ли держать подключение
+				bool alive = http->parser->isAlive();
 				// Буфер для чтения данных из сокета
 				char buffer[256];
 				// Выполняем чтение данных из сокета
@@ -461,12 +463,15 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				evutil_socket_t socket = (fd != http->socServer ? http->socServer : http->socClient);
 				// Если данные не считаны значит клиент отключился
 				if(len <= 0){
-					// Выводим в консоль информацию
-					debug_message("Work is done!");
-					// Сообщаем что все данные получены
-					send(socket, 0, 1, 0);
-					// Выполняем очистку подключения
-					flash_connect(arg, fd != http->socClient);
+					// Если нужно работать в режиме HTTP/1.0
+					if(!alive && (len == 0)){
+						// Выводим в консоль информацию
+						debug_message("Work is done!");
+						// Сообщаем что все данные получены
+						send(socket, 0, 1, 0);
+						// Выполняем очистку подключения
+						flash_connect(arg, fd != http->socClient);
+					}
 				// Если данные считаны нормально
 				} else if(socket > -1) {
 					// Выполняем отправку данных на сокет клиента
@@ -519,39 +524,14 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 				close_event(&http->evServer);
 				// Очищаем событие для клиента
 				close_event(&http->evClient);
-				/*
-				// Проверяем нужно ли держать подключение
-				bool alive = http->parser->isAlive();
-				// Если нужно работать в режиме HTTP/1.0
-				if(!alive){
-					// Буфер для чтения данных из сокета
-					char buffer[255];
-					int len = 0;
-					// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
-					while((len = recv(fd, buffer, sizeof(buffer), 0)) != 0){
-						
-						cout << " len = " << len << endl;
-
-						// Выполняем отправку данных на сокет клиента
-						if(len > 0) send(http->socClient, (void *) buffer, len, 0);
-						// Заполняем буфер нулями
-						memset(buffer, 0, sizeof(buffer));
-					}
-					// Сообщаем что это конец
-					send(http->socClient, 0, 1, 0);
-					// Удаляем данные и отключаемся
-					free_data(http);
-				// Если нужно работать в режиме HTTP/1.1
-				} else {*/
-					// Устанавливаем таймаут ожидания запроса в 3 секунды
-					struct timeval timeout = KEEP_ALIVE;
-					// Создаем новое событие для клиента
-					http->evClient = event_new(http->base, http->socClient, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
-					http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
-					// Активируем события
-					event_add(http->evClient, &timeout);
-					event_add(http->evServer, &timeout);
-				//}
+				// Устанавливаем таймаут ожидания запроса в 3 секунды
+				struct timeval timeout = KEEP_ALIVE;
+				// Создаем новое событие для клиента
+				http->evClient = event_new(http->base, http->socClient, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+				http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+				// Активируем события
+				event_add(http->evClient, &timeout);
+				event_add(http->evServer, &timeout);
 			}
 		} break;
 	}
