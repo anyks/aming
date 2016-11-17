@@ -370,9 +370,13 @@ void Http::createHead(){
 	if(useragent.length()) head.append(string("User-Agent: ") + useragent + string("\r\n"));
 	// Добавляем остальные заголовки
 	for(u_int i = 0; i < other.size(); i++){
-		// Если это не заголовок контента, то добавляем в список остальные заголовки
+		/*
+		// Если это не заголовок контента, то добавляем в список остальные заголовки (Not Gzip)
 		if((toCase(other[i]).find("content-length:") == string::npos)
 		&& (toCase(other[i]).find("gzip") == string::npos)) head.append(other[i] + string("\r\n"));
+		*/
+		// Если это не заголовок контента, то добавляем в список остальные заголовки (Gzip)
+		if(toCase(other[i]).find("content-length:") == string::npos) head.append(other[i] + string("\r\n"));
 	}
 	// Добавляем заголовок connection
 	if(connection.length()) head.append(string("Connection: ") + connection + string("\r\n"));

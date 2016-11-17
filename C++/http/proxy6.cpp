@@ -20,6 +20,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <event2/event.h>
 #include <event2/event_struct.h>
@@ -89,11 +90,13 @@ class BufferHttpProxy {
 		~BufferHttpProxy(){
 			// Отключаем от сервиса (disconnect)
 			if(socServer > 0){
+				send(socServer, 0, 1, 0);
 				shutdown(socServer, SHUT_RDWR);
 				close(socServer);
 				socServer = -1;
 			}
 			if(socClient > 0){
+				send(socClient, 0, 1, 0);
 				shutdown(socClient, SHUT_RDWR);
 				close(socClient);
 				socClient = -1;
@@ -251,6 +254,15 @@ evutil_socket_t create_app_socket(){
 	echoserver.sin_addr.s_addr = htonl(INADDR_ANY); // inet_addr("127.0.0.1");
 	// Указываем порт сервера
 	echoserver.sin_port = htons(5556); // htons(SERVER_PORT);
+	// Устанавливаемое значение
+	int optval = 1;
+	// Устанавливаем TCP_NODELAY
+	if(setsockopt(serversock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(int)) < 0){
+		// Выводим в консоль информацию
+		debug_message("Cannot set TCP_NODELAY option on listen socket.");
+		// Выходим
+		return -1;
+	}
 	// Выполняем биндинг сокета // ::bind (для мака)
 	if(::bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0){
 		// Выводим в консоль информацию
@@ -368,6 +380,30 @@ void free_data(void * arg){
 	}
 }
 /**
+ * write_socket Функция записи данных в сокет
+ * @param buffer буфер данных для передачи
+ * @param socket сокет куда нужно произвесте запись
+ * @param size   размер записываемых данных
+ */
+void write_socket(const char * buffer, evutil_socket_t socket, size_t size){
+	// Количество переданных байтов
+	int len = 0;
+	// Общее количество переданных байтов
+	u_int total = 0;
+	// Передаем все байты
+	while(total < size){
+		// Начинаем передавать данные пока все не передали
+		if((len = send(socket, (void *) (buffer + total), size - total, 0)) < 0){
+			// Выводим в консоль информацию
+			debug_message("Broken write data to socket");
+			// Выходим
+			break;
+		}
+		// Запоминаем общее количество переданных данных
+		total += len;
+	}
+}
+/**
  * on_http_connect Прототип функции подключения к серверу
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
@@ -425,9 +461,9 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 					// Очищаем память
 					free_data(http);
 				// Если данные считаны нормально
-				} else if(socket > -1) {
+				} else if((socket > -1) && (len <= sizeof(buffer))) {
 					// Выполняем отправку данных на сокет клиента
-					send(socket, (void *) buffer, len, 0);
+					write_socket(buffer, socket, len);
 				}
 			} break;
 		}
@@ -495,7 +531,7 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 					// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
 					while((len = recv(fd, buffer, sizeof(buffer), 0)) > 0){
 						// Выполняем отправку данных на сокет клиента
-						send(http->socClient, (void *) buffer, len, 0);
+						if(len <= sizeof(buffer)) write_socket(buffer, http->socClient, len);
 						// Заполняем буфер нулями
 						memset(buffer, 0, sizeof(buffer));
 					}
