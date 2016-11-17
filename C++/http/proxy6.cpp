@@ -380,30 +380,6 @@ void free_data(void * arg){
 	}
 }
 /**
- * write_socket Функция записи данных в сокет
- * @param buffer буфер данных для передачи
- * @param socket сокет куда нужно произвесте запись
- * @param size   размер записываемых данных
- */
-void write_socket(const char * buffer, evutil_socket_t socket, size_t size){
-	// Количество переданных байтов
-	int len = 0;
-	// Общее количество переданных байтов
-	u_int total = 0;
-	// Передаем все байты
-	while(total < size){
-		// Начинаем передавать данные пока все не передали
-		if((len = send(socket, (void *) (buffer + total), size - total, 0)) < 0){
-			// Выводим в консоль информацию
-			debug_message("Broken write data to socket");
-			// Выходим
-			break;
-		}
-		// Запоминаем общее количество переданных данных
-		total += len;
-	}
-}
-/**
  * on_http_connect Прототип функции подключения к серверу
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
@@ -463,7 +439,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные считаны нормально
 				} else if((socket > -1) && (len <= sizeof(buffer))) {
 					// Выполняем отправку данных на сокет клиента
-					write_socket(buffer, socket, len);
+					send(socket, (void *) buffer, len, 0);
 				}
 			} break;
 		}
@@ -531,7 +507,7 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 					// Выполняем чтение данных из сокета сервера до тех пор пока не считаем все полностью
 					while((len = recv(fd, buffer, sizeof(buffer), 0)) > 0){
 						// Выполняем отправку данных на сокет клиента
-						if(len <= sizeof(buffer)) write_socket(buffer, http->socClient, len);
+						if(len <= sizeof(buffer)) send(http->socClient, (void *) buffer, len, 0);
 						// Заполняем буфер нулями
 						memset(buffer, 0, sizeof(buffer));
 					}
