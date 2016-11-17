@@ -427,7 +427,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Буфер для чтения данных из сокета
 				char buffer[256];
 				// Выполняем чтение данных из сокета
-				int len = recv(fd, buffer, sizeof(buffer), 0);
+				size_t len = recv(fd, buffer, sizeof(buffer), 0);
 				// Получаем сокет для ответа
 				evutil_socket_t socket = (fd != http->socServer ? http->socServer : http->socClient);
 				// Если данные не считаны значит клиент отключился
