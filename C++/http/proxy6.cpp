@@ -394,20 +394,23 @@ void free_data(BufferHttpProxy ** http){
 }
 /**
  * flash_connect Функция очистки подключения
- * @param arg  ссылка на объект подключения
- * @param flag флаг типа сокета (true - сервер, false - клиент)
+ * @param arg ссылка на объект подключения
+ * @param fd  файловый дескриптор (сокет)
  */
-void flash_connect(BufferHttpProxy ** arg, bool flag = false){
+void flash_connect(evutil_socket_t fd, BufferHttpProxy ** arg){
 	// Получаем объект подключения
 	BufferHttpProxy * http = *arg;
 	// Если данные существуют
 	if(http != NULL){
-		// Снимаем событие
-		close_event(flag ? &http->evServer : &http->evClient);
-		// Отключаем сокет
-		close_socket(flag ? http->socServer : http->socClient);
-		// Очищаем память
-		if((http->socServer < 0) && (http->socClient < 0)) free_data(&http);
+		// Если сервер отключен тогда выходим
+		if(http->socServer < 0) free_data(&http);
+		// Если сервер не отключен
+		else if(fd == http->socServer) {
+			// Снимаем событие
+			close_event(&http->evServer);
+			// Отключаем сокет
+			close_socket(http->socServer);
+		}
 	}
 }
 /**
@@ -450,8 +453,8 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 			case 1: {
 				// Выводим в консоль информацию
 				debug_message("Таймаут клиент!!!!");
-				// Выполняем очистку подключения
-				flash_connect(&http, fd != http->socClient);
+				// Если сервер отключился то отключаем все
+				flash_connect(fd, &http);
 			} break;
 			// Если это чтение данных
 			case 2: {
@@ -468,21 +471,18 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 					// Если нужно работать в режиме HTTP/1.0
 					// Если установлен заголовок Proxy-Connection: keep-alive и это HTTP/1.1
 					// а также это не зашифрованное соединение то мы не отключаемся а ждем новых порций данных
-					if((!alive && (len == 0)) || http->ishttps){
+					if(!alive || http->ishttps){
 						// Выводим в консоль информацию
 						debug_message("Work is done!");
-						// Сообщаем что все данные получены
-						send(socket, 0, 1, 0);
-						// Выполняем очистку подключения
-						flash_connect(&http, fd != http->socClient);
-					// Если соединение поломано то отключаемся
-					} else if(len < 0) flash_connect(&http, fd != http->socClient);
+						// Если сервер отключился то отключаем все
+						flash_connect(fd, &http);
+					}
 				// Если данные считаны нормально
 				} else if(socket > -1) {
 					// Выполняем отправку данных на сокет клиента
 					send(socket, (void *) buffer, len, 0);
 				// Если сокет не существует тогда удаляем данные
-				} else free_data(&http);
+				} else flash_connect(fd, &http);
 			} break;
 		}
 	}
@@ -509,7 +509,7 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Выводим в консоль информацию
 				debug_message("Таймаут клиент!!!!");
 				// Выполняем очистку подключения
-				flash_connect(&http, fd != http->socClient);
+				free_data(&http);
 			} break;
 			// Если это запись
 			case 4: {
@@ -518,7 +518,7 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Send data to client
 				long len = write(fd, query.c_str() + http->request.offset, query.length() - http->request.offset);
 				// Выполняем отправку данных до тех пор пока все не отправим
-				if(len < (query.length() - http->request.offset)){
+				if(len < (long) (query.length() - http->request.offset)){
 					// Failed to send rest data, need to reschedule
 					http->request.offset += len;
 				// Если мы все отправили
@@ -560,20 +560,18 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 				// Выводим в консоль информацию
 				debug_message("Таймаут клиент!!!!");
 				// Выполняем очистку подключения
-				flash_connect(&http, fd != http->socClient);
+				free_data(&http);
 			} break;
 			// Если это запись
 			case 4: {
 				// Send data to client
 				long len = write(fd, http->response.c_str() + http->request.offset, http->response.length() - http->request.offset);
 				// Выполняем отправку данных до тех пор пока все не отправим
-				if(len < (http->response.length() - http->request.offset)){
+				if(len < (long) (http->response.length() - http->request.offset)){
 					// Failed to send rest data, need to reschedule
 					http->request.offset += len;
 				// Если мы все отправили
 				} else {
-					// Сообщаем что все данные получены
-					send(fd, 0, 1, 0);
 					// Устанавливаем таймаут ожидания запроса в 3 секунды
 					struct timeval timeout = KEEP_ALIVE;
 					// Если это не зашифрованное соединение то просто выходим
@@ -620,8 +618,14 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 void prepare_request(evutil_socket_t fd, short event, BufferHttpProxy ** arg){
 	// Выполняем приведение типов
 	BufferHttpProxy * http = *arg;
+
+	cout << " ++++++ " << http->request.data.c_str() << endl;
+
 	// Выполняем парсинг полученных данных
 	if(http->request.data.length() && http->parse()){
+		
+		cout << " ------ " << http->parser->getQuery().c_str() << endl;
+
 		// Устанавливаем таймаут ожидания запроса в 3 секунды
 		struct timeval timeout = KEEP_ALIVE;
 		// Обнуляем размер буфера
