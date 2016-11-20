@@ -56,9 +56,10 @@ class BufferHttpProxy {
 	private:
 		// Буфер данных
 		struct Buffer {
-			string	data;				// Данные в буфере
-			size_t	offset	= 0,		// Смещение в буфере
-					total	= 0;		// Общее количество данных в буфере
+			char	* data	= NULL;	// Данные в буфере
+			size_t	offset	= 0,	// Смещение в буфере
+					total	= 0,	// Общее количество данных в буфере
+					size	= 4096;	// Размер буфера
 		};
 	public:
 		struct event_base	* base = NULL;			// База событий
@@ -79,6 +80,8 @@ class BufferHttpProxy {
 		BufferHttpProxy(string name){
 			// Создаем объект для работы с http заголовками
 			parser = new Http(name);
+			// Создаем буфер с данными
+			request.data = new char[(const size_t) request.size];
 		}
 		/**
 		 * ~BufferHttpProxy Деструктор
@@ -103,8 +106,13 @@ class BufferHttpProxy {
 			// Удаляем указатели
 			evServer = NULL;
 			evClient = NULL;
-			// Очищаем строку
-			request.data.clear();
+			// Если буфер не удален то удаляем его
+			if(request.data != NULL){
+				// Удаляем буфер
+				delete [] request.data;
+				// Запоминаем что данные удалены
+				request.data = NULL;
+			}
 			// Если парсер не удален
 			if(parser != NULL){
 				// Удаляем парсер
@@ -119,7 +127,7 @@ class BufferHttpProxy {
 		 */
 		bool parse(){
 			// Выполняем парсинг данных
-			return parser->parse(request.data);
+			return parser->parse2(request.data, request.total);
 		}
 };
 /**
@@ -197,7 +205,7 @@ void create_pid(pid_t pid){
 	// Открываем файл на запись
 	FILE * fh = fopen(filename.c_str(), "w");
 	// Выводим номер процесса
-	std::cout << pid << endl;
+	cout << pid << endl;
 	// Записываем считанные данные в файл
 	fprintf(fh, "%d", pid);
 	// Закрываем файл
@@ -294,7 +302,7 @@ evutil_socket_t create_server_socket(const char * host, int port){
 	// TCP stream-sockets
 	param.ai_socktype = SOCK_STREAM;
 	// Если формат подключения указан не верно то сообщаем об этом
-	if(getaddrinfo(host, std::to_string(port).c_str(), &param, &req) != 0){
+	if(getaddrinfo(host, to_string(port).c_str(), &param, &req) != 0){
 		// Выводим в консоль информацию
 		debug_message("Error in server address format!");
 		// Выходим
@@ -611,27 +619,27 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 }
 /**
  * prepare_request Функция обработки входящего запроса
- * @param fd    файловый дескриптор (сокет)
- * @param event событие на которое сработала функция обратного вызова
- * @param arg   объект передаваемый как значение
+ * @param fd   файловый дескриптор (сокет)
+ * @param arg  объект передаваемый как значение
+ * @param flag возникновение ошибки (либо чтение данных либо таймаут)
  */
-void prepare_request(evutil_socket_t fd, short event, BufferHttpProxy ** arg){
+void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = false){
 	// Выполняем приведение типов
 	BufferHttpProxy * http = *arg;
 
-	cout << " ++++++ " << http->request.data.c_str() << endl;
+	cout << " ---- " << http->request.data << " fd = " << fd << endl;
 
 	// Выполняем парсинг полученных данных
-	if(http->request.data.length() && http->parse()){
-		
-		cout << " ------ " << http->parser->getQuery().c_str() << endl;
+	if((http->request.total > 0) && http->parse()){
+		// Закрываем события
+		close_events(&http);
+
+		cout << " +++++ " << http->request.data << endl;
 
 		// Устанавливаем таймаут ожидания запроса в 3 секунды
 		struct timeval timeout = KEEP_ALIVE;
 		// Обнуляем размер буфера
 		http->request.total = 0;
-		// Очищаем буфер данных
-		http->request.data.clear();
 		// Если это метод коннект
 		bool methodConnect = (strcmp(http->parser->getMethod().c_str(), "connect") ? false : true);
 		// Если авторизация не прошла
@@ -665,10 +673,11 @@ void prepare_request(evutil_socket_t fd, short event, BufferHttpProxy ** arg){
 				http->socServer = create_server_socket(http->parser->getHost().c_str(), http->parser->getPort());
 				// Сообщаем что авторизация удачная
 				if(http->socServer > -1){
+					
+					cout << " ------------ " << http->parser->getQuery() << endl;
+
 					// Указываем что нужно отключится сразу после отправки запроса
 					if(http->parser->getVersion() > 1) http->parser->setClose();
-					// Закрываем события
-					close_events(&http);
 					// Создаем новое событие для клиента
 					http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_proxy, http);
 					// Активируем события
@@ -679,15 +688,43 @@ void prepare_request(evutil_socket_t fd, short event, BufferHttpProxy ** arg){
 		}
 		// Ответ готов
 		if(http->response.length()){
-			// Закрываем события
-			close_events(&http);
 			// Создаем новое событие для клиента
 			http->evClient = event_new(http->base, fd, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_write_client, http);
 			// Активируем события
 			event_add(http->evClient, &timeout);
 		}
 	// Если это таймаут то выходим
-	} else {
+	} else if(flag) {
+		// Выводим в консоль информацию
+		debug_message("Таймаут клиент, клиент так и не запросил данные!!!!");
+		// Очищаем память
+		free_data(&http);
+	}
+	// Выходим
+	return;
+}
+
+
+/**
+ * prepare_request Функция обработки входящего запроса
+ * @param fd   файловый дескриптор (сокет)
+ * @param arg  объект передаваемый как значение
+ * @param flag возникновение ошибки (либо чтение данных либо таймаут)
+ */
+void prepare_request2(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = false){
+	// Выполняем приведение типов
+	BufferHttpProxy * http = *arg;
+	// Выполняем парсинг полученных данных
+	if((http->request.total > 0) && http->parse()){
+		// Закрываем события
+		close_events(&http);
+
+		cout << " ++++++++ " << endl;
+
+		// Удаляем выделенную ранее память
+		delete [] http->request.data;
+	// Если это таймаут то выходим
+	} else if(flag) {
 		// Выводим в консоль информацию
 		debug_message("Таймаут клиент, клиент так и не запросил данные!!!!");
 		// Очищаем память
@@ -712,7 +749,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 		// Определяем возникшее событие
 		switch(event){
 			// Если это таймаут
-			case 1: prepare_request(fd, event, &http); break;
+			case 1: prepare_request2(fd, &http, true); break;
 			// Если это чтение
 			case 2: {
 				// Буфер для чтения данных из сокета
@@ -720,7 +757,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Если данные не считаны то выполняем обработку входящего запроса
-				if(len <= 0) prepare_request(fd, event, &http);
+				if(len <= 0) prepare_request2(fd, &http, true);
 				// Если данные считаны нормально тогда продолжаем
 				else {
 					// Устанавливаем параметры по умолчанию
@@ -730,10 +767,26 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 					// Проверяем последние два символа
 					short l1 = (short) buffer[len - 2];
 					short l2 = (short) buffer[len - 1];
-					// Копируем буфер в память
-					http->request.data.append(string(buffer).substr(0, len));
+					// Если количество передаваемых данных превысило заложенный то расширяем максимальный размер
+					if(http->request.total > http->request.size){
+						// Увеличиваем размер буфера
+						http->request.size *= 2;
+						// Выделяем еще памяти под буфер
+						http->request.data = (char *) realloc(http->request.data, http->request.size);
+						// Если память выделить нельзя то выводим ошибку и выходим
+						if(http->request.data == NULL){
+							// Выводим в консоль информацию
+							debug_message("Error in memory re-allocation!");
+							// Очищаем память
+							free_data(&http);
+							// Выходим
+							return;
+						}
+					}
+					// Выполняем копирование данных в буфер памяти
+					copy(buffer, buffer + len, http->request.data + (http->request.total - len));
 					// Если это перенос строки "\r\n", выполняем обработку входящего запроса
-					if((l1 == 13) && (l2 == 10)) prepare_request(fd, event, &http);
+					if(((l1 == 13) && (l2 == 10)) || (l2 == 0)) prepare_request2(fd, &http, false);
 				}
 			} break;
 		}

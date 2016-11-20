@@ -1,3 +1,4 @@
+#include <map>
 #include <string>
 #include <cstring>
 #include <vector>
@@ -6,18 +7,43 @@
 #include <sys/types.h>
 #include "base64.h"
 
+#include <iostream>
+
 // Устанавливаем пространство имен
 using namespace std;
-
 // Класс содержит данные парсинга http запроса
 class Http {
 	private:
+		// Данные запроса для POST метода
+		char * entitybody = NULL;
 		// Структура подключения
 		struct connect {
 			string	host,		// Хост
 					port,		// Порт
 					protocol;	// Протокол
 		};
+		// Структура http данных
+		struct http_data {
+			string					http;		// http запрос
+			size_t					length = 0;	// Количество заголовков
+			map <string, string>	headers;	// Заголовки http запроса
+			map <string, string>	origin;		// Оригинальные http заголовки
+			/**
+			 * clear Метод очистки структуры
+			 */
+			void clear(){
+				// Обнуляем размер
+				length = 0;
+				// Очищаем строку
+				http.clear();
+				// Очищаем карту заголовков
+				headers.clear();
+				// Очищаем оригинальные заголовки
+				origin.clear();
+			}
+		};
+		// Данные http запроса
+		http_data query2;
 		// Основные переменные
 		string	appname,		// Название прокси сервера
 				appver,			// Версия системы
@@ -35,7 +61,6 @@ class Http {
 				auth,			// Тип авторизации
 				login,			// Логин
 				password,		// Пароль
-				entitybody,		// Данные запроса для POST метода
 				head;			// Результирующий заголовок для запроса
 		// Массив остальных заголовков которые для нас не имеют значения
 		vector <string> other;
@@ -133,12 +158,12 @@ class Http {
 			"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
 		};
 		/**
-		 * Http::split Функция разбиения строки на указанные составляющие
-		 * @param str   строка которую нужно разбить на составляющие
-		 * @param delim разделитель в строке
-		 * @return      массив строк полученных при разделении
+		 * split Функция разделения строк на составляющие
+		 * @param str   строка для поиска
+		 * @param delim разделитель
+		 * @param v     результирующий вектор
 		 */
-		vector <string> split(const string str, const string delim);
+		void split(const string &str, const string delim, vector <string> &v);
 		/**
 		 * toCase Функция перевода в указанный регистр
 		 * @param  str  строка для перевода в указанных регистр
@@ -168,6 +193,12 @@ class Http {
 		 */
 		string & trim(string &str, const char * t = " \t\n\r\f\v");
 		/**
+		 * getHeaders Функция извлечения данных http запроса
+		 * @param  str строка http запроса
+		 * @return     данные http запроса
+		 */
+		http_data getHeaders(string str);
+		/**
 		 * getHeaderParam Функция получения содержимое заголовка
 		 * @param  head  заголовок в котором ищем параметры
 		 * @param  param параметр для поиска
@@ -181,6 +212,12 @@ class Http {
 		 * @return     выводим значение заголовка
 		 */
 		string findHeaderParam(string str, string buf);
+		/**
+		 * Http::checkPort Функция проверки на качество порта
+		 * @param  port входная строка якобы содержащая порт
+		 * @return      результат проверки
+		 */
+		bool checkPort(string port);
 		/**
 		 * getConnection Функция извлечения данных подключения
 		 * @param  str строка запроса
@@ -196,6 +233,8 @@ class Http {
 		 * createHead Функция получения сформированного заголовка запроса
 		 */
 		void createHead();
+
+		void generateHttp();
 	public:
 		/**
 		 * isAlive Метод определения нужно ли держать соединение для прокси
@@ -211,9 +250,17 @@ class Http {
 		/**
 		 * parse Метод выполнения парсинга
 		 * @param  buffer буфер входящих данных из сокета
+		 * @param  size   размер переданных данных
 		 * @return        результат определения завершения запроса
 		 */
-		bool parse(const string buffer);
+		bool parse2(const char * buffer, size_t size);
+		/**
+		 * parse Метод выполнения парсинга
+		 * @param  buffer буфер входящих данных из сокета
+		 * @param  size   размер переданных данных
+		 * @return        результат определения завершения запроса
+		 */
+		bool parse(const char * buffer, size_t size);
 		/**
 		 * brokenRequest Метод получения ответа (неудачного отправленного запроса)
 		 * @return ответ в формате html

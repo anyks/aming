@@ -2,33 +2,23 @@
 
 // Устанавливаем пространство имен
 using namespace std;
-
 /**
- * Http::split Функция разбиения строки на указанные составляющие
- * @param str   строка которую нужно разбить на составляющие
- * @param delim разделитель в строке
- * @return      массив строк полученных при разделении
+ * split Функция разделения строк на составляющие
+ * @param str   строка для поиска
+ * @param delim разделитель
+ * @param v     результирующий вектор
  */
-vector <string> Http::split(const string str, const string delim){
-	// Начальный символ для обрезки строки
-	int i = 0;
-	// Результирующий вектор
-	vector <string> result;
-	// Позиция разделителя в строке
-	size_t pos = str.find(delim);
-	// Перебираем строку до тех пор пока не переберем её целиком
-	while(pos != string::npos){
-		// Добавляем найденную позицию в строке
-		result.push_back(str.substr(i, pos - i));
-		// Запоминаем новую позицию
-		i = delim.length() + pos;
-		// Выполняем поиск новой позиции
-		pos = str.find(delim, i);
-		// Если позиция достигнута тогда продолжаем дальше
-		if(pos == string::npos) result.push_back(str.substr(i, str.length()));
+void Http::split(const string &str, const string delim, vector <string> &v){
+	string::size_type i = 0;
+	string::size_type j = str.find(delim);
+	u_int len = delim.length();
+	// Выполняем разбиение строк
+	while(j != string::npos){
+		v.push_back(str.substr(i, j - i));
+		i = ++j + (len - 1);
+		j = str.find(delim, j);
+		if(j == string::npos) v.push_back(str.substr(i, str.length()));
 	}
-	// Выводим результат
-	return result;
 }
 /**
  * toCase Функция перевода в указанный регистр
@@ -72,6 +62,54 @@ string & Http::trim(string &str, const char * t){
 	return ltrim(rtrim(str, t), t);
 }
 /**
+ * getHeaders Функция извлечения данных http запроса
+ * @param  str строка http запроса
+ * @return     данные http запроса
+ */
+Http::http_data Http::getHeaders(string str){
+	// Создаем структуру данных
+	http_data data;
+	// Проверяем существуют ли данные
+	if(str.length()){
+		// Определяем конец запроса
+		size_t end_query = str.find("\r\n\r\n");
+		// Если конец запроса найден
+		if(end_query != string::npos){
+			// Массив строк
+			vector <string> strings, params;
+			// Выполняем разбиение строк
+			split(str, "\r\n", strings);
+			// Если строки найдены
+			if(strings.size()){
+				// Позиция найденного разделителя
+				size_t pos;
+				// Запоминаем http запрос
+				data.http = toCase(trim(strings[0]));
+				// Переходим по всему массиву строк
+				for(int i = 1; i < strings.size(); i++){
+					// Выполняем поиск разделитель
+					pos = strings[i].find(":");
+					// Если разделитель найден
+					if(pos != string::npos){
+						// Получаем ключ
+						string key = strings[i].substr(0, pos);
+						// Получаем значение
+						string val = strings[i].substr(pos + 1, strings[i].length() - (pos + 1));
+						// Запоминаем найденны параметры
+						data.headers.insert(pair <string, string>(toCase(trim(key)), trim(val)));
+						// Запоминаем оригинальные параметры заголовков
+						data.origin.insert(pair <string, string>(toCase(trim(key)), trim(key)));
+					}
+				}
+			}
+			// Получаем длину массива заголовков
+			data.length = end_query + 4;
+		}
+	}
+	// Выводим результат
+	return data;
+}
+/**
  * getHeaderParam Функция получения содержимое заголовка
  * @param  head  заголовок в котором ищем параметры
  * @param  param параметр для поиска
@@ -107,6 +145,8 @@ string Http::findHeaderParam(string str, string buf){
 	size_t pos1 = toCase(buf).find(istr);
 	// Ищем конец заголовка Content-length
 	size_t pos2 = toCase(buf).find("\r\n", pos1);
+	// Очищаем строку
+	str.clear();
 	// Если заголовок найден
 	if((pos1 != string::npos) && (pos2 != string::npos)){
 		// Получаем размер всей строки
@@ -114,7 +154,7 @@ string Http::findHeaderParam(string str, string buf){
 		// Определяем начальную позицию
 		int start = pos1 + istr.length();
 		// Определяем конечную позицию
-		int end = length - ((length - start) + (length - pos2));
+		int end = pos2 - start;
 		// Запоминаем новое значение буфера
 		buf = buf.substr(start, end);
 		// Извлекаем данные заголовка
@@ -122,6 +162,37 @@ string Http::findHeaderParam(string str, string buf){
 	}
 	// Выводим результат
 	return str;
+}
+/**
+ * Http::checkPort Функция проверки на качество порта
+ * @param  port входная строка якобы содержащая порт
+ * @return      результат проверки
+ */
+bool Http::checkPort(string port){
+	// Получаем длину строку
+	size_t len = port.length();
+	// Если строка существует
+	if(len){
+		// Результирующая строка
+		string result = "";
+		// Переходим по всей строке и ищем неположенные символы
+		for(size_t i = 0; i < len; i++){
+			// Получаем текущий символ
+			char symbol = port.c_str()[i];
+			// Если найдены символы любые кроме цифр
+			if((symbol > '9') || (symbol < '0')) return false;
+			// Добавляем в результирующую строку символы цифр
+			else result += symbol;
+		}
+		// Преобразуем строку в цифры
+		if(::atoi(result.c_str()) > 65535)
+			// Если длина порта меньше максимального
+			return false;
+		// Если порт прошел все проверки
+		else return true;
+	}
+	// Сообщаем что ничего не нашли
+	return false;
 }
 /**
  * getConnection Функция извлечения данных подключения
@@ -138,7 +209,9 @@ Http::connect Http::getConnection(string str){
 	// Если протокол найден
 	if(pos != (size_t) string::npos){
 		// Выполняем разделение на протокол
-		vector <string> prt = split(str, "://");
+		vector <string> prt;
+		// Функция разбиения на составляющие
+		split(str, "://", prt);
 		// Запоминаем размер массива
 		size = prt.size();
 		// Если протокол найден
@@ -157,7 +230,9 @@ Http::connect Http::getConnection(string str){
 	// Если хост и порт найдены
 	if(pos != (size_t) string::npos){
 		// Выполняем разделение на протокол
-		vector <string> prt = split(str, ":");
+		vector <string> prt;
+		// Функция разбиения на составляющие
+		split(str, ":", prt);
 		// Запоминаем размер массива
 		size = prt.size();
 		// Если порт и хост найдены
@@ -165,7 +240,7 @@ Http::connect Http::getConnection(string str){
 			// Запоминаем хост
 			data.host = prt[0];
 			// Запоминаем порт
-			data.port = prt[1];
+			data.port = (checkPort(prt[1]) ? prt[1] : "80");
 		}
 		// Очищаем память выделенную для вектора
 		vector <string> ().swap(prt);
@@ -208,7 +283,7 @@ void Http::parser(string buffer){
 		// Запоминаем первоначальный запрос
 		query = buffer;
 		// Выполняем парсинг заголовков
-		headers = split(query, "\r\n");
+		split(query, "\r\n", headers);
 		// Размеры данных
 		size_t size = headers.size();
 		// Если заголовки найдены
@@ -218,7 +293,9 @@ void Http::parser(string buffer){
 			// Запоминаем команду запроса
 			command = headers[0];
 			// Разделяем на составляющие команду
-			vector <string> cmd = split(command, " ");
+			vector <string> cmd;
+			// Функция разбиения на составляющие
+			split(command, " ", cmd);
 			// Получаем размер массива
 			size = cmd.size();
 			// Если комманда существует
@@ -228,7 +305,9 @@ void Http::parser(string buffer){
 				// Запоминаем путь запроса
 				path = cmd[1];
 				// Разбиваем протокол и тип протокола на части
-				vector <string> prt = split(cmd[2], "/");
+				vector <string> prt;
+				// Функция разбиения на составляющие
+				split(cmd[2], "/", prt);
 				// Получаем размер массива
 				size = prt.size();
 				// Если данные найдены
@@ -297,7 +376,9 @@ void Http::parser(string buffer){
 							// Если авторизация найдена
 							} else if(ath.length()){
 								// Выполняем разделение на тип и данные авторизации
-								vector <string> lgn = split(ath, " ");
+								vector <string> lgn;
+								// Функция разбиения на составляющие
+								split(ath, " ", lgn);
 								// Запоминаем размер массива
 								size = lgn.size();
 								// Если данные получены
@@ -313,7 +394,9 @@ void Http::parser(string buffer){
 										// Если протокол найден
 										if(pos != string::npos){
 											// Выполняем разделение на логин и пароль
-											vector <string> lp = split(dauth, ":");
+											vector <string> lp;
+											// Функция разбиения на составляющие
+											split(dauth, ":", lp);
 											// Запоминаем размер массива
 											size = lp.size();
 											// Если данные получены
@@ -381,11 +464,11 @@ void Http::createHead(){
 	// Добавляем заголовок connection
 	if(connection.length()) head.append(string("Connection: ") + connection + string("\r\n"));
 	// Если тело запроса существует то добавляем размер тела
-	if(entitybody.length()) head.append(string("Content-Length: ") + to_string(entitybody.length()) + string("\r\n"));
+	if(entitybody != NULL) head.append(string("Content-Length: ") + to_string(strlen(entitybody)) + string("\r\n"));
 	// Запоминаем конец запроса
 	head.append(string("\r\n"));
 	// Если существует тело запроса то добавляем его
-	if(entitybody.length()) head.append(entitybody);
+	if(entitybody != NULL) head.append(entitybody);
 }
 /**
  * isAlive Метод определения нужно ли держать соединение для прокси
@@ -419,42 +502,132 @@ bool Http::isHttp(const string buffer){
 	// Сообщаем что это не http
 	return false;
 }
+
+void Http::generateHttp(){
+	cout << "http = " << query2.http.c_str() << endl;
+
+	if(entitybody != NULL) cout << "entitybody = " << entitybody << endl;
+
+	for(map <string, string>::iterator it = query2.headers.begin(); it != query2.headers.end(); ++it)
+		cout << query2.origin[it->first] << " => " << it->second << '\n';
+}
+
 /**
  * parse Метод выполнения парсинга
  * @param  buffer буфер входящих данных из сокета
+ * @param  size   размер переданных данных
  * @return        результат определения завершения запроса
  */
-bool Http::parse(const string buffer){
-	// Выполняем поиск размера передаваемых данных
-	string len_data = findHeaderParam("Content-length", buffer);
+bool Http::parse2(const char * buffer, size_t size){
+	// Выполняем парсинг http запроса
+	if(!query2.length) query2 = getHeaders(buffer);
+	// Если данные существуют
+	if(query2.length){
+		// Проверяем есть ли размер вложений
+		string cl = query2.headers.find("content-length")->second;
+		// Проверяем есть ли чанкование
+		string ch = query2.headers.find("transfer-encoding")->second;
+		// Если найден размер вложений
+		if(cl.length()){
+			// Размер вложений
+			int body_size = ::atoi(cl.c_str());
+			// Получаем размер вложения
+			if(size >= (query2.length + body_size)){
+				// Создаем тело запроса
+				entitybody = new char[(const int) body_size + 1];
+				// Заполняем нулями буфер
+				memset(entitybody, 0, body_size + 1);
+				// Извлекаем указанные данные
+				strncpy(entitybody, buffer + query2.length, body_size);
+				// Генерацию данных
+				generateHttp();
+				// Сообщаем что все удачно получено
+				return true;
+			}
+		// Если это чанкование
+		} else if(ch.length() && (ch.find("chunked") != string::npos)){
+			// Формируем блок с данными
+			string str = buffer + query2.length;
+			// Размер вложений
+			int body_size = str.find("0\r\n\r\n");
+			// Если конец строки найден
+			if(body_size != string::npos){
+				// Создаем тело запроса
+				entitybody = new char[(const int) (body_size + 5) + 1];
+				// Заполняем нулями буфер
+				memset(entitybody, 0, (body_size + 5) + 1);
+				// Извлекаем указанные данные
+				strncpy(entitybody, str.c_str(), body_size + 5);
+				// Генерацию данных
+				generateHttp();
+				// Сообщаем что все удачно получено
+				return true;
+			}
+		// Если указан тип данных но длина вложенных данных не указана
+		} else if(ch.length()) return false;
+		// Если вложения не найдены
+		else {
+			// Генерацию данных
+			generateHttp();
+			// Сообщаем что все удачно получено
+			return true;
+		}
+	}
+	// Выводим результат
+	return false;
+}
+/**
+ * parse Метод выполнения парсинга
+ * @param  buffer буфер входящих данных из сокета
+ * @param  size   размер переданных данных
+ * @return        результат определения завершения запроса
+ */
+bool Http::parse(const char * buffer, size_t size){
 	// Символы завершения ввода заголовков
-	const char * endPos = strstr(buffer.c_str(), "\r\n\r\n");
-	// Если все данные переданы то выходим
-	if(!len_data.length() && (endPos != NULL)){
-		// Выполняем парсинг заголовков http запроса
-		parser(buffer);
-		// Выполняем генерацию результирующего запроса
-		createHead();
-		// Выходим
-		return true;
-	// Сообщаем что размер найден
-	} else if(endPos != NULL) {
+	const char * endPos = strstr(buffer, "\r\n\r\n");
+	// Если данные переданы правильно
+	if(endPos != NULL){
 		// Получаем длину передаваемых данных
-		const u_int len = ::atoi(len_data.c_str());
-		// Создаем новый буфер с данными
-		string buf(endPos + 4);
-		// Урезаем строку до нужных размеров
-		buf = buf.substr(0, len);
-		// Если все байты считаны
-		if(buf.length() >= len){
-			// Запоминаем данные тела запроса
-			entitybody = buf;
+		const int len = ::atoi(findHeaderParam("Content-length", buffer).c_str());
+		// Если вложения не найдены тогда передаем на обработку
+		if(!len){
 			// Выполняем парсинг заголовков http запроса
 			parser(buffer);
 			// Выполняем генерацию результирующего запроса
 			createHead();
-			// Выходим из функции
+			// Выходим
 			return true;
+		// Иначе ищем вложения
+		} else {
+			// Определяем длину заголовка
+			const int qlen = ((endPos + 4) - buffer) + 1;
+			// Получаем заголовок запроса
+			char * query = new char[qlen];
+			// Копируем заголовок
+			strncpy(query, buffer, qlen - 1);
+			// Устанавливаем конец строки
+			query[qlen - 1] = '\0';
+			// Определяем длину тела вложения запроса
+			const int dlen = ((int) size - (qlen + 1));
+			// Если все байты тела вложения запроса получены
+			if(dlen >= len){
+				// Выделяем память под тело запроса
+				entitybody = new char[dlen + 1];
+				// Копируем тело вложения запроса
+				strncpy(entitybody, buffer + strlen(query), len);
+				// Устанавливаем конец строки
+				entitybody[dlen] = '\0';
+				// Выполняем парсинг заголовков http запроса
+				parser(query);
+				// Выполняем генерацию результирующего запроса
+				createHead();
+				// Удаляем выделенную память под заголовки запроса
+				delete [] query;
+				// Выходим из функции
+				return true;
+			}
+			// Удаляем выделенную память под заголовки запроса
+			delete [] query;
 		}
 	}
 	// Возвращаем что ничего еще не найдено
@@ -736,6 +909,12 @@ Http::Http(const string str, string ver){
  * Http Деструктор
  */
 Http::~Http(){
+	
+
+	if(entitybody != NULL) delete [] entitybody;
+	// Очищаем заголовки
+	query2.clear();
+
 	// Очищаем память выделенную для вектора
 	vector <string> ().swap(other);
 	vector <string> ().swap(headers);
