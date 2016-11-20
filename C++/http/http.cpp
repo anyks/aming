@@ -538,7 +538,8 @@ bool Http::parse2(const char * buffer, size_t size){
 				// Заполняем нулями буфер
 				memset(entitybody, 0, body_size + 1);
 				// Извлекаем указанные данные
-				strncpy(entitybody, buffer + query2.length, body_size);
+				//strncpy(entitybody, buffer + query2.length, body_size);
+				copy(buffer + query2.length, buffer + (query2.length + body_size), entitybody);
 				// Генерацию данных
 				generateHttp();
 				// Сообщаем что все удачно получено
@@ -557,7 +558,8 @@ bool Http::parse2(const char * buffer, size_t size){
 				// Заполняем нулями буфер
 				memset(entitybody, 0, (body_size + 5) + 1);
 				// Извлекаем указанные данные
-				strncpy(entitybody, str.c_str(), body_size + 5);
+				//strncpy(entitybody, str.c_str(), body_size + 5);
+				copy(buffer + query2.length, buffer + (query2.length + body_size + 5), entitybody);
 				// Генерацию данных
 				generateHttp();
 				// Сообщаем что все удачно получено
