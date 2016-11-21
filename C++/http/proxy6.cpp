@@ -61,18 +61,68 @@ class BufferHttpProxy {
 					total	= 0,	// Общее количество данных в буфере
 					size	= 4096;	// Размер буфера
 		};
+		// Структура данных для http вложений
+		struct http_body {
+			char	* data;		// Данные вложений
+			size_t	length = 0;	// Размер данных вложений
+		};
+		// Структура данных для выполнения запросов на удаленном сервере
+		struct http_query {
+			string		request;	// Запрос данных на удаленном сервере
+			http_body	entitybody;	// Тело вложений в запросе
+		};
 	public:
 		struct event_base	* base = NULL;			// База событий
-		Http				* parser = 0x00;		// Объект парсера
+		Http				* parser = NULL;		// Объект парсера
 		struct event		* evClient = NULL,		// Событие клиента
 							* evServer = NULL;		// Событие сервера
-		string				response;				// Ответ системы
+		http_query			* response = NULL;		// Ответ системы
 		Buffer				request;				// Данные запроса
 		bool				auth		= false,	// Флаг авторизации
 							ishttps		= false;	// Флаг зашифрованного соединения
 		int					pid			= -1;		// Пид процесса
 		evutil_socket_t		socServer	= -1,		// Сокет сервера
 							socClient	= -1;		// Сокет клиента
+		/**
+		 * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
+		 * @return объект с данными запроса
+		 */
+		http_query * requiredAuth(){
+			// Формируем ответ клиенту
+			return (parser != NULL ? reinterpret_cast <BufferHttpProxy::http_query *> (parser->requiredAuth()) : NULL);
+		}
+		/**
+		 * faultAuth Метод получения ответа (неудачной авторизации)
+		 * @return объект с данными запроса
+		 */
+		http_query * faultAuth(){
+			// Формируем ответ клиенту
+			return (parser != NULL ? reinterpret_cast <BufferHttpProxy::http_query *> (parser->faultAuth()) : NULL);
+		}
+		/**
+		 * authSuccess Метод получения ответа (подтверждения авторизации)
+		 * @return объект с данными запроса
+		 */
+		http_query * authSuccess(){
+			// Формируем ответ клиенту
+			return (parser != NULL ? reinterpret_cast <BufferHttpProxy::http_query *> (parser->authSuccess()) : NULL);
+		}
+		/**
+		 * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
+		 * @return объект с данными запроса
+		 */
+		http_query * faultConnect(){
+			// Формируем ответ клиенту
+			return (parser != NULL ? reinterpret_cast <BufferHttpProxy::http_query *> (parser->faultConnect()) : NULL);
+		}
+		/**
+		 * getQuery Метод получения сформированного http запроса
+		 * @return объект с данными запроса
+		 */
+		http_query * getQuery(){
+			// Формируем ответ клиенту
+			return (parser != NULL ? reinterpret_cast <BufferHttpProxy::http_query *> (parser->getQuery()) : NULL);
+		}
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param [string] name имя ресурса
@@ -718,18 +768,85 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
  * @param arg  объект передаваемый как значение
  * @param flag возникновение ошибки (либо чтение данных либо таймаут)
  */
-void prepare_request2(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = false){
+void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = false){
 	// Выполняем приведение типов
 	BufferHttpProxy * http = *arg;
 	// Выполняем парсинг полученных данных
 	if((http->request.total > 0) && http->parse()){
 		// Закрываем события
 		close_events(&http);
-
-		cout << " ++++++++ " << endl;
-
 		// Удаляем выделенную ранее память
 		delete [] http->request.data;
+		// Обнуляем размер буфера
+		http->request.total = 0;
+		// Устанавливаем таймаут ожидания запроса в 3 секунды
+		struct timeval timeout = KEEP_ALIVE;
+		// Если это метод коннект
+		bool methodConnect = (strcmp(http->parser->getMethod().c_str(), "connect") ? false : true);
+		// Если авторизация не прошла
+		if(!http->auth) http->auth = check_auth(http->parser);
+		// Если нужно запросить пароль
+		if(!http->auth && (!http->parser->getLogin().length()
+		|| !http->parser->getPassword().length())){
+			// Формируем ответ клиенту
+			http->response = http->requiredAuth();
+		// Сообщаем что авторизация не удачная
+		} else if(!http->auth) {
+			// Формируем ответ клиенту
+			http->response = http->faultAuth();
+		// Если авторизация прошла
+		} else {
+			// Определяем порт, если это шифрованное сообщение то будем считывать данные целиком
+			if(methodConnect){
+				// Выполняем подключение к серверу
+				http->socServer = create_server_socket(http->parser->getHost().c_str(), http->parser->getPort());
+				// Если сокет существует
+				if(http->socServer > -1){
+					// Формируем ответ клиенту
+					http->response = http->authSuccess();
+					// Устанавливаем флаг защищенного соединения
+					http->ishttps = true;
+				// Если подключение не удачное то сообщаем об этом
+				} else http->response = http->faultConnect();
+			// Иначе делаем запрос на получение данных
+			} else {
+				// Выполняем подключение к серверу
+				http->socServer = create_server_socket(http->parser->getHost().c_str(), http->parser->getPort());
+				// Сообщаем что авторизация удачная
+				if(http->socServer > -1){
+					// Указываем что нужно отключится сразу после отправки запроса
+					if(http->parser->getVersion() > 1) http->parser->setClose();
+					// Формируем ответ клиенту
+					http->response = http->getQuery();
+
+					cout << " ++++++1 " << http->response->request.c_str() << endl;
+
+					// Очищаем память
+					free_data(&http);
+
+					// Создаем новое событие для клиента
+					//http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_proxy, http);
+					// Активируем события
+					//event_add(http->evServer, &timeout);
+					// Выходим
+					return;
+				// Если подключение не удачное то сообщаем об этом
+				} else http->response = http->faultConnect();
+			}
+		}
+		// Ответ готов
+		if(http->response->request.length()){
+
+			cout << " ++++++2 " << http->response->request.c_str() << endl;
+
+			// Очищаем память
+			free_data(&http);
+
+			// Создаем новое событие для клиента
+			//http->evClient = event_new(http->base, fd, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_write_client, http);
+			// Активируем события
+			//event_add(http->evClient, &timeout);
+		}
 	// Если это таймаут то выходим
 	} else if(flag) {
 		// Выводим в консоль информацию
@@ -756,7 +873,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 		// Определяем возникшее событие
 		switch(event){
 			// Если это таймаут
-			case 1: prepare_request2(fd, &http, true); break;
+			case 1: prepare_request(fd, &http, true); break;
 			// Если это чтение
 			case 2: {
 				// Буфер для чтения данных из сокета
@@ -764,11 +881,10 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Если данные не считаны то выполняем обработку входящего запроса
-				if(len <= 0) prepare_request2(fd, &http, true);
+				if(len <= 0) prepare_request(fd, &http, true);
 				// Если данные считаны нормально тогда продолжаем
 				else {
 					// Устанавливаем параметры по умолчанию
-					http->response			= "";
 					http->request.total		+= len;
 					http->request.offset	= 0;
 					// Проверяем последние два символа
@@ -793,7 +909,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 					// Выполняем копирование данных в буфер памяти
 					copy(buffer, buffer + len, http->request.data + (http->request.total - len));
 					// Если это перенос строки "\r\n", выполняем обработку входящего запроса
-					if(((l1 == 13) && (l2 == 10)) || (l2 == 0)) prepare_request2(fd, &http, false);
+					if(((l1 == 13) && (l2 == 10)) || (l2 == 0)) prepare_request(fd, &http, false);
 				}
 			} break;
 		}

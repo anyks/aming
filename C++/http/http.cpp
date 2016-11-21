@@ -503,86 +503,126 @@ bool Http::parse(const char * buffer, size_t size){
  * brokenRequest Метод получения ответа (неудачного отправленного запроса)
  * @return ответ в формате html
  */
-string Http::brokenRequest(){
+Http::http_query * Http::brokenRequest(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
 	size_t pos = html[9].find(defname);
+	// Результирующая строка
+	string result;
 	// Если это домен
 	if(pos != string::npos){
 		// Заменяем дефолтное название на указанное
-		return html[9].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[9].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о неудачном отправленном запросе
-	return html[9];
+	result = html[9];
+	// Если запрос существует то удаляем его
+	if(request != NULL) delete request;
+	// Создаем его
+	request = new http_query(result, entitybody);
+	// Выводим значение переменной
+	return request;
 }
 /**
  * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
  * @return ответ в формате html
  */
-string Http::faultConnect(){
+Http::http_query * Http::faultConnect(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
 	size_t pos = html[6].find(defname);
+	// Результирующая строка
+	string result;
 	// Если это домен
 	if(pos != string::npos){
 		// Заменяем дефолтное название на указанное
-		return html[6].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[6].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о неудачном подключении
-	return html[6];
+	result = html[6];
+	// Если запрос существует то удаляем его
+	if(request != NULL) delete request;
+	// Создаем его
+	request = new http_query(result, entitybody);
+	// Выводим значение переменной
+	return request;
 }
 /**
  * faultAuth Метод получения ответа (неудачной авторизации)
  * @return ответ в формате html
  */
-string Http::faultAuth(){
+Http::http_query * Http::faultAuth(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
 	size_t pos = html[5].find(defname);
+	// Результирующая строка
+	string result;
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		return html[5].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[5].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о неудачной авторизации
-	return html[5];
+	result = html[5];
+	// Если запрос существует то удаляем его
+	if(request != NULL) delete request;
+	// Создаем его
+	request = new http_query(result, entitybody);
+	// Выводим значение переменной
+	return request;
 }
 /**
  * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
  * @return ответ в формате html
  */
-string Http::requiredAuth(){
+Http::http_query * Http::requiredAuth(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
 	size_t pos = html[2].find(defname);
+	// Результирующая строка
+	string result;
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		return html[2].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[2].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о требовании авторизации
-	return html[2];
+	result = html[2];
+	// Если запрос существует то удаляем его
+	if(request != NULL) delete request;
+	// Создаем его
+	request = new http_query(result, entitybody);
+	// Выводим значение переменной
+	return request;
 }
 /**
  * authSuccess Метод получения ответа (подтверждения авторизации)
  * @return ответ в формате html
  */
-string Http::authSuccess(){
+Http::http_query * Http::authSuccess(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
 	size_t pos = html[0].find(defname);
+	// Результирующая строка
+	string result;
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		return html[0].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[0].replace(pos, defname.length(), appname + string("/") + appver);
 	}
 	// Выводим шаблон сообщения о том что авторизация пройдена
-	return html[0];
+	result = html[0];
+	// Если запрос существует то удаляем его
+	if(request != NULL) delete request;
+	// Создаем его
+	request = new http_query(result, entitybody);
+	// Выводим значение переменной
+	return request;
 }
 /**
  * getMethod Метод получения метода запроса
@@ -655,8 +695,8 @@ string Http::getUseragent(){
 Http::http_query * Http::getQuery(){
 	// Если запрос существует то удаляем его
 	if(request != NULL) delete request;
-	// Иначе создаем его
-	else request = new http_query(query.request, entitybody);
+	// Создаем его
+	request = new http_query(query.request, entitybody);
 	// Выводим значение переменной
 	return request;
 }

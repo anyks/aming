@@ -282,27 +282,27 @@ class Http {
 		 * brokenRequest Метод получения ответа (неудачного отправленного запроса)
 		 * @return ответ в формате html
 		 */
-		string brokenRequest();
+		http_query * brokenRequest();
 		/**
 		 * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
 		 * @return ответ в формате html
 		 */
-		string faultConnect();
+		http_query * faultConnect();
 		/**
 		 * faultAuth Метод получения ответа (неудачной авторизации)
 		 * @return ответ в формате html
 		 */
-		string faultAuth();
+		http_query * faultAuth();
 		/**
 		 * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
 		 * @return ответ в формате html
 		 */
-		string requiredAuth();
+		http_query * requiredAuth();
 		/**
 		 * authSuccess Метод получения ответа (подтверждения авторизации)
 		 * @return ответ в формате html
 		 */
-		string authSuccess();
+		http_query * authSuccess();
 		/**
 		 * getMethod Метод получения метода запроса
 		 * @return метод запроса
