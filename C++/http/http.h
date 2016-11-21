@@ -14,8 +14,6 @@ using namespace std;
 // Класс содержит данные парсинга http запроса
 class Http {
 	private:
-		// Данные запроса для POST метода
-		char * entitybody = NULL;
 		// Структура подключения
 		struct connect {
 			string	host,		// Хост
@@ -24,48 +22,91 @@ class Http {
 		};
 		// Структура http данных
 		struct http_data {
-			string					http;		// http запрос
-			size_t					length = 0;	// Количество заголовков
-			map <string, string>	headers;	// Заголовки http запроса
-			map <string, string>	origin;		// Оригинальные http заголовки
+			string					http;				// http запрос
+			string					auth;				// Тип авторизации
+			string					method;				// Метод запроса
+			string					path;				// Путь запроса
+			string					protocol;			// Протокол запроса
+			string					version;			// Версия протокола
+			string					host;				// Хост запроса
+			string					port;				// Порт запроса
+			string					login;				// Логин
+			string					password;			// Пароль
+			string					useragent;			// UserAgent браузера
+			string					connection;			// Заголовок connection
+			string					request;			// Результирующий заголовок для запроса
+			size_t					length = 0;			// Количество заголовков
+			map <string, string>	headers;			// Заголовки http запроса
+			map <string, string>	origin;				// Оригинальные http заголовки
 			/**
 			 * clear Метод очистки структуры
 			 */
 			void clear(){
 				// Обнуляем размер
 				length = 0;
-				// Очищаем строку
+				// Очищаем строки
 				http.clear();
+				auth.clear();
+				method.clear();
+				path.clear();
+				protocol.clear();
+				version.clear();
+				host.clear();
+				port.clear();
+				login.clear();
+				password.clear();
+				useragent.clear();
+				connection.clear();
+				request.clear();
 				// Очищаем карту заголовков
 				headers.clear();
 				// Очищаем оригинальные заголовки
 				origin.clear();
 			}
 		};
+		// Структура данных для http вложений
+		struct http_body {
+			char	* data;		// Данные вложений
+			size_t	length = 0;	// Размер данных вложений
+		};
+		// Структура данных для выполнения запросов на удаленном сервере
+		struct http_query {
+			string		request;		// Запрос данных на удаленном сервере
+			http_body	entitybody;		// Тело вложений в запросе
+			/**
+			 * http_query Конструктор
+			 * @param str  данные запроса
+			 * @param body тело запроса
+			 */
+			http_query(string str, http_body body){
+				// Копируем данные запроса
+				request = str;
+				// Запоминаем длину данных
+				entitybody.length = body.length;
+				// Если вложения существуют
+				if(entitybody.length){
+					// Выделяем память для вложенного тела данных
+					entitybody.data = new char[body.length + 1];
+					// Копируем данные
+					copy(body.data, body.data + (body.length + 1), entitybody.data);
+				}
+			}
+			/*
+			* ~http_query Деструктор
+			 */
+			~http_query(){
+				// Удаляем выделенную ранее память
+				if(entitybody.length) delete [] entitybody.data;
+			}
+		};
 		// Данные http запроса
-		http_data query2;
-		// Основные переменные
-		string	appname,		// Название прокси сервера
-				appver,			// Версия системы
-				query,			// Исходный запрос
-				command,		// Команда запроса
-				method,			// Метод запроса
-				host,			// Хост запроса
-				port,			// Порт запроса
-				path,			// Путь запроса
-				protocol,		// Протокол запроса
-				version,		// Версия протокола
-				connection,		// Заголовок connection
-				pconnection,	// Заголовок proxy-connection
-				useragent,		// UserAgent браузера
-				auth,			// Тип авторизации
-				login,			// Логин
-				password,		// Пароль
-				head;			// Результирующий заголовок для запроса
-		// Массив остальных заголовков которые для нас не имеют значения
-		vector <string> other;
-		// Массив заголовков
-		vector <string> headers;
+		http_data query;
+		// Данные http вложений
+		http_body entitybody;
+		// Данные запроса
+		http_query * request;
+		// Название и версия прокси сервера
+		string appname, appver;
 		// Шаблоны ответов
 		string html[12] = {
 			// Подключение разрешено [0]
@@ -199,20 +240,6 @@ class Http {
 		 */
 		http_data getHeaders(string str);
 		/**
-		 * getHeaderParam Функция получения содержимое заголовка
-		 * @param  head  заголовок в котором ищем параметры
-		 * @param  param параметр для поиска
-		 * @return       найденный параметр
-		 */
-		string getHeaderParam(string head, string param);
-		/**
-		 * findHeaderParam Функция поиска значение заголовка
-		 * @param  str строка поиска
-		 * @param  buf буфер в котором осуществляется поиск
-		 * @return     выводим значение заголовка
-		 */
-		string findHeaderParam(string str, string buf);
-		/**
 		 * Http::checkPort Функция проверки на качество порта
 		 * @param  port входная строка якобы содержащая порт
 		 * @return      результат проверки
@@ -225,15 +252,12 @@ class Http {
 		 */
 		connect getConnection(string str);
 		/**
-		 * parser Функция парсера http запроса
-		 * @param buffer буфер входящих данных полученных из сокета
-		 */
-		void parser(string buffer);
-		/**
 		 * createHead Функция получения сформированного заголовка запроса
 		 */
 		void createHead();
-
+		/**
+		 * generateHttp Метод генерации данных http запроса
+		 */
 		void generateHttp();
 	public:
 		/**
@@ -247,13 +271,6 @@ class Http {
 		 * @return        результат проверки
 		 */
 		bool isHttp(const string buffer);
-		/**
-		 * parse Метод выполнения парсинга
-		 * @param  buffer буфер входящих данных из сокета
-		 * @param  size   размер переданных данных
-		 * @return        результат определения завершения запроса
-		 */
-		bool parse2(const char * buffer, size_t size);
 		/**
 		 * parse Метод выполнения парсинга
 		 * @param  buffer буфер входящих данных из сокета
@@ -330,7 +347,7 @@ class Http {
 		 * getQuery Метод получения сформированного http запроса
 		 * @return сформированный http запрос
 		 */
-		string getQuery();
+		http_query * getQuery();
 		/**
 		 * getPort Метод получения порта запроса
 		 * @return порт удаленного ресурса
@@ -353,9 +370,9 @@ class Http {
 		void setHost(const string str);
 		/**
 		 * setPort Метод установки порта запроса
-		 * @param str строка с данными для установки
+		 * @param number номер порта для установки
 		 */
-		void setPort(const string str);
+		void setPort(u_int number);
 		/**
 		 * setPath Метод установки пути запроса
 		 * @param str строка с данными для установки
@@ -368,9 +385,9 @@ class Http {
 		void setProtocol(const string str);
 		/**
 		 * setVersion Метод установки версии протокола запроса
-		 * @param str строка с данными для установки
+		 * @param number номер версии протокола
 		 */
-		void setVersion(const string str);
+		void setVersion(float number);
 		/**
 		 * setAuth Метод установки метода авторизации запроса
 		 * @param str строка с данными для установки

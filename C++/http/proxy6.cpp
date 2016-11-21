@@ -127,7 +127,7 @@ class BufferHttpProxy {
 		 */
 		bool parse(){
 			// Выполняем парсинг данных
-			return parser->parse2(request.data, request.total);
+			return parser->parse(request.data, request.total);
 		}
 };
 /**
@@ -427,27 +427,28 @@ void flash_connect(evutil_socket_t fd, BufferHttpProxy ** arg){
  * @param event событие на которое сработала функция обратного вызова
  * @param arg   объект передаваемый как значение
  */
-void on_http_connect(evutil_socket_t fd, short event, void * arg);
+//void on_http_connect(evutil_socket_t fd, short event, void * arg);
 /**
  * on_http_request Прототип функции проверка запроса
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
  * @param arg   объект передаваемый как значение
  */
-void on_http_request(evutil_socket_t fd, short event, void * arg);
+//void on_http_request(evutil_socket_t fd, short event, void * arg);
 /**
  * on_http_write_client Прототип функции вывода ответа клиенту
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
  * @param arg   объект передаваемый как значение
  */
-void on_http_write_client(evutil_socket_t fd, short event, void * arg);
+//void on_http_write_client(evutil_socket_t fd, short event, void * arg);
 /**
  * do_http_proxy Функция обмена сообщениями между клиентом и сервером (https)
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
  * @param arg   объект передаваемый как значение
  */
+/*
 void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
@@ -497,12 +498,14 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 	// Выходим
 	return;
 }
+*/
 /**
  * on_http_proxy обмена сообщениями между клиентом и сервером (http)
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
  * @param arg   объект передаваемый как значение
  */
+/*
 void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
@@ -548,12 +551,14 @@ void on_http_proxy(evutil_socket_t fd, short event, void * arg){
 	// Выходим
 	return;
 }
+*/
 /**
  * on_http_write_client Функция вывода ответа клиенту
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
  * @param arg   объект передаваемый как значение
  */
+/*
 void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
@@ -617,12 +622,14 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 	// Выходим
 	return;
 }
+*/
 /**
  * prepare_request Функция обработки входящего запроса
  * @param fd   файловый дескриптор (сокет)
  * @param arg  объект передаваемый как значение
  * @param flag возникновение ошибки (либо чтение данных либо таймаут)
  */
+/*
 void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = false){
 	// Выполняем приведение типов
 	BufferHttpProxy * http = *arg;
@@ -703,7 +710,7 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 	// Выходим
 	return;
 }
-
+*/
 
 /**
  * prepare_request Функция обработки входящего запроса
