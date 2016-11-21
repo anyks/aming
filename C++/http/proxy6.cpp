@@ -137,25 +137,44 @@ class BufferHttpProxy {
 		 * ~BufferHttpProxy Деструктор
 		 */
 		~BufferHttpProxy(){
+			
+			cout << " ++++ 1" << endl;
+
 			// Отключаем от сервиса (disconnect)
 			if(socServer > 0){
 				shutdown(socServer, SHUT_RDWR);
 				close(socServer);
 				socServer = -1;
 			}
+
+			cout << " ++++ 2" << endl;
+
 			if(socClient > 0){
 				shutdown(socClient, SHUT_RDWR);
 				close(socClient);
 				socClient = -1;
 			}
+
+			cout << " ++++ 3" << endl;
+
 			// Удаляем события
 			if((evServer != NULL) && (evServer->ev_base != NULL)) event_free(evServer);
 			else if((evServer != NULL) && (evServer->ev_base == NULL)) delete evServer;
+
+			cout << " ++++ 4" << endl;
+
 			if((evClient != NULL) && (evClient->ev_base != NULL)) event_free(evClient);
 			else if((evClient != NULL) && (evClient->ev_base == NULL)) delete evClient;
+
+			cout << " ++++ 5" << endl;
+
 			// Удаляем указатели
 			evServer = NULL;
 			evClient = NULL;
+
+
+			cout << " ++++ 6" << endl;
+
 			// Если буфер не удален то удаляем его
 			if(request.data != NULL){
 				// Удаляем буфер
@@ -163,6 +182,9 @@ class BufferHttpProxy {
 				// Запоминаем что данные удалены
 				request.data = NULL;
 			}
+
+			cout << " ++++ 7" << endl;
+
 			// Если парсер не удален
 			if(parser != NULL){
 				// Удаляем парсер
@@ -170,6 +192,8 @@ class BufferHttpProxy {
 				// Запоминаем что данные удалены
 				parser = NULL;
 			}
+
+			cout << " ++++ 8" << endl;
 		}
 		/**
 		 * parse Метод парсинга данных
