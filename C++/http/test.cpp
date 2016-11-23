@@ -105,6 +105,7 @@ http_data getHeaders(string str){
 }
 
 int main(int argc, char * argv[]){
+	
 	// Тестовый заголовок
 	const char * str = "POST http://ocsp.digicert.com/ HTTP/1.1\r\n"
 				"Host: ocsp.digicert.com\r\n"
@@ -117,6 +118,7 @@ int main(int argc, char * argv[]){
 				"Proxy-Authorization: Basic emRENzg2S2V1UzprLmZyb2xvdnZAZ21haWwuY29t\r\n"
 				"Connection: keep-alive\r\n"
 				"\r\n";
+	/*
 	// Выполняем парсинг http запроса
 	http_data data = getHeaders(str);
 
@@ -130,6 +132,23 @@ int main(int argc, char * argv[]){
 		for(map <string, string>::iterator it = data.headers.begin(); it != data.headers.end(); ++it)
 			cout << it->first << " => " << it->second << '\n';
 	}
+	*/
+
+	char dd[13] = "Hello World!";
+
+	dd[12] = '\0';
+
+	vector <char> v;
+
+	v.assign(dd, dd + 13);
+
+	for(int i = 0; i < v.size(); i++){
+		cout << " ++++ " << v[i] << endl;
+	}
+
+	const char * kk = v.data();
+
+	cout << " --- " << kk << endl;
 
 	return 0;
 }

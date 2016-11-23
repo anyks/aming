@@ -22,22 +22,23 @@ class Http {
 		};
 		// Структура http данных
 		struct http_data {
-			string					http;				// http запрос
-			string					auth;				// Тип авторизации
-			string					method;				// Метод запроса
-			string					path;				// Путь запроса
-			string					protocol;			// Протокол запроса
-			string					version;			// Версия протокола
-			string					host;				// Хост запроса
-			string					port;				// Порт запроса
-			string					login;				// Логин
-			string					password;			// Пароль
-			string					useragent;			// UserAgent браузера
-			string					connection;			// Заголовок connection
-			string					request;			// Результирующий заголовок для запроса
-			size_t					length = 0;			// Количество заголовков
-			map <string, string>	headers;			// Заголовки http запроса
-			map <string, string>	origin;				// Оригинальные http заголовки
+			string					http;		// http запрос
+			string					auth;		// Тип авторизации
+			string					method;		// Метод запроса
+			string					path;		// Путь запроса
+			string					protocol;	// Протокол запроса
+			string					version;	// Версия протокола
+			string					host;		// Хост запроса
+			string					port;		// Порт запроса
+			string					login;		// Логин
+			string					password;	// Пароль
+			string					useragent;	// UserAgent браузера
+			string					connection;	// Заголовок connection
+			string					request;	// Результирующий заголовок для запроса
+			size_t					length = 0;	// Количество заголовков
+			vector <char>			entitybody;	// Данные http вложений
+			map <string, string>	headers;	// Заголовки http запроса
+			map <string, string>	origin;		// Оригинальные http заголовки
 			/**
 			 * clear Метод очистки структуры
 			 */
@@ -64,47 +65,16 @@ class Http {
 				origin.clear();
 			}
 		};
-		// Структура данных для http вложений
-		struct http_body {
-			char	* data;		// Данные вложений
-			size_t	length = 0;	// Размер данных вложений
-		};
 		// Структура данных для выполнения запросов на удаленном сервере
 		struct http_query {
-			string		request;		// Запрос данных на удаленном сервере
-			http_body	entitybody;		// Тело вложений в запросе
-			/**
-			 * http_query Конструктор
-			 * @param str  данные запроса
-			 * @param body тело запроса
-			 */
-			http_query(string str, http_body body){
-				// Копируем данные запроса
-				request = str;
-				// Запоминаем длину данных
-				entitybody.length = body.length;
-				// Если вложения существуют
-				if(entitybody.length){
-					// Выделяем память для вложенного тела данных
-					entitybody.data = new char[body.length + 1];
-					// Копируем данные
-					copy(body.data, body.data + (body.length + 1), entitybody.data);
-				}
-			}
-			/*
-			* ~http_query Деструктор
-			 */
-			~http_query(){
-				// Удаляем выделенную ранее память
-				if(entitybody.length) delete [] entitybody.data;
-			}
+			string			data;		// Запрос данных на удаленном сервере
+			vector <char>	entitybody;	// Тело вложений в запросе
 		};
+		// Определяем новый тип
+		typedef struct http_query HttpQuery;
+		typedef struct http_data HttpData;
 		// Данные http запроса
-		http_data query;
-		// Данные http вложений
-		http_body entitybody;
-		// Данные запроса
-		http_query * request;
+		HttpData query;
 		// Название и версия прокси сервера
 		string appname, appver;
 		// Шаблоны ответов
@@ -238,7 +208,7 @@ class Http {
 		 * @param  str строка http запроса
 		 * @return     данные http запроса
 		 */
-		http_data getHeaders(string str);
+		HttpData getHeaders(string str);
 		/**
 		 * Http::checkPort Функция проверки на качество порта
 		 * @param  port входная строка якобы содержащая порт
@@ -282,27 +252,32 @@ class Http {
 		 * brokenRequest Метод получения ответа (неудачного отправленного запроса)
 		 * @return ответ в формате html
 		 */
-		http_query * brokenRequest();
+		HttpQuery brokenRequest();
 		/**
 		 * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
 		 * @return ответ в формате html
 		 */
-		http_query * faultConnect();
+		HttpQuery faultConnect();
 		/**
 		 * faultAuth Метод получения ответа (неудачной авторизации)
 		 * @return ответ в формате html
 		 */
-		http_query * faultAuth();
+		HttpQuery faultAuth();
 		/**
 		 * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
 		 * @return ответ в формате html
 		 */
-		http_query * requiredAuth();
+		HttpQuery requiredAuth();
 		/**
 		 * authSuccess Метод получения ответа (подтверждения авторизации)
 		 * @return ответ в формате html
 		 */
-		http_query * authSuccess();
+		HttpQuery authSuccess();
+		/**
+		 * getQuery Метод получения сформированного http запроса
+		 * @return сформированный http запрос
+		 */
+		HttpQuery getQuery();
 		/**
 		 * getMethod Метод получения метода запроса
 		 * @return метод запроса
@@ -343,11 +318,6 @@ class Http {
 		 * @return юзерагент
 		 */
 		string getUseragent();
-		/**
-		 * getQuery Метод получения сформированного http запроса
-		 * @return сформированный http запрос
-		 */
-		http_query * getQuery();
 		/**
 		 * getPort Метод получения порта запроса
 		 * @return порт удаленного ресурса
@@ -402,6 +372,10 @@ class Http {
 		 * setClose Метод установки принудительного отключения после запроса
 		 */
 		void setClose();
+		/**
+		 * Http::clear Метод очистки всех полученных данных
+		 */
+		void clear();
 		/**
 		 * Http Конструктор
 		 * @param str строка содержащая название сервиса

@@ -66,11 +66,11 @@ string & Http::trim(string &str, const char * t){
  * @param  str строка http запроса
  * @return     данные http запроса
  */
-Http::http_data Http::getHeaders(string str){
+Http::HttpData Http::getHeaders(string str){
 	// Создаем структуру данных
-	http_data data;
+	HttpData data;
 	// Проверяем существуют ли данные
-	if(str.length()){
+	if(!str.empty()){
 		// Определяем конец запроса
 		size_t end_query = str.find("\r\n\r\n");
 		// Если конец запроса найден
@@ -80,7 +80,7 @@ Http::http_data Http::getHeaders(string str){
 			// Выполняем разбиение строк
 			split(str, "\r\n", strings);
 			// Если строки найдены
-			if(strings.size()){
+			if(!strings.empty()){
 				// Позиция найденного разделителя
 				size_t pos;
 				// Запоминаем http запрос
@@ -150,18 +150,14 @@ Http::connect Http::getConnection(string str){
 	connect data;
 	// Выполняем поиск протокола
 	size_t pos = str.find("://");
-	// Размеры данных
-	size_t size;
 	// Если протокол найден
 	if(pos != (size_t) string::npos){
 		// Выполняем разделение на протокол
 		vector <string> prt;
 		// Функция разбиения на составляющие
 		split(str, "://", prt);
-		// Запоминаем размер массива
-		size = prt.size();
 		// Если протокол найден
-		if(size){
+		if(!prt.empty()){
 			// Запоминаем версию протокола
 			data.protocol = prt[0];
 			// Запоминаем оставшуюся часть строки
@@ -179,10 +175,8 @@ Http::connect Http::getConnection(string str){
 		vector <string> prt;
 		// Функция разбиения на составляющие
 		split(str, ":", prt);
-		// Запоминаем размер массива
-		size = prt.size();
 		// Если порт и хост найдены
-		if(size){
+		if(!prt.empty()){
 			// Запоминаем хост
 			data.host = prt[0];
 			// Запоминаем порт
@@ -242,7 +236,7 @@ void Http::createHead(){
 		+ string(":") + query.port + string("\r\n")
 	);
 	// Добавляем useragent
-	if(query.useragent.length()) query.request.append(string("User-Agent: ") + query.useragent + string("\r\n"));
+	if(!query.useragent.empty()) query.request.append(string("User-Agent: ") + query.useragent + string("\r\n"));
 	// Добавляем остальные заголовки
 	for(map <string, string>::iterator it = query.headers.begin(); it != query.headers.end(); ++it){
 		// Фильтруем заголовки
@@ -251,6 +245,7 @@ void Http::createHead(){
 		&& (it->first != "connection")
 		&& (it->first != "proxy-authorization")
 		&& (it->first != "proxy-connection")){
+		//&& (it->first != "accept-encoding")){
 			// Добавляем оставшиеся заголовки
 			query.request.append(
 				query.origin[it->first] + string(": ")
@@ -259,9 +254,9 @@ void Http::createHead(){
 		}
 	}
 	// Если это не метод CONNECT то меняем заголовок Connection на close
-	if(query.connection.length() && !strcmp(query.version.c_str(), "1.0")) query.connection = "close";
+	if(!query.connection.empty() && !strcmp(query.version.c_str(), "1.0")) query.connection = "close";
 	// Добавляем заголовок connection
-	if(query.connection.length()) query.request.append(string("Connection: ") + query.connection + string("\r\n"));
+	if(!query.connection.empty()) query.request.append(string("Connection: ") + query.connection + string("\r\n"));
 	// Запоминаем конец запроса
 	query.request.append(string("\r\n"));
 }
@@ -273,7 +268,7 @@ bool Http::isAlive(){
 	// Получаем данные заголовока коннекта
 	string connection = query.headers.find("proxy-connection")->second;
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
-	if(!strcmp(query.version.c_str(), "1.1") && connection.length()
+	if(!strcmp(query.version.c_str(), "1.1") && !connection.empty()
 	&& !strcmp(toCase(connection).c_str(), "keep-alive")) return true;
 	else return false;
 }
@@ -284,7 +279,7 @@ bool Http::isAlive(){
  */
 bool Http::isHttp(const string buffer){
 	// Если буфер существует
-	if(buffer.length()){
+	if(!buffer.empty()){
 		// Создаем новый буфер
 		char buf[4];
 		// Шаблон основных комманд
@@ -336,7 +331,7 @@ void Http::generateHttp(){
 			// Получаем данные заголовока коннекта
 			query.connection = toCase(query.headers.find("connection")->second);
 			// Если хост найден
-			if(host.length()){
+			if(!host.empty()){
 				// Выполняем получение параметров подключения
 				connect gcon = getConnection(query.path);
 				// Выполняем получение параметров подключения
@@ -360,7 +355,7 @@ void Http::generateHttp(){
 					// Вырезаем домер из пути
 					tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
 					// Если путь существует
-					if(tmp_path.length()) query.path = tmp_path;
+					if(!tmp_path.empty()) query.path = tmp_path;
 				}
 				// Запоминаем хост
 				query.host = toCase(scon.host);
@@ -380,7 +375,7 @@ void Http::generateHttp(){
 				}
 			}
 			// Если авторизация найдена
-			if(auth.length()){
+			if(!auth.empty()){
 				// Выполняем разделение на тип и данные авторизации
 				vector <string> lgn;
 				// Функция разбиения на составляющие
@@ -445,49 +440,39 @@ bool Http::parse(const char * buffer, size_t size){
 		// Проверяем есть ли чанкование
 		string ch = query.headers.find("transfer-encoding")->second;
 		// Если найден размер вложений
-		if(cl.length()){
+		if(!cl.empty()){
 			// Размер вложений
 			int body_size = ::atoi(cl.c_str());
 			// Получаем размер вложения
 			if(size >= (query.length + body_size)){
-				// Запоминаем размер вложений
-				entitybody.length = body_size;
-				// Создаем тело запроса
-				entitybody.data = new char[(const int) body_size + 1];
-				// Заполняем нулями буфер
-				memset(entitybody.data, 0, body_size + 1);
 				// Извлекаем указанные данные
-				//strncpy(entitybody.data, buffer + query.length, body_size);
-				copy(buffer + query.length, buffer + (query.length + body_size), entitybody.data);
+				query.entitybody.assign(buffer + query.length, buffer + (query.length + body_size));
+				// Добавляем завершающий байт
+				query.entitybody.push_back('\0');
 				// Генерацию данных
 				generateHttp();
 				// Сообщаем что все удачно получено
 				return true;
 			}
 		// Если это чанкование
-		} else if(ch.length() && (ch.find("chunked") != string::npos)){
+		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
 			// Формируем блок с данными
 			string str = buffer + query.length;
 			// Размер вложений
 			int body_size = str.find("0\r\n\r\n");
 			// Если конец строки найден
 			if(body_size != string::npos){
-				// Запоминаем размер вложений
-				entitybody.length = body_size + 5;
-				// Создаем тело запроса
-				entitybody.data = new char[(const int) (body_size + 5) + 1];
-				// Заполняем нулями буфер
-				memset(entitybody.data, 0, (body_size + 5) + 1);
 				// Извлекаем указанные данные
-				//strncpy(entitybody.data, str.c_str(), body_size + 5);
-				copy(buffer + query.length, buffer + (query.length + body_size + 5), entitybody.data);
+				query.entitybody.assign(buffer + query.length, buffer + (query.length + body_size + 5));
+				// Добавляем завершающий байт
+				query.entitybody.push_back('\0');
 				// Генерацию данных
 				generateHttp();
 				// Сообщаем что все удачно получено
 				return true;
 			}
 		// Если указан тип данных но длина вложенных данных не указана
-		} else if(ch.length()) return false;
+		} else if(!ch.empty()) return false;
 		// Если вложения не найдены
 		else {
 			// Генерацию данных
@@ -503,7 +488,7 @@ bool Http::parse(const char * buffer, size_t size){
  * brokenRequest Метод получения ответа (неудачного отправленного запроса)
  * @return ответ в формате html
  */
-Http::http_query * Http::brokenRequest(){
+Http::HttpQuery Http::brokenRequest(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -517,18 +502,14 @@ Http::http_query * Http::brokenRequest(){
 	}
 	// Выводим шаблон сообщения о неудачном отправленном запросе
 	result = html[9];
-	// Если запрос существует то удаляем его
-	if(request != NULL) delete request;
-	// Создаем его
-	request = new http_query(result, entitybody);
-	// Выводим значение переменной
-	return request;
+	// Выводим результат
+	return {result};
 }
 /**
  * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
  * @return ответ в формате html
  */
-Http::http_query * Http::faultConnect(){
+Http::HttpQuery Http::faultConnect(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -542,18 +523,14 @@ Http::http_query * Http::faultConnect(){
 	}
 	// Выводим шаблон сообщения о неудачном подключении
 	result = html[6];
-	// Если запрос существует то удаляем его
-	if(request != NULL) delete request;
-	// Создаем его
-	request = new http_query(result, entitybody);
-	// Выводим значение переменной
-	return request;
+	// Выводим результат
+	return {result};
 }
 /**
  * faultAuth Метод получения ответа (неудачной авторизации)
  * @return ответ в формате html
  */
-Http::http_query * Http::faultAuth(){
+Http::HttpQuery Http::faultAuth(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -567,18 +544,14 @@ Http::http_query * Http::faultAuth(){
 	}
 	// Выводим шаблон сообщения о неудачной авторизации
 	result = html[5];
-	// Если запрос существует то удаляем его
-	if(request != NULL) delete request;
-	// Создаем его
-	request = new http_query(result, entitybody);
-	// Выводим значение переменной
-	return request;
+	// Выводим результат
+	return {result};
 }
 /**
  * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
  * @return ответ в формате html
  */
-Http::http_query * Http::requiredAuth(){
+Http::HttpQuery Http::requiredAuth(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -592,18 +565,14 @@ Http::http_query * Http::requiredAuth(){
 	}
 	// Выводим шаблон сообщения о требовании авторизации
 	result = html[2];
-	// Если запрос существует то удаляем его
-	if(request != NULL) delete request;
-	// Создаем его
-	request = new http_query(result, entitybody);
-	// Выводим значение переменной
-	return request;
+	// Выводим результат
+	return {result};
 }
 /**
  * authSuccess Метод получения ответа (подтверждения авторизации)
  * @return ответ в формате html
  */
-Http::http_query * Http::authSuccess(){
+Http::HttpQuery Http::authSuccess(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -617,12 +586,16 @@ Http::http_query * Http::authSuccess(){
 	}
 	// Выводим шаблон сообщения о том что авторизация пройдена
 	result = html[0];
-	// Если запрос существует то удаляем его
-	if(request != NULL) delete request;
-	// Создаем его
-	request = new http_query(result, entitybody);
-	// Выводим значение переменной
-	return request;
+	// Выводим результат
+	return {result};
+}
+/**
+ * getQuery Метод получения сформированного http запроса
+ * @return сформированный http запрос
+ */
+Http::HttpQuery Http::getQuery(){
+	// Выводим результат
+	return {query.request, query.entitybody};
 }
 /**
  * getMethod Метод получения метода запроса
@@ -689,24 +662,12 @@ string Http::getUseragent(){
 	return query.useragent;
 }
 /**
- * getQuery Метод получения сформированного http запроса
- * @return сформированный http запрос
- */
-Http::http_query * Http::getQuery(){
-	// Если запрос существует то удаляем его
-	if(request != NULL) delete request;
-	// Создаем его
-	request = new http_query(query.request, entitybody);
-	// Выводим значение переменной
-	return request;
-}
-/**
  * getPort Метод получения порта запроса
  * @return порт удаленного ресурса
  */
 int Http::getPort(){
 	// Выводим значение переменной
-	return (query.port.length() ? ::atoi(query.port.c_str()) : 80);
+	return (!query.port.empty() ? ::atoi(query.port.c_str()) : 80);
 }
 /**
  * getVersion Метод получения версии протокола запроса
@@ -714,7 +675,7 @@ int Http::getPort(){
  */
 float Http::getVersion(){
 	// Выводим значение переменной
-	return (query.version.length() ? ::atof(query.version.c_str()) : 1.0);
+	return (!query.version.empty() ? ::atof(query.version.c_str()) : 1.0);
 }
 /**
  * setMethod Метод установки метода запроса
@@ -808,6 +769,13 @@ void Http::setUseragent(const string str){
 	createHead();
 }
 /**
+ * Http::clear Метод очистки всех полученных данных
+ */
+void Http::clear(){
+	// Очищаем заголовки
+	query.clear();
+}
+/**
  * Http Конструктор
  * @param str строка содержащая название сервиса
  */
@@ -823,8 +791,6 @@ Http::Http(const string str, string ver){
 Http::~Http(){
 	// Очищаем заголовки
 	query.clear();
-	// Если запрос существует то удаляем его
-	if(request != NULL) delete request;
-	// Удаляем вложенное тело запроса
-	if(entitybody.data != NULL) delete [] entitybody.data;
+	// Очищаем память выделенную для вектора
+	vector <char> ().swap(query.entitybody);
 }
