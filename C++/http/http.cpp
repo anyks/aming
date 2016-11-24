@@ -425,63 +425,91 @@ void Http::generateHttp(){
 	createHead();
 }
 /**
+ * checkEnd Функция проверки завершения запроса
+ * @param  buffer буфер с входящими данными
+ * @param  size   размер входящих данных
+ * @return        результат проверки
+ */
+Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
+	// Создаем блок данных
+	HttpEnd data;
+	// Выполняем парсинг http запроса
+	if(!_query.length) _query = getHeaders(buffer);
+	// Если данные существуют
+	if(_query.length){
+		// Проверяем есть ли размер вложений
+		string cl = _query.headers.find("content-length")->second;
+		// Проверяем есть ли чанкование
+		string ch = _query.headers.find("transfer-encoding")->second;
+		// Если найден размер вложений
+		if(!cl.empty()){
+			// Определяем размер вложений
+			int body_size = ::atoi(cl.c_str());
+			// Получаем размер вложения
+			if(size >= (_query.length + body_size)){
+				// Заполняем структуру данными
+				data.flag = 3;
+				// Заполняем размеры
+				data.begin	= _query.length;
+				data.end	= _query.length + body_size;
+			}
+		// Если это чанкование
+		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
+			// Если конец строки найден
+			if((size > 5) // 0\r\n\r\n
+			&& ((short) buffer[size - 1] == 10)
+			&& ((short) buffer[size - 2] == 13)
+			&& ((short) buffer[size - 3] == 10)
+			&& ((short) buffer[size - 4] == 13)
+			&& ((short) buffer[size - 5] == 48)){
+				// Заполняем структуру данными
+				data.flag = 4;
+				// Заполняем размеры
+				data.begin	= _query.length;
+				data.end	= size;
+			}
+		// Если указан тип данных но длина вложенных данных не указана
+		} else if(!ch.empty()) data.flag = 0;
+		// Если найден конечный символ
+		else if((short) buffer[size - 1] == 0) data.flag = 2;
+		// Если вложения не найдены
+		else data.flag = 1;
+		// Если флаг установлен тогда очищаем структуру
+		if(data.flag) _query.clear();
+	}
+	// Выводим результат
+	return data;
+}
+/**
  * parse Метод выполнения парсинга
  * @param  buffer буфер входящих данных из сокета
  * @param  size   размер переданных данных
  * @return        результат определения завершения запроса
  */
 bool Http::parse(const char * buffer, size_t size){
-	// Выполняем парсинг http запроса
-	if(!query.length) query = getHeaders(buffer);
-	// Если данные существуют
-	if(query.length){
-		// Проверяем есть ли размер вложений
-		string cl = query.headers.find("content-length")->second;
-		// Проверяем есть ли чанкование
-		string ch = query.headers.find("transfer-encoding")->second;
-		// Если найден размер вложений
-		if(!cl.empty()){
-			// Размер вложений
-			int body_size = ::atoi(cl.c_str());
-			// Получаем размер вложения
-			if(size >= (query.length + body_size)){
+	// Выполняем проверку завершения передачи данных
+	HttpEnd check = checkEnd(buffer, size);
+	// Если флаг установлен
+	if(check.flag){
+		// Выполняем парсинг http запроса
+		query = getHeaders(buffer);
+		// Определяем тип запроса
+		switch(check.flag){
+			// Если присутствуют вложения
+			case 3:
+			case 4: {
 				// Извлекаем указанные данные
-				query.entitybody.assign(buffer + query.length, buffer + (query.length + body_size));
+				query.entitybody.assign(buffer + check.begin, buffer + check.end);
 				// Добавляем завершающий байт
 				query.entitybody.push_back('\0');
-				// Генерацию данных
-				generateHttp();
-				// Сообщаем что все удачно получено
-				return true;
-			}
-		// Если это чанкование
-		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
-			// Формируем блок с данными
-			string str = buffer + query.length;
-			// Размер вложений
-			int body_size = str.find("0\r\n\r\n");
-			// Если конец строки найден
-			if(body_size != string::npos){
-				// Извлекаем указанные данные
-				query.entitybody.assign(buffer + query.length, buffer + (query.length + body_size + 5));
-				// Добавляем завершающий байт
-				query.entitybody.push_back('\0');
-				// Генерацию данных
-				generateHttp();
-				// Сообщаем что все удачно получено
-				return true;
-			}
-		// Если указан тип данных но длина вложенных данных не указана
-		} else if(!ch.empty()) return false;
-		// Если вложения не найдены
-		else {
-			// Генерацию данных
-			generateHttp();
-			// Сообщаем что все удачно получено
-			return true;
+			} break;
 		}
+		// Генерируем данные
+		generateHttp();
+		// Сообщаем что все удачно получено
+		return true;
 	}
-	// Выводим результат
+	// Сообщаем что данные не получены
 	return false;
 }
 /**
@@ -790,6 +818,7 @@ Http::Http(const string str, string ver){
  */
 Http::~Http(){
 	// Очищаем заголовки
+	_query.clear();
 	query.clear();
 	// Очищаем память выделенную для вектора
 	vector <char> ().swap(query.entitybody);

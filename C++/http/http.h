@@ -14,6 +14,11 @@ using namespace std;
 // Класс содержит данные парсинга http запроса
 class Http {
 	private:
+		// Структура подержащая данные проверки, полной передачи данных
+		struct check_end {
+			u_short flag = 0;
+			size_t begin = 0, end = 0;
+		};
 		// Структура подключения
 		struct connect {
 			string	host,		// Хост
@@ -70,11 +75,11 @@ class Http {
 			string			data;		// Запрос данных на удаленном сервере
 			vector <char>	entitybody;	// Тело вложений в запросе
 		};
-		// Определяем новый тип
-		typedef struct http_query HttpQuery;
+		// Определяем новые типы данных
 		typedef struct http_data HttpData;
+		typedef struct check_end HttpEnd;
 		// Данные http запроса
-		HttpData query;
+		HttpData _query, query;
 		// Название и версия прокси сервера
 		string appname, appver;
 		// Шаблоны ответов
@@ -230,6 +235,8 @@ class Http {
 		 */
 		void generateHttp();
 	public:
+		// Определяем тип данных для содержания данных запроса
+		typedef struct http_query HttpQuery;
 		/**
 		 * isAlive Метод определения нужно ли держать соединение для прокси
 		 * @return результат проверки
@@ -248,6 +255,13 @@ class Http {
 		 * @return        результат определения завершения запроса
 		 */
 		bool parse(const char * buffer, size_t size);
+		/**
+		 * checkEnd Функция проверки завершения запроса
+		 * @param  buffer буфер с входящими данными
+		 * @param  size   размер входящих данных
+		 * @return        результат проверки
+		 */
+		HttpEnd checkEnd(const char * buffer, size_t size);
 		/**
 		 * brokenRequest Метод получения ответа (неудачного отправленного запроса)
 		 * @return ответ в формате html

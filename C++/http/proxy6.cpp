@@ -57,23 +57,15 @@ class BufferHttpProxy {
 		// Буфер данных
 		struct Buffer {
 			vector <char> data;		// Данные в буфере
-			size_t total	= 0;	// Общее количество данных в буфере
 			size_t offset	= 0;	// Смещение в буфере
 			bool end		= true;	// Немедленное завершение запроса после отправки данных
 		};
-		// Структура данных для выполнения запросов на удаленном сервере
-		struct http_query {
-			string			data;		// Запрос данных на удаленном сервере
-			vector <char>	entitybody;	// Тело вложений в запросе
-		};
-		// Определяем новый тип
-		typedef struct http_query HttpQuery;
 	public:
 		struct event_base	* base = NULL;			// База событий
 		Http				* parser = NULL;		// Объект парсера
 		struct event		* evClient = NULL,		// Событие клиента
 							* evServer = NULL;		// Событие сервера
-		HttpQuery			response;				// Ответ системы
+		Http::HttpQuery		response;				// Ответ системы
 		Buffer				request;				// Данные запроса
 		bool				auth		= false,	// Флаг авторизации
 							ishttps		= false;	// Флаг зашифрованного соединения
@@ -128,7 +120,7 @@ class BufferHttpProxy {
 		 */
 		bool parse(){
 			// Выполняем парсинг данных
-			return parser->parse(request.data.data(), request.total);
+			return parser->parse(request.data.data(), request.data.size() - 1);
 		}
 };
 /**
@@ -402,6 +394,31 @@ void free_data(BufferHttpProxy ** http){
 	}
 }
 /**
+ * appendToBuffer Функция добавления в буфер новых данных
+ * @param data       ссылка на буфер данных
+ * @param chunk_size размер одной порции данных
+ * @param buffer     буфер с входящими данными
+ */
+void appendToBuffer(vector <char> & data, size_t chunk_size, const char * buffer){
+	// Определяем количество общих данных
+	size_t total = (!data.empty() ? data.size() - 1 : 0);
+	// Устанавливаем параметры по умолчанию
+	total += chunk_size;
+	// Выполняем увеличение размера вектора
+	data.resize(total + 1);
+	// Вспомогательные переменные для заполнения вектора данными
+	size_t i = total - chunk_size, j = 0;
+	// Добавляем все полученные байты в массив
+	while(i < total){
+		// Заполняем вектор полученными символами
+		data[i] = (char) buffer[j];
+		i++;	// Изменяем смещение по вектору
+		j++;	// Изменяем смещение по буферу данных
+	}
+	// Добавляем нулевой символ
+	data[total] = '\0';
+}
+/**
  * on_http_connect Прототип функции подключения к серверу
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
@@ -432,6 +449,8 @@ void flash_connect(evutil_socket_t fd, BufferHttpProxy ** arg){
 	BufferHttpProxy * http = *arg;
 	// Если данные существуют
 	if(http != NULL){
+		// Выполняем увеличение размера вектора
+		http->request.data.clear();
 		// Проверяем должено ли жить подключение
 		if(!http->parser->isAlive()){
 			// Если это клиент то удаляем событие
@@ -495,19 +514,25 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				if(len <= 0){
 					// Выводим в консоль информацию
 					debug_message("Server or client is disconnect!");
+					// Очищаем введенные ранее данные
+					http->parser->clear();
 					// Если сервер отключился то отключаем все
 					flash_connect(fd, &http);
 				// Если данные считаны нормально
 				} else if(socket > -1) {
 					// Выполняем отправку данных на сокет клиента
 					send(socket, (void *) buffer, len, 0);
-					// Если после завершения запроса нужно отключится, отключаемся
-					if(((short) buffer[len - 1] == 0)
-					|| (string(buffer).find("0\r\n\r\n") != string::npos)){
-						// Выводим в консоль информацию
-						debug_message("Work is done!");
-						// Если сервер отключился то отключаем все
-						flash_connect(fd, &http);
+					// Если с сервера пришли данные
+					if(fd == http->socServer){
+						// Склеиваем полученные данные
+						appendToBuffer(http->request.data, len, buffer);
+						// Выполняем проверку прислали все данные или нет
+						if(http->parser->checkEnd(http->request.data.data(), http->request.data.size() - 1).flag){
+							// Выводим в консоль информацию
+							debug_message("Work is done!");
+							// Если сервер отключился то отключаем все
+							flash_connect(fd, &http);
+						}
 					}
 				// Если сокет не существует тогда удаляем данные
 				} else free_data(&http);
@@ -699,11 +724,9 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 	// Выполняем приведение типов
 	BufferHttpProxy * http = *arg;
 	// Выполняем парсинг полученных данных
-	if((http->request.total > 0) && http->parse()){
+	if(!http->request.data.empty() && http->parse()){
 		// Закрываем события
 		close_events(&http);
-		// Обнуляем размер буфера
-		http->request.total = 0;
 		// Очищаем буфер данных
 		http->request.data.clear();
 		// Устанавливаем таймаут ожидания запроса в 3 секунды
@@ -716,11 +739,11 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 		if(!http->auth && (!http->parser->getLogin().length()
 		|| !http->parser->getPassword().length())){
 			// Формируем ответ клиенту
-			http->response.data = http->parser->requiredAuth().data;
+			http->response = http->parser->requiredAuth();
 		// Сообщаем что авторизация не удачная
 		} else if(!http->auth) {
 			// Формируем ответ клиенту
-			http->response.data = http->parser->faultAuth().data;
+			http->response = http->parser->faultAuth();
 		// Если авторизация прошла
 		} else {
 			// Определяем порт, если это шифрованное сообщение то будем считывать данные целиком
@@ -730,13 +753,14 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 				// Если сокет существует
 				if(http->socServer > -1){
 					// Формируем ответ клиенту
-					http->response.data = http->parser->authSuccess().data;
+					http->response = http->parser->authSuccess();
+
 					// Устанавливаем флаг защищенного соединения
 					http->ishttps = true;
 					// Отключаем немедленное завершение
 					//http->request.end = false;
 				// Если подключение не удачное то сообщаем об этом
-				} else http->response.data = http->parser->faultConnect().data;
+				} else http->response = http->parser->faultConnect();
 			// Иначе делаем запрос на получение данных
 			} else {
 				// Выполняем подключение к серверу
@@ -746,7 +770,7 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 					// Указываем что нужно отключится сразу после отправки запроса
 					//if(http->parser->getVersion() > 1) http->parser->setClose();
 					// Формируем ответ клиенту
-					http->response.data = http->parser->getQuery().data;
+					http->response = http->parser->getQuery();
 					// Отключаем немедленное завершение
 					//http->request.end = false;
 
@@ -759,7 +783,7 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 					// Выходим
 					return;
 				// Если подключение не удачное то сообщаем об этом
-				} else http->response.data = http->parser->faultConnect().data;
+				} else http->response = http->parser->faultConnect();
 			}
 		}
 		// Ответ готов
@@ -810,25 +834,13 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 				if(len <= 0) prepare_request(fd, &http, true);
 				// Если данные считаны нормально тогда продолжаем
 				else {
-					// Устанавливаем параметры по умолчанию
-					http->request.total		+= len;
-					http->request.offset	= 0;
+					// Скидываем количество отправляемых данных
+					http->request.offset = 0;
 					// Проверяем последние два символа
 					short l1 = (short) buffer[len - 2];
 					short l2 = (short) buffer[len - 1];
-					// Выполняем увеличение размера вектора
-					http->request.data.resize(http->request.total + 1);
-					// Вспомогательные переменные для заполнения вектора данными
-					size_t i = http->request.total - len, j = 0;
-					// Добавляем все полученные байты в массив
-					while(i < http->request.total){
-						// Заполняем вектор полученными символами
-						http->request.data[i] = buffer[j];
-						i++;	// Изменяем смещение по вектору
-						j++;	// Изменяем смещение по буферу данных
-					}
-					// Добавляем нулевой символ
-					http->request.data[http->request.total] = '\0';
+					// Склеиваем полученные данные
+					appendToBuffer(http->request.data, len, buffer);
 					// Если это перенос строки "\r\n", выполняем обработку входящего запроса
 					if(((l1 == 13) && (l2 == 10)) || (l2 == 0)) prepare_request(fd, &http, false);
 				}
