@@ -244,8 +244,8 @@ void Http::createHead(){
 		&& (it->first != "user-agent")
 		&& (it->first != "connection")
 		&& (it->first != "proxy-authorization")
-		&& (it->first != "proxy-connection")){
-		//&& (it->first != "accept-encoding")){
+		&& (it->first != "proxy-connection")//){
+		&& (it->first != "accept-encoding")){
 			// Добавляем оставшиеся заголовки
 			query.request.append(
 				query.origin[it->first] + string(": ")

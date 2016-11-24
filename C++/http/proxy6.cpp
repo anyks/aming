@@ -589,10 +589,37 @@ void on_http_write_client2(evutil_socket_t fd, short event, void * arg){
 					http->request.offset += len;
 				// Если все данные отправлены
 				} else {
-					// Устанавливаем таймаут ожидания запроса в 3 секунды
-					struct timeval timeout = KEEP_ALIVE;
 					// Закрываем события
 					close_events(&http);
+					// Если вложения присутствуют то отправляем и их
+					if(!http->response.entitybody.empty()){
+						// Количество отправленных данных
+						int send_body = 0;
+						// Определяем длину вложений
+						size_t totalsend_body = 0;
+						// Определяем общее количество данных
+						size_t size_body = http->response.entitybody.size();
+						// Получаем данные отправляемых вложений
+						const char * data = http->response.entitybody.data();
+						// Определяем сколько данных уже отправлено
+						send_size = size_body - totalsend_body;
+						// Определяем сколько данных нужно отправить
+						if(send_size > 255) send_size = 255;
+						// Выполняем отправку до тех пор пока все данные не отправлены
+						while(totalsend_body < size_body){
+							// Выполняем отправку данных
+							if((send_body = send(fd, (void *) (data + totalsend_body), send_size, 0)) < 0){
+								// Отключаемся от сервера
+								free_data(&http);
+								// Выходим из цикла
+								break;
+							}
+							// Запоминаем количество отправленных данных
+							totalsend_body += send_body;
+						}
+					}
+					// Устанавливаем таймаут ожидания запроса в 3 секунды
+					struct timeval timeout = KEEP_ALIVE;
 					// Создаем новое событие для клиента
 					http->evClient = event_new(http->base, http->socClient, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
 					http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
@@ -615,13 +642,6 @@ void on_http_write_client2(evutil_socket_t fd, short event, void * arg){
 void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
-
-	cout << " Запрашиваем авторизацию " << http->response.data.c_str() << endl;
-
-	free_data(&http);
-	return;
-
-	/*
 	// Если подключение не передано
 	if(!http) close_socket(fd);
 	// Если все данные получены
@@ -638,60 +658,42 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 			// Если это запись
 			case 4: {
 				// Определяем длину ответа
-				size_t len_data = http->response->data.length();
-				// Send data to client
-				long len = write(fd, http->response->data.c_str() + http->request.offset, len_data - http->request.offset);
-				// Выполняем отправку данных до тех пор пока все не отправим
-				if(len < (long) (len_data - http->request.offset)){
-					// Failed to send rest data, need to reschedule
+				size_t len_data = http->response.data.length();
+				// Определяем сколько данных уже отправлено
+				size_t send_size = len_data - http->request.offset;
+				// Определяем сколько данных нужно отправить
+				if(send_size > 255) send_size = 255;
+				// Если количество отправляемых данных больше 0 то отправляем
+				if(send_size > 0){
+					// Отправляем запрос на сервер
+					int len = send(fd, (void *) (http->response.data.c_str() + http->request.offset), send_size, 0);
+					// Если данные не отправились то выходим
+					if(len <= 0){
+						// Выводим в консоль информацию
+						debug_message("Сервер неожиданно отключился во время отправки!!!!");
+						// Выполняем очистку подключения
+						free_data(&http);
+						// Выходим
+						break;
+					}
+					// Увеличиваем количество отправленных данных
 					http->request.offset += len;
-				// Если мы все отправили
+				// Если все данные отправлены
 				} else {
 					// Закрываем события
 					close_events(&http);
-					// Если вложения присутствуют то отправляем и их
-					if(!http->response->entitybody.empty()){
-						// Количество отправленных данных
-						int send_body = 0;
-						// Определяем длину вложений
-						size_t totalsend_body = 0;
-						// Определяем общее количество данных
-						size_t size_body = http->response->entitybody.size();
-						// Получаем данные отправляемых вложений
-						const char * data = http->response->entitybody.data();
-						// Выполняем отправку до тех пор пока все данные не отправлены
-						while(totalsend_body < size_body){
-							// Выполняем отправку данных
-							if((send_body = send(fd, (void *) (data + totalsend_body), 255, 0)) < 0){
-								// Отключаемся от сервера
-								free_data(&http);
-								// Выходим из цикла
-								break;
-							}
-							// Запоминаем количество отправленных данных
-							totalsend_body += send_body;
-						}
-					// Отправляем завершающий символ
-					} else send(fd, (void *) '\0', 1, 0);
 					// Устанавливаем таймаут ожидания запроса в 3 секунды
 					struct timeval timeout = KEEP_ALIVE;
 					// Если это не зашифрованное соединение то просто выходим
-					if(!http->ishttps && http->request.end){
-						// Проверяем нужно ли держать подключение
-						//bool alive = http->parser->isAlive();
-						
-						//free_data(&http);
-
-						
+					if(!http->ishttps){
 						// Если данные еще не удалены
-						if(!alive) free_data(&http);
+						if(!http->parser->isAlive()) free_data(&http);
 						// Если нужно держать подключение
 						else {
-							
-							http->request.offset = 0;
-
 							// Отключаемся от сервера
 							close_socket(http->socServer);
+							// Очищаем введенные ранее данные
+							http->parser->clear();
 							// Добавляем событие в базу
 							http->evClient = event_new(http->base, http->socClient, EV_READ | EV_PERSIST, on_http_request, http);
 							// Активируем событие
@@ -710,7 +712,6 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 			} break;
 		}
 	}
-	*/
 	// Выходим
 	return;
 }
@@ -754,7 +755,6 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 				if(http->socServer > -1){
 					// Формируем ответ клиенту
 					http->response = http->parser->authSuccess();
-
 					// Устанавливаем флаг защищенного соединения
 					http->ishttps = true;
 					// Отключаем немедленное завершение
@@ -788,13 +788,10 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg, bool flag = fal
 		}
 		// Ответ готов
 		if(!http->response.data.empty()){
-			
-			//cout << " Запрос на ввод пароля " << http->request.data.data() << endl;
-			free_data(&http);
 			// Создаем новое событие для клиента
-			//http->evClient = event_new(http->base, fd, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_write_client, http);
+			http->evClient = event_new(http->base, fd, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_write_client, http);
 			// Активируем события
-			//event_add(http->evClient, &timeout);
+			event_add(http->evClient, &timeout);
 		// Очищаем память
 		} else free_data(&http);
 	// Если это таймаут то выходим
