@@ -84,7 +84,7 @@ Http::HttpData Http::getHeaders(string str){
 				// Позиция найденного разделителя
 				size_t pos;
 				// Запоминаем http запрос
-				data.http = toCase(trim(strings[0]));
+				data.http = trim(strings[0]);
 				// Переходим по всему массиву строк
 				for(int i = 1; i < strings.size(); i++){
 					// Выполняем поиск разделитель
@@ -442,7 +442,7 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		// Проверяем есть ли чанкование
 		string ch = _query.headers.find("transfer-encoding")->second;
 		// Если найден размер вложений
-		if(!cl.empty()){
+		if(!cl.empty() && checkPort(cl)){
 			// Определяем размер вложений
 			int body_size = ::atoi(cl.c_str());
 			// Получаем размер вложения
@@ -455,9 +455,6 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 			}
 		// Если это чанкование
 		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
-			
-			cout << " ---------- " << buffer << endl;
-
 			// Если конец строки найден
 			if((size > 5) // 0\r\n\r\n
 			&& ((short) buffer[size - 1] == 10)

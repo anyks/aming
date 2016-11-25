@@ -144,7 +144,7 @@ void debug_message(string str){
  */
 void sigpipe_handler(int signum){
 	// Выводим в консоль информацию
-	debug_message("Сигнал обрыва соединения во время записи!!!!");
+	debug_message("Сигнал попытки записи в отключенный сокет!!!!");
 }
 /**
  * sigchld_handler Функция обработки сигнала о появившемся зомби процессе SIGCHLD
@@ -251,6 +251,11 @@ evutil_socket_t create_app_socket(){
 		// Выходим
 		return -1;
 	}
+
+	// Маскируем ошибку о сигнале (записи в отключенный сокет)
+	int n = 1;
+	setsockopt(serversock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
+
 	// Выполняем биндинг сокета // ::bind (для мака)
 	if(::bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0){
 		// Выводим в консоль информацию
