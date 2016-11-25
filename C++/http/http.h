@@ -227,6 +227,13 @@ class Http {
 		 */
 		connect getConnection(string str);
 		/**
+		 * getHeader Функция извлекает данные заголовка по его ключу
+		 * @param  key     ключ заголовка
+		 * @param  headers массив заголовков
+		 * @return         строка с данными заголовка
+		 */
+		string getHeader(string key, map <string, string> headers);
+		/**
 		 * createHead Функция получения сформированного заголовка запроса
 		 */
 		void createHead();

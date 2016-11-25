@@ -86,7 +86,7 @@ Http::HttpData Http::getHeaders(string str){
 				// Запоминаем http запрос
 				data.http = trim(strings[0]);
 				// Переходим по всему массиву строк
-				for(int i = 1; i < strings.size(); i++){
+				for(u_int i = 1; i < strings.size(); i++){
 					// Выполняем поиск разделитель
 					pos = strings[i].find(":");
 					// Если разделитель найден
@@ -214,9 +214,17 @@ Http::connect Http::getConnection(string str){
 	return data;
 }
 /**
- * Если версия протокола 1.0 то там нет keep-alive и должен выставлять значение clone (идет запрос, ответ и отсоединение)
- * Если версия протокола 1.1 и там установлен keep-alive то отсоединение должно быть по таймеру которое выставлено на ожидание соединения (время жизни например 30 секунд)
+ * Http::getHeader Функция извлекает данные заголовка по его ключу
+ * @param  key     ключ заголовка
+ * @param  headers массив заголовков
+ * @return         строка с данными заголовка
  */
+string Http::getHeader(string key, map <string, string> headers){
+	// Проверяем существует ли такой заголовок
+	if(headers.count(key) > 0) return headers.find(key)->second;
+	// Сообщаем что ничего не найдено
+	return "";
+}
 /**
  * createHead Функция получения сформированного заголовка запроса
  */
@@ -266,7 +274,7 @@ void Http::createHead(){
  */
 bool Http::isAlive(){
 	// Получаем данные заголовока коннекта
-	string connection = query.headers.find("proxy-connection")->second;
+	string connection = getHeader("proxy-connection", query.headers);
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
 	if(!strcmp(query.version.c_str(), "1.1") && !connection.empty()
 	&& !strcmp(toCase(connection).c_str(), "keep-alive")) return true;
@@ -278,7 +286,7 @@ bool Http::isAlive(){
  */
 bool Http::isAliveServer(){
 	// Получаем данные заголовока коннекта
-	string connection = query.headers.find("connection")->second;
+	string connection = getHeader("connection", query.headers);
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
 	if(!strcmp(query.version.c_str(), "1.1") && !connection.empty()
 	&& !strcmp(toCase(connection).c_str(), "keep-alive")) return true;
@@ -335,13 +343,13 @@ void Http::generateHttp(){
 			// Запоминаем версию протокола
 			query.version = prt[1];
 			// Извлекаем данные хоста
-			string host = query.headers.find("host")->second;
+			string host = getHeader("host", query.headers);
 			// Извлекаем данные авторизации
-			string auth = query.headers.find("proxy-authorization")->second;
+			string auth = getHeader("proxy-authorization", query.headers);
 			// Получаем данные юзерагента
-			query.useragent = query.headers.find("user-agent")->second;
+			query.useragent = getHeader("user-agent", query.headers);
 			// Получаем данные заголовока коннекта
-			query.connection = toCase(query.headers.find("connection")->second);
+			query.connection = toCase(getHeader("connection", query.headers));
 			// Если хост найден
 			if(!host.empty()){
 				// Выполняем получение параметров подключения
@@ -450,9 +458,9 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 	// Если данные существуют
 	if(_query.length){
 		// Проверяем есть ли размер вложений
-		string cl = _query.headers.find("content-length")->second;
+		string cl = getHeader("content-length", _query.headers);
 		// Проверяем есть ли чанкование
-		string ch = _query.headers.find("transfer-encoding")->second;
+		string ch = getHeader("transfer-encoding", _query.headers);
 		// Если найден размер вложений
 		if(!cl.empty() && checkPort(cl)){
 			// Определяем размер вложений

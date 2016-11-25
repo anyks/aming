@@ -6,6 +6,7 @@
 // Linux
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http6 http.cpp base64.cpp proxy6.cpp -levent -lpthread = dynamic
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http6 http.cpp base64.cpp proxy6.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a -lpthread = static
+// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http6 http.cpp base64.cpp proxy6.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
 
 // MacOS X
 // export EVENT_NOKQUEUE=1
