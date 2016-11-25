@@ -244,8 +244,8 @@ void Http::createHead(){
 		&& (it->first != "user-agent")
 		&& (it->first != "connection")
 		&& (it->first != "proxy-authorization")
-		&& (it->first != "proxy-connection")//){
-		&& (it->first != "accept-encoding")){
+		&& (it->first != "proxy-connection")){
+		//&& (it->first != "accept-encoding")){
 			// Добавляем оставшиеся заголовки
 			query.request.append(
 				query.origin[it->first] + string(": ")
@@ -267,6 +267,18 @@ void Http::createHead(){
 bool Http::isAlive(){
 	// Получаем данные заголовока коннекта
 	string connection = query.headers.find("proxy-connection")->second;
+	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
+	if(!strcmp(query.version.c_str(), "1.1") && !connection.empty()
+	&& !strcmp(toCase(connection).c_str(), "keep-alive")) return true;
+	else return false;
+}
+/**
+ * isAliveServer Метод определения нужно ли держать соединение для сервера
+ * @return результат проверки
+ */
+bool Http::isAliveServer(){
+	// Получаем данные заголовока коннекта
+	string connection = query.headers.find("connection")->second;
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
 	if(!strcmp(query.version.c_str(), "1.1") && !connection.empty()
 	&& !strcmp(toCase(connection).c_str(), "keep-alive")) return true;

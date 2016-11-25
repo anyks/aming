@@ -243,6 +243,11 @@ class Http {
 		 */
 		bool isAlive();
 		/**
+		 * isAliveServer Метод определения нужно ли держать соединение для сервера
+		 * @return результат проверки
+		 */
+		bool isAliveServer();
+		/**
 		 * isHttp Метод проверки на то http это или нет
 		 * @param  buffer буфер входящих данных
 		 * @return        результат проверки
