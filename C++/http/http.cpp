@@ -455,6 +455,9 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 			}
 		// Если это чанкование
 		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
+			
+			cout << " ---------- " << buffer << endl;
+
 			// Если конец строки найден
 			if((size > 5) // 0\r\n\r\n
 			&& ((short) buffer[size - 1] == 10)
