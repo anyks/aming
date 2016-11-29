@@ -115,23 +115,12 @@ Http::HttpData Http::getHeaders(string str){
  * @return      результат проверки
  */
 bool Http::checkPort(string port){
-	// Получаем длину строку
-	size_t len = port.length();
 	// Если строка существует
-	if(len){
-		// Результирующая строка
-		string result = "";
-		// Переходим по всей строке и ищем неположенные символы
-		for(size_t i = 0; i < len; i++){
-			// Получаем текущий символ
-			char symbol = port.c_str()[i];
-			// Если найдены символы любые кроме цифр
-			if((symbol > '9') || (symbol < '0')) return false;
-			// Добавляем в результирующую строку символы цифр
-			else result += symbol;
-		}
+	if(!port.empty()){
+		// Проверяем цифры это или нет
+		bool number = (port.find_first_not_of("0123456789") == string::npos);
 		// Преобразуем строку в цифры
-		if(::atoi(result.c_str()) > 65535)
+		if(number && ::atoi(port.c_str()) > 65535)
 			// Если длина порта меньше максимального
 			return false;
 		// Если порт прошел все проверки
@@ -192,9 +181,10 @@ Http::connect Http::getConnection(string str){
 		data.port = "80";
 	}
 	// Устанавливаем номер порта в зависимости от типа протокола
-	if(!strcmp(toCase(data.protocol).c_str(), "https")) data.port = "443";
+	if(!strcmp(toCase(data.protocol).c_str(), "https")
+	|| !strcmp(toCase(query.method).c_str(), "connect")) data.port = "443";
 	// Устанавливаем версию протокола в зависимости от порта
-	else if(!strcmp(toCase(data.port).c_str(), "443")) data.protocol = "https";
+	if(!strcmp(toCase(data.port).c_str(), "443")) data.protocol = "https";
 	// Запоминаем найденный хост
 	str = data.host;
 	// Выполняем поиск дирректории в хосте
@@ -387,11 +377,17 @@ void Http::generateHttp(){
 					// Уделяем предпочтение 443 порту
 					query.port = scon.port;
 				// Запоминаем порт такой какой он есть
-				} else {
+				} else if(gcon.port.find_first_not_of("0123456789") == string::npos) {
 					// Запоминаем протокол
 					query.protocol = toCase(gcon.protocol);
 					// Запоминаем порт
 					query.port = gcon.port;
+				// Устанавливаем значение порта и протокола по умолчанию
+				} else {
+					// Запоминаем протокол
+					query.protocol = "http";
+					// Устанавливаем http порт
+					query.port = "80";
 				}
 			}
 			// Если авторизация найдена
@@ -461,41 +457,46 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		string cl = getHeader("content-length", _query.headers);
 		// Проверяем есть ли чанкование
 		string ch = getHeader("transfer-encoding", _query.headers);
-		// Если найден размер вложений
-		if(!cl.empty() && checkPort(cl)){
-			// Определяем размер вложений
-			int body_size = ::atoi(cl.c_str());
-			// Получаем размер вложения
-			if(size >= (_query.length + body_size)){
-				// Заполняем структуру данными
-				data.flag = 3;
-				// Заполняем размеры
-				data.begin	= _query.length;
-				data.end	= _query.length + body_size;
-			}
-		// Если это чанкование
-		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
-			// Если конец строки найден
-			if((size > 5) // 0\r\n\r\n
-			&& ((short) buffer[size - 1] == 10)
-			&& ((short) buffer[size - 2] == 13)
-			&& ((short) buffer[size - 3] == 10)
-			&& ((short) buffer[size - 4] == 13)
-			&& ((short) buffer[size - 5] == 48)){
-				// Заполняем структуру данными
-				data.flag = 4;
-				// Заполняем размеры
-				data.begin	= _query.length;
-				data.end	= size;
-			}
-		// Если указан тип данных но длина вложенных данных не указана
-		} else if(!ch.empty()) data.flag = 0;
-		// Если найден конечный символ
-		else if((short) buffer[size - 1] == 0) data.flag = 2;
-		// Если вложения не найдены
-		else data.flag = 1;
+		// Проверяем есть ли закрытие соединения
+		string cc = getHeader("connection", _query.headers);
+		// Если это автозакрытие подключения то ничего не определяем
+		if(cc.empty() || (cc != "close")){
+			// Если найден размер вложений
+			if(!cl.empty() && (cl.find_first_not_of("0123456789") == string::npos)){
+				// Определяем размер вложений
+				int body_size = ::atoi(cl.c_str());
+				// Получаем размер вложения
+				if(size >= (_query.length + body_size)){
+					// Заполняем структуру данными
+					data.type = 3;
+					// Заполняем размеры
+					data.begin	= _query.length;
+					data.end	= _query.length + body_size;
+				}
+			// Если это чанкование
+			} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
+				// Если конец строки найден
+				if((size > 5) // 0\r\n\r\n
+				&& ((short) buffer[size - 1] == 10)
+				&& ((short) buffer[size - 2] == 13)
+				&& ((short) buffer[size - 3] == 10)
+				&& ((short) buffer[size - 4] == 13)
+				&& ((short) buffer[size - 5] == 48)){
+					// Заполняем структуру данными
+					data.type = 4;
+					// Заполняем размеры
+					data.begin	= _query.length;
+					data.end	= size;
+				}
+			// Если указан тип данных но длина вложенных данных не указана
+			} else if(!ch.empty()) data.type = 0;
+			// Если найден конечный символ
+			else if((short) buffer[size - 1] == 0) data.type = 2;
+			// Если вложения не найдены
+			else data.type = 1;
+		}
 		// Если флаг установлен тогда очищаем структуру
-		if(data.flag) _query.clear();
+		if(data.type) _query.clear();
 	}
 	// Выводим результат
 	return data;
@@ -510,11 +511,11 @@ bool Http::parse(const char * buffer, size_t size){
 	// Выполняем проверку завершения передачи данных
 	HttpEnd check = checkEnd(buffer, size);
 	// Если флаг установлен
-	if(check.flag){
+	if(check.type){
 		// Выполняем парсинг http запроса
 		query = getHeaders(buffer);
 		// Определяем тип запроса
-		switch(check.flag){
+		switch(check.type){
 			// Если присутствуют вложения
 			case 3:
 			case 4: {

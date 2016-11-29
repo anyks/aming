@@ -16,7 +16,7 @@ class Http {
 	private:
 		// Структура подержащая данные проверки, полной передачи данных
 		struct check_end {
-			u_short flag = 0;
+			u_short type = 0;
 			size_t begin = 0, end = 0;
 		};
 		// Структура подключения
