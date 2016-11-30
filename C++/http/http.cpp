@@ -251,36 +251,50 @@ void Http::createHead(){
 			);
 		}
 	}
-	// Если это не метод CONNECT то меняем заголовок Connection на close
-	if(!query.connection.empty() && !strcmp(query.version.c_str(), "1.0")) query.connection = "close";
 	// Добавляем заголовок connection
 	if(!query.connection.empty()) query.request.append(string("Connection: ") + query.connection + string("\r\n"));
 	// Запоминаем конец запроса
 	query.request.append(string("\r\n"));
 }
 /**
+ * isConnect Метод проверяет является ли метод, методом connect
+ * @return результат проверки на метод connect
+ */
+bool Http::isConnect(){
+	// Сообщаем является ли метод, методом connect
+	return !strcmp(query.method.c_str(), "connect");
+}
+/**
+ * isClose Метод проверяет должно ли быть закрыто подключение
+ * @return результат проверки на закрытие подключения
+ */
+bool Http::isClose(){
+	// Сообщаем должно ли быть закрыто подключение
+	return !strcmp(query.connection.c_str(), "close");
+}
+/**
+ * isHttps Метод проверяет является ли подключение защищенным
+ * @return результат проверки на защищенное подключение
+ */
+bool Http::isHttps(){
+	// Сообщаем является ли продключение защищенным
+	return !strcmp(query.protocol.c_str(), "https");
+}
+/**
  * isAlive Метод определения нужно ли держать соединение для прокси
  * @return результат проверки
  */
 bool Http::isAlive(){
-	// Получаем данные заголовока коннекта
-	string connection = getHeader("proxy-connection", query.headers);
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
-	if(!strcmp(query.version.c_str(), "1.1") && !connection.empty()
-	&& !strcmp(toCase(connection).c_str(), "keep-alive")) return true;
-	else return false;
-}
-/**
- * isAliveServer Метод определения нужно ли держать соединение для сервера
- * @return результат проверки
- */
-bool Http::isAliveServer(){
-	// Получаем данные заголовока коннекта
-	string connection = getHeader("connection", query.headers);
-	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
-	if(!strcmp(query.version.c_str(), "1.1") && !connection.empty()
-	&& !strcmp(toCase(connection).c_str(), "keep-alive")) return true;
-	else return false;
+	if(getVersion() > 1){
+		// Проверяем указан ли заголовок отключения
+		if(!strcmp(query.connection.c_str(), "close")) return false;
+		// Иначе сообщаем что подключение должно жить долго
+		return true;
+	// Проверяем указан ли заголовок удержания соединения
+	} else if(!strcmp(query.connection.c_str(), "keep-alive")) return true;
+	// Сообщаем что подключение жить не должно
+	return false;
 }
 /**
  * isHttp Метод проверки на то http это или нет
@@ -336,10 +350,14 @@ void Http::generateHttp(){
 			string host = getHeader("host", query.headers);
 			// Извлекаем данные авторизации
 			string auth = getHeader("proxy-authorization", query.headers);
+			// Получаем заголовок Proxy-Connection
+			string proxy_connection = getHeader("proxy-connection", query.headers);
 			// Получаем данные юзерагента
 			query.useragent = getHeader("user-agent", query.headers);
 			// Получаем данные заголовока коннекта
 			query.connection = toCase(getHeader("connection", query.headers));
+			// Если постоянное соединение не установлено
+			if(!proxy_connection.empty()) query.connection = proxy_connection;
 			// Если хост найден
 			if(!host.empty()){
 				// Выполняем получение параметров подключения
@@ -552,7 +570,7 @@ Http::HttpQuery Http::brokenRequest(){
 	// Выводим шаблон сообщения о неудачном отправленном запросе
 	result = html[9];
 	// Выводим результат
-	return {result};
+	return {501, result};
 }
 /**
  * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
@@ -573,7 +591,7 @@ Http::HttpQuery Http::faultConnect(){
 	// Выводим шаблон сообщения о неудачном подключении
 	result = html[6];
 	// Выводим результат
-	return {result};
+	return {502, result};
 }
 /**
  * faultAuth Метод получения ответа (неудачной авторизации)
@@ -594,7 +612,7 @@ Http::HttpQuery Http::faultAuth(){
 	// Выводим шаблон сообщения о неудачной авторизации
 	result = html[5];
 	// Выводим результат
-	return {result};
+	return {403, result};
 }
 /**
  * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
@@ -615,7 +633,7 @@ Http::HttpQuery Http::requiredAuth(){
 	// Выводим шаблон сообщения о требовании авторизации
 	result = html[2];
 	// Выводим результат
-	return {result};
+	return {407, result};
 }
 /**
  * authSuccess Метод получения ответа (подтверждения авторизации)
@@ -636,7 +654,7 @@ Http::HttpQuery Http::authSuccess(){
 	// Выводим шаблон сообщения о том что авторизация пройдена
 	result = html[0];
 	// Выводим результат
-	return {result};
+	return {200, result};
 }
 /**
  * getQuery Метод получения сформированного http запроса
@@ -644,7 +662,7 @@ Http::HttpQuery Http::authSuccess(){
  */
 Http::HttpQuery Http::getQuery(){
 	// Выводим результат
-	return {query.request, query.entitybody};
+	return {200, query.request, query.entitybody};
 }
 /**
  * getMethod Метод получения метода запроса
@@ -714,7 +732,7 @@ string Http::getUseragent(){
  * getPort Метод получения порта запроса
  * @return порт удаленного ресурса
  */
-int Http::getPort(){
+u_int Http::getPort(){
 	// Выводим значение переменной
 	return (!query.port.empty() ? ::atoi(query.port.c_str()) : 80);
 }

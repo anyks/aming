@@ -44,7 +44,7 @@ using namespace std;
 // Максимальное количество воркеров
 #define MAX_WORKERS 4
 // Таймаут ожидания для http 1.1
-#define KEEP_ALIVE {60, 0}
+#define KEEP_ALIVE {10, 0}
 
 // Временный каталог для файлов
 string nameSystem	= "anyksHttp";
@@ -58,8 +58,6 @@ class BufferHttpProxy {
 		// Буфер данных
 		struct Buffer {
 			vector <char>	data;			// Данные в буфере
-			string			host;			// Хост сервера
-			int				port;			// Порт сервера
 			size_t			offset	= 0;	// Смещение в буфере
 		};
 	public:
@@ -69,8 +67,7 @@ class BufferHttpProxy {
 							* evServer = NULL;		// Событие сервера
 		Http::HttpQuery		response;				// Ответ системы
 		Buffer				request;				// Данные запроса
-		bool				auth		= false,	// Флаг авторизации
-							ishttps		= false;	// Флаг зашифрованного соединения
+		bool				auth		= false;	// Флаг авторизации
 		int					pid			= -1;		// Пид процесса
 		evutil_socket_t		socServer	= -1,		// Сокет сервера
 							socClient	= -1;		// Сокет клиента
@@ -412,17 +409,14 @@ evutil_socket_t connect_server(BufferHttpProxy ** arg){
 				memcpy(&addr, sh->h_addr_list[i], sizeof(struct in_addr));
 				ip = inet_ntoa(addr);
 			}
-			// Если хост уже существует то отключаем сервер
-			if(!http->request.host.empty()
-			&& (http->socServer > 0)
-			&& (ip != http->request.host)) close_socket(http->socServer);
-			// Запоминаем хост и порт
-			http->request.host = ip;
-			http->request.port = http->parser->getPort();
+			// Получаем порт сервера
+			u_int port = http->parser->getPort();
 			// Если данные адреса найдены
-			if(!http->request.host.empty() && http->request.port){
+			if(!ip.empty() && port){
+				// Выводим в консоль данные о подключении
+				if(http->socServer < 0) debug_message(string("connect to host = ") + http->parser->getHost() + " [" + ip + "]");
 				// Выполняем подключение к серверу
-				if(http->socServer < 0) sock = create_server_socket(http->request.host.c_str(), http->request.port);
+				if(http->socServer < 0) sock = create_server_socket(ip.c_str(), port); // http->parser->getHost().c_str()
 				// Иначе возвращаем сокет самого сервера
 				else sock = http->socServer;
 			}
@@ -539,6 +533,7 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg);
  * @param arg   ссылка на объект подключения
  * @param error завершено с ошибкой или нет
  */
+/*
 void flash_connect(evutil_socket_t fd, BufferHttpProxy ** arg, bool error = false){
 	// Получаем объект подключения
 	BufferHttpProxy * http = *arg;
@@ -602,12 +597,14 @@ void flash_connect(evutil_socket_t fd, BufferHttpProxy ** arg, bool error = fals
 		}
 	}
 }
+*/
 /*
  * do_http_proxy Функция обмена сообщениями между клиентом и сервером (https)
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
  * @param arg   объект передаваемый как значение
  */
+/*
 void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
@@ -664,6 +661,78 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 	// Выходим
 	return;
 }
+*/
+/**
+ * on_http_read_server Функция обработки события чтения данных из сокета сервера
+ * @param fd    файловый дескриптор (сокет)
+ * @param event событие на которое сработала функция обратного вызова
+ * @param arg   объект передаваемый как значение
+ */
+void on_http_read_server(evutil_socket_t fd, short event, void * arg){
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (arg);
+	// Если подключение не передано
+	if(!http) close_socket(fd);
+	// Если все данные получены
+	else {
+		// Обрабатываем входящее событие
+		switch(event){
+			// Если это таймаут
+			case 1: {
+				// Выводим в консоль информацию
+				debug_message("Timeout server!!!!");
+				// Сообщаем что сервер отключился по таймауту
+				free_data(&http);
+			} break;
+			// Если это чтение
+			case 2: {
+				// Буфер для чтения данных из сокета
+				char buffer[256];
+				// Выполняем чтение данных из сокета
+				int len = recv(fd, buffer, sizeof(buffer), 0);
+				// Если данные не считаны значит клиент отключился
+				if(len <= 0) free_data(&http);
+				// Выполняем проверку прислали все данные или нет
+				else if(http->socClient > -1) {
+					// Если данные не могут быть отправлены тогда выходим
+					if((len = send(http->socClient, (void *) buffer, len, 0)) <= 0) free_data(&http);
+					// Если данные удачно отправлены
+					else {
+						// Склеиваем полученные данные
+						appendToBuffer(http->request.data, len, buffer);
+						// Проверяем все ли данные переданы
+						if(http->parser->checkEnd(
+							http->request.data.data(),
+							http->request.data.size() - 1
+						).type){
+							// Закрываем события
+							close_events(&http);
+							// Очищаем буфер данных
+							http->request.data.clear();
+
+							//cout << " ========= Ответ ========= client = " << http->socClient << ", server = " << fd <<  " == " << http->request.data.data() << endl;
+
+							// Если подключение держать не надо тогда выходим
+							if(!http->parser->isAlive()) free_data(&http);
+							// Если нужно держать подключение
+							else {
+								// Очищаем введенные ранее данные
+								http->parser->clear();
+								// Добавляем событие в базу
+								http->evClient = event_new(http->base, http->socClient, EV_READ | EV_PERSIST, on_http_request, http);
+								// Устанавливаем таймаут ожидания запроса в 3 секунды
+								struct timeval timeout = KEEP_ALIVE;
+								// Активируем событие
+								event_add(http->evClient, &timeout);
+							}
+						}
+					}
+				// Иначе выходим
+				} else free_data(&http);
+			} break;
+		}
+	}
+}
 /**
  * on_http_write_server Функция обработки события записи данных в сокет сервера
  * @param fd    файловый дескриптор (сокет)
@@ -689,7 +758,7 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 			// Если это запись
 			case 4: {
 				// Определяем длину ответа
-				size_t len_data = http->response.data.length();
+				size_t len_data = http->response.mess.length();
 				// Определяем сколько данных уже отправлено
 				size_t send_size = len_data - http->request.offset;
 				// Определяем сколько данных нужно отправить
@@ -697,7 +766,7 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 				// Если количество отправляемых данных больше 0 то отправляем
 				if(send_size > 0){
 					// Отправляем запрос на сервер
-					int len = send(fd, (void *) (http->response.data.c_str() + http->request.offset), send_size, 0);
+					int len = send(fd, (void *) (http->response.mess.c_str() + http->request.offset), send_size, 0);
 					// Если данные не отправились то выходим
 					if(len <= 0){
 						// Выводим в консоль информацию
@@ -730,7 +799,7 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 						// Выполняем отправку до тех пор пока все данные не отправлены
 						while(totalsend_body < size_body){
 							// Выполняем отправку данных
-							if((send_body = send(fd, (void *) (data + totalsend_body), send_size, 0)) < 0){
+							if((send_body = send(fd, (void *) (data + totalsend_body), send_size, 0)) <= 0){
 								// Отключаемся от сервера
 								free_data(&http);
 								// Выходим из функции
@@ -740,13 +809,11 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 							totalsend_body += send_body;
 						}
 					}
+					// Создаем новое событие для чтения данных с сервера
+					http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, on_http_read_server, http);
 					// Устанавливаем таймаут ожидания запроса в 3 секунды
 					struct timeval timeout = KEEP_ALIVE;
-					// Создаем новое событие для клиента
-					http->evClient = event_new(http->base, http->socClient, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
-					http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
 					// Активируем события
-					event_add(http->evClient, &timeout);
 					event_add(http->evServer, &timeout);
 				}
 			} break;
@@ -780,7 +847,7 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 			// Если это запись
 			case 4: {
 				// Определяем длину ответа
-				size_t len_data = http->response.data.length();
+				size_t len_data = http->response.mess.length();
 				// Определяем сколько данных уже отправлено
 				size_t send_size = len_data - http->request.offset;
 				// Определяем сколько данных нужно отправить
@@ -788,7 +855,7 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 				// Если количество отправляемых данных больше 0 то отправляем
 				if(send_size > 0){
 					// Отправляем запрос на сервер
-					int len = send(fd, (void *) (http->response.data.c_str() + http->request.offset), send_size, 0);
+					int len = send(fd, (void *) (http->response.mess.c_str() + http->request.offset), send_size, 0);
 					// Если данные не отправились то выходим
 					if(len <= 0){
 						// Выводим в консоль информацию
@@ -802,33 +869,42 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 					http->request.offset += len;
 				// Если все данные отправлены
 				} else {
-					// Закрываем события
-					close_events(&http);
 					// Устанавливаем таймаут ожидания запроса в 3 секунды
 					struct timeval timeout = KEEP_ALIVE;
-					// Если это не зашифрованное соединение то просто выходим
-					if(!http->ishttps){
-						// Если подключение к клиенту держать не нужно
-						if(!http->parser->isAlive()) free_data(&http);
-						// Если нужно держать подключение
-						else {
-							// Отключаемся от сервера
-							close_socket(http->socServer);
-							// Очищаем введенные ранее данные
-							http->parser->clear();
-							// Добавляем событие в базу
-							http->evClient = event_new(http->base, http->socClient, EV_READ | EV_PERSIST, on_http_request, http);
-							// Активируем событие
+					// Если авторизация прошла
+					if(http->response.code == 200){
+						// Если это защищенное подключение
+						if(http->parser->isHttps()){
+							// Закрываем события
+							close_events(&http);
+
+							cout << " Делаем запрос на получение зашифрованных данных " << endl;
+
+							free_data(&http);
+							/*
+							// Создаем новое событие для клиента
+							http->evClient = event_new(http->base, http->socClient, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+							http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+							// Активируем события
 							event_add(http->evClient, &timeout);
+							event_add(http->evServer, &timeout);
+							*/
+							// Выходим из функции
+							return;
 						}
-					// Если это зашифрованное соединение
-					} else {
-						// Создаем новое событие для клиента
-						http->evClient = event_new(http->base, http->socClient, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
-						http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
-						// Активируем события
+					}
+					// Если подключение держать не надо тогда выходим
+					if(!http->parser->isAlive()) free_data(&http);
+					// Если нужно держать подключение
+					else {
+						// Закрываем события
+						close_events(&http);
+						// Очищаем введенные ранее данные
+						http->parser->clear();
+						// Добавляем событие в базу
+						http->evClient = event_new(http->base, http->socClient, EV_READ | EV_PERSIST, on_http_request, http);
+						// Активируем событие
 						event_add(http->evClient, &timeout);
-						event_add(http->evServer, &timeout);
 					}
 				}
 			} break;
@@ -845,19 +921,24 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg){
 	// Выполняем приведение типов
 	BufferHttpProxy * http = *arg;
-
-	cout << " ----- " << http->request.data.data() << endl;
-
 	// Выполняем парсинг полученных данных
 	if(!http->request.data.empty() && http->parse()){
+		
+		cout << " -------1 " << http->request.data.data() << " === " << http->socServer << endl;
+
 		// Закрываем события
 		close_events(&http);
 		// Очищаем буфер данных
 		http->request.data.clear();
+
+
+		if(http->parser->isHttps()){
+			free_data(&http);
+			return;
+		}
+
 		// Устанавливаем таймаут ожидания запроса в 3 секунды
 		struct timeval timeout = KEEP_ALIVE;
-		// Если это метод коннект
-		bool methodConnect = (strcmp(http->parser->getMethod().c_str(), "connect") ? false : true);
 		// Если авторизация не прошла
 		if(!http->auth) http->auth = check_auth(http->parser);
 		// Если нужно запросить пароль
@@ -871,43 +952,35 @@ void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg){
 			http->response = http->parser->faultAuth();
 		// Если авторизация прошла
 		} else {
-			// Определяем порт, если это шифрованное сообщение то будем считывать данные целиком
-			if(methodConnect){
-				// Выполняем подключение к серверу
-				http->socServer = connect_server(&http);
-				// Если сокет существует
-				if(http->socServer > -1){
+			// Выполняем подключение к серверу
+			http->socServer = connect_server(&http);
+			// Если сокет существует
+			if(http->socServer > -1){
+				// Определяем порт, если это метод connect
+				if(http->parser->isConnect())
 					// Формируем ответ клиенту
 					http->response = http->parser->authSuccess();
-					// Устанавливаем флаг защищенного соединения
-					http->ishttps = true;
-				// Если подключение не удачное то сообщаем об этом
-				} else http->response = http->parser->faultConnect();
-			// Иначе делаем запрос на получение данных
-			} else {
-				// Выполняем подключение к серверу
-				http->socServer = connect_server(&http);
-				// Сообщаем что авторизация удачная
-				if(http->socServer > -1){
+				// Иначе делаем запрос на получение данных
+				else {
 					// Указываем что нужно отключится сразу после отправки запроса
-					//if(http->parser->getVersion() > 1) http->parser->setClose();
-					// Формируем ответ клиенту
+					if(!http->parser->isAlive()) http->parser->setClose();
+					// Формируем запрос на сервер
 					http->response = http->parser->getQuery();
 
-					cout << " query = " << http->response.data.c_str() << endl;
+					//cout << " ========= Запрос ========= client = " << fd << ", server = " << http->socServer <<  " == " << http->response.mess << endl;
 
-					// Создаем новое событие для клиента
+					// Создаем новое событие для сервера
 					http->evServer = event_new(http->base, http->socServer, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_write_server, http);
 					// Активируем события
 					event_add(http->evServer, &timeout);
 					// Выходим
 					return;
-				// Если подключение не удачное то сообщаем об этом
-				} else http->response = http->parser->faultConnect();
-			}
+				}
+			// Если подключение не удачное то сообщаем об этом
+			} else http->response = http->parser->faultConnect();
 		}
 		// Ответ готов
-		if(!http->response.data.empty()){
+		if(!http->response.mess.empty()){
 			// Создаем новое событие для клиента
 			http->evClient = event_new(http->base, fd, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_write_client, http);
 			// Активируем события
