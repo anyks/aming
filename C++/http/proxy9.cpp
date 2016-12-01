@@ -7,6 +7,8 @@
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp -levent = dynamic
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a = static
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+// FreeBSD
+// clang++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp -I/usr/local/include /usr/local/lib/libevent.a
 
 // MacOS X
 // export EVENT_NOKQUEUE=1
@@ -20,6 +22,7 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/signal.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
