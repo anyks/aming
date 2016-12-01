@@ -43,7 +43,7 @@ using namespace std;
 // Максимальное количество клиентов
 #define MAX_CLIENTS 10
 // Максимальный размер буфера
-#define BUFFER_SIZE 50
+#define BUFFER_SIZE 255
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
 #define MAX_SOCKETS 1024
 // Максимальное количество воркеров
@@ -350,6 +350,7 @@ evutil_socket_t create_app_socket(){
 		// Выходим
 		return -1;
 	}
+	/*
 	// Указываем что сокет не блокирующий
 	if(set_non_block(sock) < 0){
 		// Выводим в консоль информацию
@@ -357,6 +358,7 @@ evutil_socket_t create_app_socket(){
 		// Выходим
 		return -1;
 	}
+	*/
 	// Выводим сокет системы
 	return sock;
 }
@@ -418,7 +420,7 @@ evutil_socket_t create_server_socket(const char * host, int port){
 
 	
 	// Указываем что сокет не блокирующий
-	if(set_non_block(sock) < 0) debug_message("Failed to set server socket non-blocking");
+	//if(set_non_block(sock) < 0) debug_message("Failed to set server socket non-blocking");
 	// Выводим созданный нами сокет
 	return sock;
 	
@@ -962,7 +964,7 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	// Если сокет не создан тогда выходим
 	if(sock < 1) return;
 	/* Set the client socket to non-blocking mode. */
-	if(set_non_block(sock) < 0) debug_message("Failed to set client socket non-blocking");
+	//if(set_non_block(sock) < 0) debug_message("Failed to set client socket non-blocking");
 	// Получаем объект базы событий
 	struct event_base * base = reinterpret_cast <struct event_base *> (arg);
 	// Создаем новый объект подключения
