@@ -7,8 +7,6 @@
 #include <sys/types.h>
 #include "base64.h"
 
-#include <iostream>
-
 // Устанавливаем пространство имен
 using namespace std;
 // Класс содержит данные парсинга http запроса
