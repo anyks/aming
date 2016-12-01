@@ -42,6 +42,8 @@ using namespace std;
 #define TTL_CONNECT 0 // 0.5
 // Максимальное количество клиентов
 #define MAX_CLIENTS 10
+// Максимальный размер буфера
+#define BUFFER_SIZE 50
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
 #define MAX_SOCKETS 1024
 // Максимальное количество воркеров
@@ -586,7 +588,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 			// Если это чтение данных
 			case 2: {
 				// Буфер для чтения данных из сокета
-				char buffer[256];
+				char buffer[BUFFER_SIZE];
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Получаем сокет для ответа
@@ -627,7 +629,7 @@ void on_http_read_server(evutil_socket_t fd, short event, void * arg){
 			// Если это чтение
 			case 2: {
 				// Буфер для чтения данных из сокета
-				char buffer[256];
+				char buffer[BUFFER_SIZE];
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Если данные не считаны значит клиент отключился
@@ -699,7 +701,7 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 				// Определяем сколько данных уже отправлено
 				size_t send_size = len_data - http->request.offset;
 				// Определяем сколько данных нужно отправить
-				if(send_size > 255) send_size = 255;
+				if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
 				// Если количество отправляемых данных больше 0 то отправляем
 				if(send_size > 0){
 					// Отправляем запрос на сервер
@@ -732,7 +734,7 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 						// Определяем сколько данных уже отправлено
 						send_size = size_body - totalsend_body;
 						// Определяем сколько данных нужно отправить
-						if(send_size > 255) send_size = 255;
+						if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
 						// Выполняем отправку до тех пор пока все данные не отправлены
 						while(totalsend_body < size_body){
 							// Выполняем отправку данных
@@ -788,7 +790,7 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 				// Определяем сколько данных уже отправлено
 				size_t send_size = len_data - http->request.offset;
 				// Определяем сколько данных нужно отправить
-				if(send_size > 255) send_size = 255;
+				if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
 				// Если количество отправляемых данных больше 0 то отправляем
 				if(send_size > 0){
 					// Отправляем запрос на сервер
@@ -918,7 +920,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 			// Если это чтение
 			case 2: {
 				// Буфер для чтения данных из сокета
-				char buffer[255];
+				char buffer[BUFFER_SIZE];
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Если данные не считаны то выполняем обработку входящего запроса
