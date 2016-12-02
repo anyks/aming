@@ -62,8 +62,13 @@ string piddir		= "/var/run";
  */
 class BufferHttpProxy {
 	private:
+		// Структура с данными для обмена
+		struct Data {
+			size_t			pos = 0;	// Позиция отдачи данных
+			vector <char>	buf;		// Буфер с данными
+		};
 		// Буфер данных
-		struct Buffer {
+		struct Request {
 			vector <char>	data;			// Данные в буфере
 			size_t			offset	= 0;	// Смещение в буфере
 		};
@@ -82,6 +87,11 @@ class BufferHttpProxy {
 			u_int	port;	// Порт сервера
 			string	host;	// Хост сервера
 		};
+		// Данные для обмена
+		struct RWData {
+			Data client;	// Клиент
+			Data server;	// Сервер
+		};
 	public:
 		int					pid		= -1;		// Пид процесса
 		bool				auth	= false;	// Флаг авторизации
@@ -90,8 +100,14 @@ class BufferHttpProxy {
 		Events				evs;				// Работа событий
 		Sockets				fds;				// Сокеты
 		Server				server;				// Параметры удаленного сервера
+		RWData				rwdata;				// Данные для обмена между клиентом и сервером
 		Http::HttpQuery		response;			// Ответ системы
-		Buffer				request;			// Данные запроса
+		Request				request;			// Данные запроса
+		
+
+		struct event * client1 = NULL;	// Событие клиента
+		struct event * server1 = NULL;	// Событие сервера
+
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param [string] name имя ресурса
@@ -120,9 +136,20 @@ class BufferHttpProxy {
 			else if(evs.server && (evs.server->ev_base == NULL)) delete evs.server;
 			if(evs.client && evs.client->ev_base) event_free(evs.client);
 			else if(evs.client && (evs.client->ev_base == NULL)) delete evs.client;
+
+
+			if(server1 && server1->ev_base) event_free(server1);
+			else if(server1 && (server1->ev_base == NULL)) delete server1;
+			if(client1 && client1->ev_base) event_free(client1);
+			else if(client1 && (client1->ev_base == NULL)) delete client1;
+
 			// Удаляем указатели
 			evs.server = NULL;
 			evs.client = NULL;
+
+			client1 = NULL;
+			server1 = NULL;
+
 			// Если парсер не удален
 			if(parser){
 				// Удаляем парсер
@@ -277,6 +304,9 @@ void close_events(BufferHttpProxy ** arg){
 		close_event(&http->evs.server);
 		// Очищаем событие для клиента
 		close_event(&http->evs.client);
+
+		close_event(&http->client1);
+		close_event(&http->server1);
 	}
 }
 /**
@@ -332,9 +362,13 @@ evutil_socket_t create_app_socket(){
 	}
 	*/
 
+	// Устанавливаем опцию постоянного соединения
+	//int n = 1;
+	//setsockopt(sock, IPPROTO_TCP, SO_KEEPALIVE, &n, sizeof(n));
+
 	// Маскируем ошибку о сигнале (записи в отключенный сокет)
 	//int n = 1;
-	//setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &n, sizeof(n));
+	//setsockopt(sock, IPPROTO_TCP, SO_NOSIGPIPE, &n, sizeof(n));
 
 	// Выполняем биндинг сокета // ::bind (для мака)
 	if(::bind(sock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0){
@@ -350,7 +384,6 @@ evutil_socket_t create_app_socket(){
 		// Выходим
 		return -1;
 	}
-	/*
 	// Указываем что сокет не блокирующий
 	if(set_non_block(sock) < 0){
 		// Выводим в консоль информацию
@@ -358,7 +391,15 @@ evutil_socket_t create_app_socket(){
 		// Выходим
 		return -1;
 	}
-	*/
+
+	int data_buff_size = MAX_CLIENTS * BUFFER_SIZE;
+
+	bool opt_val = true;
+	socklen_t  opt_len = sizeof(bool);
+
+	setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&data_buff_size, opt_len);
+	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&data_buff_size, opt_len);
+
 	// Выводим сокет системы
 	return sock;
 }
@@ -395,6 +436,11 @@ evutil_socket_t create_server_socket(const char * host, int port){
 		// Выходим
 		return -1;
 	}
+
+	// Устанавливаем опцию постоянного соединения
+	//int n = 1;
+	//setsockopt(sock, IPPROTO_TCP, SO_KEEPALIVE, &n, sizeof(n));
+
 	// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
 	if(connect(sock, req->ai_addr, req->ai_addrlen) < 0){
 		// Выводим в консоль информацию
@@ -404,7 +450,6 @@ evutil_socket_t create_server_socket(const char * host, int port){
 	}
 	// И освобождаем связанный список
 	freeaddrinfo(req);
-	
 
 	/*
 	// Устанавливаемое значение
@@ -595,11 +640,112 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Получаем сокет для ответа
 				evutil_socket_t socket = (fd != http->fds.server ? http->fds.server : http->fds.client);
-				// Если данные не считаны значит клиент отключился
-				if((len <= 0) || (socket < 0)
-				// Если при записи данных получаем ошибку, значит отключаемся
-				|| ((len = send(socket, (void *) buffer, len, 0)) <= 0)) free_data(&http);
+				// Если данные не могут быть прочитаны то выходим
+				if(len <= 0) free_data(&http);
+				// Если данные прочитаны нормально
+				else {
+					// Если запись идет в сервер
+					//if(socket == http->fds.server){
+						
+						//http->rwdata.client.pos = 0;
 
+						//cout << " ------ Записываем -------- " << " send_size = " << len << (socket == http->fds.server ? " server " : " client ") << endl;
+
+						// Если данные считаны или при записи данных получаем ошибку, значит отключаемся
+						if((len = send(socket, (void *) buffer, len, 0)) <= 0) free_data(&http);
+					// Если это запись в клиент
+					//} else {
+						
+						//cout << " --------- Чтение с сервера ---------" << len << endl;
+						/*
+						close_event(&http->client1);
+
+						// Копируем полученные данные в буфер
+						appendToBuffer(http->rwdata.client.buf, len, buffer);
+
+						http->client1 = event_new(http->base, http->fds.client, EV_WRITE, do_http_proxy, http);
+						// Устанавливаем таймаут ожидания запроса в 3 секунды
+						//struct timeval timeout = KEEP_ALIVE;
+						// Активируем события
+						event_add(http->client1, NULL);
+						*/
+						//cout << " Последний байт " << (short) buffer[len - 1] << endl;
+
+						/*
+						// Если все данные все считаны с сокета сервера
+						if((short) buffer[len - 1] == 0){
+							// Закрываем события
+							close_events(&http);
+							// Обнуляем количество отправленных данных
+							http->rwdata.client.pos = 0;
+							// Создаем событие записи для клиента
+							http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_WRITE | EV_PERSIST, do_http_proxy, http);
+							// Устанавливаем таймаут ожидания запроса в 3 секунды
+							struct timeval timeout = KEEP_ALIVE;
+							// Активируем события
+							event_add(http->evs.client, &timeout);
+						}
+						*/
+					//}
+				}
+			} break;
+			// Если это запись данных
+			case 4: {
+				
+				
+				if(!http->rwdata.client.buf.empty()){
+
+					// Определяем длину ответа
+					size_t len_data = http->rwdata.client.buf.size() - 1;
+					// Определяем сколько данных уже отправлено
+					size_t send_size = len_data - http->rwdata.client.pos;
+					// Определяем сколько данных нужно отправить
+					if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
+
+					if(send_size > 0){
+
+						cout << " ------ Записываем в клиент -------- len_data = " << len_data << " send_size = " << send_size << endl;
+
+						// Если количество отправляемых данных больше 0 то отправляем
+						if(send_size > 0){
+							
+							const char * buffer = http->rwdata.client.buf.data();
+
+							// Отправляем запрос на сервер
+							int len = send(fd, (void *) (buffer + http->rwdata.client.pos), send_size, 0);
+							// Если данные не отправились то выходим
+							if(len <= 0){
+								// Выводим в консоль информацию
+								debug_message("Client disconnect, broken write!!!!");
+								// Выполняем очистку подключения
+								free_data(&http);
+								// Выходим
+								break;
+							}
+							// Увеличиваем количество отправленных данных
+							http->rwdata.client.pos += len;
+						// Если все данные отправлены
+						}
+					} //else if(len_data) free_data(&http);
+				}
+
+				// else {
+					
+					/*
+					// Закрываем события
+					close_events(&http);
+					// Очищаем буфер с данными
+					http->rwdata.client.buf.clear();
+					// Создаем новое событие для клиента
+					http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+					http->evs.server = event_new(http->base, http->fds.server, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+					// Устанавливаем таймаут ожидания запроса в 3 секунды
+					struct timeval timeout = KEEP_ALIVE;
+					// Активируем события
+					event_add(http->evs.client, &timeout);
+					event_add(http->evs.server, &timeout);
+					*/
+				//}
 			} break;
 		}
 	}
@@ -819,11 +965,22 @@ void on_http_write_client(evutil_socket_t fd, short event, void * arg){
 							// Создаем новое событие для клиента
 							http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
 							http->evs.server = event_new(http->base, http->fds.server, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+							
+
+							//http->client1 = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_WRITE | EV_PERSIST, do_http_proxy, http);
+							//http->server1 = event_new(http->base, http->fds.server, EV_TIMEOUT | EV_WRITE | EV_PERSIST, do_http_proxy, http);
+
+							
+
 							// Устанавливаем таймаут ожидания запроса в 3 секунды
 							struct timeval timeout = KEEP_ALIVE;
 							// Активируем события
 							event_add(http->evs.client, &timeout);
 							event_add(http->evs.server, &timeout);
+
+
+							//event_add(http->client1, NULL);
+							//event_add(http->server1, &timeout);
 							// Выходим из функции
 							return;
 						}
@@ -964,7 +1121,22 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	// Если сокет не создан тогда выходим
 	if(sock < 1) return;
 	/* Set the client socket to non-blocking mode. */
-	//if(set_non_block(sock) < 0) debug_message("Failed to set client socket non-blocking");
+	if(set_non_block(sock) < 0) debug_message("Failed to set client socket non-blocking");
+
+	int data_buff_size = MAX_CLIENTS * BUFFER_SIZE;
+
+	bool opt_val = true;
+	socklen_t  opt_len = sizeof(bool);
+
+
+
+	setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&data_buff_size, opt_len);
+	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&data_buff_size, opt_len);
+
+	getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&data_buff_size, &opt_len);
+
+	cout << " int data_buff_size = " << data_buff_size << endl;
+
 	// Получаем объект базы событий
 	struct event_base * base = reinterpret_cast <struct event_base *> (arg);
 	// Создаем новый объект подключения
