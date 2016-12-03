@@ -59,7 +59,7 @@ using namespace std;
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
 #define MAX_SOCKETS 1024
 // Максимальное количество воркеров
-#define MAX_WORKERS 1
+#define MAX_WORKERS 10
 // Порт сервера
 #define SERVER_PORT 5555
 // Таймаут ожидания для http 1.1
@@ -487,7 +487,7 @@ evutil_socket_t connect_server(BufferHttpProxy ** arg){
 			// Если данные адреса найдены
 			if(!http->server.host.empty() && http->server.port){
 				// Выводим в консоль данные о подключении
-				if(http->fds.server < 0) debug_message(string("connect to host = ") + http->parser->getHost() + " [" + http->server.host + string(":") + to_string(http->server.port) + "]");
+				if(http->fds.server < 0) debug_message(string("connect to host = ") + http->parser->getHost() + " [" + http->server.host + string(":") + to_string(http->server.port) + "]" + string(" sock = ") + to_string(http->fds.client));
 				// Выполняем подключение к серверу
 				if(http->fds.server < 0) sock = create_server_socket(http->server.host.c_str(), http->server.port);
 				// Иначе возвращаем сокет самого сервера
@@ -683,37 +683,71 @@ void on_http_read_server(evutil_socket_t fd, short event, void * arg){
 				if(len <= 0) free_data(&http);
 				// Выполняем проверку прислали все данные или нет
 				else if(http->fds.client > -1) {
-					// Если данные не могут быть отправлены тогда выходим
-					if((len = send(http->fds.client, (void *) buffer, len, 0)) <= 0) free_data(&http);
-					// Если данные удачно отправлены
-					else {
-						// Склеиваем полученные данные
-						appendToBuffer(http->request.data, len, buffer);
-						// Проверяем все ли данные переданы
-						if(http->parser->checkEnd(
-							http->request.data.data(),
-							http->request.data.size() - 1
-						).type){
-							// Закрываем события
-							close_events(&http);
-							// Очищаем буфер данных
-							http->request.data.clear();
-							// Если подключение держать не надо тогда выходим
-							if(!http->parser->isAlive()) free_data(&http);
-							// Если нужно держать подключение
-							else {
-								// Очищаем введенные ранее данные
-								http->parser->clear();
-								// Добавляем событие в базу
-								http->evs.client = event_new(http->base, http->fds.client, EV_READ | EV_PERSIST, on_http_request, http);
-								// Устанавливаем таймаут ожидания запроса в 3 секунды
-								struct timeval timeout = CONNECT_TIMEOUT;
-								// Активируем событие
-								event_add(http->evs.client, &timeout);
-							}
-						}
+					// Склеиваем полученные данные
+					appendToBuffer(http->request.data, len, buffer);
+					// Проверяем все ли данные переданы
+					if(http->parser->checkEnd(
+						http->request.data.data(),
+						http->request.data.size() - 1
+					).type){
+						// Закрываем события
+						close_events(&http);
+						// Добавляем событие в базу
+						http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_WRITE | EV_PERSIST, on_http_read_server, http);
+						// Устанавливаем таймаут ожидания запроса в 3 секунды
+						struct timeval timeout = CONNECT_TIMEOUT;
+						// Активируем событие
+						event_add(http->evs.client, &timeout);
 					}
 				// Иначе выходим
+				} else free_data(&http);
+			} break;
+			// Если это запись
+			case 4: {
+				// Если вложения присутствуют то отправляем и их
+				if(!http->request.data.empty()){
+					// Определяем длину ответа
+					size_t len_data = http->request.data.size();
+					// Определяем сколько данных уже отправлено
+					size_t send_size = len_data - http->request.offset;
+					// Определяем сколько данных нужно отправить
+					if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
+					// Если количество отправляемых данных больше 0 то отправляем
+					if(send_size > 0){
+						// Отправляем запрос на сервер
+						int len = send(fd, (void *) (http->request.data.data() + http->request.offset), send_size, 0);
+						// Если данные не отправились то выходим
+						if(len <= 0){
+							// Выводим в консоль информацию
+							debug_message("Client disconnect, broken write!!!!");
+							// Выполняем очистку подключения
+							free_data(&http);
+							// Выходим
+							break;
+						}
+						// Увеличиваем количество отправленных данных
+						http->request.offset += len;
+					// Если все данные отправлены
+					} else {
+						// Закрываем события
+						close_events(&http);
+						// Очищаем буфер данных
+						http->request.data.clear();
+						// Если подключение держать не надо тогда выходим
+						if(!http->parser->isAlive()) free_data(&http);
+						// Если нужно держать подключение
+						else {
+							// Очищаем введенные ранее данные
+							http->parser->clear();
+							// Добавляем событие в базу
+							http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_READ | EV_PERSIST, on_http_request, http);
+							// Устанавливаем таймаут ожидания запроса в 3 секунды
+							struct timeval timeout = CONNECT_TIMEOUT;
+							// Активируем событие
+							event_add(http->evs.client, &timeout);
+						}
+					}
+				// Отключаемся от сервера
 				} else free_data(&http);
 			} break;
 		}
@@ -768,6 +802,8 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 				} else {
 					// Закрываем события
 					close_events(&http);
+					// Очищаем количество переданных данных
+					http->request.offset = 0;
 					// Если вложения присутствуют то отправляем и их
 					if(!http->response.entitybody.empty()){
 						// Количество отправленных данных
@@ -778,12 +814,12 @@ void on_http_write_server(evutil_socket_t fd, short event, void * arg){
 						size_t size_body = http->response.entitybody.size();
 						// Получаем данные отправляемых вложений
 						const char * data = http->response.entitybody.data();
-						// Определяем сколько данных уже отправлено
-						send_size = size_body - totalsend_body;
-						// Определяем сколько данных нужно отправить
-						if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
 						// Выполняем отправку до тех пор пока все данные не отправлены
 						while(totalsend_body < size_body){
+							// Определяем сколько данных уже отправлено
+							send_size = size_body - totalsend_body;
+							// Определяем сколько данных нужно отправить
+							if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
 							// Выполняем отправку данных
 							if((send_body = send(fd, (void *) (data + totalsend_body), send_size, 0)) <= 0){
 								// Отключаемся от сервера
@@ -1027,7 +1063,7 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	// Запоминаем сокет подключения
 	http->fds.client = sock;
 	// Добавляем событие в базу
-	http->evs.client = event_new(base, http->fds.client, EV_READ | EV_PERSIST, on_http_request, http);
+	http->evs.client = event_new(base, http->fds.client, EV_TIMEOUT | EV_READ | EV_PERSIST, on_http_request, http);
 	// Ожидаем подключение 3 секунд и 0 микросекунд
 	struct timeval timeout = CONNECT_TIMEOUT;
 	// Активируем событие

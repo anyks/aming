@@ -486,7 +486,7 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 				// Получаем размер вложения
 				if(size >= (_query.length + body_size)){
 					// Заполняем структуру данными
-					data.type = 3;
+					data.type = 4;
 					// Заполняем размеры
 					data.begin	= _query.length;
 					data.end	= _query.length + body_size;
@@ -501,7 +501,7 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 				&& ((short) buffer[size - 4] == 13)
 				&& ((short) buffer[size - 5] == 48)){
 					// Заполняем структуру данными
-					data.type = 4;
+					data.type = 5;
 					// Заполняем размеры
 					data.begin	= _query.length;
 					data.end	= size;
@@ -509,9 +509,23 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 			// Если указан тип данных но длина вложенных данных не указана
 			} else if(!ch.empty()) data.type = 0;
 			// Если найден конечный символ
-			else if((short) buffer[size - 1] == 0) data.type = 2;
+			else if((short) buffer[size - 1] == 0) data.type = 3;
 			// Если вложения не найдены
-			else data.type = 1;
+			else data.type = 2;
+		// Если это закрытие соединение
+		} else if(!cc.empty() && (cc == "close")) {
+			// Если конец строки найден
+			if((size > 4) // \r\n\r\n
+			&& ((short) buffer[size - 1] == 10)
+			&& ((short) buffer[size - 2] == 13)
+			&& ((short) buffer[size - 3] == 10)
+			&& ((short) buffer[size - 4] == 13)){
+				// Заполняем структуру данными
+				data.type = 1;
+				// Заполняем размеры
+				data.begin	= _query.length;
+				data.end	= size;
+			}
 		}
 		// Если флаг установлен тогда очищаем структуру
 		if(data.type) _query.clear();
