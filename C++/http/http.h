@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include "base64.h"
 
+#include <iostream>
+
 // Устанавливаем пространство имен
 using namespace std;
 // Класс содержит данные парсинга http запроса
@@ -70,9 +72,76 @@ class Http {
 		};
 		// Структура данных для выполнения запросов на удаленном сервере
 		struct http_query {
-			short			code;		// Код сообщения
-			string			mess;		// Запрос данных на удаленном сервере
-			vector <char>	entitybody;	// Тело вложений в запросе
+			private:
+				// Результирующий вектор
+				vector <char> _result;
+			public:
+				// Код сообщения
+				short code;
+				// Смещение в буфере
+				size_t offset = 0;
+				/**
+				 * http_query Конструктор
+				 * @param code       код сообщения
+				 * @param mess       данные сообщения
+				 * @param entitybody вложенные данные
+				 */
+				http_query(short _code = 0, string _mess = "", vector <char> _entitybody = {}){
+					// Если строка существует
+					if(!_mess.empty()){
+						// Устанавливаем код сообщения
+						code = _code;
+						// Копируем в вектор сам запрос
+						_result.assign(_mess.begin(), _mess.end());
+						// Если данные существуют
+						if(!_entitybody.empty()){
+							// Копируем в результирующий вектор данные вложения
+							copy(_entitybody.begin(), _entitybody.end(), back_inserter(_result));
+						}
+					}
+				}
+				/**
+				 * ~http_query Деструктор
+				 */
+				~http_query(){
+					// Очищаем все переменные
+					code	= 0;
+					offset	= 0;
+					vector <char> ().swap(_result);
+				}
+				/**
+				 * clear Метод очистки данных
+				 */
+				void clear(){
+					// Очищаем все переменные
+					code	= 0;
+					offset	= 0;
+					_result.clear();
+				}
+				/**
+				 * data Метод получения данных запроса
+				 * @return данные запроса
+				 */
+				const char * data(){
+					// Выводим результат
+					return _result.data();
+				}
+				/**
+				 * size Метод получения размера
+				 * @return данные размера
+				 */
+				size_t size(){
+					// Выводим результат
+					return _result.size();
+				}
+				/**
+				 * empty Метод определяет наличие данных
+				 * @return проверка о наличи данных
+				 */
+				bool empty(){
+					// Выводим результат
+					return _result.empty();
+				}
 		};
 		// Определяем новые типы данных
 		typedef struct http_data HttpData;
@@ -363,6 +432,11 @@ class Http {
 		 * @return версия протокола запроса
 		 */
 		float getVersion();
+		/**
+		 * modify Функция модифицирования ответных данных
+		 * @param data ссылка на данные полученные от сервера
+		 */
+		void modify(vector <char> &data);
 		/**
 		 * setMethod Метод установки метода запроса
 		 * @param str строка с данными для установки

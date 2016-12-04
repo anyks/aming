@@ -134,21 +134,23 @@ int main(int argc, char * argv[]){
 	}
 	*/
 
-	char dd[13] = "Hello World!";
+	string dd = "Hello World";
+	string mm = "Data World = ";
 
-	dd[12] = '\0';
+	vector <char> k;
+	vector <char> d;
 
-	vector <char> v;
+	k.assign(dd.begin(), dd.end());
+	d.assign(mm.begin(), mm.end());
 
-	v.assign(dd, dd + 13);
 
-	for(int i = 0; i < v.size(); i++){
-		cout << " ++++ " << v[i] << endl;
-	}
+	copy(k.begin(), k.end(), back_inserter(d));
 
-	const char * kk = v.data();
+	//d.assign(end(d), begin(k), end(k));
+	vector<char>::iterator it1 = d.begin();
+	vector<char>::iterator it2 = d.end();
 
-	cout << " --- " << kk << endl;
+	cout << " --- " << d.data() << " ==== " << *it1 << " == " << *it2 << endl;
 
 	return 0;
 }

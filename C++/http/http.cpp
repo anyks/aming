@@ -228,11 +228,15 @@ void Http::createHead(){
 		+ string(" ") + string("HTTP/")
 		+ query.version + string("\r\n")
 	);
+	/*
 	// Устанавливаем заголовок Host:
 	query.request.append(
 		string("Host: ") + query.host
 		+ string(":") + query.port + string("\r\n")
 	);
+	*/
+	// Устанавливаем заголовок Host:
+	query.request.append(string("Host: ") + query.host + string("\r\n"));
 	// Добавляем useragent
 	if(!query.useragent.empty()) query.request.append(string("User-Agent: ") + query.useragent + string("\r\n"));
 	// Добавляем остальные заголовки
@@ -242,7 +246,7 @@ void Http::createHead(){
 		&& (it->first != "user-agent")
 		&& (it->first != "connection")
 		&& (it->first != "proxy-authorization")
-		&& (it->first != "proxy-connection")){
+		&& (it->first != "proxy-connection")){ // Если прокси является smarty
 		//&& (it->first != "accept-encoding")){
 			// Добавляем оставшиеся заголовки
 			query.request.append(
@@ -252,7 +256,14 @@ void Http::createHead(){
 		}
 	}
 	// Добавляем заголовок connection
-	if(!query.connection.empty()) query.request.append(string("Connection: ") + query.connection + string("\r\n"));
+	if(!query.connection.empty()){
+		// Устанавливаем заголовок подключения
+		query.request.append(string("Connection: ") + query.connection + string("\r\n"));
+		// Проверяем есть ли заголовок соединения прокси
+		string pc = getHeader("proxy-connection", query.headers); // Если это не smarty
+		// Добавляем заголовок закрытия подключения
+		if(pc.empty()) query.request.append(string("Proxy-Connection: ") + query.connection + string("\r\n"));
+	}
 	// Запоминаем конец запроса
 	query.request.append(string("\r\n"));
 }
@@ -357,7 +368,7 @@ void Http::generateHttp(){
 			// Получаем данные заголовока коннекта
 			query.connection = toCase(getHeader("connection", query.headers));
 			// Если постоянное соединение не установлено
-			if(!proxy_connection.empty()) query.connection = proxy_connection;
+			if(!proxy_connection.empty()) query.connection = proxy_connection; // Если прокси является smarty
 			// Если хост найден
 			if(!host.empty()){
 				// Выполняем получение параметров подключения
@@ -459,6 +470,53 @@ void Http::generateHttp(){
 	createHead();
 }
 /**
+ * modify Функция модифицирования ответных данных
+ * @param data ссылка на данные полученные от сервера
+ */
+void Http::modify(vector <char> &data){
+	// Если заголовки не заняты тогда выполняем модификацию
+	if(!_query.length){
+		// Выполняем парсинг http запроса
+		_query = getHeaders(data.data());
+		// Проверяем есть ли заголовок соединения прокси
+		string pc = getHeader("proxy-connection", _query.headers); // Если не smarty
+		// Проверяем есть ли заголовок соединения
+		string co = getHeader("connection", _query.headers);
+		// Если заголовок не найден
+		if(pc.empty() && !co.empty()){
+			// Поздиция конца заголовков
+			int pos = -1;
+			// Получаем данные ответа
+			const char * headers = data.data();
+			// Ищем первое вхождение подстроки в строке
+			char * end_headers = strstr(headers, "\r\n\r\n");
+			// Если завершение заголовка найдено
+			if(end_headers != NULL) pos = end_headers - headers;
+			// Если позиция найдена
+			if(pos > -1){
+				// Копируем заголовки
+				string str(headers, pos);
+				// Устанавливаем название прокси
+				str.append(string("\r\nProxy-agent: ") + appname + string("/") + appver); // Если нужно устанавливать название приложения
+				// Добавляем заголовок закрытия подключения
+				str.append(string("\r\nProxy-Connection: ") + co); // Если не smarty
+				// Начальные и конечные блоки данных
+				vector <char> first, last;
+				// Заполняем первичные данные структуры
+				first.assign(str.begin(), str.end());
+				// Заполняем последние данные структуры
+				last.assign(data.begin() + pos, data.end());
+				// Объединяем блоки
+				copy(last.begin(), last.end(), back_inserter(first));
+				// Заменяем первоначальный блок с данными
+				data = first;
+			}
+		}
+		// Очищаем объект
+		_query.clear();
+	}
+}
+/**
  * checkEnd Функция проверки завершения запроса
  * @param  buffer буфер с входящими данными
  * @param  size   размер входящих данных
@@ -477,43 +535,35 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		string ch = getHeader("transfer-encoding", _query.headers);
 		// Проверяем есть ли закрытие соединения
 		string cc = getHeader("connection", _query.headers);
-		// Если это автозакрытие подключения то ничего не определяем
-		if(cc.empty() || (cc != "close")){
-			// Если найден размер вложений
-			if(!cl.empty() && (cl.find_first_not_of("0123456789") == string::npos)){
-				// Определяем размер вложений
-				int body_size = ::atoi(cl.c_str());
-				// Получаем размер вложения
-				if(size >= (_query.length + body_size)){
-					// Заполняем структуру данными
-					data.type = 4;
-					// Заполняем размеры
-					data.begin	= _query.length;
-					data.end	= _query.length + body_size;
-				}
-			// Если это чанкование
-			} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
-				// Если конец строки найден
-				if((size > 5) // 0\r\n\r\n
-				&& ((short) buffer[size - 1] == 10)
-				&& ((short) buffer[size - 2] == 13)
-				&& ((short) buffer[size - 3] == 10)
-				&& ((short) buffer[size - 4] == 13)
-				&& ((short) buffer[size - 5] == 48)){
-					// Заполняем структуру данными
-					data.type = 5;
-					// Заполняем размеры
-					data.begin	= _query.length;
-					data.end	= size;
-				}
-			// Если указан тип данных но длина вложенных данных не указана
-			} else if(!ch.empty()) data.type = 0;
-			// Если найден конечный символ
-			else if((short) buffer[size - 1] == 0) data.type = 3;
-			// Если вложения не найдены
-			else data.type = 2;
-		// Если это закрытие соединение
-		} else if(!cc.empty() && (cc == "close")) {
+		// Если найден размер вложений
+		if(!cl.empty() && (cl.find_first_not_of("0123456789") == string::npos)){
+			// Определяем размер вложений
+			int body_size = ::atoi(cl.c_str());
+			// Получаем размер вложения
+			if(size >= (_query.length + body_size)){
+				// Заполняем структуру данными
+				data.type = 4;
+				// Заполняем размеры
+				data.begin	= _query.length;
+				data.end	= _query.length + body_size;
+			}
+		// Если это чанкование
+		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
+			// Если конец строки найден
+			if((size > 5) // 0\r\n\r\n
+			&& ((short) buffer[size - 1] == 10)
+			&& ((short) buffer[size - 2] == 13)
+			&& ((short) buffer[size - 3] == 10)
+			&& ((short) buffer[size - 4] == 13)
+			&& ((short) buffer[size - 5] == 48)){
+				// Заполняем структуру данными
+				data.type = 5;
+				// Заполняем размеры
+				data.begin	= _query.length;
+				data.end	= size;
+			}
+		// Если это автозакрытие подключения
+		} else if(!cc.empty() && (cc == "close")){
 			// Если конец строки найден
 			if((size > 4) // \r\n\r\n
 			&& ((short) buffer[size - 1] == 10)
@@ -521,12 +571,17 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 			&& ((short) buffer[size - 3] == 10)
 			&& ((short) buffer[size - 4] == 13)){
 				// Заполняем структуру данными
-				data.type = 1;
+				data.type = 3;
 				// Заполняем размеры
 				data.begin	= _query.length;
 				data.end	= size;
 			}
-		}
+		// Если указан тип данных но длина вложенных данных не указана
+		} else if(!ch.empty()) data.type = 0;
+		// Если найден конечный символ
+		else if((short) buffer[size - 1] == 0) data.type = 2;
+		// Если вложения не найдены
+		else data.type = 1;
 		// Если флаг установлен тогда очищаем структуру
 		if(data.type) _query.clear();
 	}
@@ -583,8 +638,10 @@ Http::HttpQuery Http::brokenRequest(){
 	}
 	// Выводим шаблон сообщения о неудачном отправленном запросе
 	result = html[9];
+	// Данные для вывода
+	HttpQuery data(501, result);
 	// Выводим результат
-	return {501, result};
+	return data;
 }
 /**
  * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
@@ -604,8 +661,10 @@ Http::HttpQuery Http::faultConnect(){
 	}
 	// Выводим шаблон сообщения о неудачном подключении
 	result = html[6];
+	// Данные для вывода
+	HttpQuery data(502, result);
 	// Выводим результат
-	return {502, result};
+	return data;
 }
 /**
  * faultAuth Метод получения ответа (неудачной авторизации)
@@ -625,8 +684,10 @@ Http::HttpQuery Http::faultAuth(){
 	}
 	// Выводим шаблон сообщения о неудачной авторизации
 	result = html[5];
+	// Данные для вывода
+	HttpQuery data(403, result);
 	// Выводим результат
-	return {403, result};
+	return data;
 }
 /**
  * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
@@ -646,8 +707,10 @@ Http::HttpQuery Http::requiredAuth(){
 	}
 	// Выводим шаблон сообщения о требовании авторизации
 	result = html[2];
+	// Данные для вывода
+	HttpQuery data(407, result);
 	// Выводим результат
-	return {407, result};
+	return data;
 }
 /**
  * authSuccess Метод получения ответа (подтверждения авторизации)
@@ -667,16 +730,20 @@ Http::HttpQuery Http::authSuccess(){
 	}
 	// Выводим шаблон сообщения о том что авторизация пройдена
 	result = html[0];
+	// Данные для вывода
+	HttpQuery data(200, result);
 	// Выводим результат
-	return {200, result};
+	return data;
 }
 /**
  * getQuery Метод получения сформированного http запроса
  * @return сформированный http запрос
  */
 Http::HttpQuery Http::getQuery(){
+	// Данные для вывода
+	HttpQuery data(200, query.request, query.entitybody);
 	// Выводим результат
-	return {200, query.request, query.entitybody};
+	return data;
 }
 /**
  * getMethod Метод получения метода запроса
