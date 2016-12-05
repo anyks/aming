@@ -57,7 +57,7 @@ using namespace std;
 // Максимальный размер буфера
 #define BUFFER_WRITE_SIZE 256
 // Максимальный размер буфера для чтения http данных
-#define BUFFER_READ_SIZE 4096;
+#define BUFFER_READ_SIZE 4096
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
 #define MAX_SOCKETS 1024
 // Максимальное количество воркеров
