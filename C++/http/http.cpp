@@ -528,7 +528,7 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 	// Выполняем парсинг http запроса
 	if(!_query.length) _query = getHeaders(buffer);
 	// Если данные существуют
-	if(_query.length){
+	if(!_query.http.empty()){
 		// Проверяем есть ли размер вложений
 		string cl = getHeader("content-length", _query.headers);
 		// Проверяем есть ли чанкование
@@ -584,7 +584,8 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		else data.type = 1;
 		// Если флаг установлен тогда очищаем структуру
 		if(data.type) _query.clear();
-	}
+	// Ечищаем структуру если пришел мусор
+	} else _query.clear();
 	// Выводим результат
 	return data;
 }
@@ -921,6 +922,7 @@ void Http::setUseragent(const string str){
  */
 void Http::clear(){
 	// Очищаем заголовки
+	_query.clear();
 	query.clear();
 }
 /**

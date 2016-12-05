@@ -124,7 +124,7 @@ class Http {
 				 */
 				const char * data(){
 					// Выводим результат
-					return _result.data();
+					return (!_result.empty() ? _result.data() : "");
 				}
 				/**
 				 * size Метод получения размера

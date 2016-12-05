@@ -65,7 +65,7 @@ using namespace std;
 // Порт сервера
 #define SERVER_PORT 5555
 // Таймаут ожидания для http 1.1
-#define READ_TIMEOUT {30, 0}
+#define READ_TIMEOUT {60, 0}
 // Таймаут ожидания коннекта
 #define KEEP_ALIVE_TIMEOUT {5, 0}
 
@@ -611,12 +611,8 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 			case 1: {
 				// Выводим в консоль информацию
 				debug_message("Timeout https connect!!!!");
-				// Если это клиент то удаляем событие
-				if(fd == http->fds.client)
-					// Отключаем событие для клиента
-					close_event(&http->evs.client);
 				// Закрываем соединение
-				else free_data(&http);
+				free_data(&http);
 			} break;
 			// Если это чтение данных
 			case 2: {
@@ -629,7 +625,7 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные не получены то выходим
 				if(len <= 0){
 					// Выводим в консоль информацию
-					debug_message(string("Error in read method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server "));
+					if(errno) debug_message(string("Error in read method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server "));
 					// Удаляем объект с данными
 					free_data(&http);
 				// Если данные получены удачно
@@ -660,7 +656,7 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные не отправлены то выходим
 				if(len <= 0){
 					// Выводим в консоль информацию
-					debug_message(string("Error in write method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server "));
+					if(errno) debug_message(string("Error in write method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server "));
 					// Удаляем объект с данными
 					free_data(&http);
 				// Если данные отправлены удачно
@@ -845,69 +841,6 @@ void on_http_write(evutil_socket_t fd, short event, void * arg){
 	return;
 }
 /**
- * prepare_request Функция обработки входящего запроса
- * @param fd   файловый дескриптор (сокет)
- * @param arg  объект передаваемый как значение
- */
-void prepare_request(evutil_socket_t fd, BufferHttpProxy ** arg){
-	// Выполняем приведение типов
-	BufferHttpProxy * http = *arg;
-	// Выполняем парсинг полученных данных
-	if(!http->request.data.empty() && http->parse()){
-		// Закрываем события
-		close_events(&http);
-		// Очищаем буфер данных
-		http->request.data.clear();
-		// Если авторизация не прошла
-		if(!http->auth) http->auth = check_auth(http->parser);
-		// Если нужно запросить пароль
-		if(!http->auth && (!http->parser->getLogin().length()
-		|| !http->parser->getPassword().length())){
-			// Формируем ответ клиенту
-			http->response = http->parser->requiredAuth();
-		// Сообщаем что авторизация не удачная
-		} else if(!http->auth) {
-			// Формируем ответ клиенту
-			http->response = http->parser->faultAuth();
-		// Если авторизация прошла
-		} else {
-			// Выполняем подключение к серверу
-			http->fds.server = connect_server(&http);
-			// Если сокет существует
-			if(http->fds.server > -1){
-				// Определяем порт, если это метод connect
-				if(http->parser->isConnect())
-					// Формируем ответ клиенту
-					http->response = http->parser->authSuccess();
-				// Иначе делаем запрос на получение данных
-				else {
-					// Указываем что нужно отключится сразу после отправки запроса
-					if(!http->parser->isAlive()) http->parser->setClose();
-					// Формируем запрос на сервер
-					http->response = http->parser->getQuery();
-					// Создаем новое событие для сервера
-					http->evs.server = event_new(http->base, http->fds.server, EV_WRITE | EV_PERSIST, on_http_write, http);
-					// Активируем события
-					event_add(http->evs.server, NULL);
-					// Выходим
-					return;
-				}
-			// Если подключение не удачное то сообщаем об этом
-			} else http->response = http->parser->faultConnect();
-		}
-		// Ответ готов
-		if(!http->response.empty()){
-			// Создаем новое событие для клиента
-			http->evs.client = event_new(http->base, fd, EV_WRITE | EV_PERSIST, on_http_write, http);
-			// Активируем события
-			event_add(http->evs.client, NULL);
-		// Очищаем память
-		} else free_data(&http);
-	}
-	// Выходим
-	return;
-}
-/**
  * on_http_request Функция проверка запроса
  * @param fd    файловый дескриптор (сокет)
  * @param event событие на которое сработала функция обратного вызова
@@ -936,13 +869,60 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 				else {
 					// Скидываем количество отправляемых данных
 					http->request.offset = 0;
-					// Проверяем последние два символа
-					short l1 = (short) buffer[len - 2];
-					short l2 = (short) buffer[len - 1];
 					// Склеиваем полученные данные
 					appendToBuffer(http->request.data, len, buffer);
-					// Если это перенос строки "\r\n", выполняем обработку входящего запроса
-					if(((l1 == 13) && (l2 == 10)) || (l2 == 0)) prepare_request(fd, &http);
+					// Выполняем парсинг полученных данных
+					if(!http->request.data.empty() && http->parse()){
+						// Закрываем события
+						close_events(&http);
+						// Очищаем буфер данных
+						http->request.data.clear();
+						// Если авторизация не прошла
+						if(!http->auth) http->auth = check_auth(http->parser);
+						// Если нужно запросить пароль
+						if(!http->auth && (!http->parser->getLogin().length()
+						|| !http->parser->getPassword().length())){
+							// Формируем ответ клиенту
+							http->response = http->parser->requiredAuth();
+						// Сообщаем что авторизация не удачная
+						} else if(!http->auth) {
+							// Формируем ответ клиенту
+							http->response = http->parser->faultAuth();
+						// Если авторизация прошла
+						} else {
+							// Выполняем подключение к серверу
+							http->fds.server = connect_server(&http);
+							// Если сокет существует
+							if(http->fds.server > -1){
+								// Определяем порт, если это метод connect
+								if(http->parser->isConnect())
+									// Формируем ответ клиенту
+									http->response = http->parser->authSuccess();
+								// Иначе делаем запрос на получение данных
+								else {
+									// Указываем что нужно отключится сразу после отправки запроса
+									if(!http->parser->isAlive()) http->parser->setClose();
+									// Формируем запрос на сервер
+									http->response = http->parser->getQuery();
+									// Создаем новое событие для сервера
+									http->evs.server = event_new(http->base, http->fds.server, EV_WRITE | EV_PERSIST, on_http_write, http);
+									// Активируем события
+									event_add(http->evs.server, NULL);
+									// Выходим
+									return;
+								}
+							// Если подключение не удачное то сообщаем об этом
+							} else http->response = http->parser->faultConnect();
+						}
+						// Ответ готов
+						if(!http->response.empty()){
+							// Создаем новое событие для клиента
+							http->evs.client = event_new(http->base, fd, EV_WRITE | EV_PERSIST, on_http_write, http);
+							// Активируем события
+							event_add(http->evs.client, NULL);
+						// Очищаем память
+						} else free_data(&http);
+					}
 				}
 			} break;
 		}
