@@ -65,9 +65,9 @@ using namespace std;
 // Порт сервера
 #define SERVER_PORT 5555
 // Таймаут ожидания для http 1.1
-#define READ_TIMEOUT {10, 0}
+#define READ_TIMEOUT {30, 0}
 // Таймаут ожидания коннекта
-#define KEEP_ALIVE_TIMEOUT {60, 0}
+#define KEEP_ALIVE_TIMEOUT {5, 0}
 
 // Временный каталог для файлов
 string nameSystem	= "anyksHttp";
@@ -670,10 +670,11 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 					// Устанавливаем событие
 					http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_READ, do_https_proxy, http);
 					// Устанавливаем таймаут ожидания запроса в 3 секунды
-					struct timeval timeout = READ_TIMEOUT;
+					struct timeval timeout_server = READ_TIMEOUT;
+					struct timeval timeout_client = KEEP_ALIVE_TIMEOUT;
 					// Добавляем событие
-					event_add(http->evs.server, &timeout);
-					event_add(http->evs.client, &timeout);
+					event_add(http->evs.server, &timeout_server);
+					event_add(http->evs.client, &timeout_client);
 				}
 
 			} break;
@@ -808,14 +809,14 @@ void on_http_write(evutil_socket_t fd, short event, void * arg){
 			case 1: {
 				// Закрываем события
 				close_events(&http);
-				// Устанавливаем таймаут ожидания запроса в 3 секунды
-				struct timeval timeout = READ_TIMEOUT;
 				// Если запись производится в сервер
 				if(fd == http->fds.server){
 					// Очищаем количество переданных данных
 					http->response.clear();
 					// Создаем новое событие для чтения данных с сервера
 					http->evs.server = event_new(http->base, http->fds.server, EV_TIMEOUT | EV_READ | EV_PERSIST, do_http_proxy, http);
+					// Устанавливаем таймаут ожидания запроса в 3 секунды
+					struct timeval timeout = READ_TIMEOUT;
 					// Активируем события
 					event_add(http->evs.server, &timeout);
 				// Если запись производится в клиент
@@ -826,6 +827,8 @@ void on_http_write(evutil_socket_t fd, short event, void * arg){
 						if(http->parser->isConnect()){
 							// Создаем новое событие для клиента
 							http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_READ, do_https_proxy, http);
+							// Устанавливаем таймаут ожидания запроса в 3 секунды
+							struct timeval timeout = KEEP_ALIVE_TIMEOUT;
 							// Активируем события
 							event_add(http->evs.client, &timeout);
 							// Выходим из функции
