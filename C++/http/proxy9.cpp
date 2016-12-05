@@ -975,6 +975,15 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 		// Выходим
 		return;
 	}
+	// Считываем установленный размер буфера
+	if(getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &buffer_size, &opt_len) < 0){
+		// Выводим в консоль информацию
+		debug_message("Get buffer wrong!!!!");
+		// Выходим
+		return;
+	}
+	// Если размер буфера не может быть такой установлен то выводим сообщение об ошибке
+	if(buffer_size < BUFFER_SIZE) debug_message(string("Wrong buffer, you mast set buffer size = ") + to_string(buffer_size));
 	// Получаем объект базы событий
 	struct event_base * base = reinterpret_cast <struct event_base *> (arg);
 	// Создаем новый объект подключения
