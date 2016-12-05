@@ -489,7 +489,7 @@ void Http::modify(vector <char> &data){
 			// Получаем данные ответа
 			const char * headers = data.data();
 			// Ищем первое вхождение подстроки в строке
-			char * end_headers = strstr(headers, "\r\n\r\n");
+			const char * end_headers = strstr(headers, "\r\n\r\n");
 			// Если завершение заголовка найдено
 			if(end_headers != NULL) pos = end_headers - headers;
 			// Если позиция найдена
