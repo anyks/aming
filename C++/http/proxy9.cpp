@@ -55,7 +55,9 @@ using namespace std;
 // Максимальное количество клиентов
 #define MAX_CLIENTS 100
 // Максимальный размер буфера
-#define BUFFER_SIZE 64
+#define BUFFER_WRITE_SIZE 256
+// Максимальный размер буфера для чтения http данных
+#define BUFFER_READ_SIZE 4096;
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
 #define MAX_SOCKETS 1024
 // Максимальное количество воркеров
@@ -79,7 +81,7 @@ class BufferHttpProxy {
 		// Структура с данными для обмена
 		struct Data {
 			size_t	len = 0;			// Размер буфера
-			char	buff[BUFFER_SIZE];	// Буфер данных
+			char	buff[BUFFER_WRITE_SIZE];	// Буфер данных
 		};
 		// Буфер данных
 		struct Request {
@@ -330,12 +332,14 @@ evutil_socket_t create_app_socket(){
 		return -1;
 	}
 	// Получаем размер буфера
-	int buffer_size = MAX_CLIENTS * BUFFER_SIZE * MAX_WORKERS;
+	int buffer_read_size	= MAX_CLIENTS * BUFFER_READ_SIZE * MAX_WORKERS;
+	int buffer_write_size	= MAX_CLIENTS * BUFFER_WRITE_SIZE * MAX_WORKERS;
 	// Определяем размер массива опции
-	socklen_t opt_len = sizeof(buffer_size);
+	socklen_t read_optlen	= sizeof(buffer_read_size);
+	socklen_t write_optlen	= sizeof(buffer_write_size);
 	// Устанавливаем размер буфера для сокета клиента и сервера
-	if((setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &buffer_size, opt_len) < 0)
-	|| (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_size, opt_len) < 0)){
+	if((setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &buffer_write_size, write_optlen) < 0)
+	|| (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_read_size, read_optlen) < 0)){
 		// Выводим в консоль информацию
 		debug_message("[-] Set buffer wrong.");
 		// Выходим
@@ -552,7 +556,7 @@ short sendData(evutil_socket_t fd, const char * mess, size_t &offset, size_t len
 	// Определяем сколько данных уже отправлено
 	size_t send_size = length - offset;
 	// Определяем сколько данных нужно отправить
-	if(send_size > BUFFER_SIZE) send_size = BUFFER_SIZE;
+	if(send_size > BUFFER_WRITE_SIZE) send_size = BUFFER_WRITE_SIZE;
 	// Если количество отправляемых данных больше 0 то отправляем
 	if(send_size > 0){
 		// Отправляем запрос на сервер
@@ -705,7 +709,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Завершение запроса
 				bool end_query = false;
 				// Буфер для чтения данных из сокета
-				char buffer[BUFFER_SIZE];
+				char buffer[BUFFER_READ_SIZE];
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Если данные не считаны значит клиент отключился
@@ -920,7 +924,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 			// Если это чтение
 			case 2: {
 				// Буфер для чтения данных из сокета
-				char buffer[BUFFER_SIZE];
+				char buffer[BUFFER_READ_SIZE];
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, buffer, sizeof(buffer), 0);
 				// Если данные не считаны то выполняем обработку входящего запроса
@@ -964,26 +968,35 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	// Устанавливаем неблокирующий режим для сокета
 	if(set_non_block(sock) < 0) debug_message("[-] Failed to set server socket to non-blocking.");
 	// Получаем размер буфера
-	int buffer_size = BUFFER_SIZE;
+	int buffer_read_size	= BUFFER_READ_SIZE;
+	int buffer_write_size	= BUFFER_WRITE_SIZE;
 	// Определяем размер массива опции
-	socklen_t opt_len = sizeof(buffer_size);
+	socklen_t read_optlen	= sizeof(buffer_read_size);
+	socklen_t write_optlen	= sizeof(buffer_write_size);
 	// Устанавливаем размер буфера для сокета клиента и сервера
-	if((setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &buffer_size, opt_len) < 0)
-	|| (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_size, opt_len) < 0)){
+	if((setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_read_size, read_optlen) < 0)
+	|| (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &buffer_write_size, write_optlen) < 0)){
 		// Выводим в консоль информацию
 		debug_message("Set buffer wrong!!!!");
 		// Выходим
 		return;
 	}
 	// Считываем установленный размер буфера
-	if(getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &buffer_size, &opt_len) < 0){
+	if((getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &buffer_read_size, &read_optlen) < 0)
+	|| (getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &buffer_write_size, &write_optlen) < 0)){
 		// Выводим в консоль информацию
 		debug_message("Get buffer wrong!!!!");
 		// Выходим
 		return;
 	}
-	// Если размер буфера не может быть такой установлен то выводим сообщение об ошибке
-	if(buffer_size < BUFFER_SIZE) debug_message(string("Wrong buffer, you mast set buffer size = ") + to_string(buffer_size));
+	// Если размер буфера не может быть такой установлен для записывающей операции
+	if(buffer_read_size < BUFFER_READ_SIZE)
+		// Выводим в консоль сообщение
+		debug_message(string("Wrong buffer, you mast set buffer read size = ") + to_string(buffer_read_size));
+	// Если размер буфера не может быть такой установлен для считывающей операции
+	if(buffer_write_size < BUFFER_WRITE_SIZE)
+		// Выводим в консоль сообщение
+		debug_message(string("Wrong buffer, you mast set buffer write size = ") + to_string(buffer_write_size));
 	// Получаем объект базы событий
 	struct event_base * base = reinterpret_cast <struct event_base *> (arg);
 	// Создаем новый объект подключения
