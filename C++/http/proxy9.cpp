@@ -712,15 +712,23 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные не считаны значит клиент отключился
 				if(len <= 0){
 					// Если хоть какие-то данные получены
-					if(!http->request.data.empty()) end_query = true;
+					if(!http->request.data.empty()){
+						// Проверяем все ли данные переданы
+						if(http->parser->checkEnd(
+							http->request.data.data(),
+							http->request.data.size() - 1
+						).type) end_query = true;
 					// Если ничего не получено тогда выходим
-					else free_data(&http);
+					} else free_data(&http);
 				// Выполняем проверку прислали все данные или нет
 				} else if(http->fds.client > -1) {
 					// Склеиваем полученные данные
 					appendToBuffer(http->request.data, len, buffer);
 					// Проверяем все ли данные переданы
-					if(http->parser->checkEnd(http->request.data.data(), http->request.data.size() - 1).type) end_query = true;
+					if(http->parser->checkEnd(
+						http->request.data.data(),
+						http->request.data.size() - 1
+					).type) end_query = true;
 				// Иначе выходим
 				} else free_data(&http);
 				// Если запрос завершился

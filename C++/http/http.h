@@ -154,12 +154,12 @@ class Http {
 		string html[12] = {
 			// Подключение разрешено [0]
 			"HTTP/1.0 200 Connection established\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n\r\n",
+			"Proxy-Agent: ProxyAnyks/1.0\r\n\r\n",
 			// Продолжить подключение [1]
 			"HTTP/1.1 100 Continue\r\n\r\n",
 			// Требуется авторизация в прокси [2]
 			"HTTP/1.0 407 Proxy Authentication Required\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
@@ -170,7 +170,7 @@ class Http {
 			"</body></html>\r\n",
 			// Ошибка запроса [3]
 			"HTTP/1.0 400 Bad Request\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -178,7 +178,7 @@ class Http {
 			"<body><h2>400 Bad Request</h2></body></html>\r\n",
 			// Страница не найдена [4]
 			"HTTP/1.0 404 Not Found\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -186,7 +186,7 @@ class Http {
 			"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n",
 			// Доступ закрыт [5]
 			"HTTP/1.0 403 Forbidden\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -194,7 +194,7 @@ class Http {
 			"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n",
 			// Шлюз не доступен (хост не найден или ошибка подключения) [6]
 			"HTTP/1.0 502 Bad Gateway\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -202,7 +202,7 @@ class Http {
 			"<body><h2>502 Bad Gateway</h2><h3>Host Not Found or connection failed</h3></body></html>\r\n",
 			// Сервис не доступен (вы исчерпали свой трафик) [7]
 			"HTTP/1.0 503 Service Unavailable\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -210,7 +210,7 @@ class Http {
 			"<body><h2>503 Service Unavailable</h2><h3>You have exceeded your traffic limit</h3></body></html>\r\n",
 			// Сервис не доступен (обнаружена рекурсия) [8]
 			"HTTP/1.0 503 Service Unavailable\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -218,7 +218,7 @@ class Http {
 			"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n",
 			// Сервис не доступен (Требуемое действие не поддерживается прокси-сервером) [9]
 			"HTTP/1.0 501 Not Implemented\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -226,7 +226,7 @@ class Http {
 			"<body><h2>501 Not Implemented</h2><h3>Required action is not supported by proxy server</h3></body></html>\r\n",
 			// Сервис не доступен (Не удалось подключится к родительской прокси) [10]
 			"HTTP/1.0 502 Bad Gateway\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"
@@ -234,7 +234,7 @@ class Http {
 			"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n",
 			// Внутренняя ошибка [11]
 			"HTTP/1.0 500 Internal Error\r\n"
-			"Proxy-agent: ProxyAnyks/1.0\r\n"
+			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
 			"Content-type: text/html; charset=utf-8\r\n"
 			"\r\n"

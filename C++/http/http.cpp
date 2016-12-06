@@ -497,7 +497,7 @@ void Http::modify(vector <char> &data){
 				// Копируем заголовки
 				string str(headers, pos);
 				// Устанавливаем название прокси
-				str.append(string("\r\nProxy-agent: ") + appname + string("/") + appver); // Если нужно устанавливать название приложения
+				str.append(string("\r\nProxy-Agent: ") + appname + string("/") + appver); // Если нужно устанавливать название приложения
 				// Добавляем заголовок закрытия подключения
 				str.append(string("\r\nProxy-Connection: ") + co); // Если не smarty
 				// Начальные и конечные блоки данных
@@ -550,7 +550,7 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		// Если это чанкование
 		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
 			// Если конец строки найден
-			if((size > 5) // 0\r\n\r\n
+			if(((size > 5) && (_query.length < size)) // 0\r\n\r\n
 			&& ((short) buffer[size - 1] == 10)
 			&& ((short) buffer[size - 2] == 13)
 			&& ((short) buffer[size - 3] == 10)
@@ -565,7 +565,7 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		// Если это автозакрытие подключения
 		} else if(!cc.empty() && (cc == "close")){
 			// Если конец строки найден
-			if((size > 4) // \r\n\r\n
+			if(((size > 4) && (_query.length < size)) // \r\n\r\n
 			&& ((short) buffer[size - 1] == 10)
 			&& ((short) buffer[size - 2] == 13)
 			&& ((short) buffer[size - 3] == 10)
