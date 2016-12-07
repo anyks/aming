@@ -322,12 +322,20 @@ evutil_socket_t create_app_socket(){
 	evutil_socket_t sock;
 	// Максимальное число клиентов
 	int maxpending = MAX_CLIENTS;
+	// Устанавливаем параметр SO_REUSEADDR
+	int reuseaddr = 1, tcpnodelay = 1;
 	// Структура для сервера
 	struct sockaddr_in echoserver;
 	// Создаем сокет
 	if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
 		// Выводим в консоль информацию
 		debug_message("[-] Could not create socket.");
+		// Выходим
+		return -1;
+	}
+	// Разрешаем повторно использовать тот же host:port в промежуток времени
+	if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr)) < 0){
+		debug_message("[-] Failed to set option SO_REUSEADDR");
 		// Выходим
 		return -1;
 	}
@@ -339,14 +347,6 @@ evutil_socket_t create_app_socket(){
 	|| (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_read_size, sizeof(buffer_read_size)) < 0)){
 		// Выводим в консоль информацию
 		debug_message("[-] Set buffer wrong.");
-		// Выходим
-		return -1;
-	}
-	// Устанавливаем параметр SO_REUSEADDR
-	int reuseaddr = 1;
-	// Разрешаем повторно использовать тот же host:port в промежуток времени
-	if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr)) < 0){
-		debug_message("[-] Failed to set option SO_REUSEADDR");
 		// Выходим
 		return -1;
 	}
@@ -362,17 +362,6 @@ evutil_socket_t create_app_socket(){
 	echoserver.sin_addr.s_addr = *((unsigned long *) server->h_addr);
 	// Указываем порт сервера
 	echoserver.sin_port = htons(SERVER_PORT);
-	/*
-	// Устанавливаемое значение
-	int optval = 1;
-	// Устанавливаем TCP_NODELAY
-	if(setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0){
-		// Выводим в консоль информацию
-		debug_message("Cannot set TCP_NODELAY option on listen socket.");
-		// Выходим
-		return -1;
-	}
-	*/
 	// Маскируем ошибку о сигнале (записи в отключенный сокет)
 	//int n = 1;
 	//setsockopt(sock, IPPROTO_TCP, SO_NOSIGPIPE, &n, sizeof(n));
@@ -394,6 +383,13 @@ evutil_socket_t create_app_socket(){
 	if(set_non_block(sock) < 0){
 		// Выводим в консоль информацию
 		debug_message("[-] Failed to set server socket to non-blocking.");
+		// Выходим
+		return -1;
+	}
+	// Устанавливаем TCP_NODELAY
+	if(setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &tcpnodelay, sizeof(tcpnodelay)) < 0){
+		// Выводим в консоль информацию
+		debug_message("Cannot set TCP_NODELAY option on listen socket.");
 		// Выходим
 		return -1;
 	}
@@ -453,8 +449,6 @@ evutil_socket_t create_server_socket(const char * host, int port){
 	}
 	// И освобождаем связанный список
 	freeaddrinfo(req);
-	// Устанавливаем неблокирующий режим для сокета
-	//if(set_non_block(sock) < 0) debug_message("[-] Failed to set server socket to non-blocking.");
 	// Выводим созданный нами сокет
 	return sock;
 }
@@ -627,9 +621,6 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				bzero(http->answer.buff, sizeof(http->answer.buff));
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, http->answer.buff, sizeof(http->answer.buff), 0);
-
-				cout << " ========= read =========== " << len << (fd != http->fds.server ? " client " : " server ") << endl;
-
 				// Если данные не получены то выходим
 				if(len <= 0){
 					// Выводим в консоль информацию
@@ -661,9 +652,6 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				close_events(&http);
 				// Отправляем данные полученные ранее
 				int len = send(fd, (void *) http->answer.buff, http->answer.len, 0);
-
-				cout << " ========= write =========== " << len << (fd != http->fds.server ? " client " : " server ") << endl;
-
 				// Если данные не отправлены то выходим
 				if(len <= 0){
 					// Выводим в консоль информацию
@@ -673,15 +661,14 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные отправлены удачно
 				} else {
 					// Устанавливаем событие
-					http->evs.server = event_new(http->base, http->fds.server, EV_TIMEOUT | EV_READ, do_https_proxy, http);
-					// Устанавливаем событие
 					http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_READ, do_https_proxy, http);
+					// Устанавливаем событие
+					http->evs.server = event_new(http->base, http->fds.server, EV_TIMEOUT | EV_READ, do_https_proxy, http);
 					// Устанавливаем таймаут ожидания запроса в 3 секунды
-					struct timeval timeout_server = READ_TIMEOUT;
-					struct timeval timeout_client = KEEP_ALIVE_TIMEOUT;
+					struct timeval timeout = KEEP_ALIVE_TIMEOUT;
 					// Добавляем событие
-					event_add(http->evs.server, &timeout_server);
-					event_add(http->evs.client, &timeout_client);
+					event_add(http->evs.client, &timeout);
+					event_add(http->evs.server, NULL);
 				}
 
 			} break;
@@ -723,14 +710,13 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные не считаны значит клиент отключился
 				if(len <= 0){
 					// Если хоть какие-то данные получены
-					if(!http->request.data.empty()){
-						// Проверяем все ли данные переданы
-						if(http->parser->checkEnd(
-							http->request.data.data(),
-							http->request.data.size() - 1
-						).type) end_query = true;
+					if(!http->request.data.empty()
+					&& http->parser->checkEnd(
+						http->request.data.data(),
+						http->request.data.size() - 1
+					).type) end_query = true;
 					// Если ничего не получено тогда выходим
-					} else free_data(&http);
+					else free_data(&http);
 				// Выполняем проверку прислали все данные или нет
 				} else if(http->fds.client > -1) {
 					// Склеиваем полученные данные
@@ -888,6 +874,8 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 				else {
 					// Скидываем количество отправляемых данных
 					http->request.offset = 0;
+					// Очищаем объект ответа
+					http->response.clear();
 					// Склеиваем полученные данные
 					appendToBuffer(http->request.data, len, buffer);
 					// Выполняем парсинг полученных данных
@@ -949,12 +937,6 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 	// Выходим
 	return;
 }
-
-static void set_tcp_no_delay(evutil_socket_t fd){
-	int one = 1;
-	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
-}
-
 /**
  * on_http_connect Функция подключения к серверу
  * @param fd    файловый дескриптор (сокет)
@@ -975,9 +957,6 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	if(sock < 1) return;
 	// Устанавливаем неблокирующий режим для сокета
 	if(set_non_block(sock) < 0) debug_message("[-] Failed to set server socket to non-blocking.");
-
-	set_tcp_no_delay(fd);
-
 	// Получаем размер буфера
 	int buffer_read_size	= BUFFER_READ_SIZE;
 	int buffer_write_size	= BUFFER_WRITE_SIZE;

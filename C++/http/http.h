@@ -87,6 +87,8 @@ class Http {
 				 * @param entitybody вложенные данные
 				 */
 				http_query(short _code = 0, string _mess = "", vector <char> _entitybody = {}){
+					// Очищаем вектор
+					_result.clear();
 					// Если строка существует
 					if(!_mess.empty()){
 						// Устанавливаем код сообщения
