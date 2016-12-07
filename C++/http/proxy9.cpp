@@ -55,7 +55,7 @@ using namespace std;
 // Максимальное количество клиентов
 #define MAX_CLIENTS 100
 // Максимальный размер буфера
-#define BUFFER_WRITE_SIZE 256
+#define BUFFER_WRITE_SIZE 512
 // Максимальный размер буфера для чтения http данных
 #define BUFFER_READ_SIZE 4096
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
@@ -334,14 +334,19 @@ evutil_socket_t create_app_socket(){
 	// Получаем размер буфера
 	int buffer_read_size	= MAX_CLIENTS * BUFFER_READ_SIZE * MAX_WORKERS;
 	int buffer_write_size	= MAX_CLIENTS * BUFFER_WRITE_SIZE * MAX_WORKERS;
-	// Определяем размер массива опции
-	socklen_t read_optlen	= sizeof(buffer_read_size);
-	socklen_t write_optlen	= sizeof(buffer_write_size);
 	// Устанавливаем размер буфера для сокета клиента и сервера
-	if((setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &buffer_write_size, write_optlen) < 0)
-	|| (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_read_size, read_optlen) < 0)){
+	if((setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &buffer_write_size, sizeof(buffer_write_size)) < 0)
+	|| (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_read_size, sizeof(buffer_read_size)) < 0)){
 		// Выводим в консоль информацию
 		debug_message("[-] Set buffer wrong.");
+		// Выходим
+		return -1;
+	}
+	// Устанавливаем параметр SO_REUSEADDR
+	int reuseaddr = 1;
+	// Разрешаем повторно использовать тот же host:port в промежуток времени
+	if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr)) < 0){
+		debug_message("[-] Failed to set option SO_REUSEADDR");
 		// Выходим
 		return -1;
 	}
@@ -622,6 +627,9 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				bzero(http->answer.buff, sizeof(http->answer.buff));
 				// Выполняем чтение данных из сокета
 				int len = recv(fd, http->answer.buff, sizeof(http->answer.buff), 0);
+
+				cout << " ========= read =========== " << len << (fd != http->fds.server ? " client " : " server ") << endl;
+
 				// Если данные не получены то выходим
 				if(len <= 0){
 					// Выводим в консоль информацию
@@ -653,6 +661,9 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				close_events(&http);
 				// Отправляем данные полученные ранее
 				int len = send(fd, (void *) http->answer.buff, http->answer.len, 0);
+
+				cout << " ========= write =========== " << len << (fd != http->fds.server ? " client " : " server ") << endl;
+
 				// Если данные не отправлены то выходим
 				if(len <= 0){
 					// Выводим в консоль информацию
@@ -938,6 +949,12 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 	// Выходим
 	return;
 }
+
+static void set_tcp_no_delay(evutil_socket_t fd){
+	int one = 1;
+	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
+}
+
 /**
  * on_http_connect Функция подключения к серверу
  * @param fd    файловый дескриптор (сокет)
@@ -958,6 +975,9 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	if(sock < 1) return;
 	// Устанавливаем неблокирующий режим для сокета
 	if(set_non_block(sock) < 0) debug_message("[-] Failed to set server socket to non-blocking.");
+
+	set_tcp_no_delay(fd);
+
 	// Получаем размер буфера
 	int buffer_read_size	= BUFFER_READ_SIZE;
 	int buffer_write_size	= BUFFER_WRITE_SIZE;
