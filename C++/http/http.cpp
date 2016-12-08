@@ -517,6 +517,28 @@ void Http::modify(vector <char> &data){
 	}
 }
 /**
+ * Http::checkCharEnd Функция проверяет по массиву символов, достигнут ли конец запроса
+ * @param  buffer буфер с данными
+ * @param  size   размер буфера
+ * @param  chs    массив с символами завершающими запрос
+ * @return        результат проверки
+ */
+bool Http::checkCharEnd(const char * buffer, size_t size, vector <short> chs){
+	// Результат проверки
+	bool check = false;
+	// Выполняем реверс массива
+	reverse(chs.begin(), chs.end());
+	// Переходим по всему массиву
+	for(u_int i = 0; i < chs.size(); i++){
+		// Выполняем проверку завершающих символов
+		if((short) buffer[size - (i + 1)] == chs[i])
+			check = true;
+		else check = false;
+	}
+	// Выводим результат
+	return check;
+}
+/**
  * checkEnd Функция проверки завершения запроса
  * @param  buffer буфер с входящими данными
  * @param  size   размер входящих данных
@@ -551,11 +573,8 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
 			// Если конец строки найден
 			if(((size > 5) && (_query.length < size)) // 0\r\n\r\n
-			&& ((short) buffer[size - 1] == 10)
-			&& ((short) buffer[size - 2] == 13)
-			&& ((short) buffer[size - 3] == 10)
-			&& ((short) buffer[size - 4] == 13)
-			&& ((short) buffer[size - 5] == 48)){
+			&& (checkCharEnd(buffer, size, {48, 13, 10, 13, 10})
+			|| checkCharEnd(buffer, size, {48, 10, 10}))){
 				// Заполняем структуру данными
 				data.type = 5;
 				// Заполняем размеры
@@ -566,10 +585,8 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		} else if(!cc.empty() && (cc == "close")){
 			// Если конец строки найден
 			if(((size > 4) && (_query.length < size)) // \r\n\r\n
-			&& ((short) buffer[size - 1] == 10)
-			&& ((short) buffer[size - 2] == 13)
-			&& ((short) buffer[size - 3] == 10)
-			&& ((short) buffer[size - 4] == 13)){
+			&& (checkCharEnd(buffer, size, {13, 10, 13, 10})
+			|| checkCharEnd(buffer, size, {10, 10}))){
 				// Заполняем структуру данными
 				data.type = 3;
 				// Заполняем размеры

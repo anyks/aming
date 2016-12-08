@@ -322,7 +322,7 @@ evutil_socket_t create_app_socket(){
 	evutil_socket_t sock;
 	// Максимальное число клиентов
 	int maxpending = MAX_CLIENTS;
-	// Устанавливаем параметр SO_REUSEADDR
+	// Устанавливаем параметр
 	int reuseaddr = 1, tcpnodelay = 1;
 	// Структура для сервера
 	struct sockaddr_in echoserver;
@@ -402,9 +402,11 @@ evutil_socket_t create_app_socket(){
  * @param  port порт сервера
  * @return      файловый дескриптор (сокет)
  */
-evutil_socket_t create_server_socket(const char * host, int port){
+evutil_socket_t create_server_socket(const char * host, ev_uint16_t port){
 	// Сокет подключения
 	evutil_socket_t sock = -1;
+	// Буфер порта
+	char port_buf[6];
 	// Структура параметров подключения
 	struct addrinfo param;
 	// Указатель на результаты
@@ -415,13 +417,21 @@ evutil_socket_t create_server_socket(const char * host, int port){
 	param.ai_family = AF_UNSPEC;
 	// TCP stream-sockets
 	param.ai_socktype = SOCK_STREAM;
+	// We want a TCP socket
+	param.ai_protocol = IPPROTO_TCP;
+	// Only return addresses we can use.
+	param.ai_flags = EVUTIL_AI_ADDRCONFIG;
+	// Convert the port to decimal.
+	evutil_snprintf(port_buf, sizeof(port_buf), "%d", (int) port);
 	// Если формат подключения указан не верно то сообщаем об этом
-	if(getaddrinfo(host, to_string(port).c_str(), &param, &req) != 0){
+	if(evutil_getaddrinfo(host, port_buf, &param,  &req)){
 		// Выводим в консоль информацию
 		debug_message("Error in server address format!");
 		// Выходим
 		return -1;
 	}
+	// If there was no error, we should have at least one answer.
+	// assert(req);
 	// Создаем сокет, если сокет не создан то сообщаем об этом
 	if((sock = socket(req->ai_family, req->ai_socktype, req->ai_protocol)) < 0){
 		// Выводим в консоль информацию
@@ -429,26 +439,19 @@ evutil_socket_t create_server_socket(const char * host, int port){
 		// Выходим
 		return -1;
 	}
-	/*
-	// Устанавливаемое значение
-	int optval = 1;
-	// Устанавливаем TCP_NODELAY
-	if(setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0){
-		// Выводим в консоль информацию
-		debug_message("Cannot set TCP_NODELAY option on listen socket.");
-		// Выходим
-		return -1;
-	}
-	*/
+	// Если сокет не создан то выходим
+	if(sock < 0) return -1;
 	// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
 	if(connect(sock, req->ai_addr, req->ai_addrlen) < 0){
+		// Закрываем сокет
+		EVUTIL_CLOSESOCKET(sock);
 		// Выводим в консоль информацию
 		debug_message("Error in connecting to server!");
 		// Выходим
 		return -1;
 	}
 	// И освобождаем связанный список
-	freeaddrinfo(req);
+	evutil_freeaddrinfo(req);
 	// Выводим созданный нами сокет
 	return sock;
 }
@@ -901,6 +904,14 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 							http->fds.server = connect_server(&http);
 							// Если сокет существует
 							if(http->fds.server > -1){
+								// Если подключение постоянное
+								if(http->parser->isAlive()){
+									// Устанавливаем параметр
+									int tcpnodelay_client = 1, tcpnodelay_server = 1;
+									// Устанавливаем TCP_NODELAY
+									setsockopt(http->fds.client, IPPROTO_TCP, TCP_NODELAY, &tcpnodelay_client, sizeof(tcpnodelay_client));
+									setsockopt(http->fds.server, IPPROTO_TCP, TCP_NODELAY, &tcpnodelay_server, sizeof(tcpnodelay_server));
+								}
 								// Определяем порт, если это метод connect
 								if(http->parser->isConnect())
 									// Формируем ответ клиенту
@@ -956,7 +967,7 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	// Если сокет не создан тогда выходим
 	if(sock < 1) return;
 	// Устанавливаем неблокирующий режим для сокета
-	if(set_non_block(sock) < 0) debug_message("[-] Failed to set server socket to non-blocking.");
+	//if(set_non_block(sock) < 0) debug_message("[-] Failed to set server socket to non-blocking.");
 	// Получаем размер буфера
 	int buffer_read_size	= BUFFER_READ_SIZE;
 	int buffer_write_size	= BUFFER_WRITE_SIZE;

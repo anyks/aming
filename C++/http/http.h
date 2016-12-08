@@ -16,8 +16,8 @@ class Http {
 	private:
 		// Структура подержащая данные проверки, полной передачи данных
 		struct check_end {
-			u_short type = 0;
-			size_t begin = 0, end = 0;
+			u_short	type = 0;
+			size_t	begin = 0, end = 0;
 		};
 		// Структура подключения
 		struct connect {
@@ -124,26 +124,17 @@ class Http {
 				 * data Метод получения данных запроса
 				 * @return данные запроса
 				 */
-				const char * data(){
-					// Выводим результат
-					return (!_result.empty() ? _result.data() : "");
-				}
+				const char * data(){return (!_result.empty() ? _result.data() : "");}
 				/**
 				 * size Метод получения размера
 				 * @return данные размера
 				 */
-				size_t size(){
-					// Выводим результат
-					return _result.size();
-				}
+				size_t size(){return _result.size();}
 				/**
 				 * empty Метод определяет наличие данных
 				 * @return проверка о наличи данных
 				 */
-				bool empty(){
-					// Выводим результат
-					return _result.empty();
-				}
+				bool empty(){return _result.empty();}
 		};
 		// Определяем новые типы данных
 		typedef struct http_data HttpData;
@@ -290,6 +281,14 @@ class Http {
 		 * @return      результат проверки
 		 */
 		bool checkPort(string port);
+		/**
+		 * Http::checkCharEnd Функция проверяет по массиву символов, достигнут ли конец запроса
+		 * @param  buffer буфер с данными
+		 * @param  size   размер буфера
+		 * @param  chs    массив с символами завершающими запрос
+		 * @return        результат проверки
+		 */
+		bool checkCharEnd(const char * buffer, size_t size, vector <short> chs);
 		/**
 		 * getConnection Функция извлечения данных подключения
 		 * @param  str строка запроса
