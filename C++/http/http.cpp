@@ -533,7 +533,10 @@ bool Http::checkCharEnd(const char * buffer, size_t size, vector <short> chs){
 		// Выполняем проверку завершающих символов
 		if((short) buffer[size - (i + 1)] == chs[i])
 			check = true;
-		else check = false;
+		else {
+			check = false;
+			break;
+		}
 	}
 	// Выводим результат
 	return check;

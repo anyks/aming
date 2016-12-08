@@ -1,14 +1,14 @@
 // sudo lsof -i | grep -E LISTEN
-// otool -L http9
+// otool -L http10
 // MacOS X
-// g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp -I/usr/local/include -levent = dynamic
-// g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a = static
+// g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http10 http.cpp base64.cpp proxy10.cpp -I/usr/local/include -levent = dynamic
+// g++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http10 http.cpp base64.cpp proxy10.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a = static
 // Linux
-// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp -levent = dynamic
-// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a = static
-// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http10 http.cpp base64.cpp proxy10.cpp -levent = dynamic
+// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http10 http.cpp base64.cpp proxy10.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a = static
+// g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http10 http.cpp base64.cpp proxy10.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http9 http.cpp base64.cpp proxy9.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http10 http.cpp base64.cpp proxy10.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // tcpdump -i vtnet0 -w tcpdump.out -s 1520 port 5555
 // tcpdump -n -v 'tcp[tcpflags] & (tcp-fin| tcp-rst) != 0' | grep 46.39.231.200
 
@@ -40,6 +40,10 @@
 #include <arpa/inet.h>
 #include <event2/event.h>
 #include <event2/event_struct.h>
+#include <event2/listener.h>
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+
 #include "http.h"
 
 // Устанавливаем область видимости
@@ -679,6 +683,9 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 					// Добавляем событие
 					event_add(http->evs.client, &timeout_client);
 					event_add(http->evs.server, &timeout_server);
+					// Устанавливаем приоритеты
+					event_priority_set(http->evs.client, 0);
+					event_priority_set(http->evs.server, 1);
 				}
 			} break;
 		}
@@ -1021,6 +1028,88 @@ void on_http_connect(evutil_socket_t fd, short event, void * arg){
 	// Выходим
 	return;
 }
+
+static void accept_conn_cb(struct evconnlistener * listener, evutil_socket_t fd, struct sockaddr * address, int socklen, void *ctx){
+	// We got a new connection! Set up a bufferevent for it.
+	struct event_base * base = evconnlistener_get_base(listener);
+	// Время ожидания следующего запроса
+	float ttl = TTL_CONNECT;
+	// Устанавливаем таймаут
+	if(ttl > 0) sleep(ttl);
+	// Структуры получения данных сокета
+	socklen_t	len = 0;
+	sockaddr_in	client_addr;
+	/*
+	// Accept incoming connection
+	evutil_socket_t sock = accept(fd, reinterpret_cast <sockaddr *> (&client_addr), &len);
+	// Если сокет не создан тогда выходим
+	if(sock < 1) return;
+	*/
+	// Устанавливаем неблокирующий режим для сокета
+	//if(set_non_block(sock) < 0) debug_message("[-] Failed to set server socket to non-blocking.");
+	// Получаем размер буфера
+	int buffer_read_size	= BUFFER_READ_SIZE;
+	int buffer_write_size	= BUFFER_WRITE_SIZE;
+	// Определяем размер массива опции
+	socklen_t read_optlen	= sizeof(buffer_read_size);
+	socklen_t write_optlen	= sizeof(buffer_write_size);
+	// Устанавливаем размер буфера для сокета клиента и сервера
+	if((setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &buffer_read_size, read_optlen) < 0)
+	|| (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &buffer_write_size, write_optlen) < 0)){
+		// Выводим в консоль информацию
+		debug_message("Set buffer wrong!!!!");
+		// Выходим
+		return;
+	}
+	// Считываем установленный размер буфера
+	if((getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &buffer_read_size, &read_optlen) < 0)
+	|| (getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buffer_write_size, &write_optlen) < 0)){
+		// Выводим в консоль информацию
+		debug_message("Get buffer wrong!!!!");
+		// Выходим
+		return;
+	}
+	// Если размер буфера не может быть такой установлен для записывающей операции
+	if(buffer_read_size < BUFFER_READ_SIZE)
+		// Выводим в консоль сообщение
+		debug_message(string("Wrong buffer, you mast set buffer read size = ") + to_string(buffer_read_size));
+	// Если размер буфера не может быть такой установлен для считывающей операции
+	if(buffer_write_size < BUFFER_WRITE_SIZE)
+		// Выводим в консоль сообщение
+		debug_message(string("Wrong buffer, you mast set buffer write size = ") + to_string(buffer_write_size));
+	// Создаем новый объект подключения
+	BufferHttpProxy * http = new BufferHttpProxy(nameSystem);
+	// Запоминаем базу событий
+	http->base = base;
+	// Запоминаем сокет подключения
+	http->fds.client = fd;
+	// Добавляем событие в базу
+	http->evs.client = event_new(base, http->fds.client, EV_TIMEOUT | EV_READ | EV_PERSIST, on_http_request, http);
+	// Ожидаем подключение 3 секунд и 0 микросекунд
+	struct timeval timeout = KEEP_ALIVE_TIMEOUT;
+	// Активируем событие
+	event_add(http->evs.client, &timeout);
+	// Выходим
+	return;
+
+	/*
+	struct bufferevent * bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
+
+	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, NULL);
+
+	bufferevent_enable(bev, EV_READ | EV_WRITE);
+	*/
+}
+
+static void accept_error_cb(struct evconnlistener * listener, void * ctx){
+		struct event_base *base = evconnlistener_get_base(listener);
+		int err = EVUTIL_SOCKET_ERROR();
+		fprintf(stderr, "Got an error %d (%s) on the listener. Shutting down.\n", err, evutil_socket_error_to_string(err));
+
+		event_base_loopexit(base, NULL);
+}
+
+
 /**
  * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
  * @param  maxfd максимальное количество файловых дескрипторов
@@ -1073,7 +1162,35 @@ int main(int argc, char * argv[]){
 	// Записываем пид процесса в файл
 	create_pid(sid);
 	// Получаем сокет
-	evutil_socket_t socket = create_app_socket();
+	//evutil_socket_t socket = create_app_socket();
+
+	// Создаем новую базу
+	struct event_base * base = event_base_new();
+	struct sockaddr_in sin;
+	/* Clear the sockaddr before using it, in case there are extra
+	* platform-specific fields that can mess us up. */
+	memset(&sin, 0, sizeof(sin));
+	// This is an INET address
+	sin.sin_family = AF_INET;
+	// Listen on 0.0.0.0
+	sin.sin_addr.s_addr = htonl(0);
+	// Listen on the given port.
+	sin.sin_port = htons(SERVER_PORT);
+
+	// Устанавливаем сигнал установки подключения
+	signal(SIGPIPE, sigpipe_handler);	// Сигнал обрыва соединения во время записи
+	signal(SIGCHLD, sigchld_handler);	// Дочерний процесс убит
+	signal(SIGTERM, sigterm_handler);	// Процесс убит
+	signal(SIGHUP, sighup_handler);		// Терминал потерял связь
+	
+	struct evconnlistener * listener = evconnlistener_new_bind(base, accept_conn_cb, NULL, LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE | LEV_OPT_THREADSAFE | LEV_OPT_LEAVE_SOCKETS_BLOCKING, -1, (struct sockaddr *) &sin, sizeof(sin));
+	if(!listener) {
+		perror("Couldn't create listener");
+		return 1;
+	}
+	evconnlistener_set_error_cb(listener, accept_error_cb);
+
+	/*
 	// Проверяем все ли удачно
 	if(socket == -1){
 		// Выводим в консоль информацию
@@ -1081,11 +1198,16 @@ int main(int argc, char * argv[]){
 		// Выходим
 		return 1;
 	}
-	// Устанавливаем сигнал установки подключения
-	signal(SIGPIPE, sigpipe_handler);	// Сигнал обрыва соединения во время записи
-	signal(SIGCHLD, sigchld_handler);	// Дочерний процесс убит
-	signal(SIGTERM, sigterm_handler);	// Процесс убит
-	signal(SIGHUP, sighup_handler);		// Терминал потерял связь
+	*/
+
+	// Активируем перебор базы событий
+	event_base_loop(base, EVLOOP_NO_EXIT_ON_EMPTY);
+	// Удаляем базу
+	event_base_free(base);
+
+	
+	
+	/*
 	// Ключ по которому передаются данные между процессов
 	key_t msgkey = ftok(".", getpid());
 	// Получаем внешний идентификатор процесса
@@ -1115,8 +1237,6 @@ int main(int argc, char * argv[]){
 				msgrcv(qid, &fork_buf, lenfork_buf, 1, 0);
 				// Выводим в консоль информацию
 				debug_message(string("Start service: pid = ") + to_string(getpid()) + string(", socket = ") + to_string(fork_buf.socket));
-				// Создаем новую базу
-				struct event_base * base = event_base_new();
 				// Добавляем событие в базу
 				struct event * evnt = event_new(base, fork_buf.socket, EV_READ | EV_PERSIST, on_http_connect, base);
 				// Активируем событие
@@ -1143,6 +1263,7 @@ int main(int argc, char * argv[]){
 	}
 	// Освобождаем процесс
 	msgctl(qid, IPC_RMID, 0);
+	*/
 	// Выходим
 	remove_pid(EXIT_SUCCESS);
 	// Выходим
