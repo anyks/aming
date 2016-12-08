@@ -126,6 +126,29 @@ class BufferHttpProxy {
 		 * ~BufferHttpProxy Деструктор
 		 */
 		~BufferHttpProxy(){
+			// Удаляем события для сервера
+			if(evs.server && evs.server->ev_base){
+				// Удаляем таймеры
+				// event_remove_timer(evs.server);
+				// Удаляем событие
+				event_del(evs.server);
+				// Очищаем память
+				event_free(evs.server);
+			// Проверяем альтернативные варианты
+			} else if(evs.server && (evs.server->ev_base == NULL)) delete evs.server;
+			// Удаляем события для клиента
+			if(evs.client && evs.client->ev_base){
+				// Удаляем таймеры
+				// event_remove_timer(evs.client);
+				// Удаляем событие
+				event_del(evs.client);
+				// Очищаем память
+				event_free(evs.client);
+			// Проверяем альтернативные варианты
+			} else if(evs.client && (evs.client->ev_base == NULL)) delete evs.client;
+			// Удаляем указатели
+			evs.server = NULL;
+			evs.client = NULL;
 			// Отключаем от сервиса (disconnect)
 			if(fds.server >= 0){
 				shutdown(fds.server, SHUT_RDWR);
@@ -137,14 +160,6 @@ class BufferHttpProxy {
 				close(fds.client);
 				fds.client = -1;
 			}
-			// Удаляем события
-			if(evs.server && evs.server->ev_base) event_free(evs.server);
-			else if(evs.server && (evs.server->ev_base == NULL)) delete evs.server;
-			if(evs.client && evs.client->ev_base) event_free(evs.client);
-			else if(evs.client && (evs.client->ev_base == NULL)) delete evs.client;
-			// Удаляем указатели
-			evs.server = NULL;
-			evs.client = NULL;
 			// Если парсер не удален
 			if(parser != NULL){
 				// Удаляем парсер
@@ -279,6 +294,10 @@ void close_socket(evutil_socket_t &sock){
 void close_event(struct event ** ev){
 	// Очищаем событие
 	if(*ev != NULL){
+		// Удаляем таймеры
+		// event_remove_timer(*ev);
+		// Удаляем событие
+		event_del(*ev);
 		// Очищаем событие
 		event_free(*ev);
 		// Обнуляем указатель события
