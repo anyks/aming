@@ -616,7 +616,7 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если это сервер то отключаемся от сервера
 				else {
 					// Выводим в консоль информацию
-					debug_message("Timeout https connect!!!!");
+					debug_message(string("Timeout https connect!!!! socket = ") + to_string(fd));
 					// Закрываем соединение
 					free_data(&http);
 				}
@@ -633,7 +633,7 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				if(len <= 0){
 					//http://www.workers.com.br/manuais/53/html/tcp53/mu/mu-7.htm
 					// Выводим в консоль информацию
-					if(errno) debug_message(string("Error in read method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server "));
+					if(errno) debug_message(string("Error in read method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server ")  + string("socket = ") + to_string(fd));
 					// Удаляем объект с данными
 					free_data(&http);
 				// Если данные получены удачно
@@ -664,7 +664,7 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				// Если данные не отправлены то выходим
 				if(len <= 0){
 					// Выводим в консоль информацию
-					if(errno) debug_message(string("Error in write method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server "));
+					if(errno) debug_message(string("Error in write method = ") + to_string(errno) + string(fd != http->fds.server ? " client " : " server ")  + string("socket = ") + to_string(fd));
 					// Удаляем объект с данными
 					free_data(&http);
 				// Если данные отправлены удачно
@@ -679,6 +679,9 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 					// Добавляем событие
 					event_add(http->evs.client, &timeout_client);
 					event_add(http->evs.server, &timeout_server);
+					// Устанавливаем приоритеты
+					event_priority_set(http->evs.server, 0);
+					event_priority_set(http->evs.client, 1);
 				}
 			} break;
 		}
@@ -704,7 +707,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 			// Если это таймаут
 			case 1: {
 				// Выводим в консоль информацию
-				debug_message("Timeout server!!!!");
+				debug_message(string("Timeout server!!!! socket = ") + to_string(fd));
 				// Сообщаем что сервер отключился по таймауту
 				free_data(&http);
 			} break;
@@ -760,7 +763,7 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 						// Если произошла ошибка
 						case -1: {
 							// Выводим в консоль информацию
-							debug_message("Client disconnect, broken write!!!!");
+							debug_message(string("Client disconnect, broken write!!!! socket = ") + to_string(fd));
 							// Выполняем очистку подключения
 							free_data(&http);
 						} break;
@@ -811,7 +814,7 @@ void on_http_write(evutil_socket_t fd, short event, void * arg){
 			// Если произошла ошибка
 			case -1: {
 				// Выводим в консоль информацию
-				debug_message("Server disconnect, broken write!!!!");
+				debug_message(string("Server disconnect, broken write!!!! socket = ") + to_string(fd));
 				// Выполняем очистку подключения
 				free_data(&http);
 			} break;
@@ -881,16 +884,16 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 				if(len <= 0) free_data(&http);
 				// Если данные считаны нормально тогда продолжаем
 				else {
-					// Скидываем количество отправляемых данных
-					http->request.offset = 0;
-					// Очищаем объект ответа
-					http->response.clear();
 					// Склеиваем полученные данные
 					appendToBuffer(http->request.data, len, buffer);
 					// Выполняем парсинг полученных данных
 					if(!http->request.data.empty() && http->parse()){
 						// Закрываем события
 						close_events(&http);
+						// Скидываем количество отправляемых данных
+						http->request.offset = 0;
+						// Очищаем объект ответа
+						http->response.clear();
 						// Очищаем буфер данных
 						http->request.data.clear();
 						// Если авторизация не прошла
