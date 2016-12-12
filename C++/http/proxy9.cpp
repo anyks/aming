@@ -55,7 +55,7 @@ using namespace std;
 // Максимальное количество клиентов
 #define MAX_CLIENTS 100
 // Максимальный размер буфера
-#define BUFFER_WRITE_SIZE 512
+#define BUFFER_WRITE_SIZE 2048
 // Максимальный размер буфера для чтения http данных
 #define BUFFER_READ_SIZE 4096
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
@@ -64,8 +64,10 @@ using namespace std;
 #define MAX_WORKERS 8
 // Порт сервера
 #define SERVER_PORT 5555
-// Таймаут ожидания для http 1.1
-#define READ_TIMEOUT {15, 0}
+// Таймаут времени на чтение
+#define READ_TIMEOUT {12, 0}
+// Таймаут времени на запись
+#define WRITE_TIMEOUT {15, 0}
 // Таймаут ожидания коннекта
 #define KEEP_ALIVE_TIMEOUT {5, 0}
 
@@ -326,6 +328,8 @@ void close_events(BufferHttpProxy ** arg){
 void free_data(BufferHttpProxy ** http){
 	// Если данные еще не удалены
 	if(*http != NULL){
+		// Выводим сообщение кто отключился
+		debug_message(string("disconnect server = ") + to_string((*http)->fds.server) + string(" client = ") + to_string((*http)->fds.client) + string(" pid = ") + to_string(getpid()));
 		// Удаляем объект данных
 		delete *http;
 		// Присваиваем пустой адрес
@@ -514,11 +518,18 @@ evutil_socket_t connect_server(BufferHttpProxy ** arg){
 			// Если данные адреса найдены
 			if(!http->server.host.empty() && http->server.port){
 				// Выводим в консоль данные о подключении
-				if(http->fds.server < 0) debug_message(string("connect to host = ") + http->parser->getHost() + " [" + http->server.host + string(":") + to_string(http->server.port) + "]" + string(" sock = ") + to_string(http->fds.client));
-				// Выполняем подключение к серверу
-				if(http->fds.server < 0) sock = create_server_socket(http->server.host.c_str(), http->server.port);
+				if(http->fds.server < 0){
+					// Выводим в консоль сообщение о новом коннекте
+					debug_message(string("connect to host = ") + http->parser->getHost() + " [" + http->server.host + string(":") + to_string(http->server.port) + "]" + string(" path = ") + http->parser->getPath() + string(" sock = ") + to_string(http->fds.client) + string(" pid = ") + to_string(getpid()));
+					// Выполняем подключение к серверу
+					sock = create_server_socket(http->server.host.c_str(), http->server.port);
 				// Иначе возвращаем сокет самого сервера
-				else sock = http->fds.server;
+				} else {
+					// Выводим в консоль сообщение о новом коннекте
+					debug_message(string("server is connect host = ") + http->parser->getHost() + " [" + http->server.host + string(":") + to_string(http->server.port) + "]" + string(" path = ") + http->parser->getPath() + string(" sock = ") + to_string(http->fds.client) + string(" pid = ") + to_string(getpid()));
+					// Запоминаем сокет уже подключенный сервера
+					sock = http->fds.server;
+				}
 			}
 		}
 	}
@@ -659,18 +670,20 @@ void do_https_proxy(evutil_socket_t fd, short event, void * arg){
 				} else {
 					// Запоминаем размер буфера
 					http->answer.len = len;
+					// Устанавливаем таймаут ожидания запроса в 3 секунды
+					struct timeval timeout = WRITE_TIMEOUT;
 					// Если это клиент
 					if(fd != http->fds.server){
 						// Устанавливаем событие
 						http->evs.server = event_new(http->base, http->fds.server, EV_WRITE, do_https_proxy, http);
 						// Добавляем событие
-						event_add(http->evs.server, NULL);
+						event_add(http->evs.server, &timeout);
 					// Если это сервер
 					} else {
 						// Устанавливаем событие
 						http->evs.client = event_new(http->base, http->fds.client, EV_WRITE, do_https_proxy, http);
 						// Добавляем событие
-						event_add(http->evs.client, NULL);
+						event_add(http->evs.client, &timeout);
 					}
 				}
 			} break;
@@ -767,8 +780,10 @@ void do_http_proxy(evutil_socket_t fd, short event, void * arg){
 					http->parser->modify(http->request.data);
 					// Добавляем событие в базу
 					http->evs.client = event_new(http->base, http->fds.client, EV_WRITE | EV_PERSIST, do_http_proxy, http);
+					// Устанавливаем таймаут ожидания запроса в 3 секунды
+					struct timeval timeout = WRITE_TIMEOUT;
 					// Активируем событие
-					event_add(http->evs.client, NULL);
+					event_add(http->evs.client, &timeout);
 				}
 			} break;
 			// Если это запись
@@ -857,6 +872,10 @@ void on_http_write(evutil_socket_t fd, short event, void * arg){
 					if(http->response.code == 200){
 						// Если это защищенное подключение
 						if(http->parser->isConnect()){
+							// Устанавливаем неблокирующий режим для сокета
+							if((set_non_block(http->fds.client) < 0)
+							|| (set_non_block(http->fds.server) < 0))
+								debug_message("[-] Failed to set server socket to non-blocking.");
 							// Создаем новое событие для клиента
 							http->evs.client = event_new(http->base, http->fds.client, EV_TIMEOUT | EV_READ, do_https_proxy, http);
 							// Устанавливаем таймаут ожидания запроса в 3 секунды
@@ -915,6 +934,8 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 						http->response.clear();
 						// Очищаем буфер данных
 						http->request.data.clear();
+						// Устанавливаем таймаут ожидания запроса в 3 секунды
+						struct timeval timeout = WRITE_TIMEOUT;
 						// Если авторизация не прошла
 						if(!http->auth) http->auth = check_auth(http->parser);
 						// Если нужно запросить пароль
@@ -953,7 +974,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 									// Создаем новое событие для сервера
 									http->evs.server = event_new(http->base, http->fds.server, EV_WRITE | EV_PERSIST, on_http_write, http);
 									// Активируем события
-									event_add(http->evs.server, NULL);
+									event_add(http->evs.server, &timeout);
 									// Выходим
 									return;
 								}
@@ -965,7 +986,7 @@ void on_http_request(evutil_socket_t fd, short event, void * arg){
 							// Создаем новое событие для клиента
 							http->evs.client = event_new(http->base, fd, EV_WRITE | EV_PERSIST, on_http_write, http);
 							// Активируем события
-							event_add(http->evs.client, NULL);
+							event_add(http->evs.client, &timeout);
 						// Очищаем память
 						} else free_data(&http);
 					}
