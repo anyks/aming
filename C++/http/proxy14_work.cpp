@@ -566,7 +566,8 @@ static void read_client_cb(struct bufferevent * bev, void * ctx){
 				// Ответ готов
 				if(!http->response.empty()){
 					// Отправляем клиенту сообщение
-					if(bufferevent_write(bev, http->response.data(), http->response.size()) < 0) free_data(&http);
+					if((bufferevent_write(bev, http->response.data(), http->response.size()) < 0)
+					|| (http->response.code != 200)) free_data(&http);
 				// Отключаемся
 				} else free_data(&http);
 			}
