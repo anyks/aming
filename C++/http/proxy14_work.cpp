@@ -391,9 +391,9 @@ bool connect_server(BufferHttpProxy ** arg){
 				// Устанавливаем коллбеки
 				bufferevent_setcb(http->events.server, read_server_cb, NULL, event_cb, http);
 				// Активируем буферы событий на чтение и запись
-				bufferevent_enable(http->events.server, EV_READ);
+				bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
 				// Очищаем буферы событий при завершении работы
-				bufferevent_flush(http->events.server, EV_READ, BEV_FINISHED);
+				bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
 				// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
 				if(bufferevent_socket_connect(http->events.server, req->ai_addr, req->ai_addrlen) < 0){
 					// Выводим в консоль информацию
@@ -602,9 +602,9 @@ static void accept_connect(struct evconnlistener * listener, evutil_socket_t fd,
 	// Устанавливаем коллбеки
 	bufferevent_setcb(http->events.client, read_client_cb, NULL, event_cb, http);
 	// Активируем буферы событий на чтение и запись
-	bufferevent_enable(http->events.client, EV_READ);
+	bufferevent_enable(http->events.client, EV_READ | EV_WRITE);
 	// Очищаем буферы событий при завершении работы
-	bufferevent_flush(http->events.client, EV_READ, BEV_FINISHED);
+	bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
 	// Выходим
 	return;
 }
