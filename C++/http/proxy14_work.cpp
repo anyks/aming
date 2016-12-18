@@ -8,7 +8,7 @@
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http14 http.cpp base64.cpp proxy14.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a = static
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o http14 http.cpp base64.cpp proxy14.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http14 http.cpp base64.cpp proxy14.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o http14 http.cpp base64.cpp proxy14_work.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // tcpdump -i vtnet0 -w tcpdump.out -s 1520 port 5555
 // tcpdump -n -v 'tcp[tcpflags] & (tcp-fin| tcp-rst) != 0' | grep 46.39.231.200
 
@@ -71,11 +71,11 @@ using namespace std;
 // Порт сервера
 #define SERVER_PORT 5555
 // Таймаут времени на чтение
-#define READ_TIMEOUT {12, 0}
+#define READ_TIMEOUT {15, 0}
 // Таймаут времени на запись
-#define WRITE_TIMEOUT {15, 0}
+#define WRITE_TIMEOUT {10, 0}
 // Таймаут ожидания коннекта
-#define KEEP_ALIVE_TIMEOUT {10, 0}
+#define KEEP_ALIVE_TIMEOUT {30, 0}
 
 // Сервера
 map <string, evutil_socket_t> servers;
@@ -338,6 +338,8 @@ bool connect_server(BufferHttpProxy ** arg){
 			if((http->events.server != NULL)
 			&& ((http->server.host != ip)
 			|| (http->server.port != port))) http->free_server();
+			// Получаем текущий сокет клиента
+			evutil_socket_t fd = bufferevent_getfd(http->events.client);
 			// Если сервер еще не подключен
 			if(http->events.server == NULL){
 				// Запоминаем хост и порт сервера
@@ -413,11 +415,16 @@ bool connect_server(BufferHttpProxy ** arg){
 					set_tcpnodelay(client_fd);
 				}
 				// Выводим в консоль сообщение о новом коннекте
-				printf("connect to host = %s [%s:%d] path = %s\n", http->parser->getHost().c_str(), http->server.host.c_str(), http->server.port, http->parser->getPath().c_str());
+				printf("connect to host = %s [%s:%d] path = %s, socket = %d\n", http->parser->getHost().c_str(), http->server.host.c_str(), http->server.port, http->parser->getPath().c_str(), fd);
 				// Сообщаем что все удачно
 				return true;
 			// Если сервер уже подключен, сообщаем что все удачно
-			} else return true;
+			} else {
+				// Выводим в консоль сообщение о новом коннекте
+				printf("last connect to host = %s [%s:%d] path = %s, socket = %d\n", http->parser->getHost().c_str(), http->server.host.c_str(), http->server.port, http->parser->getPath().c_str(), fd);
+				// Сообщаем что все удачно
+				return true;
+			}
 		// Очищаем буфер, если он существует
 		} else http->free_server();
 	}
@@ -444,7 +451,7 @@ static void event_cb(struct bufferevent * bev, short events, void * ctx){
 		// Если подключение удачное
 		if(events & BEV_EVENT_CONNECTED){
 			// Выводим сообщение в консоль
-			printf("Connect %s okay.\n", subject.c_str());
+			printf("Connect %s okay., socket = %d\n", subject.c_str(), current_fd);
 		// Если это ошибка или завершение работы
 		} else if(events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
 			// Если это ошибка
@@ -455,7 +462,7 @@ static void event_cb(struct bufferevent * bev, short events, void * ctx){
 				if(err) printf("DNS error: %s\n", evutil_gai_strerror(err));
 			}
 			// Сообщаем что произошло отключение
-			printf("Closing %s\n", subject.c_str());
+			printf("Closing %s, socket = %d\n", subject.c_str(), current_fd);
 			// Отключаемся
 			free_data(&http);
 		}
@@ -665,7 +672,7 @@ int main(int argc, char * argv[]){
 	struct evconnlistener * listener = evconnlistener_new_bind(
 		base, accept_connect, NULL,
 		LEV_OPT_REUSEABLE |
-		LEV_OPT_THREADSAFE |
+		//LEV_OPT_THREADSAFE |
 		LEV_OPT_CLOSE_ON_FREE |
 		LEV_OPT_LEAVE_SOCKETS_BLOCKING,
 		MAX_CLIENTS, (struct sockaddr *) &sin, sizeof(sin)
