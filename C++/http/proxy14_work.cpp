@@ -674,8 +674,8 @@ int main(int argc, char * argv[]){
 		base, accept_connect, NULL,
 		LEV_OPT_REUSEABLE |
 		//LEV_OPT_THREADSAFE |
-		LEV_OPT_CLOSE_ON_FREE,// |
-		//LEV_OPT_LEAVE_SOCKETS_BLOCKING,
+		LEV_OPT_CLOSE_ON_FREE |
+		LEV_OPT_LEAVE_SOCKETS_BLOCKING,
 		MAX_CLIENTS, (struct sockaddr *) &sin, sizeof(sin)
 	);
 	// Если подключение не удалось
