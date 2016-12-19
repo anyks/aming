@@ -463,8 +463,8 @@ static void event_cb(struct bufferevent * bev, short events, void * ctx){
 			}
 			// Сообщаем что произошло отключение
 			printf("Closing %s, socket = %d\n", subject.c_str(), current_fd);
-			// Отключаемся
-			free_data(&http);
+			// Отключаемся если сработал таймаут или подключение не должно жить
+			if((events & BEV_EVENT_TIMEOUT) || !http->parser->isAlive()) free_data(&http);
 		}
 	// Отключаемся
 	} else bufferevent_free(bev);
@@ -674,8 +674,8 @@ int main(int argc, char * argv[]){
 		base, accept_connect, NULL,
 		LEV_OPT_REUSEABLE |
 		//LEV_OPT_THREADSAFE |
-		LEV_OPT_CLOSE_ON_FREE |
-		LEV_OPT_LEAVE_SOCKETS_BLOCKING,
+		LEV_OPT_CLOSE_ON_FREE,// |
+		//LEV_OPT_LEAVE_SOCKETS_BLOCKING,
 		MAX_CLIENTS, (struct sockaddr *) &sin, sizeof(sin)
 	);
 	// Если подключение не удалось
