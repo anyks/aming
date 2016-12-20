@@ -28,26 +28,26 @@
 #include <stdlib.h>
 #include <iostream>
 #include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/msg.h>
-#include <sys/stat.h>
-#include <sys/resource.h>
+//#include <unistd.h>
+//#include <fcntl.h>
+//#include <sys/msg.h>
+//#include <sys/stat.h>
+//#include <sys/resource.h>
 #include <sys/wait.h>
-#include <sys/socket.h>
+//#include <sys/socket.h>
 #include <sys/signal.h>
-#include <netinet/in.h>
+//#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include <event2/event.h>
-#include <event2/event_struct.h>
+//#include <event2/event.h>
+//#include <event2/event_struct.h>
 #include <event2/listener.h>
-#include <event2/bufferevent.h>
 #include <event2/buffer.h>
-#include <event2/util.h>
-#include <event2/dns.h>
+#include <event2/bufferevent.h>
+//#include <event2/util.h>
+//#include <event2/dns.h>
 //#include <event2/visibility.h>
-#include <event2/event-config.h>
+//#include <event2/event-config.h>
 #include "http.h"
 
 // Устанавливаем область видимости
@@ -66,8 +66,6 @@ using namespace std;
 #define BUFFER_READ_SIZE 4096
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
 #define MAX_SOCKETS 1024
-// Максимальное количество воркеров
-#define MAX_WORKERS 1
 // Порт сервера
 #define SERVER_PORT 5555
 // Таймаут времени на чтение
@@ -76,9 +74,6 @@ using namespace std;
 #define WRITE_TIMEOUT {10, 0}
 // Таймаут ожидания коннекта
 #define KEEP_ALIVE_TIMEOUT {30, 0}
-
-// Сервера
-map <string, evutil_socket_t> servers;
 
 /**
  * BufferHttpProxy Класс для работы с данными прокси сервера
@@ -256,13 +251,13 @@ int set_buffer_size(evutil_socket_t fd, int read_size, int write_size){
  * free_data Функция очистки памяти для http прокси
  * @param arg объект для очистки
  */
-void free_data(BufferHttpProxy ** http){
+void free_data(BufferHttpProxy ** arg){
 	// Если данные еще не удалены
-	if(*http != NULL){
+	if(*arg != NULL){
 		// Удаляем объект данных
-		delete *http;
+		delete *arg;
 		// Присваиваем пустой адрес
-		*http = NULL;
+		*arg = NULL;
 	}
 }
 /**
@@ -270,14 +265,16 @@ void free_data(BufferHttpProxy ** http){
  * @param  http объект в котором содержится username и password
  * @return      результат проверки подлинности
  */
-bool check_auth(Http * &http){
+bool check_auth(BufferHttpProxy ** arg){
+	// Получаем объект подключения
+	BufferHttpProxy * http = *arg;
 	// Логин
 	const char * username = "zdD786KeuS";
 	// Проль
 	const char * password = "k.frolovv@gmail.com";
 	// Проверяем логин и пароль
-	if(!strcmp(http->getLogin().c_str(), username)
-	&& !strcmp(http->getPassword().c_str(), password)) return true;
+	if(!strcmp(http->parser->getLogin().c_str(), username)
+	&& !strcmp(http->parser->getPassword().c_str(), password)) return true;
 	else return false;
 }
 /**
@@ -531,7 +528,7 @@ static void read_client_cb(struct bufferevent * bev, void * ctx){
 				// Очищаем объект ответа
 				http->response.clear();
 				// Если авторизация не прошла
-				if(!http->auth) http->auth = check_auth(http->parser);
+				if(!http->auth) http->auth = check_auth(&http);
 				// Если нужно запросить пароль
 				if(!http->auth && (!http->parser->getLogin().length()
 				|| !http->parser->getPassword().length())){
@@ -690,9 +687,9 @@ int main(int argc, char * argv[]){
 	// Устанавливаем неблокирующий режим
 	set_tcpnodelay(socket);
 	// Размер буфера на чтение
-	int buffer_read_size = ((MAX_CLIENTS > 0 ? MAX_CLIENTS : 1) * BUFFER_READ_SIZE * MAX_WORKERS);
+	int buffer_read_size = ((MAX_CLIENTS > 0 ? MAX_CLIENTS : 1) * BUFFER_READ_SIZE);
 	// Размер буфера на запись
-	int buffer_write_size = ((MAX_CLIENTS > 0 ? MAX_CLIENTS : 1) * BUFFER_WRITE_SIZE * MAX_WORKERS);
+	int buffer_write_size = ((MAX_CLIENTS > 0 ? MAX_CLIENTS : 1) * BUFFER_WRITE_SIZE);
 	// Устанавливаем размеры буферов
 	set_buffer_size(socket, buffer_read_size, buffer_write_size);
 	// Устанавливаем обработчик на получение ошибок
