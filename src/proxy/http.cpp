@@ -288,14 +288,19 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 			}
 			// Сообщаем что произошло отключение
 			printf("Closing %s, socket = %d\n", subject.c_str(), current_fd);
-			// Отключаемся если сработал таймаут или подключение не должно жить
-			if((events & BEV_EVENT_TIMEOUT) || !http->parser->isAlive()) free_http(&http);
-			// Если это не таймаут а постоянное подключение и это клиент
-			else if(http->parser->isAlive() && (subject == "client")){
-				// Устанавливаем таймаут ожидания результата
-				struct timeval tread = {http->keepalive_timeout, 0};
-				// Устанавливаем таймауты
-				bufferevent_set_timeouts(bev, &tread, NULL);
+			// Если это код не разрешающий коннект
+			if(http->response.code != 200) free_http(&http);
+			// Если это разрешенный запрос
+			else {
+				// Отключаемся если сработал таймаут или подключение не должно жить
+				if((events & BEV_EVENT_TIMEOUT) || !http->parser->isAlive()) free_http(&http);
+				// Если это не таймаут а постоянное подключение и это клиент
+				else if(http->parser->isAlive() && (subject == "client")){
+					// Устанавливаем таймаут ожидания результата
+					struct timeval tread = {http->keepalive_timeout, 0};
+					// Устанавливаем таймауты
+					bufferevent_set_timeouts(bev, &tread, NULL);
+				}
 			}
 		}
 	// Отключаемся
@@ -379,8 +384,8 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 				// Если авторизация не прошла
 				if(!http->auth) http->auth = check_auth(http);
 				// Если нужно запросить пароль
-				if(!http->auth && (!http->parser->getLogin().length()
-				|| !http->parser->getPassword().length())){
+				if(!http->auth && (http->parser->getLogin().empty()
+				|| http->parser->getPassword().empty())){
 					// Формируем ответ клиенту
 					http->response = http->parser->requiredAuth();
 				// Сообщаем что авторизация не удачная
@@ -417,15 +422,17 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 				}
 				// Ответ готов
 				if(!http->response.empty()){
-					// Устанавливаем таймаут ожидания результата
-					struct timeval tread = {http->keepalive_timeout, 0};
-					// Устанавливаем таймаут записи результата
-					struct timeval twrite = {http->write_timeout, 0};
-					// Устанавливаем таймауты
-					bufferevent_set_timeouts(bev, &tread, &twrite);
+					// Если это код разрешающий коннект
+					if(http->response.code == 200){
+						// Устанавливаем таймаут ожидания результата
+						struct timeval tread = {http->keepalive_timeout, 0};
+						// Устанавливаем таймаут записи результата
+						struct timeval twrite = {http->write_timeout, 0};
+						// Устанавливаем таймауты
+						bufferevent_set_timeouts(bev, &tread, &twrite);
+					}
 					// Отправляем клиенту сообщение
-					if((bufferevent_write(bev, http->response.data(), http->response.size()) < 0)
-					|| (http->response.code != 200)) free_http(&http);
+					if(bufferevent_write(bev, http->response.data(), http->response.size()) < 0) free_http(&http);
 				// Отключаемся
 				} else free_http(&http);
 			}
