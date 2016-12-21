@@ -135,10 +135,6 @@ void create_proxy(){
  * run_worker Функция запуска воркера
  */
 void run_worker(){
-	// Статус выхода процесса
-	int status;
-	// Пиды воркера
-	pid_t w;
 	// Запускаем воркер
 	switch(cpid = fork()){
 		// Если поток не создан
@@ -152,12 +148,14 @@ void run_worker(){
 		case 0: create_proxy(); break;
 		// Если это мастер процесс
 		default: {
+			// Статус выхода процесса
+			int status;
 			// Зацикливаем ожидание завершения дочернего процесса
 			do {
 				// Ожидаем завершение работы дочернего процесса
-				w = waitpid(cpid, &status, WUNTRACED | WCONTINUED);
+				pid_t pid = waitpid(cpid, &status, WUNTRACED | WCONTINUED);
 				// Если дочерний процесс не определен тогда выходим
-				if(w == -1){
+				if(pid == -1){
 					perror("waitpid");
 					exit(EXIT_FAILURE);
 				}
