@@ -1,3 +1,10 @@
+/* СЕРВЕР HTTP ПРОКСИ ANYKS */
+/*
+*	автор:				Юрий Николаевич Лобарев
+*	skype:				efrantick
+*	телефон:			+7(920)672-33-22
+*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
+*/
 #include "http.h"
 
 // Устанавливаем пространство имен
@@ -18,21 +25,6 @@ string HttpProxy::get_host(struct sockaddr * address, int socklen){
 	if(s == 0) return hbuf;
 	// Сообщаем что ничего не найдено
 	return "";
-}
-/**
- * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
- * @param  maxfd максимальное количество файловых дескрипторов
- * @return       количество установленных файловых дескрипторов
- */
-int HttpProxy::set_fd_limit(u_int maxfd){
-	// Структура для установки лимитов
-	struct rlimit lim;
-	// зададим текущий лимит на кол-во открытых дискриптеров
-	lim.rlim_cur = maxfd;
-	// зададим максимальный лимит на кол-во открытых дискриптеров
-	lim.rlim_max = maxfd;
-	// установим указанное кол-во
-	return setrlimit(RLIMIT_NOFILE, &lim);
 }
 /**
  * free_http Функция очистки объекта http
@@ -513,7 +505,6 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
  * @param name       название прокси-сервера
  * @param host       хост прокси-сервера
  * @param port       порт прокси-сервера
- * @param maxfds     максимальное количество файловых дескрипторов для прокси-сервера
  * @param buffrsize  размер буфера сокета на чтение
  * @param buffwsize  размер буфера сокета на запись
  * @param maxcls     максимальное количество подключаемых клиентов к прокси-серверу (-1 автоматически)
@@ -525,7 +516,6 @@ HttpProxy::HttpProxy(
 	const char * name,
 	const char * host,
 	u_int port,
-	u_int maxfds,
 	int buffrsize,
 	int buffwsize,
 	int maxcls,
@@ -539,8 +529,6 @@ HttpProxy::HttpProxy(
 	read_timeout		= rtm;
 	write_timeout		= wtm;
 	keepalive_timeout	= katm;
-	// Установим максимальное кол-во дискрипторов которое можно открыть
-	set_fd_limit(maxfds);
 	// Структура для создания сервера приложения
 	struct sockaddr_in sin;
 	// Создаем новую базу

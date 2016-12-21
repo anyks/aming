@@ -1,3 +1,10 @@
+/* СЕРВЕР HTTP ПРОКСИ ANYKS */
+/*
+*	автор:				Юрий Николаевич Лобарев
+*	skype:				efrantick
+*	телефон:			+7(920)672-33-22
+*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
+*/
 #include <iostream>
 #include <errno.h>
 #include <stdlib.h>
@@ -24,8 +31,6 @@ using namespace std;
 #define BUFFER_WRITE_SIZE -1 // 2048
 // Максимальный размер буфера для чтения http данных
 #define BUFFER_READ_SIZE -1 // 4096
-// Максимальное количество открытых сокетов (по дефолту в системе 1024)
-#define MAX_SOCKETS 1024
 // Порт сервера
 #define SERVER_PORT 5555
 // Таймаут времени на чтение
@@ -150,12 +155,6 @@ class HttpProxy {
 		 */
 		string get_host(struct sockaddr * address, int socklen);
 		/**
-		 * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
-		 * @param  maxfd максимальное количество файловых дескрипторов
-		 * @return       количество установленных файловых дескрипторов
-		 */
-		int set_fd_limit(u_int maxfd);
-		/**
 		 * free_http Функция очистки объекта http
 		 * @param arg объект для очистки
 		 */
@@ -233,7 +232,6 @@ class HttpProxy {
 		 * @param name       название прокси-сервера
 		 * @param host       хост прокси-сервера
 		 * @param port       порт прокси-сервера
-		 * @param maxfds     максимальное количество файловых дескрипторов для прокси-сервера
 		 * @param buffrsize  размер буфера сокета на чтение
 		 * @param buffwsize  размер буфера сокета на запись
 		 * @param maxcls     максимальное количество подключаемых клиентов к прокси-серверу (-1 автоматически)
@@ -245,7 +243,6 @@ class HttpProxy {
 			const char *	name		= "anyks",
 			const char *	host		= "0.0.0.0",
 			u_int			port		= SERVER_PORT,
-			u_int			maxfds		= MAX_SOCKETS,
 			int				buffrsize	= BUFFER_READ_SIZE,
 			int				buffwsize	= BUFFER_WRITE_SIZE,
 			int				maxcls		= MAX_CLIENTS,
