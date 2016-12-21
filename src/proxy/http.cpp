@@ -143,7 +143,7 @@ bool HttpProxy::check_auth(void * ctx){
  * @param ctx объект входящих данных
  * @return    результат подключения
  */
-bool HttpProxy::connect_server(void * ctx){
+int HttpProxy::connect_server(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
@@ -198,17 +198,17 @@ bool HttpProxy::connect_server(void * ctx){
 					// Выводим в консоль информацию
 					printf("Error in server address format! %s\n", ip.c_str());
 					// Выходим
-					return false;
+					return 0;
 				}
 				// Создаем сокет, если сокет не создан то сообщаем об этом
 				if((sock = socket(req->ai_family, req->ai_socktype, req->ai_protocol)) < 0){
 					// Выводим в консоль информацию
 					printf("Error in creating socket to server!\n");
 					// Выходим
-					return false;
+					return 0;
 				}
 				// Если сокет не создан то выходим
-				if(sock < 0) return false;
+				if(sock < 0) return 0;
 				// Устанавливаем размеры буферов
 				set_buffer_size(sock, http->buffer_read_size, http->buffer_write_size);
 				// Создаем буфер событий для сервера
@@ -226,7 +226,7 @@ bool HttpProxy::connect_server(void * ctx){
 					// Очищаем буфер сервера
 					http->free_server();
 					// Выходим
-					return false;
+					return -1;
 				}
 				// И освобождаем связанный список
 				evutil_freeaddrinfo(req);
@@ -242,19 +242,19 @@ bool HttpProxy::connect_server(void * ctx){
 				// Выводим в консоль сообщение о новом коннекте
 				printf("connect to host = %s [%s:%d] path = %s, socket = %d\n", http->parser->getHost().c_str(), http->server.host.c_str(), http->server.port, http->parser->getPath().c_str(), fd);
 				// Сообщаем что все удачно
-				return true;
+				return 1;
 			// Если сервер уже подключен, сообщаем что все удачно
 			} else {
 				// Выводим в консоль сообщение о новом коннекте
 				printf("last connect to host = %s [%s:%d] path = %s, socket = %d\n", http->parser->getHost().c_str(), http->server.host.c_str(), http->server.port, http->parser->getPath().c_str(), fd);
 				// Сообщаем что все удачно
-				return true;
+				return 2;
 			}
 		// Очищаем буфер, если он существует
 		} else http->free_server();
 	}
 	// Выходим
-	return false;
+	return -1;
 }
 /**
  * event Функция обработка входящих событий
@@ -394,8 +394,10 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 					http->response = http->parser->faultAuth();
 				// Если авторизация прошла
 				} else {
+					// Выполняем подключение к удаленному серверу
+					int connect = connect_server(http);
 					// Если сокет существует
-					if(connect_server(http)){
+					if(connect > 0){
 						// Определяем порт, если это метод connect
 						if(http->parser->isConnect())
 							// Формируем ответ клиенту
@@ -418,7 +420,9 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 							return;
 						}
 					// Если подключение не удачное то сообщаем об этом
-					} else http->response = http->parser->faultConnect();
+					} else if(connect == 0) http->response = http->parser->faultConnect();
+					// Если подключение удалено, выходим
+					else return;
 				}
 				// Ответ готов
 				if(!http->response.empty()){

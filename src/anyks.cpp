@@ -4,7 +4,7 @@
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
 // g++ -std=c++11 -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 #include <sys/wait.h>
 #include <sys/signal.h>
 #include "./proxy/http.h"

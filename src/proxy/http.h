@@ -192,7 +192,7 @@ class HttpProxy {
 		 * @param ctx объект входящих данных
 		 * @return    результат подключения
 		 */
-		static bool connect_server(void * ctx);
+		static int connect_server(void * ctx);
 		/**
 		 * event Функция обработка входящих событий
 		 * @param bev    буфер события
