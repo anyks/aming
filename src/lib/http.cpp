@@ -973,7 +973,7 @@ void Http::clear(){
  * @param opt параметры прокси-сервера
  * @param ver версия прокси-сервера
  */
-Http::Http(const string str, u_short opt, string ver){
+Http::Http(const string str, u_short opt, const string ver){
 	// Если имя передано то запоминаем его
 	this->appname = str;
 	// Устанавливаем версию системы

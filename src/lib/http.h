@@ -17,6 +17,10 @@
 // Устанавливаем пространство имен
 using namespace std;
 
+// Название и версия прокси-сервера
+#define APP_NAME "ANYKS"
+#define APP_VERSION "1.0"
+
 // Флаг разрешения connect прокси-сервера
 #define OPT_CONNECT 0x01
 // Флаг вывода названия прокси-сервера
@@ -515,7 +519,7 @@ class Http {
 		 * @param opt параметры прокси-сервера
 		 * @param ver версия прокси-сервера
 		 */
-		Http(const string str = "ANYKS", u_short opt = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG), string ver = "1.0");
+		Http(const string str = APP_NAME, u_short opt = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG), const string ver = APP_VERSION);
 		/**
 		 * Http Деструктор
 		 */

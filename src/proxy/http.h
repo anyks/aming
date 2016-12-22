@@ -25,6 +25,9 @@ using namespace std;
 #define EVLOOP_NONBLOCK			0x02
 #define EVLOOP_NO_EXIT_ON_EMPTY	0x04
 
+// Название и версия прокси-сервера
+#define APP_VERSION "1.0"
+
 // Максимальное количество клиентов
 #define MAX_CLIENTS -1 // 1024
 // Максимальный размер буфера
@@ -105,7 +108,7 @@ class BufferHttpProxy {
 		 */
 		BufferHttpProxy(string name, u_short options){
 			// Создаем объект для работы с http заголовками
-			parser = new Http(name, options);
+			parser = new Http(name, options, APP_VERSION);
 		}
 		/**
 		 * ~BufferHttpProxy Деструктор
