@@ -65,6 +65,7 @@ class BufferHttpProxy {
 		u_short				read_timeout;		// Таймаут времени на чтение
 		u_short				write_timeout;		// Таймаут времени на запись
 		u_short				keepalive_timeout;	// Таймаут ожидания коннекта
+		u_short				options;			// Параметры прокси-сервера
 		struct event_base	* base;				// База событий
 		Http				* parser;			// Объект парсера
 		Http::HttpQuery		response;			// Ответ системы
@@ -99,11 +100,12 @@ class BufferHttpProxy {
 		}
 		/**
 		 * BufferHttpProxy Конструктор
-		 * @param [string] name имя ресурса
+		 * @param string  name    имя ресурса
+		 * @param u_short options параметры прокси-сервера
 		 */
-		BufferHttpProxy(string name){
+		BufferHttpProxy(string name, u_short options){
 			// Создаем объект для работы с http заголовками
-			parser = new Http(name);
+			parser = new Http(name, options);
 		}
 		/**
 		 * ~BufferHttpProxy Деструктор
@@ -137,8 +139,10 @@ class BufferHttpProxy {
  */
 class HttpProxy {
 	private:
-		// Название системы
-		string name_app;
+		// Название прокси-сервера
+		string name;
+		// Параметры прокси-сервера
+		u_short options;
 		// Таймеры
 		u_short read_timeout;		// Таймаут времени на чтение
 		u_short write_timeout;		// Таймаут времени на запись
@@ -238,6 +242,7 @@ class HttpProxy {
 		 * @param rtm        таймаут на чтение данных из сокета сервера
 		 * @param wtm        таймаут на запись данных из сокета клиента и сервера
 		 * @param katm       таймаут на чтение данных из сокета клиента
+		 * @param options    опции прокси-сервера
 		 */
 		HttpProxy(
 			const char *	name		= "anyks",
@@ -248,7 +253,8 @@ class HttpProxy {
 			int				maxcls		= MAX_CLIENTS,
 			u_short			rtm			= READ_TIMEOUT,
 			u_short			wtm			= WRITE_TIMEOUT,
-			u_short			katm		= KEEP_ALIVE_TIMEOUT
+			u_short			katm		= KEEP_ALIVE_TIMEOUT,
+			u_short			options		= OPT_CONNECT | OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG | OPT_PGZIP
 		);
 		/**
 		 * HttpProxy Конструктор

@@ -166,6 +166,7 @@ void create_proxy(){
 	// Установим максимальное кол-во дискрипторов которое можно открыть
 	set_fd_limit(MAX_FDS);
 	// Создаем объект для http прокси-сервера
+	// HttpProxy * http = new HttpProxy("anyks", "0.0.0.0", SERVER_PORT, -1, -1, -1, READ_TIMEOUT, WRITE_TIMEOUT, KEEP_ALIVE_TIMEOUT, OPT_SMART);
 	HttpProxy * http = new HttpProxy();
 	// Очищаем выделенный объект
 	delete http;
@@ -215,6 +216,20 @@ void run_worker(){
 		}
 	}
 }
+
+
+/*
+void test(short options){
+	if(options & OPT_CONNECT) cout << " OPT_CONNECT " << endl;
+	if(options & OPT_NAME) cout << " OPT_NAME " << endl;
+	if(options & OPT_GZIP) cout << " OPT_GZIP " << endl;
+	if(options & OPT_SMART) cout << " OPT_SMART " << endl;
+	if(options & OPT_KEEPALIVE) cout << " OPT_KEEPALIVE " << endl;
+	if(options & OPT_LOG) cout << " OPT_LOG " << endl;
+	if(options & OPT_PGZIP) cout << " OPT_PGZIP " << endl;
+}
+*/
+
 /**
  * main Главная функция приложения
  * @param  argc длина массива параметров

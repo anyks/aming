@@ -370,10 +370,14 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
+		// Определяем connect прокси разрешен
+		bool conn_enabled = (http->options & OPT_CONNECT);
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input = bufferevent_get_input(bev);
 		// Если авторизация прошла, и коннект произведен
-		if((http->response.code == 200) && http->parser->isConnect()){
+		if((http->response.code == 200)
+		&& http->parser->isConnect()
+		&& (conn_enabled || http->parser->isHttps())){
 			// Получаем буферы входящих данных и исходящих
 			struct evbuffer * output = bufferevent_get_output(http->events.server);
 			// Устанавливаем таймаут ожидания результата
@@ -426,9 +430,13 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 					// Если сокет существует
 					if(connect > 0){
 						// Определяем порт, если это метод connect
-						if(http->parser->isConnect())
+						if(http->parser->isConnect() && (conn_enabled || http->parser->isHttps()))
 							// Формируем ответ клиенту
 							http->response = http->parser->authSuccess();
+						// Если connect разрешен только для https подключений
+						else if(!conn_enabled && http->parser->isConnect())
+							// Сообращем что подключение запрещено
+							http->response = http->parser->faultConnect();
 						// Иначе делаем запрос на получение данных
 						else {
 							// Указываем что нужно отключится сразу после отправки запроса
@@ -507,7 +515,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Выводим в консоль сообщение
 		printf("client host = %s\n", host.c_str());
 		// Создаем новый объект подключения
-		BufferHttpProxy * http = new BufferHttpProxy(proxy->name_app);
+		BufferHttpProxy * http = new BufferHttpProxy(proxy->name, proxy->options);
 		// Запоминаем таймауты
 		http->read_timeout		= proxy->read_timeout;
 		http->write_timeout		= proxy->write_timeout;
@@ -515,6 +523,8 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Запоминаем размеры буферов
 		http->buffer_read_size	= proxy->buffer_read_size;
 		http->buffer_write_size	= proxy->buffer_write_size;
+		// Запоминаем параметры прокси-сервера
+		http->options = proxy->options;
 		// Запоминаем базу событий
 		http->base = evconnlistener_get_base(listener);
 		// Создаем буфер событий
@@ -546,6 +556,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
  * @param rtm        таймаут на чтение данных из сокета сервера
  * @param wtm        таймаут на запись данных из сокета клиента и сервера
  * @param katm       таймаут на чтение данных из сокета клиента
+ * @param options    опции прокси-сервера
  */
 HttpProxy::HttpProxy(
 	const char * name,
@@ -556,10 +567,13 @@ HttpProxy::HttpProxy(
 	int maxcls,
 	u_short rtm,
 	u_short wtm,
-	u_short katm
+	u_short katm,
+	u_short options
 ){
 	// Запоминаем название системы
-	name_app = name;
+	this->name = name;
+	// Запоминаем тип прокси-сервера
+	this->options = options;
 	// Запоминаем таймауты
 	read_timeout		= rtm;
 	write_timeout		= wtm;

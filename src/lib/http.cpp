@@ -226,6 +226,12 @@ string Http::getHeader(string key, map <string, string> headers){
  * createHead Функция получения сформированного заголовка запроса
  */
 void Http::createHead(){
+	// Определяем тип прокси
+	bool smart = (options & OPT_SMART);
+	// Определяем разрешено ли сжатие
+	bool gzip = (options & OPT_GZIP);
+	// Определяем разрешено ли постоянное подключение
+	bool keepalive = (options & OPT_KEEPALIVE);
 	// Очищаем заголовок
 	query.request.clear();
 	// Создаем строку запроса
@@ -253,8 +259,8 @@ void Http::createHead(){
 		&& (it->first != "user-agent")
 		&& (it->first != "connection")
 		&& (it->first != "proxy-authorization")
-		&& (it->first != "proxy-connection")){ // Если прокси является smarty
-		//&& (it->first != "accept-encoding")){
+		&& (!gzip && (it->first != "accept-encoding"))
+		&& (smart && (it->first != "proxy-connection"))){
 			// Добавляем оставшиеся заголовки
 			query.request.append(
 				query.origin[it->first] + string(": ")
@@ -262,14 +268,19 @@ void Http::createHead(){
 			);
 		}
 	}
+	// Если постоянное подключение запрещено
+	if(!keepalive) query.connection = "close";
 	// Добавляем заголовок connection
 	if(!query.connection.empty()){
 		// Устанавливаем заголовок подключения
 		query.request.append(string("Connection: ") + query.connection + string("\r\n"));
-		// Проверяем есть ли заголовок соединения прокси
-		string pc = getHeader("proxy-connection", query.headers); // Если это не smarty
-		// Добавляем заголовок закрытия подключения
-		if(pc.empty()) query.request.append(string("Proxy-Connection: ") + query.connection + string("\r\n"));
+		// Если это не smarty
+		if(!smart){
+			// Проверяем есть ли заголовок соединения прокси
+			string pc = getHeader("proxy-connection", query.headers);
+			// Добавляем заголовок закрытия подключения
+			if(pc.empty()) query.request.append(string("Proxy-Connection: ") + query.connection + string("\r\n"));
+		}
 	}
 	// Запоминаем конец запроса
 	query.request.append(string("\r\n"));
@@ -375,7 +386,7 @@ void Http::generateHttp(){
 			// Получаем данные заголовока коннекта
 			query.connection = toCase(getHeader("connection", query.headers));
 			// Если постоянное соединение не установлено
-			if(!proxy_connection.empty()) query.connection = proxy_connection; // Если прокси является smarty
+			if((options & OPT_SMART) && !proxy_connection.empty()) query.connection = proxy_connection;
 			// Если хост найден
 			if(!host.empty()){
 				// Выполняем получение параметров подключения
@@ -483,10 +494,14 @@ void Http::generateHttp(){
 void Http::modify(vector <char> &data){
 	// Если заголовки не заняты тогда выполняем модификацию
 	if(!_query.length){
+		// Определяем тип прокси
+		bool smart = (options & OPT_SMART);
+		// Определяем разрешено ли выводить название агента
+		bool agent = (options & OPT_AGENT);
 		// Выполняем парсинг http запроса
 		_query = getHeaders(data.data());
 		// Проверяем есть ли заголовок соединения прокси
-		string pc = getHeader("proxy-connection", _query.headers); // Если не smarty
+		string pc = (!smart ? getHeader("proxy-connection", _query.headers) : "");
 		// Проверяем есть ли заголовок соединения
 		string co = getHeader("connection", _query.headers);
 		// Если заголовок не найден
@@ -504,9 +519,9 @@ void Http::modify(vector <char> &data){
 				// Копируем заголовки
 				string str(headers, pos);
 				// Устанавливаем название прокси
-				str.append(string("\r\nProxy-Agent: ") + appname + string("/") + appver); // Если нужно устанавливать название приложения
-				// Добавляем заголовок закрытия подключения
-				str.append(string("\r\nProxy-Connection: ") + co); // Если не smarty
+				if(agent) str.append(string("\r\nProxy-Agent: ") + appname + string("/") + appver);
+				// Добавляем заголовок закрытия подключения, если не smarty
+				if(!smart) str.append(string("\r\nProxy-Connection: ") + co);
 				// Начальные и конечные блоки данных
 				vector <char> first, last;
 				// Заполняем первичные данные структуры
@@ -954,13 +969,17 @@ void Http::clear(){
 }
 /**
  * Http Конструктор
- * @param str строка содержащая название сервиса
+ * @param str строка содержащая название прокси-сервера
+ * @param opt параметры прокси-сервера
+ * @param ver версия прокси-сервера
  */
-Http::Http(const string str, string ver){
+Http::Http(const string str, u_short opt, string ver){
 	// Если имя передано то запоминаем его
-	appname = str;
+	this->appname = str;
 	// Устанавливаем версию системы
-	appver = ver;
+	this->appver = ver;
+	// Запоминаем тип прокси-сервера
+	this->options = opt;
 }
 /**
  * Http Деструктор

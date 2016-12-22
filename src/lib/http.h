@@ -16,6 +16,22 @@
 
 // Устанавливаем пространство имен
 using namespace std;
+
+// Флаг разрешения connect прокси-сервера
+#define OPT_CONNECT 0x01
+// Флаг вывода названия прокси-сервера
+#define OPT_AGENT 0x02
+// Флаг разрешения сжатия данных методом gzip
+#define OPT_GZIP 0x04
+// Флаг разрешающий smart прокси-сервер
+#define OPT_SMART 0x08
+// Флаг разрешающий постоянное соединение
+#define OPT_KEEPALIVE 0x10
+// Флаг разрешающий логирование данных
+#define OPT_LOG 0x20
+// Флаг разрешающий сжатие не сжатых данных
+#define OPT_PGZIP 0x40
+
 // Класс содержит данные парсинга http запроса
 class Http {
 	private:
@@ -146,6 +162,8 @@ class Http {
 		typedef struct check_end HttpEnd;
 		// Данные http запроса
 		HttpData _query, query;
+		// Параметры прокси-сервера
+		u_short options;
 		// Название и версия прокси сервера
 		string appname, appver;
 		// Шаблоны ответов
@@ -493,9 +511,11 @@ class Http {
 		void clear();
 		/**
 		 * Http Конструктор
-		 * @param str строка содержащая название сервиса
+		 * @param str строка содержащая название прокси-сервера
+		 * @param opt параметры прокси-сервера
+		 * @param ver версия прокси-сервера
 		 */
-		Http(const string str = "ANYKS", string ver = "1.0");
+		Http(const string str = "ANYKS", u_short opt = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG), string ver = "1.0");
 		/**
 		 * Http Деструктор
 		 */
