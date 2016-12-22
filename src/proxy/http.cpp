@@ -319,8 +319,43 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 		struct timeval twrite = {http->write_timeout, 0};
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(http->events.client, &tread, &twrite);
-		// Выводим ответ сервера
-		if(evbuffer_add_buffer(output, input) < 0) free_http(&http);
+		/* ============== ИЛИ ТАК ============================= */
+		//if(evbuffer_add_buffer(output, input) < 0) free_http(&http);
+		/* ============== ИЛИ ИЗМЕНЯЕМ ЗАГОЛОВКИ ============== */
+		// Получаем размер входящих данных
+		size_t len = evbuffer_get_length(input);
+		// Создаем буфер данных
+		char * buffer = new char[len];
+		// Копируем в буфер полученные данные
+		evbuffer_copyout(input, buffer, len);
+		// Создаем буфер для исходящих данных
+		struct evbuffer * tmp = evbuffer_new();
+		// Создаем указатель поиска в буфере
+		struct evbuffer_ptr ptr;
+		// Выполняем инициализацию указателя
+		evbuffer_ptr_set(input, &ptr, 0, EVBUFFER_PTR_SET);
+		// Строка для поиска конца блока с заголовками
+		const char * str = "\r\n\r\n";
+		// Выполняем поиск конца блока с заголовками
+		ptr = evbuffer_search(input, str, strlen(str), &ptr);
+		// Если в буфере нашли заголовки
+		if(ptr.pos > -1){
+			// Добавляем полученный буфер в вектор
+			vector <char> headers(buffer, buffer + len);
+			// Выполняем модификацию заголовков
+			http->parser->modify(headers);
+			// Добавляем в новый буфер модифицированные заголовки
+			evbuffer_add(tmp, headers.data(), headers.size());
+		// Если в буфере заголовки не найдены тогда просто записываем данные в новый буфер
+		} else evbuffer_add(tmp, buffer, len);
+		// Удаляем данные из буфера
+		evbuffer_drain(input, len);
+		// Отправляем данные клиенту
+		if(evbuffer_add_buffer(output, tmp) < 0) free_http(&http);
+		// Удаляем временный буфер
+		evbuffer_free(tmp);
+		// Удаляем буфер данных
+		delete [] buffer;
 	}
 	// Выходим
 	return;

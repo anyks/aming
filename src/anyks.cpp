@@ -74,20 +74,57 @@ void rm_pidfile(const char * filename, int ext){
 	exit(ext);
 }
 /**
+ * signal_log Функция вывода значения сигнала в лог
+ * @param signum номер сигнала
+ */
+void signal_log(int signum){
+	// Определяем данные сигнала
+	switch(signum){
+		case SIGABRT:	printf("Сигнал посылаемый функцией abort() [%d]\n", signum);						break;
+		case SIGALRM:	printf("Сигнал истечения времени, заданного alarm() [%d]\n", signum);				break;
+		case SIGBUS:	printf("Неправильное обращение в физическую память [%d]\n", signum);				break;
+		case SIGCHLD:	printf("Дочерний процесс завершен или остановлен [%d]\n", signum);					break;
+		case SIGCONT:	printf("Продолжить выполнение ранее остановленного процесса [%d]\n", signum);		break;
+		case SIGFPE:	printf("Ошибочная арифметическая операция [%d]\n", signum);							break;
+		case SIGHUP:	printf("Закрытие терминала [%d]\n", signum);										break;
+		case SIGILL:	printf("Недопустимая инструкция процессора [%d]\n", signum);						break;
+		case SIGINT:	printf("Сигнал прерывания (Ctrl-C) с терминала [%d]\n", signum);					break;
+		case SIGKILL:	printf("Безусловное завершение [%d]\n", signum);									break;
+		case SIGPIPE:	printf("Запись в разорванное соединение (пайп, сокет) [%d]\n", signum);				break;
+		case SIGQUIT:	printf("Сигнал «Quit» с терминала (Ctrl-\\) [%d]\n", signum);						break;
+		case SIGSEGV:	printf("Нарушение при обращении в память [%d]\n", signum);							break;
+		case SIGSTOP:	printf("Остановка выполнения процесса [%d]\n", signum);								break;
+		case SIGTERM:	printf("Сигнал завершения (сигнал по умолчанию для утилиты kill) [%d]\n", signum);	break;
+		case SIGTSTP:	printf("Сигнал остановки с терминала (Ctrl-Z) [%d]\n", signum);						break;
+		case SIGTTIN:	printf("Попытка чтения с терминала фоновым процессом [%d]\n", signum);				break;
+		case SIGTTOU:	printf("Попытка записи на терминал фоновым процессом [%d]\n", signum);				break;
+		case SIGUSR1:	printf("Пользовательский сигнал № 1 [%d]\n", signum);								break;
+		case SIGUSR2:	printf("Пользовательский сигнал № 2 [%d]\n", signum);								break;
+		// case SIGPOLL:	printf("Событие, отслеживаемое poll() [%d]\n", signum);							break;
+		case SIGPROF:	printf("Истечение таймера профилирования [%d]\n", signum);							break;
+		case SIGSYS:	printf("Неправильный системный вызов [%d]\n", signum);								break;
+		case SIGTRAP:	printf("Ловушка трассировки или брейкпоинт [%d]\n", signum);						break;
+		case SIGURG:	printf("На сокете получены срочные данные [%d]\n", signum);							break;
+		case SIGVTALRM:	printf("Истечение «виртуального таймера» [%d]\n", signum);							break;
+		case SIGXCPU:	printf("Процесс превысил лимит процессорного времени [%d]\n", signum);				break;
+		case SIGXFSZ:	printf("Процесс превысил допустимый размер файла [%d]\n", signum);					break;
+	}
+}
+/**
  * sigpipe_handler Функция обработки сигнала SIGPIPE
  * @param signum номер сигнала
  */
 void sigpipe_handler(int signum){
-	// Выводим в консоль информацию
-	cout << "Сигнал попытки записи в отключенный сокет!!!!" << endl;
+	// Логируем сообщение о сигнале
+	signal_log(signum);
 }
 /**
  * sigchld_handler Функция обработки сигнала о появившемся зомби процессе SIGCHLD
  * @param signum номер сигнала
  */
 void sigchld_handler(int signum) {
-	// Выводим в консоль информацию
-	cout << "Дочерний процесс убит!!!!" << endl;
+	// Логируем сообщение о сигнале
+	signal_log(signum);
 	// Избавляемся от зависших процессов
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
@@ -96,8 +133,8 @@ void sigchld_handler(int signum) {
  * @param signum номер сигнала
  */
 void sigterm_handler(int signum){
-	// Выводим в консоль информацию
-	cout << "Процесс убит!!!!" << endl;
+	// Логируем сообщение о сигнале
+	signal_log(signum);
 	// Если это родительский пид
 	if(cpid > 0){
 		// Удаляем дочерний воркер
@@ -113,8 +150,10 @@ void sigterm_handler(int signum){
  * @param signum номер сигнала
  */
 void sigsegv_handler(int signum){
-	// Выводим в консоль информацию
-	cout << "Произошла ошибка сегментации!!!" << endl;
+	// Логируем сообщение о сигнале
+	signal_log(signum);
+	// Если это родительский пид, удаляем pid файл
+	if(cpid > 0) rm_pidfile(PID_FILE, EXIT_FAILURE);
 	// перепосылка сигнала
 	signal(signum, SIG_DFL);
 	// Выходим
@@ -209,14 +248,23 @@ int main(int argc, char * argv[]){
 	set_pidfile(PID_FILE);
 	*/
 	// Устанавливаем сигнал установки подключения
-	signal(SIGPIPE, sigpipe_handler);	// Сигнал обрыва соединения во время записи
-	//signal(SIGCHLD, sigchld_handler);	// Дочерний процесс убит
-	signal(SIGSEGV, sigsegv_handler);	// Сигнал обработки ошибки сегментации (Segmentation fault: 11)
-	signal(SIGILL, sigsegv_handler);	// Сигнал обработки ошибки не верных инструкций (Illegal instruction: 4)
-	signal(SIGTERM, sigterm_handler);	// Процесс убит
-	signal(SIGINT, sigterm_handler);	// Процесс убит Ctrl-C
-	signal(SIGQUIT, sigterm_handler);	// Процесс убит Ctrl-\
-	signal(SIGTSTP, sigterm_handler);	// Процесс убит Ctrl-Z
+	signal(SIGPIPE, sigpipe_handler);	// Запись в разорванное соединение (пайп, сокет)
+	// signal(SIGCHLD, sigchld_handler);// Дочерний процесс завершен или остановлен
+	signal(SIGSEGV, sigsegv_handler);	// Нарушение при обращении в память (Segmentation fault: 11)
+	signal(SIGILL, sigsegv_handler);	// Недопустимая инструкция процессора (Illegal instruction: 4)
+	signal(SIGBUS, sigsegv_handler);	// Неправильное обращение в физическую память
+	signal(SIGFPE, sigsegv_handler);	// Ошибочная арифметическая операция
+	signal(SIGSYS, sigsegv_handler);	// Неправильный системный вызов
+	signal(SIGTRAP, sigsegv_handler);	// Ловушка трассировки или брейкпоинт
+	signal(SIGXCPU, sigsegv_handler);	// Процесс превысил лимит процессорного времени
+	signal(SIGXFSZ, sigsegv_handler);	// Процесс превысил допустимый размер файла
+	signal(SIGTERM, sigterm_handler);	// Сигнал завершения (сигнал по умолчанию для утилиты kill)
+	signal(SIGINT, sigterm_handler);	// Сигнал прерывания (Ctrl-C) с терминала
+	signal(SIGQUIT, sigterm_handler);	// Сигнал «Quit» с терминала (Ctrl-\)
+	signal(SIGTSTP, sigterm_handler);	// Сигнал остановки с терминала (Ctrl-Z)
+	signal(SIGHUP, sigterm_handler);	// Закрытие терминала
+	signal(SIGTTIN, sigterm_handler);	// Попытка чтения с терминала фоновым процессом
+	signal(SIGTTOU, sigterm_handler);	// Попытка записи на терминал фоновым процессом
 	// Запускаем воркер
 	run_worker();
 	// Выходим
