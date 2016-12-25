@@ -25,6 +25,19 @@
 #include "./lib/log.h"
 #include "./proxy/http.h"
 
+// Название и версия прокси-сервера
+#define APP_NAME "ANYKS"
+#define APP_VERSION "1.0"
+#define APP_COPYRIGHT "ANYKS LLC"
+#define APP_SITE "http://anyks.com"
+#define APP_EMAIL "info@anyks.com"
+#define APP_SUPPORT "support@anyks.com"
+#define APP_AUTHOR "forman"
+
+// Порты по умолчанию
+#define HTTP_PORT 8080
+#define SOCKS5_PORT 1080
+
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
 #define MAX_FDS 1024 * 10
 // Адрес файла pid
@@ -229,6 +242,30 @@ int main(int argc, char * argv[]){
 	setlocale(LC_ALL, "");
 	// Создаем модуль лога
 	log = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src");
+	// Выводим приглашение
+	log->welcome(
+		APP_NAME,		// название приложения
+		"anyks",		// пользовательское название
+		APP_VERSION,	// версия приложения
+		"0.0.0.0",		// хост на котором поднято приложение
+		true,			// активация IPv4
+		false,			// активация IPv6
+		true,			// активация обмена сжатыми данными
+		true,			// сжимать полученные не сжатые данные
+		true,			// активация умного прокси
+		true,			// активация постоянных подключений
+		true,			// тип поднятого прокси
+		true,			// тип поднятого прокси
+		true,			// активация коннект прокси
+		-1,				// максимальное количество подключений
+		HTTP_PORT,		// порт http прокси
+		SOCKS5_PORT,	// порт socks5 прокси
+		APP_COPYRIGHT,	// копирайт автора прокси
+		APP_SITE,		// сайт автора прокси
+		APP_EMAIL,		// адрес электронной почты автора
+		APP_SUPPORT,	// адрес электронной почты службы поддержки
+		APP_AUTHOR		// ник или имя автора
+	);
 	/*
 	// Наши ID процесса и сессии
 	pid_t pid, sid;

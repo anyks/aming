@@ -10,6 +10,45 @@
 // Устанавливаем область видимости
 using namespace std;
 /**
+ * getOsName Функция определения операционной системы
+ * @return название операционной системы
+ */
+const char * LogApp::getOsName(){
+	#ifdef _WIN32
+		return "Windows 32-bit";
+	#elif _WIN64
+		return "Windows 64-bit";
+	#elif __unix || __unix__
+		return "Unix";
+	#elif __APPLE__ || __MACH__
+		return "Mac OSX";
+	#elif __linux__
+		return "Linux";
+	#elif __FreeBSD__
+		return "FreeBSD";
+	#else
+		return "Other";
+	#endif
+}
+/**
+ * makePath Функция создания каталога для хранения логов
+ * @param  path адрес для каталога
+ * @return      результат создания каталога
+ */
+bool LogApp::makePath(const char * path){
+	// Проверяем существует ли нужный нам каталог
+	if(!isDirExist(path)){
+		// Устанавливаем параметры каталога
+		mode_t mode = 0755;
+		// Создаем каталог
+		if(mkdir(path, mode) == 0) return true;
+		// Если каталог не создан тогда сообщаем об ошибке
+		else return false;
+	}
+	// Сообщаем что все создано удачно
+	return true;
+}
+/**
  * isDirExist Функция проверки существования каталога
  * @param  path адрес каталога
  * @return      результат проверки
@@ -34,24 +73,6 @@ bool LogApp::isFileExist(const char * path){
 	if(stat(path, &info) != 0) return false;
 	// Если это файл
 	return (info.st_mode & S_IFMT) != 0;
-}
-/**
- * makePath Функция создания каталога для хранения логов
- * @param  path адрес для каталога
- * @return      результат создания каталога
- */
-bool LogApp::makePath(const char * path){
-	// Проверяем существует ли нужный нам каталог
-	if(!isDirExist(path)){
-		// Устанавливаем параметры каталога
-		mode_t mode = 0755;
-		// Создаем каталог
-		if(mkdir(path, mode) == 0) return true;
-		// Если каталог не создан тогда сообщаем об ошибке
-		else return false;
-	}
-	// Сообщаем что все создано удачно
-	return true;
 }
 /**
  * write_to_file Функция записи лога в файл
@@ -224,6 +245,123 @@ void LogApp::write(u_short type, const char * message, ...){
 		}
 		// Завершаем список аргументов
 		va_end(args);
+	}
+}
+/**
+ * welcome Функция выводящая приглашение
+ * @param appname     название приложения
+ * @param name        пользовательское название
+ * @param version     версия приложения
+ * @param host        хост на котором поднято приложение
+ * @param ipv4        активация IPv4
+ * @param ipv6        активация IPv6
+ * @param gzip_t      активация обмена сжатыми данными
+ * @param gzip_r      сжимать полученные не сжатые данные
+ * @param smart       активация умного прокси
+ * @param keepalive   активация постоянных подключений
+ * @param http        тип поднятого прокси
+ * @param socks5      тип поднятого прокси
+ * @param connect     активация коннект прокси
+ * @param maxcon      максимальное количество подключений
+ * @param http_port   порт http прокси
+ * @param socks5_port порт socks5 прокси
+ * @param copyright   копирайт автора прокси
+ * @param site        сайт автора прокси
+ * @param email       адрес электронной почты автора
+ * @param support     адрес электронной почты службы поддержки
+ * @param author      ник или имя автора
+ */
+void LogApp::welcome(
+	const char * appname,
+	const char * name,
+	const char * version,
+	const char * host,
+	bool ipv4,
+	bool ipv6,
+	bool gzip_t,
+	bool gzip_r,
+	bool smart,
+	bool keepalive,
+	bool http,
+	bool socks5,
+	bool connect,
+	int maxcon,
+	u_int http_port,
+	u_int socks5_port,
+	const char * copyright,
+	const char * site,
+	const char * email,
+	const char * support,
+	const char * author
+){
+	// Если модуль активирован
+	if(this->enabled){
+		// Заполняем текстовые данные
+		const char * _ipv4 = (ipv4 ? "yes" : "no");
+		const char * _ipv6 = (ipv6 ? "yes" : "no");
+		const char * _gzip_t = (gzip_t ? "yes" : "no");
+		const char * _gzip_r = (gzip_r ? "yes" : "no");
+		const char * _smart = (smart ? "yes" : "no");
+		const char * _keepalive = (keepalive ? "yes" : "no");
+		const char * _http = (http ? "yes" : "no");
+		const char * _socks5 = (socks5 ? "yes" : "no");
+		const char * _connect = (connect ? "yes" : "no");
+		const char * _maxcon = (maxcon > -1 ? to_string(maxcon).c_str() : "auto");
+		// Создаем буфер для хранения даты
+		char year[5], date[80];
+		// Определяем количество секунд
+		time_t seconds = time(NULL);
+		// Получаем структуру локального времени
+		struct tm * timeinfo = localtime(&seconds);
+		// Создаем формат года
+		string yearformat = "%Y";
+		// Создаем формат полученного времени
+		string dateformat = "%m/%d/%Y %H:%M:%S";
+		// Копируем в буфер полученную дату и время
+		int len = strftime(year, sizeof(year), yearformat.c_str(), timeinfo);
+		// Устанавливаем конец строки
+		year[len] = '\0';
+		// Копируем в буфер полученную дату и время
+		len = strftime(date, sizeof(date), dateformat.c_str(), timeinfo);
+		// Устанавливаем конец строки
+		date[len] = '\0';
+		// Название прокси-сервера
+		string proxyname = appname;
+		// Копирайт автора
+		string copyauthor = (copyright + string(" - ") + year);
+		// Переводим в указанный регистр
+		transform(proxyname.begin(), proxyname.end(), proxyname.begin(), ::toupper);
+		transform(copyauthor.begin(), copyauthor.end(), copyauthor.begin(), ::toupper);
+		// Создаем буфер
+		char buffer[1024 * 16];
+		// Создаем формат вывода
+		const char * format = "\n*\n*   WELCOME TO %s PROXY\n*\n*   Parameters proxy:\n*   "
+							"name:             %s\n*   version:          %s\n"
+							"*   IPv4:             %s\n*   IPv6:             %s\n"
+							"*   gzip transfer:    %s\n*   gzip response:    %s\n"
+							"*   max connect:      %s\n*   smart             %s\n"
+							"*   keep-alive:       %s\n*   http:             %s\n"
+							"*   socks5:           %s\n*   connect:          %s\n"
+							"*   host:             %s\n*   http port:        %d\n"
+							"*   socks5 port:      %d\n*   operating system: %s\n"
+							"*   date start proxy: %s\n*\n*   Contact Developer:\n"
+							"*   copyright:        %s\n*   site:             %s\n"
+							"*   e-mail:           %s\n*   support:          %s\n"
+							"*   author:           @%s\n*\n";
+		// Записываем сообщение в буфер
+		len = sprintf(
+			buffer, format, proxyname.c_str(),
+			name, version, _ipv4, _ipv6, _gzip_t,
+			_gzip_r, _maxcon, _smart, _keepalive,
+			_http, _socks5, _connect, host,
+			http_port, socks5_port, getOsName(),
+			date, copyauthor.c_str(), site,
+			email, support, author
+		);
+		// Выводим в консоль сообщение
+		cout << buffer << endl;
+		// Записываем сообщение в лог
+		write_to_file(3, buffer);
 	}
 }
 /**

@@ -51,6 +51,11 @@ class LogApp {
 		// Размер максимального лог файла в килобайтах
 		size_t size;
 		/**
+		 * getOsName Функция определения операционной системы
+		 * @return название операционной системы
+		 */
+		const char * getOsName();
+		/**
 		 * makePath Функция создания каталога для хранения логов
 		 * @param  path адрес для каталога
 		 * @return      результат создания каталога
@@ -102,6 +107,53 @@ class LogApp {
 		 * enable Метод деактивации модуля
 		 */
 		void disable();
+		/**
+		 * welcome Функция выводящая приглашение
+		 * @param appname     название приложения
+		 * @param name        пользовательское название
+		 * @param version     версия приложения
+		 * @param host        хост на котором поднято приложение
+		 * @param ipv4        активация IPv4
+		 * @param ipv6        активация IPv6
+		 * @param gzip_t      активация обмена сжатыми данными
+		 * @param gzip_r      сжимать полученные не сжатые данные
+		 * @param smart       активация умного прокси
+		 * @param keepalive   активация постоянных подключений
+		 * @param http        тип поднятого прокси
+		 * @param socks5      тип поднятого прокси
+		 * @param connect     активация коннект прокси
+		 * @param maxcon      максимальное количество подключений
+		 * @param http_port   порт http прокси
+		 * @param socks5_port порт socks5 прокси
+		 * @param copyright   копирайт автора прокси
+		 * @param site        сайт автора прокси
+		 * @param email       адрес электронной почты автора
+		 * @param support     адрес электронной почты службы поддержки
+		 * @param author      ник или имя автора
+		 */
+		void welcome(
+			const char * appname,
+			const char * name,
+			const char * version,
+			const char * host,
+			bool ipv4,
+			bool ipv6,
+			bool gzip_t,
+			bool gzip_r,
+			bool smart,
+			bool keepalive,
+			bool http,
+			bool socks5,
+			bool connect,
+			int maxcon,
+			u_int http_port,
+			u_int socks5_port,
+			const char * copyright,
+			const char * site,
+			const char * email,
+			const char * support,
+			const char * author
+		);
 		/**
 		 * LogApp Конструктор log класса
 		 * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль, TOLOG_DATABASE - запись в базу данных)

@@ -129,7 +129,7 @@ bool HttpProxy::check_auth(void * ctx){
 		if(!strcmp(http->parser->getLogin().c_str(), username)
 		&& !strcmp(http->parser->getPassword().c_str(), password)) return true;
 		// Выводим в лог информацию о неудачном подключении
-		http->log->write(LOG_MESSAGE, "connect client [%s] to proxy wrong!", http->client.host.c_str());
+		http->log->write(LOG_MESSAGE, "auth client [%s] to proxy wrong!", http->client.host.c_str());
 	}
 	// Сообщаем что проверка не прошла
 	return false;
