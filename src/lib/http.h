@@ -5,6 +5,9 @@
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
+#ifndef _HTTP_PARSER_ANYKS_
+#define _HTTP_PARSER_ANYKS_
+
 #include <map>
 #include <string>
 #include <cstring>
@@ -391,6 +394,11 @@ class Http {
 		 */
 		HttpQuery faultConnect();
 		/**
+		 * pageNotFound Метод получения ответа (страница не найдена)
+		 * @return ответ в формате html
+		 */
+		HttpQuery pageNotFound();
+		/**
 		 * faultAuth Метод получения ответа (неудачной авторизации)
 		 * @return ответ в формате html
 		 */
@@ -525,3 +533,4 @@ class Http {
 		 */
 		~Http();
 };
+#endif

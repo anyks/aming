@@ -11,12 +11,12 @@
 using namespace std;
 
 /**
- * HttpProxy::get_host Функция получения данных хоста
+ * gethost Функция получения данных хоста
  * @param  address структура параметров подключения
  * @param  socklen размер структуры
  * @return         данные полученного хоста
  */
-string HttpProxy::get_host(struct sockaddr * address, int socklen){
+string HttpProxy::gethost(struct sockaddr * address, int socklen){
 	// Буферы данных
 	char hbuf[256], sbuf[256];
 	// Извлекаем данные из структуры подключений
@@ -41,16 +41,17 @@ void HttpProxy::free_http(BufferHttpProxy ** arg){
 }
 /**
  * set_non_block Функция отключения алгоритма Нейгла
- * @param fd файловый дескриптор (сокет)
- * @return   результат работы функции
+ * @param  fd   файловый дескриптор (сокет)
+ * @param  log  указатель на объект ведения логов
+ * @return      результат работы функции
  */
-int HttpProxy::set_tcpnodelay(evutil_socket_t fd){
+int HttpProxy::set_tcpnodelay(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем параметр
 	int tcpnodelay = 1;
 	// Устанавливаем TCP_NODELAY
 	if(setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &tcpnodelay, sizeof(tcpnodelay)) < 0){
-		// Выводим в консоль информацию
-		printf("Cannot set TCP_NODELAY option on socket %d\n", fd);
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, "cannot set TCP_NODELAY option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -89,9 +90,10 @@ void HttpProxy::append_to_buffer(vector <char> &data, size_t chunk_size, const c
  * @param  fd         файловый дескриптор (сокет)
  * @param  read_size  размер буфера на чтение
  * @param  write_size размер буфера на запись
+ * @param  log        указатель на объект ведения логов
  * @return            результат работы функции
  */
-int HttpProxy::set_buffer_size(evutil_socket_t fd, int read_size, int write_size){
+int HttpProxy::set_buffer_size(evutil_socket_t fd, int read_size, int write_size, LogApp * log){
 	// Определяем размер массива опции
 	socklen_t read_optlen	= sizeof(read_size);
 	socklen_t write_optlen	= sizeof(write_size);
@@ -101,8 +103,8 @@ int HttpProxy::set_buffer_size(evutil_socket_t fd, int read_size, int write_size
 	// Считываем установленный размер буфера
 	if((getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &read_size, &read_optlen) < 0)
 	|| (getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &write_size, &write_optlen) < 0)){
-		// Выводим в консоль информацию
-		printf("Get buffer wrong!!!!\n");
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, "get buffer wrong on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -126,6 +128,8 @@ bool HttpProxy::check_auth(void * ctx){
 		// Проверяем логин и пароль
 		if(!strcmp(http->parser->getLogin().c_str(), username)
 		&& !strcmp(http->parser->getPassword().c_str(), password)) return true;
+		// Выводим в лог информацию о неудачном подключении
+		http->log->write(LOG_MESSAGE, "connect client [%s] to proxy wrong!", http->client.host.c_str());
 	}
 	// Сообщаем что проверка не прошла
 	return false;
@@ -154,96 +158,130 @@ int HttpProxy::connect_server(void * ctx){
 				memcpy(&addr, sh->h_addr_list[i], sizeof(struct in_addr));
 				ip = inet_ntoa(addr);
 			}
-			// Если хост и порт сервера не совпадают тогда очищаем данные
-			if((http->events.server != NULL)
-			&& ((http->server.host != ip)
-			|| (http->server.port != port))) http->free_server();
-			// Получаем текущий сокет клиента
-			evutil_socket_t fd = bufferevent_getfd(http->events.client);
-			// Если сервер еще не подключен
-			if(http->events.server == NULL){
-				// Запоминаем хост и порт сервера
-				http->server.host = ip;
-				http->server.port = port;
-				// Буфер порта
-				char port_buf[6];
-				// Сокет подключения
-				evutil_socket_t sock = -1;
-				// Структура параметров подключения
-				struct addrinfo param;
-				// Указатель на результаты
-				struct addrinfo * req;
-				// Убедимся, что структура пуста
-				memset(&param, 0, sizeof(param));
-				// Неважно, IPv4 или IPv6
-				param.ai_family = AF_UNSPEC;
-				// TCP stream-sockets
-				param.ai_socktype = SOCK_STREAM;
-				// We want a TCP socket
-				param.ai_protocol = IPPROTO_TCP;
-				// Only return addresses we can use.
-				param.ai_flags = EVUTIL_AI_ADDRCONFIG;
-				// Convert the port to decimal.
-				evutil_snprintf(port_buf, sizeof(port_buf), "%d", (int) port);
-				// Если формат подключения указан не верно то сообщаем об этом
-				if(evutil_getaddrinfo(ip.c_str(), port_buf, &param,  &req)){
-					// Выводим в консоль информацию
-					printf("Error in server address format! %s\n", ip.c_str());
-					// Выходим
-					return 0;
+			// Если ip адрес существует
+			if(!ip.empty()){
+				// Если хост и порт сервера не совпадают тогда очищаем данные
+				if((http->events.server != NULL)
+				&& ((http->server.host != ip)
+				|| (http->server.port != port))) http->free_server();
+				// Получаем текущий сокет клиента
+				evutil_socket_t fd = bufferevent_getfd(http->events.client);
+				// Если сервер еще не подключен
+				if(http->events.server == NULL){
+					// Запоминаем хост и порт сервера
+					http->server.host = ip;
+					http->server.port = port;
+					// Буфер порта
+					char port_buf[6];
+					// Сокет подключения
+					evutil_socket_t sock = -1;
+					// Структура параметров подключения
+					struct addrinfo param;
+					// Указатель на результаты
+					struct addrinfo * req;
+					// Убедимся, что структура пуста
+					memset(&param, 0, sizeof(param));
+					// Неважно, IPv4 или IPv6
+					param.ai_family = AF_UNSPEC;
+					// TCP stream-sockets
+					param.ai_socktype = SOCK_STREAM;
+					// We want a TCP socket
+					param.ai_protocol = IPPROTO_TCP;
+					// Only return addresses we can use.
+					param.ai_flags = EVUTIL_AI_ADDRCONFIG;
+					// Convert the port to decimal.
+					evutil_snprintf(port_buf, sizeof(port_buf), "%d", (int) port);
+					// Если формат подключения указан не верно то сообщаем об этом
+					if(evutil_getaddrinfo(ip.c_str(), port_buf, &param,  &req)){
+						// Выводим в лог сообщение
+						http->log->write(LOG_ERROR, "address format to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.host.c_str());
+						// Выходим
+						return 0;
+					}
+					// Создаем сокет, если сокет не создан то сообщаем об этом
+					if((sock = socket(req->ai_family, req->ai_socktype, req->ai_protocol)) < 0){
+						// Выводим в лог сообщение
+						http->log->write(LOG_ERROR, "creating socket to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.host.c_str());
+						// Выходим
+						return 0;
+					}
+					// Если сокет не создан то выходим
+					if(sock < 0) return 0;
+					// Устанавливаем размеры буферов
+					set_buffer_size(sock, http->buffer_read_size, http->buffer_write_size, http->log);
+					// Создаем буфер событий для сервера
+					http->events.server = bufferevent_socket_new(http->base, sock, BEV_OPT_CLOSE_ON_FREE);
+					// Устанавливаем коллбеки
+					bufferevent_setcb(http->events.server, &HttpProxy::read_server, NULL, &HttpProxy::event, http);
+					// Активируем буферы событий на чтение и запись
+					bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
+					// Очищаем буферы событий при завершении работы
+					bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
+					// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
+					if(bufferevent_socket_connect(http->events.server, req->ai_addr, req->ai_addrlen) < 0){
+						// Выводим в лог сообщение
+						http->log->write(LOG_ERROR, "connecting to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.host.c_str());
+						// Очищаем буфер сервера
+						http->free_server();
+						// Выходим
+						return -1;
+					}
+					// И освобождаем связанный список
+					evutil_freeaddrinfo(req);
+					// Если подключение постоянное
+					if(http->parser->isAlive()){
+						// Получаем сокеты
+						evutil_socket_t server_fd = bufferevent_getfd(http->events.server);
+						evutil_socket_t client_fd = bufferevent_getfd(http->events.client);
+						// Устанавливаем TCP_NODELAY для сервера и клиента
+						set_tcpnodelay(server_fd, http->log);
+						set_tcpnodelay(client_fd, http->log);
+					}
+					// Выводим в лог сообщение о новом коннекте
+					http->log->write(
+						LOG_MESSAGE,
+						"connect client [%s] to host = %s [%s:%d], method = %s, path = %s, useragent = %s, socket = %d",
+						http->client.host.c_str(),
+						http->parser->getHost().c_str(),
+						http->server.host.c_str(),
+						http->server.port,
+						http->parser->getMethod().c_str(),
+						http->parser->getPath().c_str(),
+						http->parser->getUseragent().c_str(),
+						fd
+					);
+					// Сообщаем что все удачно
+					return 1;
+				// Если сервер уже подключен, сообщаем что все удачно
+				} else {
+					// Выводим в лог сообщение о новом коннекте
+					http->log->write(
+						LOG_MESSAGE,
+						"last connect client [%s] to host = %s [%s:%d], method = %s, path = %s, useragent = %s, socket = %d",
+						http->client.host.c_str(),
+						http->parser->getHost().c_str(),
+						http->server.host.c_str(),
+						http->server.port,
+						http->parser->getMethod().c_str(),
+						http->parser->getPath().c_str(),
+						http->parser->getUseragent().c_str(),
+						fd
+					);
+					// Сообщаем что все удачно
+					return 2;
 				}
-				// Создаем сокет, если сокет не создан то сообщаем об этом
-				if((sock = socket(req->ai_family, req->ai_socktype, req->ai_protocol)) < 0){
-					// Выводим в консоль информацию
-					printf("Error in creating socket to server!\n");
-					// Выходим
-					return 0;
-				}
-				// Если сокет не создан то выходим
-				if(sock < 0) return 0;
-				// Устанавливаем размеры буферов
-				set_buffer_size(sock, http->buffer_read_size, http->buffer_write_size);
-				// Создаем буфер событий для сервера
-				http->events.server = bufferevent_socket_new(http->base, sock, BEV_OPT_CLOSE_ON_FREE);
-				// Устанавливаем коллбеки
-				bufferevent_setcb(http->events.server, &HttpProxy::read_server, NULL, &HttpProxy::event, http);
-				// Активируем буферы событий на чтение и запись
-				bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
-				// Очищаем буферы событий при завершении работы
-				bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
-				// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
-				if(bufferevent_socket_connect(http->events.server, req->ai_addr, req->ai_addrlen) < 0){
-					// Выводим в консоль информацию
-					printf("Error in connecting to server!\n");
-					// Очищаем буфер сервера
-					http->free_server();
-					// Выходим
-					return -1;
-				}
-				// И освобождаем связанный список
-				evutil_freeaddrinfo(req);
-				// Если подключение постоянное
-				if(http->parser->isAlive()){
-					// Получаем сокеты
-					evutil_socket_t server_fd = bufferevent_getfd(http->events.server);
-					evutil_socket_t client_fd = bufferevent_getfd(http->events.client);
-					// Устанавливаем TCP_NODELAY для сервера и клиента
-					set_tcpnodelay(server_fd);
-					set_tcpnodelay(client_fd);
-				}
-				// Выводим в консоль сообщение о новом коннекте
-				printf("connect to host = %s [%s:%d] path = %s, socket = %d\n", http->parser->getHost().c_str(), http->server.host.c_str(), http->server.port, http->parser->getPath().c_str(), fd);
-				// Сообщаем что все удачно
-				return 1;
-			// Если сервер уже подключен, сообщаем что все удачно
-			} else {
-				// Выводим в консоль сообщение о новом коннекте
-				printf("last connect to host = %s [%s:%d] path = %s, socket = %d\n", http->parser->getHost().c_str(), http->server.host.c_str(), http->server.port, http->parser->getPath().c_str(), fd);
-				// Сообщаем что все удачно
-				return 2;
 			}
-		// Очищаем буфер, если он существует
-		} else http->free_server();
+		}
+		// Выводим в лог сообщение
+		http->log->write(
+			LOG_ERROR,
+			"host server = %s not found, port = %d, client = %s",
+			http->parser->getHost().c_str(),
+			http->parser->getPort(),
+			http->client.host.c_str()
+		);
+		// Выходим
+		return 0;
 	}
 	// Выходим
 	return -1;
@@ -267,8 +305,22 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 		string subject = (current_fd == client_fd ? "client" : "server");
 		// Если подключение удачное
 		if(events & BEV_EVENT_CONNECTED){
-			// Выводим сообщение в консоль
-			printf("Connect %s okay., socket = %d\n", subject.c_str(), current_fd);
+			// Если это сервер
+			if(subject == "server"){
+				// Выводим в лог сообщение
+				http->log->write(
+					LOG_ACCESS,
+					"connect client [%s] to server host = %s [%s:%d], method = %s, path = %s, useragent = %s, socket = %d",
+					http->client.host.c_str(),
+					http->parser->getHost().c_str(),
+					http->server.host.c_str(),
+					http->server.port,
+					http->parser->getMethod().c_str(),
+					http->parser->getPath().c_str(),
+					http->parser->getUseragent().c_str(),
+					current_fd
+				);
+			}
 		// Если это ошибка или завершение работы
 		} else if(events & (BEV_EVENT_ERROR | BEV_EVENT_EOF | BEV_EVENT_TIMEOUT)) {
 			// Если это ошибка
@@ -276,10 +328,31 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				// Получаем данные ошибки
 				int err = bufferevent_socket_get_dns_error(bev);
 				// Если ошибка существует, выводим сообщение в консоль
-				if(err) printf("DNS error: %s\n", evutil_gai_strerror(err));
+				if(err) http->log->write(LOG_ERROR, "DNS error: %s", evutil_gai_strerror(err));
 			}
-			// Сообщаем что произошло отключение
-			printf("Closing %s, socket = %d\n", subject.c_str(), current_fd);
+			// Если отключился клиент
+			if(subject == "client"){
+				// Выводим в лог сообщение
+				http->log->write(
+					LOG_ACCESS,
+					"closing client [%s] from server [%s:%d], socket = %d",
+					http->client.host.c_str(),
+					http->server.host.c_str(),
+					http->server.port,
+					current_fd
+				);
+			// Если отключился сервер
+			} else {
+				// Выводим в лог сообщение
+				http->log->write(
+					LOG_ACCESS,
+					"closing server [%s:%d] from client [%s], socket = %d",
+					http->server.host.c_str(),
+					http->server.port,
+					http->client.host.c_str(),
+					current_fd
+				);
+			}
 			// Если это код не разрешающий коннект
 			if(http->response.code != 200) free_http(&http);
 			// Если это разрешенный запрос
@@ -492,14 +565,19 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
  * @param ctx      передаваемый объект
  */
 void HttpProxy::accept_error(struct evconnlistener * listener, void * ctx){
-	// Получаем базу событий
-	struct event_base * base = evconnlistener_get_base(listener);
-	// Получаем сообщение об ошибке
-	int err = EVUTIL_SOCKET_ERROR();
-	// Выводим сообщение в консоль
-	fprintf(stderr, "Got an error %d (%s) on the listener. Shutting down.\n", err, evutil_socket_error_to_string(err));
-	// Удаляем базу событий
-	event_base_loopexit(base, NULL);
+	// Получаем объект прокси-сервера
+	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
+	// Если прокси существует
+	if(proxy != NULL){
+		// Получаем базу событий
+		struct event_base * base = evconnlistener_get_base(listener);
+		// Получаем сообщение об ошибке
+		int err = EVUTIL_SOCKET_ERROR();
+		// Выводим сообщение в лог
+		proxy->log->write(LOG_ERROR, "Got an error %d (%s) on the listener. Shutting down.", err, evutil_socket_error_to_string(err));
+		// Удаляем базу событий
+		event_base_loopexit(base, NULL);
+	}
 	// Выходим
 	return;
 }
@@ -517,11 +595,13 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 	// Если прокси существует
 	if(proxy != NULL){
 		// Получаем данные подключившегося клиента
-		string host = proxy->get_host(address, socklen);
-		// Выводим в консоль сообщение
-		printf("client host = %s\n", host.c_str());
+		string host = gethost(address, socklen);
+		// Выводим в лог сообщение
+		proxy->log->write(LOG_ACCESS, "client connect to proxy server, host = %s, socket = %d", host.c_str(), fd);
 		// Создаем новый объект подключения
 		BufferHttpProxy * http = new BufferHttpProxy(proxy->name, proxy->options);
+		// Запоминаем данные клиента
+		http->client.host = host;
 		// Запоминаем таймауты
 		http->read_timeout		= proxy->read_timeout;
 		http->write_timeout		= proxy->write_timeout;
@@ -529,6 +609,8 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Запоминаем размеры буферов
 		http->buffer_read_size	= proxy->buffer_read_size;
 		http->buffer_write_size	= proxy->buffer_write_size;
+		// Запоминаем объект лога
+		http->log = proxy->log;
 		// Запоминаем параметры прокси-сервера
 		http->options = proxy->options;
 		// Запоминаем базу событий
@@ -536,7 +618,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, fd, BEV_OPT_CLOSE_ON_FREE);
 		// Устанавливаем размеры буферов
-		set_buffer_size(fd, http->buffer_read_size, http->buffer_write_size);
+		set_buffer_size(fd, http->buffer_read_size, http->buffer_write_size, http->log);
 		// Устанавливаем таймаут ожидания запроса
 		struct timeval tread = {http->keepalive_timeout, 0};
 		// Устанавливаем таймауты
@@ -553,6 +635,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 }
 /**
  * HttpProxy Конструктор
+ * @param log        указатель на объект ведения логов
  * @param name       название прокси-сервера
  * @param host       хост прокси-сервера
  * @param port       порт прокси-сервера
@@ -565,6 +648,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
  * @param options    опции прокси-сервера
  */
 HttpProxy::HttpProxy(
+	LogApp * log,
 	const char * name,
 	const char * host,
 	u_int port,
@@ -576,62 +660,67 @@ HttpProxy::HttpProxy(
 	u_short katm,
 	u_short options
 ){
-	// Запоминаем название системы
-	this->name = name;
-	// Запоминаем тип прокси-сервера
-	this->options = options;
-	// Запоминаем таймауты
-	read_timeout		= rtm;
-	write_timeout		= wtm;
-	keepalive_timeout	= katm;
-	// Структура для создания сервера приложения
-	struct sockaddr_in sin;
-	// Создаем новую базу
-	struct event_base * base = event_base_new();
-	// Структура определяющая параметры сервера приложений
-	struct hostent * server = gethostbyname(host);
-	// Очищаем всю структуру
-	memset(&sin, 0, sizeof(sin));
-	// Listen on 0.0.0.0
-	// sin.sin_addr.s_addr = htonl(0);
-	// This is an INET address
-	sin.sin_family = AF_INET;
-	// Указываем адрес прокси сервера
-	sin.sin_addr.s_addr = * ((unsigned long *) server->h_addr);
-	// Listen on the given port.
-	sin.sin_port = htons(port);
-	// Вешаем приложение на порт
-	listener = evconnlistener_new_bind(
-		base, &HttpProxy::accept_connect, this,
-		LEV_OPT_REUSEABLE |
-		//LEV_OPT_THREADSAFE |
-		LEV_OPT_CLOSE_ON_FREE |
-		LEV_OPT_LEAVE_SOCKETS_BLOCKING,
-		maxcls, (struct sockaddr *) &sin, sizeof(sin)
-	);
-	// Если подключение не удалось
-	if(!listener){
-		// Выводим сообщение об ошибке
-		perror("Couldn't create listener");
-		// Выходим
-		return;
+	// Если лог существует
+	if(log != NULL){
+		// Запоминаем объект ведения логов
+		this->log = log;
+		// Запоминаем название системы
+		this->name = name;
+		// Запоминаем тип прокси-сервера
+		this->options = options;
+		// Запоминаем таймауты
+		read_timeout		= rtm;
+		write_timeout		= wtm;
+		keepalive_timeout	= katm;
+		// Структура для создания сервера приложения
+		struct sockaddr_in sin;
+		// Создаем новую базу
+		struct event_base * base = event_base_new();
+		// Структура определяющая параметры сервера приложений
+		struct hostent * server = gethostbyname(host);
+		// Очищаем всю структуру
+		memset(&sin, 0, sizeof(sin));
+		// Listen on 0.0.0.0
+		// sin.sin_addr.s_addr = htonl(0);
+		// This is an INET address
+		sin.sin_family = AF_INET;
+		// Указываем адрес прокси сервера
+		sin.sin_addr.s_addr = * ((unsigned long *) server->h_addr);
+		// Listen on the given port.
+		sin.sin_port = htons(port);
+		// Вешаем приложение на порт
+		listener = evconnlistener_new_bind(
+			base, &HttpProxy::accept_connect, this,
+			LEV_OPT_REUSEABLE |
+			//LEV_OPT_THREADSAFE |
+			LEV_OPT_CLOSE_ON_FREE |
+			LEV_OPT_LEAVE_SOCKETS_BLOCKING,
+			maxcls, (struct sockaddr *) &sin, sizeof(sin)
+		);
+		// Если подключение не удалось
+		if(!listener){
+			// Выводим сообщение об ошибке
+			perror("Couldn't create listener");
+			// Выходим
+			return;
+		}
+		// Получаем сокет приложения
+		evutil_socket_t socket = evconnlistener_get_fd(listener);
+		// Устанавливаем неблокирующий режим
+		set_tcpnodelay(socket, this->log);
+		// Размер буфера на чтение
+		buffer_read_size = buffrsize;
+		// Размер буфера на запись
+		buffer_write_size = buffwsize;
+		// Устанавливаем размеры буферов
+		set_buffer_size(socket, ((maxcls > 0 ? maxcls : 1) * buffer_read_size), ((maxcls > 0 ? maxcls : 1) * buffer_write_size), this->log);
+		// Устанавливаем обработчик на получение ошибок
+		evconnlistener_set_error_cb(listener, &HttpProxy::accept_error);
+		// Активируем перебор базы событий
+		event_base_dispatch(base);
+		// Активируем перебор базы событий
+		// event_base_loop(base, EVLOOP_NO_EXIT_ON_EMPTY);
 	}
-	// Получаем сокет приложения
-	evutil_socket_t socket = evconnlistener_get_fd(listener);
-	// Устанавливаем неблокирующий режим
-	set_tcpnodelay(socket);
-	// Размер буфера на чтение
-	buffer_read_size = buffrsize;
-	// Размер буфера на запись
-	buffer_write_size = buffwsize;
-	// Устанавливаем размеры буферов
-	set_buffer_size(socket, ((maxcls > 0 ? maxcls : 1) * buffer_read_size), ((maxcls > 0 ? maxcls : 1) * buffer_write_size));
-	// Устанавливаем обработчик на получение ошибок
-	evconnlistener_set_error_cb(listener, &HttpProxy::accept_error);
-	// Активируем перебор базы событий
-	event_base_dispatch(base);
-	// Активируем перебор базы событий
-	// event_base_loop(base, EVLOOP_NO_EXIT_ON_EMPTY);
 }
 /**
  * HttpProxy Конструктор

@@ -259,8 +259,8 @@ void Http::createHead(){
 		&& (it->first != "user-agent")
 		&& (it->first != "connection")
 		&& (it->first != "proxy-authorization")
-		&& (!gzip && (it->first != "accept-encoding"))
-		&& (smart && (it->first != "proxy-connection"))){
+		&& (gzip || (!gzip && (it->first != "accept-encoding")))
+		&& (!smart || (smart && (it->first != "proxy-connection")))){
 			// Добавляем оставшиеся заголовки
 			query.request.append(
 				query.origin[it->first] + string(": ")
@@ -706,6 +706,29 @@ Http::HttpQuery Http::faultConnect(){
 	result = html[6];
 	// Данные для вывода
 	HttpQuery data(502, result);
+	// Выводим результат
+	return data;
+}
+/**
+ * pageNotFound Метод получения ответа (страница не найдена)
+ * @return ответ в формате html
+ */
+Http::HttpQuery Http::pageNotFound(){
+	// Устанавливаем дефолтное название прокси
+	string defname = "ProxyAnyks/1.0";
+	// Определяем позицию дефолтного названия
+	size_t pos = html[4].find(defname);
+	// Результирующая строка
+	string result;
+	// Если это домен
+	if(pos != string::npos){
+		// Заменяем дефолтное название на указанное
+		result = html[4].replace(pos, defname.length(), appname + string("/") + appver);
+	}
+	// Выводим шаблон сообщения о неудачном подключении
+	result = html[4];
+	// Данные для вывода
+	HttpQuery data(404, result);
 	// Выводим результат
 	return data;
 }

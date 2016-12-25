@@ -6,12 +6,12 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
 // MacOS X
-// g++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+// g++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
 // Linux
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // Debug:
 // ulimit -c unlimited
 // ./bin/http
@@ -22,6 +22,7 @@
 #include <sys/wait.h>
 #include <sys/file.h>
 #include <sys/signal.h>
+#include "./lib/log.h"
 #include "./proxy/http.h"
 
 // Максимальное количество открытых сокетов (по дефолту в системе 1024)
@@ -31,6 +32,8 @@
 
 // Пиды дочернего воркера
 pid_t cpid = -1;
+// Объект log модуля
+LogApp * log = NULL;
 
 /**
  * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
@@ -80,34 +83,34 @@ void rm_pidfile(const char * filename, int ext){
 void signal_log(int signum){
 	// Определяем данные сигнала
 	switch(signum){
-		case SIGABRT:	printf("Сигнал посылаемый функцией abort() [%d]\n", signum);						break;
-		case SIGALRM:	printf("Сигнал истечения времени, заданного alarm() [%d]\n", signum);				break;
-		case SIGBUS:	printf("Неправильное обращение в физическую память [%d]\n", signum);				break;
-		case SIGCHLD:	printf("Дочерний процесс завершен или остановлен [%d]\n", signum);					break;
-		case SIGCONT:	printf("Продолжить выполнение ранее остановленного процесса [%d]\n", signum);		break;
-		case SIGFPE:	printf("Ошибочная арифметическая операция [%d]\n", signum);							break;
-		case SIGHUP:	printf("Закрытие терминала [%d]\n", signum);										break;
-		case SIGILL:	printf("Недопустимая инструкция процессора [%d]\n", signum);						break;
-		case SIGINT:	printf("Сигнал прерывания (Ctrl-C) с терминала [%d]\n", signum);					break;
-		case SIGKILL:	printf("Безусловное завершение [%d]\n", signum);									break;
-		case SIGPIPE:	printf("Запись в разорванное соединение (пайп, сокет) [%d]\n", signum);				break;
-		case SIGQUIT:	printf("Сигнал «Quit» с терминала (Ctrl-\\) [%d]\n", signum);						break;
-		case SIGSEGV:	printf("Нарушение при обращении в память [%d]\n", signum);							break;
-		case SIGSTOP:	printf("Остановка выполнения процесса [%d]\n", signum);								break;
-		case SIGTERM:	printf("Сигнал завершения (сигнал по умолчанию для утилиты kill) [%d]\n", signum);	break;
-		case SIGTSTP:	printf("Сигнал остановки с терминала (Ctrl-Z) [%d]\n", signum);						break;
-		case SIGTTIN:	printf("Попытка чтения с терминала фоновым процессом [%d]\n", signum);				break;
-		case SIGTTOU:	printf("Попытка записи на терминал фоновым процессом [%d]\n", signum);				break;
-		case SIGUSR1:	printf("Пользовательский сигнал № 1 [%d]\n", signum);								break;
-		case SIGUSR2:	printf("Пользовательский сигнал № 2 [%d]\n", signum);								break;
-		// case SIGPOLL:	printf("Событие, отслеживаемое poll() [%d]\n", signum);							break;
-		case SIGPROF:	printf("Истечение таймера профилирования [%d]\n", signum);							break;
-		case SIGSYS:	printf("Неправильный системный вызов [%d]\n", signum);								break;
-		case SIGTRAP:	printf("Ловушка трассировки или брейкпоинт [%d]\n", signum);						break;
-		case SIGURG:	printf("На сокете получены срочные данные [%d]\n", signum);							break;
-		case SIGVTALRM:	printf("Истечение «виртуального таймера» [%d]\n", signum);							break;
-		case SIGXCPU:	printf("Процесс превысил лимит процессорного времени [%d]\n", signum);				break;
-		case SIGXFSZ:	printf("Процесс превысил допустимый размер файла [%d]\n", signum);					break;
+		case SIGABRT:	log->write(LOG_ERROR, "Сигнал посылаемый функцией abort() [%d]", signum);						break;
+		case SIGALRM:	log->write(LOG_ERROR, "Сигнал истечения времени, заданного alarm() [%d]", signum);				break;
+		case SIGBUS:	log->write(LOG_ERROR, "Неправильное обращение в физическую память [%d]", signum);				break;
+		case SIGCHLD:	log->write(LOG_ERROR, "Дочерний процесс завершен или остановлен [%d]", signum);					break;
+		case SIGCONT:	log->write(LOG_ERROR, "Продолжить выполнение ранее остановленного процесса [%d]", signum);		break;
+		case SIGFPE:	log->write(LOG_ERROR, "Ошибочная арифметическая операция [%d]", signum);						break;
+		case SIGHUP:	log->write(LOG_ERROR, "Закрытие терминала [%d]", signum);										break;
+		case SIGILL:	log->write(LOG_ERROR, "Недопустимая инструкция процессора [%d]", signum);						break;
+		case SIGINT:	log->write(LOG_ERROR, "Сигнал прерывания (Ctrl-C) с терминала [%d]", signum);					break;
+		case SIGKILL:	log->write(LOG_ERROR, "Безусловное завершение [%d]", signum);									break;
+		case SIGPIPE:	log->write(LOG_ERROR, "Запись в разорванное соединение (пайп, сокет) [%d]", signum);			break;
+		case SIGQUIT:	log->write(LOG_ERROR, "Сигнал «Quit» с терминала (Ctrl-\\) [%d]", signum);						break;
+		case SIGSEGV:	log->write(LOG_ERROR, "Нарушение при обращении в память [%d]", signum);							break;
+		case SIGSTOP:	log->write(LOG_ERROR, "Остановка выполнения процесса [%d]", signum);							break;
+		case SIGTERM:	log->write(LOG_ERROR, "Сигнал завершения (сигнал по умолчанию для утилиты kill) [%d]", signum);	break;
+		case SIGTSTP:	log->write(LOG_ERROR, "Сигнал остановки с терминала (Ctrl-Z) [%d]", signum);					break;
+		case SIGTTIN:	log->write(LOG_ERROR, "Попытка чтения с терминала фоновым процессом [%d]", signum);				break;
+		case SIGTTOU:	log->write(LOG_ERROR, "Попытка записи на терминал фоновым процессом [%d]", signum);				break;
+		case SIGUSR1:	log->write(LOG_ERROR, "Пользовательский сигнал № 1 [%d]", signum);								break;
+		case SIGUSR2:	log->write(LOG_ERROR, "Пользовательский сигнал № 2 [%d]", signum);								break;
+		// case SIGPOLL: log->write(LOG_ERROR, "Событие, отслеживаемое poll() [%d]", signum);							break;
+		case SIGPROF:	log->write(LOG_ERROR, "Истечение таймера профилирования [%d]", signum);							break;
+		case SIGSYS:	log->write(LOG_ERROR, "Неправильный системный вызов [%d]", signum);								break;
+		case SIGTRAP:	log->write(LOG_ERROR, "Ловушка трассировки или брейкпоинт [%d]", signum);						break;
+		case SIGURG:	log->write(LOG_ERROR, "На сокете получены срочные данные [%d]", signum);						break;
+		case SIGVTALRM:	log->write(LOG_ERROR, "Истечение «виртуального таймера» [%d]", signum);							break;
+		case SIGXCPU:	log->write(LOG_ERROR, "Процесс превысил лимит процессорного времени [%d]", signum);				break;
+		case SIGXFSZ:	log->write(LOG_ERROR, "Процесс превысил допустимый размер файла [%d]", signum);					break;
 	}
 }
 /**
@@ -166,8 +169,7 @@ void create_proxy(){
 	// Установим максимальное кол-во дискрипторов которое можно открыть
 	set_fd_limit(MAX_FDS);
 	// Создаем объект для http прокси-сервера
-	// HttpProxy * http = new HttpProxy("anyks", "0.0.0.0", SERVER_PORT, -1, -1, -1, READ_TIMEOUT, WRITE_TIMEOUT, KEEP_ALIVE_TIMEOUT, OPT_SMART);
-	HttpProxy * http = new HttpProxy();
+	HttpProxy * http = new HttpProxy(log);
 	// Очищаем выделенный объект
 	delete http;
 }
@@ -200,13 +202,13 @@ void run_worker(){
 					exit(EXIT_FAILURE);
 				}
 				// Если дочерний процесс просто вышел
-				if(WIFEXITED(status)) printf("exited, pid = %d, status = %d\n", cpid, WEXITSTATUS(status));
+				if(WIFEXITED(status)) log->write(LOG_ERROR, "exited, pid = %d, status = %d", cpid, WEXITSTATUS(status));
 				// Если дочерний процесс убит
-				else if(WIFSIGNALED(status)) printf("killed by pid = %d, signal %d\n", cpid, WTERMSIG(status));
+				else if(WIFSIGNALED(status)) log->write(LOG_ERROR, "killed by pid = %d, signal %d", cpid, WTERMSIG(status));
 				// Если дочерний процесс остановлен
-				else if(WIFSTOPPED(status)) printf("stopped by pid = %d, signal %d\n", cpid, WSTOPSIG(status));
+				else if(WIFSTOPPED(status)) log->write(LOG_ERROR, "stopped by pid = %d, signal %d", cpid, WSTOPSIG(status));
 				// Если дочерний процесс прислал сообщение что нужно продолжить
-				else if(WIFCONTINUED(status)) printf("continued\n");
+				else if(WIFCONTINUED(status)) log->write(LOG_ERROR, "continued");
 			// Продолжаем до тех пор пока статус не освободится
 			} while(!WIFEXITED(status) && !WIFSIGNALED(status));
 			// Перезапускаем дочерний процесс
@@ -216,20 +218,6 @@ void run_worker(){
 		}
 	}
 }
-
-
-/*
-void test(short options){
-	if(options & OPT_CONNECT) cout << " OPT_CONNECT " << endl;
-	if(options & OPT_NAME) cout << " OPT_NAME " << endl;
-	if(options & OPT_GZIP) cout << " OPT_GZIP " << endl;
-	if(options & OPT_SMART) cout << " OPT_SMART " << endl;
-	if(options & OPT_KEEPALIVE) cout << " OPT_KEEPALIVE " << endl;
-	if(options & OPT_LOG) cout << " OPT_LOG " << endl;
-	if(options & OPT_PGZIP) cout << " OPT_PGZIP " << endl;
-}
-*/
-
 /**
  * main Главная функция приложения
  * @param  argc длина массива параметров
@@ -237,6 +225,10 @@ void test(short options){
  * @return      код выхода из приложения
  */
 int main(int argc, char * argv[]){
+	// Активируем локаль
+	setlocale(LC_ALL, "");
+	// Создаем модуль лога
+	log = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src");
 	/*
 	// Наши ID процесса и сессии
 	pid_t pid, sid;
@@ -282,6 +274,8 @@ int main(int argc, char * argv[]){
 	signal(SIGTTOU, sigterm_handler);	// Попытка записи на терминал фоновым процессом
 	// Запускаем воркер
 	run_worker();
+	// Удаляем лог
+	delete log;
 	// Выходим
 	return 0;
 }

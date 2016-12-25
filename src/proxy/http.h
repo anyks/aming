@@ -5,6 +5,9 @@
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
+#ifndef _HTTP_PROXY_ANYKS_
+#define _HTTP_PROXY_ANYKS_
+
 #include <iostream>
 #include <errno.h>
 #include <stdlib.h>
@@ -15,6 +18,7 @@
 #include <event2/listener.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
+#include "../lib/log.h"
 #include "../lib/http.h"
 
 // Устанавливаем область видимости
@@ -70,11 +74,13 @@ class BufferHttpProxy {
 		u_short				keepalive_timeout;	// Таймаут ожидания коннекта
 		u_short				options;			// Параметры прокси-сервера
 		struct event_base	* base;				// База событий
+		LogApp				* log;				// Указатель на объект ведения логов
 		Http				* parser;			// Объект парсера
 		Http::HttpQuery		response;			// Ответ системы
 		Request				request;			// Данные запроса
 		Events				events;				// Буферы событий
 		Server				server;				// Параметры удаленного сервера
+		Server				client;				// Параметры подключившегося клиента
 		// Размеры буферов на чтение и запись
 		int buffer_read_size, buffer_write_size;
 		/**
@@ -142,6 +148,8 @@ class BufferHttpProxy {
  */
 class HttpProxy {
 	private:
+		// Указатель на объект ведения логов
+		LogApp * log;
 		// Название прокси-сервера
 		string name;
 		// Параметры прокси-сервера
@@ -155,12 +163,12 @@ class HttpProxy {
 		// Слушатель порат
 		struct evconnlistener * listener = NULL;
 		/**
-		 * HttpProxy::get_host Функция получения данных хоста
+		 * gethost Функция получения данных хоста
 		 * @param  address структура параметров подключения
 		 * @param  socklen размер структуры
 		 * @return         данные полученного хоста
 		 */
-		string get_host(struct sockaddr * address, int socklen);
+		static string gethost(struct sockaddr * address, int socklen);
 		/**
 		 * free_http Функция очистки объекта http
 		 * @param arg объект для очистки
@@ -168,10 +176,11 @@ class HttpProxy {
 		static void free_http(BufferHttpProxy ** arg);
 		/**
 		 * set_non_block Функция отключения алгоритма Нейгла
-		 * @param fd файловый дескриптор (сокет)
-		 * @return   результат работы функции
+		 * @param  fd   файловый дескриптор (сокет)
+		 * @param  log  указатель на объект ведения логов
+		 * @return      результат работы функции
 		 */
-		static int set_tcpnodelay(evutil_socket_t fd);
+		static int set_tcpnodelay(evutil_socket_t fd, LogApp * log);
 		/**
 		 * append_to_buffer Функция добавления в буфер новых данных
 		 * @param data       ссылка на буфер данных
@@ -184,9 +193,10 @@ class HttpProxy {
 		 * @param  fd         файловый дескриптор (сокет)
 		 * @param  read_size  размер буфера на чтение
 		 * @param  write_size размер буфера на запись
+		 * @param  log        указатель на объект ведения логов
 		 * @return            результат работы функции
 		 */
-		static int set_buffer_size(evutil_socket_t fd, int read_size, int write_size);
+		static int set_buffer_size(evutil_socket_t fd, int read_size, int write_size, LogApp * log);
 		/**
 		 * check_auth Функция проверки логина и пароля
 		 * @param ctx объект входящих данных
@@ -236,6 +246,7 @@ class HttpProxy {
 	public:
 		/**
 		 * HttpProxy Конструктор
+		 * @param log        указатель на объект ведения логов
 		 * @param name       название прокси-сервера
 		 * @param host       хост прокси-сервера
 		 * @param port       порт прокси-сервера
@@ -248,6 +259,7 @@ class HttpProxy {
 		 * @param options    опции прокси-сервера
 		 */
 		HttpProxy(
+			LogApp * 		log			= NULL,
 			const char *	name		= "anyks",
 			const char *	host		= "0.0.0.0",
 			u_int			port		= SERVER_PORT,
@@ -264,3 +276,4 @@ class HttpProxy {
 		 */
 		~HttpProxy();
 };
+#endif
