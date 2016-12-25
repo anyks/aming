@@ -164,4 +164,5 @@ class LogApp {
 		 */
 		LogApp(u_short type = TOLOG_CONSOLE, const char * name = "anyks", const char * dir = DIR_LOG, size_t size = SIZE_LOG, bool enabled = true);
 };
-#endif
+
+#endif // _LOG_ANYKS_

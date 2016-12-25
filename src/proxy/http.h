@@ -276,4 +276,5 @@ class HttpProxy {
 		 */
 		~HttpProxy();
 };
-#endif
+
+#endif // _HTTP_PROXY_ANYKS_

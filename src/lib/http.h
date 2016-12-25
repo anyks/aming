@@ -533,4 +533,5 @@ class Http {
 		 */
 		~Http();
 };
-#endif
+
+#endif // _HTTP_PARSER_ANYKS_
