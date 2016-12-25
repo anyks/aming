@@ -172,7 +172,7 @@ class Http {
 		// Параметры прокси-сервера
 		u_short options;
 		// Название и версия прокси сервера
-		string appname, appver;
+		string name, version;
 		// Шаблоны ответов
 		string html[12] = {
 			// Подключение разрешено [0]

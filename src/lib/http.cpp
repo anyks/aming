@@ -519,7 +519,7 @@ void Http::modify(vector <char> &data){
 				// Копируем заголовки
 				string str(headers, pos);
 				// Устанавливаем название прокси
-				if(agent) str.append(string("\r\nProxy-Agent: ") + appname + string("/") + appver);
+				if(agent) str.append(string("\r\nProxy-Agent: ") + this->name + string("/") + this->version);
 				// Добавляем заголовок закрытия подключения, если не smarty
 				if(!smart) str.append(string("\r\nProxy-Connection: ") + co);
 				// Начальные и конечные блоки данных
@@ -677,7 +677,7 @@ Http::HttpQuery Http::brokenRequest(){
 	// Если это домен
 	if(pos != string::npos){
 		// Заменяем дефолтное название на указанное
-		result = html[9].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[9].replace(pos, defname.length(), this->name + string("/") + this->version);
 	}
 	// Выводим шаблон сообщения о неудачном отправленном запросе
 	result = html[9];
@@ -700,7 +700,7 @@ Http::HttpQuery Http::faultConnect(){
 	// Если это домен
 	if(pos != string::npos){
 		// Заменяем дефолтное название на указанное
-		result = html[6].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[6].replace(pos, defname.length(), this->name + string("/") + this->version);
 	}
 	// Выводим шаблон сообщения о неудачном подключении
 	result = html[6];
@@ -723,7 +723,7 @@ Http::HttpQuery Http::pageNotFound(){
 	// Если это домен
 	if(pos != string::npos){
 		// Заменяем дефолтное название на указанное
-		result = html[4].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[4].replace(pos, defname.length(), this->name + string("/") + this->version);
 	}
 	// Выводим шаблон сообщения о неудачном подключении
 	result = html[4];
@@ -746,7 +746,7 @@ Http::HttpQuery Http::faultAuth(){
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		result = html[5].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[5].replace(pos, defname.length(), this->name + string("/") + this->version);
 	}
 	// Выводим шаблон сообщения о неудачной авторизации
 	result = html[5];
@@ -769,7 +769,7 @@ Http::HttpQuery Http::requiredAuth(){
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		result = html[2].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[2].replace(pos, defname.length(), this->name + string("/") + this->version);
 	}
 	// Выводим шаблон сообщения о требовании авторизации
 	result = html[2];
@@ -792,7 +792,7 @@ Http::HttpQuery Http::authSuccess(){
 	// Если это домен
 	if(pos != string::npos){
 		// Выводим шаблон сообщения о неудачной авторизации
-		result = html[0].replace(pos, defname.length(), appname + string("/") + appver);
+		result = html[0].replace(pos, defname.length(), this->name + string("/") + this->version);
 	}
 	// Выводим шаблон сообщения о том что авторизация пройдена
 	result = html[0];
@@ -998,9 +998,9 @@ void Http::clear(){
  */
 Http::Http(const string str, u_short opt, const string ver){
 	// Если имя передано то запоминаем его
-	this->appname = str;
+	this->name = str;
 	// Устанавливаем версию системы
-	this->appver = ver;
+	this->version = ver;
 	// Запоминаем тип прокси-сервера
 	this->options = opt;
 }

@@ -107,11 +107,12 @@ class BufferHttpProxy {
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param string  name    имя ресурса
+		 * @param string  version версия ресурса
 		 * @param u_short options параметры прокси-сервера
 		 */
-		BufferHttpProxy(string name, u_short options){
+		BufferHttpProxy(string name, string version, u_short options){
 			// Создаем объект для работы с http заголовками
-			parser = new Http(name, options, APP_VERSION);
+			parser = new Http(name, options, version);
 		}
 		/**
 		 * ~BufferHttpProxy Деструктор
@@ -147,8 +148,8 @@ class HttpProxy {
 	private:
 		// Указатель на объект ведения логов
 		LogApp * log;
-		// Название прокси-сервера
-		string name;
+		// Название и версия прокси-сервера
+		string name, version;
 		// Параметры прокси-сервера
 		u_short options;
 		// Таймеры
@@ -245,6 +246,7 @@ class HttpProxy {
 		 * HttpProxy Конструктор
 		 * @param log        указатель на объект ведения логов
 		 * @param name       название прокси-сервера
+		 * @param version    версия прокси-сервера
 		 * @param host       хост прокси-сервера
 		 * @param port       порт прокси-сервера
 		 * @param buffrsize  размер буфера сокета на чтение
@@ -258,6 +260,7 @@ class HttpProxy {
 		HttpProxy(
 			LogApp * 		log			= NULL,
 			const char *	name		= "anyks",
+			const char *	version		= APP_VERSION,
 			const char *	host		= "0.0.0.0",
 			u_int			port		= SERVER_PORT,
 			int				buffrsize	= BUFFER_READ_SIZE,

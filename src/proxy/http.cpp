@@ -599,7 +599,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Выводим в лог сообщение
 		proxy->log->write(LOG_ACCESS, "client connect to proxy server, host = %s, socket = %d", host.c_str(), fd);
 		// Создаем новый объект подключения
-		BufferHttpProxy * http = new BufferHttpProxy(proxy->name, proxy->options);
+		BufferHttpProxy * http = new BufferHttpProxy(proxy->name, proxy->version, proxy->options);
 		// Запоминаем данные клиента
 		http->client.host = host;
 		// Запоминаем таймауты
@@ -637,6 +637,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
  * HttpProxy Конструктор
  * @param log        указатель на объект ведения логов
  * @param name       название прокси-сервера
+ * @param version    версия прокси-сервера
  * @param host       хост прокси-сервера
  * @param port       порт прокси-сервера
  * @param buffrsize  размер буфера сокета на чтение
@@ -650,6 +651,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 HttpProxy::HttpProxy(
 	LogApp * log,
 	const char * name,
+	const char * version,
 	const char * host,
 	u_int port,
 	int buffrsize,
@@ -666,6 +668,8 @@ HttpProxy::HttpProxy(
 		this->log = log;
 		// Запоминаем название системы
 		this->name = name;
+		// Запоминаем версию системы
+		this->version = version;
 		// Запоминаем тип прокси-сервера
 		this->options = options;
 		// Запоминаем таймауты
