@@ -335,19 +335,20 @@ void LogApp::welcome(
 		// Создаем буфер
 		char buffer[1024 * 16];
 		// Создаем формат вывода
-		const char * format = "\n*\n*   WELCOME TO %s PROXY\n*\n*   Parameters proxy:\n*   "
-							"name:             %s\n*   version:          %s\n"
-							"*   IPv4:             %s\n*   IPv6:             %s\n"
-							"*   gzip transfer:    %s\n*   gzip response:    %s\n"
-							"*   max connect:      %s\n*   smart             %s\n"
-							"*   keep-alive:       %s\n*   http:             %s\n"
-							"*   socks5:           %s\n*   connect:          %s\n"
-							"*   host:             %s\n*   http port:        %d\n"
-							"*   socks5 port:      %d\n*   operating system: %s\n"
-							"*   date start proxy: %s\n*\n*   Contact Developer:\n"
-							"*   copyright:        %s\n*   site:             %s\n"
-							"*   e-mail:           %s\n*   support:          %s\n"
-							"*   author:           @%s\n*\n";
+		const char * format = "\n*\n*   "
+		"WELCOME TO %s PROXY\n*\n*   Parameters proxy:\n*   "
+		"name:             %s\n*   version:          %s\n"
+		"*   IPv4:             %s\n*   IPv6:             %s\n"
+		"*   gzip transfer:    %s\n*   gzip response:    %s\n"
+		"*   max connect:      %s\n*   smart             %s\n"
+		"*   keep-alive:       %s\n*   http:             %s\n"
+		"*   socks5:           %s\n*   connect:          %s\n"
+		"*   host:             %s\n*   http port:        %d\n"
+		"*   socks5 port:      %d\n*   operating system: %s\n"
+		"*   date start proxy: %s\n*\n*   Contact Developer:\n"
+		"*   copyright:        %s\n*   site:             %s\n"
+		"*   e-mail:           %s\n*   support:          %s\n"
+		"*   author:           @%s\n*\n";
 		// Записываем сообщение в буфер
 		len = sprintf(
 			buffer, format, proxyname.c_str(),
