@@ -106,7 +106,7 @@ class BufferHttpProxy {
 		 */
 		struct Sockets {
 			evutil_socket_t client;	// Сокет клиента
-			evutil_socket_t server;	Сокет сервера
+			evutil_socket_t server;	// Сокет сервера
 		} __attribute__((packed));
 	public:
 		bool				auth = false;		// Флаг авторизации
