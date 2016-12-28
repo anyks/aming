@@ -20,17 +20,17 @@
 // Устанавливаем пространство имен
 using namespace std;
 
-// Название и версия прокси-сервера
+// Название и версия прокси сервера
 #define APP_NAME "ANYKS"
 #define APP_VERSION "1.0"
 
-// Флаг разрешения connect прокси-сервера
+// Флаг разрешения connect прокси сервера
 #define OPT_CONNECT 0x01
-// Флаг вывода названия прокси-сервера
+// Флаг вывода названия прокси сервера
 #define OPT_AGENT 0x02
 // Флаг разрешения сжатия данных методом gzip
 #define OPT_GZIP 0x04
-// Флаг разрешающий smart прокси-сервер
+// Флаг разрешающий smart прокси сервер
 #define OPT_SMART 0x08
 // Флаг разрешающий постоянное соединение
 #define OPT_KEEPALIVE 0x10
@@ -39,22 +39,93 @@ using namespace std;
 // Флаг разрешающий сжатие не сжатых данных
 #define OPT_PGZIP 0x40
 
-// Класс содержит данные парсинга http запроса
+/**
+ * HttpQuery Класс данных для выполнения запросов на удаленном сервере
+ */
+class HttpQuery {
+	private:
+		// Результирующий вектор
+		vector <char> _result;
+	public:
+		// Код сообщения
+		short code;
+		// Смещение в буфере
+		size_t offset = 0;
+		/**
+		 * HttpQuery Конструктор
+		 * @param code       код сообщения
+		 * @param mess       данные сообщения
+		 * @param entitybody вложенные данные
+		 */
+		HttpQuery(short _code = 0, string _mess = "", vector <char> _entitybody = {}){
+			// Очищаем вектор
+			_result.clear();
+			// Если строка существует
+			if(!_mess.empty()){
+				// Устанавливаем код сообщения
+				code = _code;
+				// Копируем в вектор сам запрос
+				_result.assign(_mess.begin(), _mess.end());
+				// Если данные существуют
+				if(!_entitybody.empty()){
+					// Копируем в результирующий вектор данные вложения
+					copy(_entitybody.begin(), _entitybody.end(), back_inserter(_result));
+				}
+			}
+		}
+		/**
+		 * ~HttpQuery Деструктор
+		 */
+		~HttpQuery(){
+			// Очищаем все переменные
+			code	= 0;
+			offset	= 0;
+			vector <char> ().swap(_result);
+		}
+		/**
+		 * clear Метод очистки данных
+		 */
+		void clear(){
+			// Очищаем все переменные
+			code	= 0;
+			offset	= 0;
+			_result.clear();
+		}
+		/**
+		 * data Метод получения данных запроса
+		 * @return данные запроса
+		 */
+		const char * data(){return (!_result.empty() ? _result.data() : "");}
+		/**
+		 * size Метод получения размера
+		 * @return данные размера
+		 */
+		size_t size(){return _result.size();}
+		/**
+		 * empty Метод определяет наличие данных
+		 * @return проверка о наличи данных
+		 */
+		bool empty(){return _result.empty();}
+};
+
+/**
+ * Http Класс содержит данные парсинга http запроса
+ */
 class Http {
 	private:
 		// Структура подержащая данные проверки, полной передачи данных
-		struct check_end {
+		struct HttpEnd {
 			u_short	type = 0;
 			size_t	begin = 0, end = 0;
-		};
+		} __attribute__((packed));
 		// Структура подключения
-		struct connect {
-			string	host,		// Хост
-					port,		// Порт
-					protocol;	// Протокол
-		};
+		struct Connect {
+			string host;		// Хост
+			string port;		// Порт
+			string protocol;	// Протокол
+		} __attribute__((packed));
 		// Структура http данных
-		struct http_data {
+		struct HttpData {
 			string					http;		// http запрос
 			string					auth;		// Тип авторизации
 			string					method;		// Метод запроса
@@ -97,79 +168,10 @@ class Http {
 				// Очищаем оригинальные заголовки
 				origin.clear();
 			}
-		};
-		// Структура данных для выполнения запросов на удаленном сервере
-		struct http_query {
-			private:
-				// Результирующий вектор
-				vector <char> _result;
-			public:
-				// Код сообщения
-				short code;
-				// Смещение в буфере
-				size_t offset = 0;
-				/**
-				 * http_query Конструктор
-				 * @param code       код сообщения
-				 * @param mess       данные сообщения
-				 * @param entitybody вложенные данные
-				 */
-				http_query(short _code = 0, string _mess = "", vector <char> _entitybody = {}){
-					// Очищаем вектор
-					_result.clear();
-					// Если строка существует
-					if(!_mess.empty()){
-						// Устанавливаем код сообщения
-						code = _code;
-						// Копируем в вектор сам запрос
-						_result.assign(_mess.begin(), _mess.end());
-						// Если данные существуют
-						if(!_entitybody.empty()){
-							// Копируем в результирующий вектор данные вложения
-							copy(_entitybody.begin(), _entitybody.end(), back_inserter(_result));
-						}
-					}
-				}
-				/**
-				 * ~http_query Деструктор
-				 */
-				~http_query(){
-					// Очищаем все переменные
-					code	= 0;
-					offset	= 0;
-					vector <char> ().swap(_result);
-				}
-				/**
-				 * clear Метод очистки данных
-				 */
-				void clear(){
-					// Очищаем все переменные
-					code	= 0;
-					offset	= 0;
-					_result.clear();
-				}
-				/**
-				 * data Метод получения данных запроса
-				 * @return данные запроса
-				 */
-				const char * data(){return (!_result.empty() ? _result.data() : "");}
-				/**
-				 * size Метод получения размера
-				 * @return данные размера
-				 */
-				size_t size(){return _result.size();}
-				/**
-				 * empty Метод определяет наличие данных
-				 * @return проверка о наличи данных
-				 */
-				bool empty(){return _result.empty();}
-		};
-		// Определяем новые типы данных
-		typedef struct http_data HttpData;
-		typedef struct check_end HttpEnd;
+		} __attribute__((packed));
 		// Данные http запроса
 		HttpData _query, query;
-		// Параметры прокси-сервера
+		// Параметры прокси сервера
 		u_short options;
 		// Название и версия прокси сервера
 		string name, version;
@@ -239,7 +241,7 @@ class Http {
 			"\r\n"
 			"<html><head><title>503 Service Unavailable</title></head>\r\n"
 			"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n",
-			// Сервис не доступен (Требуемое действие не поддерживается прокси-сервером) [9]
+			// Сервис не доступен (Требуемое действие не поддерживается прокси сервером) [9]
 			"HTTP/1.0 501 Not Implemented\r\n"
 			"Proxy-Agent: ProxyAnyks/1.0\r\n"
 			"Proxy-Connection: close\r\n"
@@ -324,7 +326,7 @@ class Http {
 		 * @param  str строка запроса
 		 * @return     объект с данными запроса
 		 */
-		connect getConnection(string str);
+		Connect getConnection(string str);
 		/**
 		 * getHeader Функция извлекает данные заголовка по его ключу
 		 * @param  key     ключ заголовка
@@ -341,8 +343,6 @@ class Http {
 		 */
 		void generateHttp();
 	public:
-		// Определяем тип данных для содержания данных запроса
-		typedef struct http_query HttpQuery;
 		/**
 		 * isConnect Метод проверяет является ли метод, методом connect
 		 * @return результат проверки на метод connect
@@ -523,9 +523,9 @@ class Http {
 		void clear();
 		/**
 		 * Http Конструктор
-		 * @param str строка содержащая название прокси-сервера
-		 * @param opt параметры прокси-сервера
-		 * @param ver версия прокси-сервера
+		 * @param str строка содержащая название прокси сервера
+		 * @param opt параметры прокси сервера
+		 * @param ver версия прокси сервера
 		 */
 		Http(const string str = APP_NAME, u_short opt = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG), const string ver = APP_VERSION);
 		/**

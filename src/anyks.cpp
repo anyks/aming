@@ -6,12 +6,12 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
 // MacOS X
-// g++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+// g++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
 // Linux
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // Debug:
 // ulimit -c unlimited
 // ./bin/http
@@ -206,7 +206,7 @@ void create_proxy(){
 		APP_AUTHOR		// ник или имя автора
 	);
 	// Создаем объект для http прокси-сервера
-	HttpProxy * http = new HttpProxy(log);
+	HttpProxy * http = new HttpProxy(log, "anyks", "1.0", "127.0.0.1", "192.168.3.43");
 	// Очищаем выделенный объект
 	delete http;
 }

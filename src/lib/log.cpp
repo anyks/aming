@@ -325,7 +325,7 @@ void LogApp::welcome(
 		len = strftime(date, sizeof(date), dateformat.c_str(), timeinfo);
 		// Устанавливаем конец строки
 		date[len] = '\0';
-		// Название прокси-сервера
+		// Название прокси сервера
 		string proxyname = appname;
 		// Копирайт автора
 		string copyauthor = (copyright + string(" - ") + year);

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <errno.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -29,8 +30,10 @@ using namespace std;
 #define EVLOOP_NONBLOCK			0x02
 #define EVLOOP_NO_EXIT_ON_EMPTY	0x04
 
-// Максимальное количество клиентов
-#define MAX_CLIENTS -1 // 1024
+// Внутренний интерфейс
+#define INTERNAL_IP "127.0.0.1"
+// Внешний интерфейс
+#define EXTERNAL_IP "0.0.0.0"
 // Максимальный размер буфера
 #define BUFFER_WRITE_SIZE -1 // 2048
 // Максимальный размер буфера для чтения http данных
@@ -45,6 +48,34 @@ using namespace std;
 #define KEEP_ALIVE_TIMEOUT 5
 
 /**
+ * Timeout Структура таймаутов
+ */
+struct Timeout {
+	u_short read;		// Таймаут времени на чтение
+	u_short write;		// Таймаут времени на запись
+	u_short keepalive;	// Таймаут ожидания коннекта
+} __attribute__((packed));
+/**
+ * BufferSize Структура размеров буфера
+ */
+struct BufferSize {
+	int read;		// Буфер на чтение
+	int write;		// Буфер на запись
+} __attribute__((packed));
+/**
+ * Proxy Структура прокси сервера
+ */
+struct Proxy {
+	string		name;		// Название прокси сервера
+	string		version;	// Версия прокси сервера
+	string		internal;	// Внутренний адрес прокси сервера
+	string		external;	// Внешний адрес прокси сервера
+	u_short		options;	// Параметры прокси сервера
+	Timeout		timeout;	// Таймауты прокси сервера
+	BufferSize	bsize;		// Размеры буферов
+	LogApp		* log;		// Указатель на объект ведения логов
+} __attribute__((packed));
+/**
  * BufferHttpProxy Класс для работы с данными прокси сервера
  */
 class BufferHttpProxy {
@@ -53,33 +84,29 @@ class BufferHttpProxy {
 		struct Events {
 			struct bufferevent * client = NULL;	// Буфер событий клиента
 			struct bufferevent * server = NULL; // Буфер событий сервера
-		};
+		} __attribute__((packed));
 		// Буфер данных
 		struct Request {
 			vector <char>	data;			// Данные в буфере
 			size_t			offset	= 0;	// Смещение в буфере
-		};
+		} __attribute__((packed));
 		// Данные текущего сервера
 		struct Server {
 			u_int	port;	// Порт сервера
 			string	host;	// Хост сервера
-		};
+		} __attribute__((packed));
 	public:
 		bool				auth = false;		// Флаг авторизации
-		u_short				read_timeout;		// Таймаут времени на чтение
-		u_short				write_timeout;		// Таймаут времени на запись
-		u_short				keepalive_timeout;	// Таймаут ожидания коннекта
-		u_short				options;			// Параметры прокси-сервера
 		struct event_base	* base;				// База событий
-		LogApp				* log;				// Указатель на объект ведения логов
 		Http				* parser;			// Объект парсера
-		Http::HttpQuery		response;			// Ответ системы
+		HttpQuery			response;			// Ответ системы
 		Request				request;			// Данные запроса
 		Events				events;				// Буферы событий
 		Server				server;				// Параметры удаленного сервера
 		Server				client;				// Параметры подключившегося клиента
-		// Размеры буферов на чтение и запись
-		int buffer_read_size, buffer_write_size;
+		Proxy				proxy;				// Параметры прокси сервера
+		evutil_socket_t		client_fd;			// Сокет клиента
+		evutil_socket_t		server_fd;			// Сокет сервера
 		/**
 		 * free_client Метод удаления буфера клиента
 		 */
@@ -108,7 +135,7 @@ class BufferHttpProxy {
 		 * BufferHttpProxy Конструктор
 		 * @param string  name    имя ресурса
 		 * @param string  version версия ресурса
-		 * @param u_short options параметры прокси-сервера
+		 * @param u_short options параметры прокси сервера
 		 */
 		BufferHttpProxy(string name, string version, u_short options){
 			// Создаем объект для работы с http заголовками
@@ -146,18 +173,8 @@ class BufferHttpProxy {
  */
 class HttpProxy {
 	private:
-		// Указатель на объект ведения логов
-		LogApp * log;
-		// Название и версия прокси-сервера
-		string name, version;
-		// Параметры прокси-сервера
-		u_short options;
-		// Таймеры
-		u_short read_timeout;		// Таймаут времени на чтение
-		u_short write_timeout;		// Таймаут времени на запись
-		u_short keepalive_timeout;	// Таймаут ожидания коннекта
-		// Размеры буферов на чтение и запись
-		int buffer_read_size, buffer_write_size;
+		// Параметры прокси сервера
+		Proxy server;
 		// Слушатель порат
 		struct evconnlistener * listener = NULL;
 		/**
@@ -168,10 +185,24 @@ class HttpProxy {
 		 */
 		static string gethost(struct sockaddr * address, int socklen);
 		/**
+		 * spawn_thread Функция создания треда
+		 * @param  thread объект треда
+		 * @param  ctx    передаваемый объект
+		 * @return        результат работы функции
+		 */
+		static bool spawn_thread(pthread_t * thread, void * ctx);
+		/**
 		 * free_http Функция очистки объекта http
 		 * @param arg объект для очистки
 		 */
 		static void free_http(BufferHttpProxy ** arg);
+		/**
+		 * set_nonblock Функция установки неблокирующего сокета
+		 * @param  fd   файловый дескриптор (сокет)
+		 * @param  log  указатель на объект ведения логов
+		 * @return      результат работы функции
+		 */
+		static int set_nonblock(evutil_socket_t fd, LogApp * log);
 		/**
 		 * set_non_block Функция отключения алгоритма Нейгла
 		 * @param  fd   файловый дескриптор (сокет)
@@ -207,6 +238,11 @@ class HttpProxy {
 		 * @return    результат подключения
 		 */
 		static int connect_server(void * ctx);
+		/**
+		 * connection Функция обработки данных подключения в треде
+		 * @param ctx передаваемый объект
+		 */
+		static void * connection(void * ctx);
 		/**
 		 * event Функция обработка входящих событий
 		 * @param bev    буфер события
@@ -245,27 +281,29 @@ class HttpProxy {
 		/**
 		 * HttpProxy Конструктор
 		 * @param log        указатель на объект ведения логов
-		 * @param name       название прокси-сервера
-		 * @param version    версия прокси-сервера
-		 * @param host       хост прокси-сервера
-		 * @param port       порт прокси-сервера
+		 * @param name       название прокси сервера
+		 * @param version    версия прокси сервера
+		 * @param internal   внутренний хост прокси сервера
+		 * @param external   внешний хост прокси сервера
+		 * @param port       порт прокси сервера
 		 * @param buffrsize  размер буфера сокета на чтение
 		 * @param buffwsize  размер буфера сокета на запись
-		 * @param maxcls     максимальное количество подключаемых клиентов к прокси-серверу (-1 автоматически)
+		 * @param maxcls     максимальное количество подключаемых клиентов к прокси серверу (-1 автоматически)
 		 * @param rtm        таймаут на чтение данных из сокета сервера
 		 * @param wtm        таймаут на запись данных из сокета клиента и сервера
 		 * @param katm       таймаут на чтение данных из сокета клиента
-		 * @param options    опции прокси-сервера
+		 * @param options    опции прокси сервера
 		 */
 		HttpProxy(
-			LogApp * 		log			= NULL,
-			const char *	name		= "anyks",
-			const char *	version		= APP_VERSION,
-			const char *	host		= "0.0.0.0",
+			LogApp			* log		= NULL,
+			const char		* name		= "anyks",
+			const char		* version	= APP_VERSION,
+			const char		* internal	= INTERNAL_IP,
+			const char		* external	= EXTERNAL_IP,
 			u_int			port		= SERVER_PORT,
 			int				buffrsize	= BUFFER_READ_SIZE,
 			int				buffwsize	= BUFFER_WRITE_SIZE,
-			int				maxcls		= MAX_CLIENTS,
+			int				maxcls		= SOMAXCONN,
 			u_short			rtm			= READ_TIMEOUT,
 			u_short			wtm			= WRITE_TIMEOUT,
 			u_short			katm		= KEEP_ALIVE_TIMEOUT,

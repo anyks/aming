@@ -141,9 +141,9 @@ bool Http::checkPort(string port){
  * @param  str строка запроса
  * @return     объект с данными запроса
  */
-Http::connect Http::getConnection(string str){
+Http::Connect Http::getConnection(string str){
 	// Полученные данные подключения
-	connect data;
+	Connect data;
 	// Выполняем поиск протокола
 	size_t pos = str.find("://");
 	// Если протокол найден
@@ -230,6 +230,8 @@ void Http::createHead(){
 	bool smart = (options & OPT_SMART);
 	// Определяем разрешено ли сжатие
 	bool gzip = (options & OPT_GZIP);
+	// Определяем разрешено ли выводить название агента
+	bool agent = (options & OPT_AGENT);
 	// Определяем разрешено ли постоянное подключение
 	bool keepalive = (options & OPT_KEEPALIVE);
 	// Очищаем заголовок
@@ -268,6 +270,8 @@ void Http::createHead(){
 			);
 		}
 	}
+	// Устанавливаем название прокси
+	if(agent) query.request.append(string("Proxy-Agent: ") + this->name + string("/") + this->version + string("\r\n"));
 	// Если постоянное подключение запрещено
 	if(!keepalive) query.connection = "close";
 	// Добавляем заголовок connection
@@ -390,9 +394,9 @@ void Http::generateHttp(){
 			// Если хост найден
 			if(!host.empty()){
 				// Выполняем получение параметров подключения
-				connect gcon = getConnection(query.path);
+				Connect gcon = getConnection(query.path);
 				// Выполняем получение параметров подключения
-				connect scon = getConnection(host);
+				Connect scon = getConnection(host);
 				// Создаем полный адрес запроса
 				string fulladdr1 = scon.protocol + string("://") + scon.host;
 				string fulladdr2 = fulladdr1 + "/";
@@ -667,7 +671,7 @@ bool Http::parse(const char * buffer, size_t size){
  * brokenRequest Метод получения ответа (неудачного отправленного запроса)
  * @return ответ в формате html
  */
-Http::HttpQuery Http::brokenRequest(){
+HttpQuery Http::brokenRequest(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -690,7 +694,7 @@ Http::HttpQuery Http::brokenRequest(){
  * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
  * @return ответ в формате html
  */
-Http::HttpQuery Http::faultConnect(){
+HttpQuery Http::faultConnect(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -713,7 +717,7 @@ Http::HttpQuery Http::faultConnect(){
  * pageNotFound Метод получения ответа (страница не найдена)
  * @return ответ в формате html
  */
-Http::HttpQuery Http::pageNotFound(){
+HttpQuery Http::pageNotFound(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -736,7 +740,7 @@ Http::HttpQuery Http::pageNotFound(){
  * faultAuth Метод получения ответа (неудачной авторизации)
  * @return ответ в формате html
  */
-Http::HttpQuery Http::faultAuth(){
+HttpQuery Http::faultAuth(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -759,7 +763,7 @@ Http::HttpQuery Http::faultAuth(){
  * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
  * @return ответ в формате html
  */
-Http::HttpQuery Http::requiredAuth(){
+HttpQuery Http::requiredAuth(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -782,7 +786,7 @@ Http::HttpQuery Http::requiredAuth(){
  * authSuccess Метод получения ответа (подтверждения авторизации)
  * @return ответ в формате html
  */
-Http::HttpQuery Http::authSuccess(){
+HttpQuery Http::authSuccess(){
 	// Устанавливаем дефолтное название прокси
 	string defname = "ProxyAnyks/1.0";
 	// Определяем позицию дефолтного названия
@@ -805,7 +809,7 @@ Http::HttpQuery Http::authSuccess(){
  * getQuery Метод получения сформированного http запроса
  * @return сформированный http запрос
  */
-Http::HttpQuery Http::getQuery(){
+HttpQuery Http::getQuery(){
 	// Данные для вывода
 	HttpQuery data(200, query.request, query.entitybody);
 	// Выводим результат
@@ -992,16 +996,16 @@ void Http::clear(){
 }
 /**
  * Http Конструктор
- * @param str строка содержащая название прокси-сервера
- * @param opt параметры прокси-сервера
- * @param ver версия прокси-сервера
+ * @param str строка содержащая название прокси сервера
+ * @param opt параметры прокси сервера
+ * @param ver версия прокси сервера
  */
 Http::Http(const string str, u_short opt, const string ver){
 	// Если имя передано то запоминаем его
 	this->name = str;
 	// Устанавливаем версию системы
 	this->version = ver;
-	// Запоминаем тип прокси-сервера
+	// Запоминаем тип прокси сервера
 	this->options = opt;
 }
 /**
