@@ -776,8 +776,6 @@ HttpProxy::HttpProxy(
 		evutil_socket_t socket = evconnlistener_get_fd(listener);
 		// Устанавливаем неблокирующий режим
 		set_tcpnodelay(socket, this->server.log);
-		// Устанавливаем размеры буферов
-		// set_buffer_size(socket, ((maxcls > 0 ? maxcls : 1) * buffrsize), ((maxcls > 0 ? maxcls : 1) * buffwsize), this->server.log);
 		// Устанавливаем обработчик на получение ошибок
 		evconnlistener_set_error_cb(listener, &HttpProxy::accept_error);
 		// Активируем перебор базы событий
