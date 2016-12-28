@@ -113,18 +113,24 @@ class HttpQuery {
  */
 class Http {
 	private:
-		// Структура подержащая данные проверки, полной передачи данных
+		/**
+		 * HttpEnd Структура подержащая данные проверки, полной передачи данных
+		 */
 		struct HttpEnd {
 			u_short	type = 0;
 			size_t	begin = 0, end = 0;
 		} __attribute__((packed));
-		// Структура подключения
+		/**
+		 * Connect Структура подключения
+		 */
 		struct Connect {
 			string host;		// Хост
 			string port;		// Порт
 			string protocol;	// Протокол
 		} __attribute__((packed));
-		// Структура http данных
+		/**
+		 * HttpData Структура http данных
+		 */
 		struct HttpData {
 			string					http;		// http запрос
 			string					auth;		// Тип авторизации

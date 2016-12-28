@@ -206,7 +206,7 @@ int HttpProxy::connect_server(void * ctx){
 						return 0;
 					}
 					// Запоминаем сокет сервера
-					http->server_fd = sock;
+					http->sockets.server = sock;
 					// Неважно, IPv4 или IPv6
 					local_addr.sin_family = AF_UNSPEC;
 					// Устанавливаем произвольный порт для локального подключения
@@ -214,7 +214,7 @@ int HttpProxy::connect_server(void * ctx){
 					// Устанавливаем адрес для локальго подключения
 					local_addr.sin_addr.s_addr = inet_addr(http->proxy.external.c_str());
 					// Выполняем бинд на сокет
-					if(::bind(http->server_fd, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0){
+					if(::bind(http->sockets.server, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0){
 						// Выводим в лог сообщение
 						http->proxy.log->write(LOG_ERROR, "bind local network [%s] error", "192.168.3.43");
 						// Выходим
@@ -229,17 +229,17 @@ int HttpProxy::connect_server(void * ctx){
 					// Обнуляем серверную структуру
 					bzero(&(server_addr.sin_zero), 8);
 					// Разблокируем сокет
-					// set_nonblock(http->server_fd, http->log);
+					// set_nonblock(http->sockets.server, http->log);
 					// Устанавливаем размеры буферов
-					set_buffer_size(http->server_fd, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
+					set_buffer_size(http->sockets.server, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
 					// Если подключение постоянное
 					if(http->parser->isAlive()){
 						// Устанавливаем TCP_NODELAY для сервера и клиента
-						set_tcpnodelay(http->server_fd, http->proxy.log);
-						set_tcpnodelay(http->client_fd, http->proxy.log);
+						set_tcpnodelay(http->sockets.server, http->proxy.log);
+						set_tcpnodelay(http->sockets.client, http->proxy.log);
 					}
 					// Создаем буфер событий для сервера
-					http->events.server = bufferevent_socket_new(http->base, http->server_fd, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+					http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 					// Устанавливаем коллбеки
 					bufferevent_setcb(http->events.server, &HttpProxy::read_server, NULL, &HttpProxy::event, http);
 					// Активируем буферы событий на чтение и запись
@@ -266,7 +266,7 @@ int HttpProxy::connect_server(void * ctx){
 						http->parser->getMethod().c_str(),
 						http->parser->getPath().c_str(),
 						http->parser->getUseragent().c_str(),
-						http->client_fd
+						http->sockets.client
 					);
 					// Сообщаем что все удачно
 					return 1;
@@ -283,7 +283,7 @@ int HttpProxy::connect_server(void * ctx){
 						http->parser->getMethod().c_str(),
 						http->parser->getPath().c_str(),
 						http->parser->getUseragent().c_str(),
-						http->client_fd
+						http->sockets.client
 					);
 					// Сообщаем что все удачно
 					return 2;
@@ -318,7 +318,7 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 		// Получаем текущий сокет
 		evutil_socket_t current_fd = bufferevent_getfd(bev);
 		// Определяем для кого вызвано событие
-		string subject = (current_fd == http->client_fd ? "client" : "server");
+		string subject = (current_fd == http->sockets.client ? "client" : "server");
 		// Если подключение удачное
 		if(events & BEV_EVENT_CONNECTED){
 			// Если это сервер
@@ -594,9 +594,9 @@ void * HttpProxy::connection(void * ctx){
 		// Запоминаем базу событий
 		http->base = base;
 		// Создаем буфер событий
-		http->events.client = bufferevent_socket_new(http->base, http->client_fd, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 		// Устанавливаем размеры буферов
-		set_buffer_size(http->client_fd, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
+		set_buffer_size(http->sockets.client, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
 		// Устанавливаем таймаут ожидания запроса
 		struct timeval tread = {http->proxy.timeout.keepalive, 0};
 		// Устанавливаем таймауты
@@ -679,7 +679,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Запоминаем параметры прокси сервера
 		http->proxy = proxy->server;
 		// Запоминаем файловый дескриптор текущего подключения
-		http->client_fd = fd;
+		http->sockets.client = fd;
 		// Запоминаем данные клиента
 		http->client.host = host;
 		// Создаем поток
@@ -777,7 +777,7 @@ HttpProxy::HttpProxy(
 		// Устанавливаем неблокирующий режим
 		set_tcpnodelay(socket, this->server.log);
 		// Устанавливаем размеры буферов
-		set_buffer_size(socket, ((maxcls > 0 ? maxcls : 1) * buffrsize), ((maxcls > 0 ? maxcls : 1) * buffwsize), this->server.log);
+		// set_buffer_size(socket, ((maxcls > 0 ? maxcls : 1) * buffrsize), ((maxcls > 0 ? maxcls : 1) * buffwsize), this->server.log);
 		// Устанавливаем обработчик на получение ошибок
 		evconnlistener_set_error_cb(listener, &HttpProxy::accept_error);
 		// Активируем перебор базы событий

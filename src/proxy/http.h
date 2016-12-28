@@ -80,20 +80,33 @@ struct Proxy {
  */
 class BufferHttpProxy {
 	private:
-		// Буферы событий
+		/**
+		 * Events Буферы событий
+		 */
 		struct Events {
 			struct bufferevent * client = NULL;	// Буфер событий клиента
 			struct bufferevent * server = NULL; // Буфер событий сервера
 		} __attribute__((packed));
-		// Буфер данных
+		/**
+		 * Request Буфер данных
+		 */
 		struct Request {
 			vector <char>	data;			// Данные в буфере
 			size_t			offset	= 0;	// Смещение в буфере
 		} __attribute__((packed));
-		// Данные текущего сервера
+		/**
+		 * Server Данные текущего сервера
+		 */
 		struct Server {
 			u_int	port;	// Порт сервера
 			string	host;	// Хост сервера
+		} __attribute__((packed));
+		/**
+		 * Sockets Сокеты клиента и сервера
+		 */
+		struct Sockets {
+			evutil_socket_t client;	// Сокет клиента
+			evutil_socket_t server;	Сокет сервера
 		} __attribute__((packed));
 	public:
 		bool				auth = false;		// Флаг авторизации
@@ -105,8 +118,7 @@ class BufferHttpProxy {
 		Server				server;				// Параметры удаленного сервера
 		Server				client;				// Параметры подключившегося клиента
 		Proxy				proxy;				// Параметры прокси сервера
-		evutil_socket_t		client_fd;			// Сокет клиента
-		evutil_socket_t		server_fd;			// Сокет сервера
+		Sockets				sockets;			// Сокеты подключений
 		/**
 		 * free_client Метод удаления буфера клиента
 		 */
