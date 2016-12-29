@@ -43,6 +43,25 @@ void BufferHttpProxy::appconn(bool flag){
 	}
 }
 /**
+ * getmac Метод определения мак адреса клиента
+ * @param  address структура параметров подключения
+ * @return данные мак адреса
+ */
+string HttpProxy::getmac(struct sockaddr * address){
+	// Буфер для копирования мак адреса
+	char buff[256];
+	// Получаем указатель на мак адрес
+	unsigned char * ptr = (unsigned char *) address->sa_data;
+	// Записываем в буфер данные мак адреса
+	sprintf(
+		buff, "%02X:%02X:%02X:%02X:%02X:%02X",
+		(ptr[0] & 0xff), (ptr[1] & 0xff), (ptr[2] & 0xff),
+		(ptr[3] & 0xff), (ptr[4] & 0xff), (ptr[5] & 0xff)
+	);
+	// Выводим данные мак адреса
+	return buff;
+}
+/**
  * gethost Функция получения данных хоста
  * @param  address структура параметров подключения
  * @param  socklen размер структуры
@@ -274,14 +293,17 @@ int HttpProxy::connect_server(void * ctx){
 						// Выходим
 						return -1;
 					}
+					// Получаем данные мак адреса клиента
+					http->server.mac = getmac((struct sockaddr *) &server_addr);
 					// Выводим в лог сообщение о новом коннекте
 					http->proxy.log->write(
 						LOG_MESSAGE,
-						"connect client [%s] to host = %s [%s:%d], method = %s, path = %s, useragent = %s, socket = %d",
+						"connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 						http->client.host.c_str(),
 						http->parser->getHost().c_str(),
 						http->server.host.c_str(),
 						http->server.port,
+						http->server.mac.c_str(),
 						http->parser->getMethod().c_str(),
 						http->parser->getPath().c_str(),
 						http->parser->getUseragent().c_str(),
@@ -294,11 +316,12 @@ int HttpProxy::connect_server(void * ctx){
 					// Выводим в лог сообщение о новом коннекте
 					http->proxy.log->write(
 						LOG_MESSAGE,
-						"last connect client [%s] to host = %s [%s:%d], method = %s, path = %s, useragent = %s, socket = %d",
+						"last connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 						http->client.host.c_str(),
 						http->parser->getHost().c_str(),
 						http->server.host.c_str(),
 						http->server.port,
+						http->server.mac.c_str(),
 						http->parser->getMethod().c_str(),
 						http->parser->getPath().c_str(),
 						http->parser->getUseragent().c_str(),
@@ -693,8 +716,10 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		set_nonblock(fd, proxy->server.log);
 		// Получаем данные подключившегося клиента
 		string host = gethost(address, socklen);
+		// Получаем данные мак адреса клиента
+		string mac = getmac(address);
 		// Выводим в лог сообщение
-		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, socket = %d", host.c_str(), fd);
+		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", host.c_str(), mac.c_str(), fd);
 		// Создаем новый объект подключения
 		BufferHttpProxy * http = new BufferHttpProxy(proxy->server.name, proxy->server.version, proxy->server.options);
 		// Запоминаем параметры прокси сервера
@@ -703,6 +728,8 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		http->connects = &proxy->connects;
 		// Запоминаем файловый дескриптор текущего подключения
 		http->sockets.client = fd;
+		// Запоминаем данные мак адреса
+		http->client.mac = mac;
 		// Запоминаем данные клиента
 		http->client.host = host;
 		// Создаем поток

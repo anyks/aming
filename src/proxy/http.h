@@ -195,8 +195,9 @@ class BufferHttpProxy {
 		 * Server Данные текущего сервера
 		 */
 		struct Server {
-			u_int	port;	// Порт сервера
-			string	host;	// Хост сервера
+			u_int	port;	// Порт
+			string	host;	// Хост адрес
+			string	mac;	// Мак адрес
 		} __attribute__((packed));
 		/**
 		 * Sockets Сокеты клиента и сервера
@@ -303,6 +304,12 @@ class HttpProxy {
 		Proxy server;
 		// Слушатель порат
 		struct evconnlistener * listener = NULL;
+		/**
+		 * getmac Метод определения мак адреса клиента
+		 * @param  address структура параметров подключения
+		 * @return данные мак адреса
+		 */
+		static string getmac(struct sockaddr * address);
 		/**
 		 * gethost Функция получения данных хоста
 		 * @param  address структура параметров подключения
