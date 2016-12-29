@@ -11,6 +11,38 @@
 using namespace std;
 
 /**
+ * appconn Функция которая добавляет или удаляет в список склиента
+ * @param flag флаг подключения или отключения клиента
+ */
+void BufferHttpProxy::appconn(bool flag){
+	// Если такое подключение найдено
+	if((*this->connects).count(this->client.host) > 0){
+		// Получаем объект текущего коннекта
+		Connects * connect = &((*this->connects).find(this->client.host)->second);
+		// Выполняем захват мютекса
+		connect->lock();
+		// Если нужно добавить подключение
+		if(flag) connect->inc();
+		// Если нужно удалить подключение
+		else {
+			// Уменьшаем количество подключений
+			connect->dec();
+			// Отправляем сигнал
+			connect->signal();
+		}
+		// Выполняем разблокировку мютекса
+		connect->unlock();
+		// Проверяем есть ли еще подключения
+		if(connect->end()) (*this->connects).erase(this->client.host);
+	// Если нужно добавить подключение
+	} else if(flag){
+		// Создаем объект подключения
+		Connects connect;
+		// Добавляем в список новое подключение
+		(*this->connects).insert(pair <string, Connects> (this->client.host, connect));
+	}
+}
+/**
  * gethost Функция получения данных хоста
  * @param  address структура параметров подключения
  * @param  socklen размер структуры
@@ -25,19 +57,6 @@ string HttpProxy::gethost(struct sockaddr * address, int socklen){
 	if(s == 0) return hbuf;
 	// Сообщаем что ничего не найдено
 	return "";
-}
-/**
- * free_http Функция очистки объекта http
- * @param arg объект для очистки
- */
-void HttpProxy::free_http(BufferHttpProxy ** arg){
-	// Если данные еще не удалены
-	if(* arg != NULL){
-		// Удаляем объект данных
-		delete * arg;
-		// Присваиваем пустой адрес
-		* arg = NULL;
-	}
 }
 /**
  * set_nonblock Функция установки неблокирующего сокета
@@ -369,25 +388,6 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 					current_fd
 				);
 			}
-			// Проверка нужно ли отключиться
-			bool close_connect = false;
-			// Если это код не разрешающий коннект
-			if(http->response.code != 200) close_connect = true;
-			// Если это разрешенный запрос
-			else {
-				// Отключаемся если сработал таймаут или подключение не должно жить
-				if((events & BEV_EVENT_TIMEOUT) || !http->parser->isAlive()) close_connect = true;
-				// Если это не таймаут а постоянное подключение и это клиент
-				else if(http->parser->isAlive() && (subject == "client")){
-					// Устанавливаем таймаут ожидания результата
-					struct timeval tread = {http->proxy.timeout.keepalive, 0};
-					// Устанавливаем таймауты
-					bufferevent_set_timeouts(bev, &tread, NULL);
-				// Если это отключился сервер
-				} else if(subject == "server") close_connect = true;
-			}
-			// Если нужно отключится
-			if(close_connect) free_http(&http);
 		}
 	// Отключаемся
 	} else bufferevent_free(bev);
@@ -418,7 +418,7 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(http->events.client, &tread, &twrite);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
-		if(smart && !agent && (evbuffer_add_buffer(output, input) < 0)) free_http(&http);
+		if(smart && !agent) evbuffer_add_buffer(output, input);
 		// Иначе изменяем заголовки
 		else {
 			// Получаем размер входящих данных
@@ -450,7 +450,7 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 			// Удаляем данные из буфера
 			evbuffer_drain(input, len);
 			// Отправляем данные клиенту
-			if(evbuffer_add_buffer(output, tmp) < 0) free_http(&http);
+			evbuffer_add_buffer(output, tmp);
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
 			// Удаляем буфер данных
@@ -487,7 +487,7 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 			// Устанавливаем таймауты
 			bufferevent_set_timeouts(http->events.server, &tread, &twrite);
 			// Выводим ответ сервера
-			if(evbuffer_add_buffer(output, input) < 0) free_http(&http);
+			evbuffer_add_buffer(output, input);
 		// Если это обычный запрос
 		} else {
 			// Получаем размер входящих данных
@@ -550,7 +550,7 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 							// Устанавливаем таймауты
 							bufferevent_set_timeouts(http->events.server, &tread, &twrite);
 							// Отправляем серверу сообщение
-							if(bufferevent_write(http->events.server, http->response.data(), http->response.size()) < 0) free_http(&http);
+							bufferevent_write(http->events.server, http->response.data(), http->response.size());
 							// Выходим
 							return;
 						}
@@ -561,19 +561,19 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 				}
 				// Ответ готов
 				if(!http->response.empty()){
+					// Устанавливаем таймаут записи результата
+					struct timeval twrite = {http->proxy.timeout.write, 0};
 					// Если это код разрешающий коннект
 					if(http->response.code == 200){
 						// Устанавливаем таймаут ожидания результата
 						struct timeval tread = {http->proxy.timeout.keepalive, 0};
-						// Устанавливаем таймаут записи результата
-						struct timeval twrite = {http->proxy.timeout.write, 0};
 						// Устанавливаем таймауты
 						bufferevent_set_timeouts(bev, &tread, &twrite);
-					}
+					// Если это завершение работы то устанавливаем таймер только на запись
+					} else bufferevent_set_timeouts(bev, NULL, &twrite);
 					// Отправляем клиенту сообщение
-					if(bufferevent_write(bev, http->response.data(), http->response.size()) < 0) free_http(&http);
-				// Отключаемся
-				} else free_http(&http);
+					bufferevent_write(bev, http->response.data(), http->response.size());
+				}
 			}
 		}
 	}
@@ -589,6 +589,19 @@ void * HttpProxy::connection(void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
+		// Если такое подключение найдено
+		if((*http->connects).count(http->client.host) > 0){
+			// Получаем объект текущего коннекта
+			Connects * connect = &((*http->connects).find(http->client.host)->second);
+			// Выполняем захват мютекса
+			connect->lock();
+			// Если количество подключений достигло предела
+			if(connect->get() >= MAX_CONNECTS) connect->wait();
+			// Выполняем разблокировку мютекса
+			connect->unlock();
+		}
+		// Выполняем инициализацию подключения
+		http->begin();
 		// Создаем новую базу событий
 		struct event_base * base = event_base_new();
 		// Запоминаем базу событий
@@ -611,6 +624,14 @@ void * HttpProxy::connection(void * ctx){
 		event_base_dispatch(http->base);
 		// Удаляем базу
 		event_base_free(base);
+		// Отключаем подключение для сокетов
+		shutdown(http->sockets.client, SHUT_RDWR);
+		shutdown(http->sockets.server, SHUT_RDWR);
+		// Закрываем сокеты
+		close(http->sockets.client);
+		close(http->sockets.server);
+		// Удаляем объект подключения
+		delete http;
 	}
 	// Выходим
 	return 0;
@@ -678,6 +699,8 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		BufferHttpProxy * http = new BufferHttpProxy(proxy->server.name, proxy->server.version, proxy->server.options);
 		// Запоминаем параметры прокси сервера
 		http->proxy = proxy->server;
+		// Запоминаем список подключений
+		http->connects = &proxy->connects;
 		// Запоминаем файловый дескриптор текущего подключения
 		http->sockets.client = fd;
 		// Запоминаем данные клиента

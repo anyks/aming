@@ -34,6 +34,8 @@ using namespace std;
 #define INTERNAL_IP "127.0.0.1"
 // Внешний интерфейс
 #define EXTERNAL_IP "0.0.0.0"
+// Максимальное количество подключений с одного клиента
+#define MAX_CONNECTS 100
 // Максимальный размер буфера
 #define BUFFER_WRITE_SIZE -1 // 2048
 // Максимальный размер буфера для чтения http данных
@@ -76,6 +78,101 @@ struct Proxy {
 	LogApp		* log;		// Указатель на объект ведения логов
 } __attribute__((packed));
 /**
+ * Connects Класс подключений к прокси серверу
+ */
+class Connects {
+	private:
+		size_t			connects;	// Количество подключений
+		pthread_mutex_t	mutex;		// Мютекс
+		pthread_cond_t	condition;	// Переменная состояния
+	public:
+		/**
+		 * get Метод получения количества подключений
+		 * @return количество активных подключений
+		 */
+		inline size_t get(){
+			// Выводим количество подключений
+			return connects;
+		}
+		/**
+		 * end Метод проверки на конец всех подключений
+		 * @return проверка на достижения нуля
+		 */
+		inline bool end(){
+			// Если количество подключений меньше 1 то сообщаем об этом
+			return !(connects > 0);
+		}
+		/**
+		 * inc Метод инкреминации количества подключений
+		 */
+		inline void inc(){
+			// Выполняем инкремент
+			connects++;
+		}
+		/**
+		 * dec Метод декрементации количества подключений
+		 */
+		inline void dec(){
+			// Выполняем декрементацию
+			if(connects > 0) connects--;
+		}
+		/**
+		 * lock Метод блокировки мютекса
+		 */
+		inline void lock(){
+			// Лочим мютекс
+			pthread_mutex_lock(&mutex);
+		}
+		/**
+		 * unlock Метод разблокировки мютекса
+		 */
+		inline void unlock(){
+			// Разлочим мютекс
+			pthread_mutex_unlock(&mutex);
+		}
+		/**
+		 * signal Метод отправки сигнала первому блокированному потоку
+		 */
+		inline void signal(){
+			// Отправляем сигнал
+			pthread_cond_signal(&condition);
+		}
+		/**
+		 * broadcastSignal Метод отправки сигналов всем блокированным потокам
+		 */
+		inline void broadcastSignal(){
+			// Выполняем вещание
+			pthread_cond_broadcast(&condition);
+		}
+		/**
+		 * wait Метод блокировки потока
+		 */
+		inline void wait(){
+			// Блокируем поток
+			pthread_cond_wait(&condition, &mutex);
+		}
+		/**
+		 * Connects Конструктор
+		 */
+		Connects(){
+			// Устанавливаем первоначальное значение коннекта
+			connects = 1;
+			// Инициализируем мютекс
+			pthread_mutex_init(&mutex, 0);
+			// Инициализируем переменную состояния
+			pthread_cond_init(&condition, 0);
+		}
+		/**
+		 * ~Connects Деструктор
+		 */
+		~Connects(){
+			// Удаляем мютекс
+			pthread_mutex_destroy(&mutex);
+			// Удаляем переменную состояния
+			pthread_cond_destroy(&condition);
+		}
+};
+/**
  * BufferHttpProxy Класс для работы с данными прокси сервера
  */
 class BufferHttpProxy {
@@ -108,17 +205,30 @@ class BufferHttpProxy {
 			evutil_socket_t client;	// Сокет клиента
 			evutil_socket_t server;	// Сокет сервера
 		} __attribute__((packed));
+		/**
+		 * appconn Функция которая добавляет или удаляет в список склиента
+		 * @param flag флаг подключения или отключения клиента
+		 */
+		void appconn(bool flag);
 	public:
-		bool				auth = false;		// Флаг авторизации
-		struct event_base	* base;				// База событий
-		Http				* parser;			// Объект парсера
-		HttpQuery			response;			// Ответ системы
-		Request				request;			// Данные запроса
-		Events				events;				// Буферы событий
-		Server				server;				// Параметры удаленного сервера
-		Server				client;				// Параметры подключившегося клиента
-		Proxy				proxy;				// Параметры прокси сервера
-		Sockets				sockets;			// Сокеты подключений
+		bool					auth = false;	// Флаг авторизации
+		struct event_base		* base;			// База событий
+		map <string, Connects>	* connects; 	// Список подключений к прокси серверу
+		Http					* parser;		// Объект парсера
+		HttpQuery				response;		// Ответ системы
+		Request					request;		// Данные запроса
+		Events					events;			// Буферы событий
+		Server					server;			// Параметры удаленного сервера
+		Server					client;			// Параметры подключившегося клиента
+		Proxy					proxy;			// Параметры прокси сервера
+		Sockets					sockets;		// Сокеты подключений
+		/**
+		 * begin Метод активации подключения
+		 */
+		void begin(){
+			// Добавляем в список подключений
+			appconn(true);
+		}
 		/**
 		 * free_client Метод удаления буфера клиента
 		 */
@@ -161,6 +271,8 @@ class BufferHttpProxy {
 			free_client();
 			// Удаляем событие сервера
 			free_server();
+			// Удаляем из списока подключений
+			appconn(false);
 			// Если парсер не удален
 			if(parser != NULL){
 				// Удаляем парсер
@@ -185,6 +297,8 @@ class BufferHttpProxy {
  */
 class HttpProxy {
 	private:
+		// Список подключений к прокси серверу
+		map <string, Connects> connects;
 		// Параметры прокси сервера
 		Proxy server;
 		// Слушатель порат
@@ -203,11 +317,6 @@ class HttpProxy {
 		 * @return        результат работы функции
 		 */
 		static bool spawn_thread(pthread_t * thread, void * ctx);
-		/**
-		 * free_http Функция очистки объекта http
-		 * @param arg объект для очистки
-		 */
-		static void free_http(BufferHttpProxy ** arg);
 		/**
 		 * set_nonblock Функция установки неблокирующего сокета
 		 * @param  fd   файловый дескриптор (сокет)
