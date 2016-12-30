@@ -43,6 +43,50 @@ void BufferHttpProxy::appconn(bool flag){
 	}
 }
 /**
+ * begin Метод активации подключения
+ */
+void BufferHttpProxy::begin(){
+	// Добавляем в список подключений
+	this->appconn(true);
+}
+/**
+ * free_server Метод удаления буфера события сервера
+ */
+void BufferHttpProxy::free_server(){
+	// Удаляем событие сервера
+	this->free_event(&this->events.server);
+}
+/**
+ * free_socket Метод отключения сокета
+ * @param fd ссылка на файловый дескриптор (сокет)
+ */
+void BufferHttpProxy::free_socket(evutil_socket_t &fd){
+	// Если сокет существует
+	if(fd > -1){
+		// Отключаем подключение для сокета
+		shutdown(fd, SHUT_RDWR);
+		// Закрываем сокет
+		close(fd);
+		// Сообщаем что сокет закрыт
+		fd = -1;
+	}
+}
+/**
+ * free_event Метод удаления буфера события
+ * @param event указатель на объект буфера события
+ */
+void BufferHttpProxy::free_event(struct bufferevent ** event){
+	// Удаляем событие
+	if(*event != NULL){
+		// Очищаем таймауты
+		bufferevent_set_timeouts(*event, NULL, NULL);
+		// Удаляем буфер события
+		bufferevent_free(*event);
+		// Устанавливаем что событие удалено
+		*event = NULL;
+	}
+}
+/**
  * getmac Метод определения мак адреса клиента
  * @param  address структура параметров подключения
  * @return данные мак адреса
@@ -185,8 +229,8 @@ bool HttpProxy::check_auth(void * ctx){
 		// Проль
 		const char * password = "k.frolovv@gmail.com";
 		// Проверяем логин и пароль
-		if(!strcmp(http->parser->getLogin().c_str(), username)
-		&& !strcmp(http->parser->getPassword().c_str(), password)) return true;
+		if(!strcmp(http->parser.getLogin().c_str(), username)
+		&& !strcmp(http->parser.getPassword().c_str(), password)) return true;
 		// Выводим в лог информацию о неудачном подключении
 		http->proxy.log->write(LOG_MESSAGE, "auth client [%s] to proxy wrong!", http->client.host.c_str());
 	}
@@ -204,13 +248,13 @@ int HttpProxy::connect_server(void * ctx){
 	// Если подключение не передано
 	if(http != NULL){
 		// Получаем данные хоста
-		hostent * sh = gethostbyname(http->parser->getHost().c_str());
+		hostent * sh = gethostbyname(http->parser.getHost().c_str());
 		// Если данные хоста найдены
 		if(sh){
 			// ip адрес ресурса
 			string ip;
 			// Получаем порт сервера
-			u_int port = http->parser->getPort();
+			u_int port = http->parser.getPort();
 			// Извлекаем ip адрес
 			for(u_int i = 0; sh->h_addr_list[i] != 0; ++i){
 				struct in_addr addr;
@@ -271,7 +315,7 @@ int HttpProxy::connect_server(void * ctx){
 					// Устанавливаем размеры буферов
 					set_buffer_size(http->sockets.server, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
 					// Если подключение постоянное
-					if(http->parser->isAlive()){
+					if(http->parser.isAlive()){
 						// Устанавливаем TCP_NODELAY для сервера и клиента
 						set_tcpnodelay(http->sockets.server, http->proxy.log);
 						set_tcpnodelay(http->sockets.client, http->proxy.log);
@@ -300,13 +344,13 @@ int HttpProxy::connect_server(void * ctx){
 						LOG_MESSAGE,
 						"connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 						http->client.host.c_str(),
-						http->parser->getHost().c_str(),
+						http->parser.getHost().c_str(),
 						http->server.host.c_str(),
 						http->server.port,
 						http->server.mac.c_str(),
-						http->parser->getMethod().c_str(),
-						http->parser->getPath().c_str(),
-						http->parser->getUseragent().c_str(),
+						http->parser.getMethod().c_str(),
+						http->parser.getPath().c_str(),
+						http->parser.getUseragent().c_str(),
 						http->sockets.client
 					);
 					// Сообщаем что все удачно
@@ -318,13 +362,13 @@ int HttpProxy::connect_server(void * ctx){
 						LOG_MESSAGE,
 						"last connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 						http->client.host.c_str(),
-						http->parser->getHost().c_str(),
+						http->parser.getHost().c_str(),
 						http->server.host.c_str(),
 						http->server.port,
 						http->server.mac.c_str(),
-						http->parser->getMethod().c_str(),
-						http->parser->getPath().c_str(),
-						http->parser->getUseragent().c_str(),
+						http->parser.getMethod().c_str(),
+						http->parser.getPath().c_str(),
+						http->parser.getUseragent().c_str(),
 						http->sockets.client
 					);
 					// Сообщаем что все удачно
@@ -336,8 +380,8 @@ int HttpProxy::connect_server(void * ctx){
 		http->proxy.log->write(
 			LOG_ERROR,
 			"host server = %s not found, port = %d, client = %s",
-			http->parser->getHost().c_str(),
-			http->parser->getPort(),
+			http->parser.getHost().c_str(),
+			http->parser.getPort(),
 			http->client.host.c_str()
 		);
 		// Выходим
@@ -370,15 +414,15 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 					LOG_ACCESS,
 					"connect client [%s], useragent = %s, socket = %d to server [%s:%d], host = %s",
 					http->client.host.c_str(),
-					http->parser->getUseragent().c_str(),
+					http->parser.getUseragent().c_str(),
 					current_fd,
 					http->server.host.c_str(),
 					http->server.port,
-					http->parser->getHost().c_str()
+					http->parser.getHost().c_str()
 				);
 			}
 		// Если это ошибка или завершение работы
-		} else if(events & (BEV_EVENT_ERROR | BEV_EVENT_TIMEOUT)) {
+		} else if(events & (BEV_EVENT_ERROR | BEV_EVENT_TIMEOUT | BEV_EVENT_EOF)) {
 			// Если это ошибка
 			if(events & BEV_EVENT_ERROR){
 				// Получаем данные ошибки
@@ -393,8 +437,8 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 					LOG_ACCESS,
 					"closing client [%s] from server [%s:%d], socket = %d",
 					http->client.host.c_str(),
-					http->parser->getHost().c_str(),
-					http->parser->getPort(),
+					http->parser.getHost().c_str(),
+					http->parser.getPort(),
 					current_fd
 				);
 			// Если отключился сервер
@@ -403,8 +447,8 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				http->proxy.log->write(
 					LOG_ACCESS,
 					"closing server [%s:%d] from client [%s], socket = %d",
-					http->parser->getHost().c_str(),
-					http->parser->getPort(),
+					http->parser.getHost().c_str(),
+					http->parser.getPort(),
 					http->client.host.c_str(),
 					current_fd
 				);
@@ -463,7 +507,7 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 				// Добавляем полученный буфер в вектор
 				vector <char> headers(buffer, buffer + len);
 				// Выполняем модификацию заголовков
-				http->parser->modify(headers);
+				http->parser.modify(headers);
 				// Добавляем в новый буфер модифицированные заголовки
 				evbuffer_add(tmp, headers.data(), headers.size());
 			// Если в буфере заголовки не найдены тогда просто записываем данные в новый буфер
@@ -497,8 +541,8 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 		struct evbuffer * input = bufferevent_get_input(bev);
 		// Если авторизация прошла, и коннект произведен
 		if((http->response.code == 200)
-		&& http->parser->isConnect()
-		&& (conn_enabled || http->parser->isHttps())){
+		&& http->parser.isConnect()
+		&& (conn_enabled || http->parser.isHttps())){
 			// Получаем буферы входящих данных и исходящих
 			struct evbuffer * output = bufferevent_get_output(http->events.server);
 			// Устанавливаем таймаут ожидания результата
@@ -536,14 +580,14 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 				// Если авторизация не прошла
 				if(!http->auth) http->auth = check_auth(http);
 				// Если нужно запросить пароль
-				if(!http->auth && (http->parser->getLogin().empty()
-				|| http->parser->getPassword().empty())){
+				if(!http->auth && (http->parser.getLogin().empty()
+				|| http->parser.getPassword().empty())){
 					// Формируем ответ клиенту
-					http->response = http->parser->requiredAuth();
+					http->response = http->parser.requiredAuth();
 				// Сообщаем что авторизация не удачная
 				} else if(!http->auth) {
 					// Формируем ответ клиенту
-					http->response = http->parser->faultAuth();
+					http->response = http->parser.faultAuth();
 				// Если авторизация прошла
 				} else {
 					// Выполняем подключение к удаленному серверу
@@ -551,19 +595,19 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 					// Если сокет существует
 					if(connect > 0){
 						// Определяем порт, если это метод connect
-						if(http->parser->isConnect() && (conn_enabled || http->parser->isHttps()))
+						if(http->parser.isConnect() && (conn_enabled || http->parser.isHttps()))
 							// Формируем ответ клиенту
-							http->response = http->parser->authSuccess();
+							http->response = http->parser.authSuccess();
 						// Если connect разрешен только для https подключений
-						else if(!conn_enabled && http->parser->isConnect())
+						else if(!conn_enabled && http->parser.isConnect())
 							// Сообращем что подключение запрещено
-							http->response = http->parser->faultConnect();
+							http->response = http->parser.faultConnect();
 						// Иначе делаем запрос на получение данных
 						else {
 							// Указываем что нужно отключится сразу после отправки запроса
-							if(!http->parser->isAlive()) http->parser->setClose();
+							if(!http->parser.isAlive()) http->parser.setClose();
 							// Формируем запрос на сервер
-							http->response = http->parser->getQuery();
+							http->response = http->parser.getQuery();
 							// Устанавливаем таймаут ожидания результата
 							struct timeval tread = {http->proxy.timeout.read, 0};
 							// Устанавливаем таймаут записи результата
@@ -576,7 +620,7 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 							return;
 						}
 					// Если подключение не удачное то сообщаем об этом
-					} else if(connect == 0) http->response = http->parser->faultConnect();
+					} else if(connect == 0) http->response = http->parser.faultConnect();
 					// Если подключение удалено, выходим
 					else return;
 				}
@@ -624,9 +668,7 @@ void * HttpProxy::connection(void * ctx){
 		// Выполняем инициализацию подключения
 		http->begin();
 		// Создаем новую базу событий
-		struct event_base * base = event_base_new();
-		// Запоминаем базу событий
-		http->base = base;
+		http->base = event_base_new();
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 		// Устанавливаем размеры буферов
@@ -651,22 +693,10 @@ void * HttpProxy::connection(void * ctx){
 
 		cout << " DELETE 2 " << endl;
 
-		// Отключаем подключение для сокетов
-		shutdown(http->sockets.client, SHUT_RDWR);
-		shutdown(http->sockets.server, SHUT_RDWR);
-
-		cout << " DELETE 3 " << endl;
-
-		// Закрываем сокеты
-		close(http->sockets.client);
-		close(http->sockets.server);
-
-		cout << " DELETE 4 " << endl;
-
 		// Удаляем объект подключения
 		delete http;
 
-		cout << " DELETE 5 " << endl;
+		cout << " DELETE 3 " << endl;
 	}
 	// Выходим
 	return 0;

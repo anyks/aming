@@ -203,19 +203,29 @@ class BufferHttpProxy {
 		 * Sockets Сокеты клиента и сервера
 		 */
 		struct Sockets {
-			evutil_socket_t client;	// Сокет клиента
-			evutil_socket_t server;	// Сокет сервера
+			evutil_socket_t client = -1;	// Сокет клиента
+			evutil_socket_t server = -1;	// Сокет сервера
 		} __attribute__((packed));
 		/**
 		 * appconn Функция которая добавляет или удаляет в список склиента
 		 * @param flag флаг подключения или отключения клиента
 		 */
 		void appconn(bool flag);
+		/**
+		 * free_socket Метод отключения сокета
+		 * @param fd ссылка на файловый дескриптор (сокет)
+		 */
+		void free_socket(evutil_socket_t &fd);
+		/**
+		 * free_event Метод удаления буфера события
+		 * @param event указатель на объект буфера события
+		 */
+		void free_event(struct bufferevent ** event);
 	public:
 		bool					auth = false;	// Флаг авторизации
 		struct event_base		* base;			// База событий
 		map <string, Connects>	* connects; 	// Список подключений к прокси серверу
-		Http					* parser;		// Объект парсера
+		Http					parser;			// Объект парсера
 		HttpQuery				response;		// Ответ системы
 		Request					request;		// Данные запроса
 		Events					events;			// Буферы событий
@@ -226,34 +236,11 @@ class BufferHttpProxy {
 		/**
 		 * begin Метод активации подключения
 		 */
-		void begin(){
-			// Добавляем в список подключений
-			appconn(true);
-		}
+		void begin();
 		/**
-		 * free_client Метод удаления буфера клиента
+		 * free_server Метод удаления буфера события сервера
 		 */
-		void free_client(){
-			// Удаляем событие клиента
-			if(events.client != NULL){
-				// Удаляем буфер события
-				bufferevent_free(events.client);
-				// Устанавливаем что событие удалено
-				events.client = NULL;
-			}
-		}
-		/**
-		 * free_server Метод удаления буфера сервера
-		 */
-		void free_server(){
-			// Удаляем событие сервера
-			if(events.server != NULL){
-				// Удаляем буфер события
-				bufferevent_free(events.server);
-				// Устанавливаем что событие удалено
-				events.server = NULL;
-			}
-		}
+		void free_server();
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param string  name    имя ресурса
@@ -262,7 +249,7 @@ class BufferHttpProxy {
 		 */
 		BufferHttpProxy(string name, string version, u_short options){
 			// Создаем объект для работы с http заголовками
-			parser = new Http(name, options, version);
+			parser = Http(name, options, version);
 		}
 		/**
 		 * ~BufferHttpProxy Деструктор
@@ -271,13 +258,18 @@ class BufferHttpProxy {
 
 			cout << " ====== 1 " << endl;
 
-			// Удаляем событие клиента
-			free_client();
+			// Очищаем файловый дескриптор сервера
+			free_socket(sockets.server);
+			// Очищаем файловый дескриптор клиента
+			free_socket(sockets.client);
+			
+			// Удаляем событие сервера
+			free_event(&events.server);
 
 			cout << " ====== 2 " << endl;
 
-			// Удаляем событие сервера
-			free_server();
+			// Удаляем событие клиента
+			free_event(&events.client);
 
 			cout << " ====== 3 " << endl;
 
@@ -286,20 +278,10 @@ class BufferHttpProxy {
 
 			cout << " ====== 4 " << endl;
 
-			// Если парсер не удален
-			if(parser != NULL){
-				// Удаляем парсер
-				delete parser;
-				// Запоминаем что данные удалены
-				parser = NULL;
-			}
-
-			cout << " ====== 5 " << endl;
-
 			// Очищаем память выделенную для вектора
 			vector <char> ().swap(request.data);
 
-			cout << " ====== 6 " << endl;
+			cout << " ====== 5 " << endl;
 		}
 		/**
 		 * parse Метод парсинга данных
@@ -307,7 +289,7 @@ class BufferHttpProxy {
 		 */
 		bool parse(){
 			// Выполняем парсинг данных
-			return parser->parse(request.data.data(), request.data.size() - 1);
+			return parser.parse(request.data.data(), request.data.size() - 1);
 		}
 };
 /**
