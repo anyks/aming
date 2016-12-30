@@ -368,15 +368,13 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				// Выводим в лог сообщение
 				http->proxy.log->write(
 					LOG_ACCESS,
-					"connect client [%s] to server host = %s [%s:%d], method = %s, path = %s, useragent = %s, socket = %d",
+					"connect client [%s], useragent = %s, socket = %d to server [%s:%d], host = %s",
 					http->client.host.c_str(),
-					http->parser->getHost().c_str(),
+					http->parser->getUseragent().c_str(),
+					current_fd,
 					http->server.host.c_str(),
 					http->server.port,
-					http->parser->getMethod().c_str(),
-					http->parser->getPath().c_str(),
-					http->parser->getUseragent().c_str(),
-					current_fd
+					http->parser->getHost().c_str()
 				);
 			}
 		// Если это ошибка или завершение работы

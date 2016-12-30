@@ -9,6 +9,7 @@
 #define _HTTP_PARSER_ANYKS_
 
 #include <map>
+#include <regex>
 #include <string>
 #include <cstring>
 #include <vector>
@@ -279,6 +280,12 @@ class Http {
 		 * @param v     результирующий вектор
 		 */
 		void split(const string &str, const string delim, vector <string> &v);
+		/**
+		 * isNumber Функция проверки является ли строка числом
+		 * @param  str строка для проверки
+		 * @return     результат проверки
+		 */
+		bool isNumber(const string &str);
 		/**
 		 * toCase Функция перевода в указанный регистр
 		 * @param  str  строка для перевода в указанных регистр

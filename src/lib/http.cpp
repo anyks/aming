@@ -28,6 +28,16 @@ void Http::split(const string &str, const string delim, vector <string> &v){
 	}
 }
 /**
+ * isNumber Функция проверки является ли строка числом
+ * @param  str строка для проверки
+ * @return     результат проверки
+ */
+bool Http::isNumber(const string &str){
+	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
+		return !isdigit(c);
+	}) == str.end();
+}
+/**
  * toCase Функция перевода в указанный регистр
  * @param  str  строка для перевода в указанных регистр
  * @param  flag флаг указания типа регистра
@@ -88,20 +98,22 @@ Http::HttpData Http::getHeaders(string str){
 			split(str, "\r\n", strings);
 			// Если строки найдены
 			if(!strings.empty()){
-				// Позиция найденного разделителя
-				size_t pos;
 				// Запоминаем http запрос
 				data.http = trim(strings[0]);
 				// Переходим по всему массиву строк
 				for(u_int i = 1; i < strings.size(); i++){
-					// Выполняем поиск разделитель
-					pos = strings[i].find(":");
-					// Если разделитель найден
-					if(pos != string::npos){
+					// Результат работы регулярного выражения
+					smatch match;
+					// Устанавливаем правило регулярного выражения
+					regex e("\\b([\\w\\-]+)\\s*\\:\\s*([\\s\\S]+)");
+					// Выполняем поиск протокола
+					regex_search(strings[i], match, e);
+					// Если заголовок найден
+					if(!match.empty() && (match.size() == 3)){
 						// Получаем ключ
-						string key = strings[i].substr(0, pos);
+						string key = match[1];
 						// Получаем значение
-						string val = strings[i].substr(pos + 1, strings[i].length() - (pos + 1));
+						string val = match[2];
 						// Запоминаем найденны параметры
 						data.headers.insert(pair <string, string>(toCase(trim(key)), trim(val)));
 						// Запоминаем оригинальные параметры заголовков
@@ -121,17 +133,16 @@ Http::HttpData Http::getHeaders(string str){
  * @param  port входная строка якобы содержащая порт
  * @return      результат проверки
  */
-bool Http::checkPort(string port){
+bool Http::checkPort(string str){
 	// Если строка существует
-	if(!port.empty()){
-		// Проверяем цифры это или нет
-		bool number = (port.find_first_not_of("0123456789") == string::npos);
+	if(!str.empty()){
 		// Преобразуем строку в цифры
-		if(number && ::atoi(port.c_str()) > 65535)
-			// Если длина порта меньше максимального
-			return false;
-		// Если порт прошел все проверки
-		else return true;
+		if(isNumber(str)){
+			// Получаем порт
+			u_int port = ::atoi(str.c_str());
+			// Проверяем диапазон портов
+			if((port > 0) && (port < 65536)) return true;
+		}
 	}
 	// Сообщаем что ничего не нашли
 	return false;
@@ -144,69 +155,36 @@ bool Http::checkPort(string port){
 Http::Connect Http::getConnection(string str){
 	// Полученные данные подключения
 	Connect data;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([A-Za-z]+):\\/\\/");
 	// Выполняем поиск протокола
-	size_t pos = str.find("://");
+	regex_search(str, match, e);
 	// Если протокол найден
-	if(pos != (size_t) string::npos){
-		// Выполняем разделение на протокол
-		vector <string> prt;
-		// Функция разбиения на составляющие
-		split(str, "://", prt);
-		// Если протокол найден
-		if(!prt.empty()){
-			// Запоминаем версию протокола
-			data.protocol = prt[0];
-			// Запоминаем оставшуюся часть строки
-			str = prt[1];
-		}
-		// Очищаем память выделенную для вектора
-		vector <string> ().swap(prt);
+	if(!match.empty() && (match.size() == 2)){
+		// Запоминаем версию протокола
+		data.protocol = toCase(match[1]);
 	// Устанавливаем протокол по умолчанию
-	} else data.protocol = query.protocol;
-	// Выполняем поиск порта и хоста
-	pos = str.find(":");
-	// Если хост и порт найдены
-	if(pos != (size_t) string::npos){
-		// Выполняем разделение на протокол
-		vector <string> prt;
-		// Функция разбиения на составляющие
-		split(str, ":", prt);
-		// Если порт и хост найдены
-		if(!prt.empty()){
-			// Запоминаем хост
-			data.host = prt[0];
-			// Запоминаем порт
-			data.port = (checkPort(prt[1]) ? prt[1] : "80");
-		}
-		// Очищаем память выделенную для вектора
-		vector <string> ().swap(prt);
-	// Если хост и порт не найдены
-	} else {
+	} else data.protocol = toCase(query.protocol);
+	// Устанавливаем правило для поиска
+	e = "\\b([\\w\\.\\-]+\\.[A-Za-z]+)(?:\\:(\\d+))?";
+	// Выполняем поиск домена и порта
+	regex_search(str, match, e);
+	// Если протокол найден
+	if(!match.empty() && (match.size() > 1)){
 		// Запоминаем хост
-		data.host = str;
-		// Запоминаем порт
-		data.port = "80";
+		data.host = toCase(match[1]);
+		// Если порт найден, тогда запоминаем его
+		if(match.size() == 3) data.port = match[2];
+		// Устанавливаем порт по умолчанию
+		else data.port = "80";
 	}
 	// Устанавливаем номер порта в зависимости от типа протокола
-	if(!strcmp(toCase(data.protocol).c_str(), "https")
-	|| !strcmp(toCase(query.method).c_str(), "connect")) data.port = "443";
+	if(!strcmp(data.protocol.c_str(), "https")
+	|| !strcmp(query.method.c_str(), "connect")) data.port = "443";
 	// Устанавливаем версию протокола в зависимости от порта
-	if(!strcmp(toCase(data.port).c_str(), "443")) data.protocol = "https";
-	// Запоминаем найденный хост
-	str = data.host;
-	// Выполняем поиск дирректории в хосте
-	pos = str.find("/");
-	// Если дирректория найдена значит это не хост
-	if(pos != (size_t) string::npos){
-		// Извлекаем название домена
-		str = str.substr(0, pos);
-		// Выполняем поиск точки в домене
-		pos = str.find(".");
-		// Если это домен
-		if(pos != (size_t) string::npos) data.host = str;
-		// Если это не домен то устанавливаем что это корень
-		else data.host = "/";
-	}
+	if(!strcmp(data.port.c_str(), "443")) data.protocol = "https";
 	// Выводим результат
 	return data;
 }
@@ -355,139 +333,113 @@ bool Http::isHttp(const string buffer){
  * generateHttp Метод генерации данных http запроса
  */
 void Http::generateHttp(){
-	// Разделяем на составляющие команду
-	vector <string> cmd;
-	// Функция разбиения на составляющие
-	split(query.http, " ", cmd);
-	// Получаем размер массива
-	size_t size = cmd.size();
-	// Если комманда существует
-	if(size && (size == 3)){
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([A-Za-z]+)\\s+([\\s\\S]+)\\s+([A-Za-z]+)\\/([\\d\\.]+)");
+	// Выполняем поиск протокола
+	regex_search(query.http, match, e);
+	// Если данные найдены
+	if(!match.empty() && (match.size() == 5)){
 		// Запоминаем метод запроса
-		query.method = toCase(cmd[0]);
+		query.method = toCase(match[1]);
 		// Запоминаем путь запроса
-		query.path = cmd[1];
-		// Разбиваем протокол и тип протокола на части
-		vector <string> prt;
-		// Функция разбиения на составляющие
-		split(cmd[2], "/", prt);
-		// Получаем размер массива
-		size = prt.size();
-		// Если данные найдены
-		if(size && (size == 2)){
-			// Запоминаем протокол запроса
-			query.protocol = toCase(prt[0]);
-			// Запоминаем версию протокола
-			query.version = prt[1];
-			// Извлекаем данные хоста
-			string host = getHeader("host", query.headers);
-			// Извлекаем данные авторизации
-			string auth = getHeader("proxy-authorization", query.headers);
-			// Получаем заголовок Proxy-Connection
-			string proxy_connection = getHeader("proxy-connection", query.headers);
-			// Получаем данные юзерагента
-			query.useragent = getHeader("user-agent", query.headers);
-			// Получаем данные заголовока коннекта
-			query.connection = toCase(getHeader("connection", query.headers));
-			// Если постоянное соединение не установлено
-			if((options & OPT_SMART) && !proxy_connection.empty()) query.connection = proxy_connection;
-			// Если хост найден
-			if(!host.empty()){
-				// Выполняем получение параметров подключения
-				Connect gcon = getConnection(query.path);
-				// Выполняем получение параметров подключения
-				Connect scon = getConnection(host);
-				// Создаем полный адрес запроса
-				string fulladdr1 = scon.protocol + string("://") + scon.host;
-				string fulladdr2 = fulladdr1 + "/";
-				string fulladdr3 = fulladdr1 + string(":") + scon.port;
-				string fulladdr4 = fulladdr3 + "/";
-				// Определяем путь
-				if(strcmp(toCase(query.method).c_str(), "connect")
-				&& (!strcmp(toCase(query.path).c_str(), toCase(host).c_str())
-				|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr1).c_str())
-				|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr2).c_str())
-				|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr3).c_str())
-				|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr4).c_str()))) query.path = "/";
-				// Выполняем удаление из адреса доменного имени
-				else if(strstr(query.path.c_str(), fulladdr1.c_str()) != NULL){
-					// Запоминаем текущий путь
-					string tmp_path = query.path;
-					// Вырезаем домер из пути
-					tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
-					// Если путь существует
-					if(!tmp_path.empty()) query.path = tmp_path;
-				}
-				// Запоминаем хост
-				query.host = toCase(scon.host);
-				// Запоминаем порт
-				if(strcmp(scon.port.c_str(), gcon.port.c_str())
-				&& !strcmp(gcon.port.c_str(), "80")){
-					// Запоминаем протокол
-					query.protocol = toCase(scon.protocol);
-					// Уделяем предпочтение 443 порту
-					query.port = scon.port;
-				// Запоминаем порт такой какой он есть
-				} else if(gcon.port.find_first_not_of("0123456789") == string::npos) {
-					// Запоминаем протокол
-					query.protocol = toCase(gcon.protocol);
-					// Запоминаем порт
-					query.port = gcon.port;
-				// Устанавливаем значение порта и протокола по умолчанию
-				} else {
-					// Запоминаем протокол
-					query.protocol = "http";
-					// Устанавливаем http порт
-					query.port = "80";
-				}
+		query.path = match[2];
+		// Запоминаем протокол запроса
+		query.protocol = toCase(match[3]);
+		// Запоминаем версию протокола
+		query.version = match[4];
+		// Извлекаем данные хоста
+		string host = getHeader("host", query.headers);
+		// Извлекаем данные авторизации
+		string auth = getHeader("proxy-authorization", query.headers);
+		// Получаем заголовок Proxy-Connection
+		string proxy_connection = getHeader("proxy-connection", query.headers);
+		// Получаем данные юзерагента
+		query.useragent = getHeader("user-agent", query.headers);
+		// Получаем данные заголовока коннекта
+		query.connection = toCase(getHeader("connection", query.headers));
+		// Если постоянное соединение не установлено
+		if((options & OPT_SMART) && !proxy_connection.empty()) query.connection = proxy_connection;
+		// Если хост найден
+		if(!host.empty()){
+			// Выполняем получение параметров подключения
+			Connect gcon = getConnection(query.path);
+			// Выполняем получение параметров подключения
+			Connect scon = getConnection(host);
+			// Создаем полный адрес запроса
+			string fulladdr1 = scon.protocol + string("://") + scon.host;
+			string fulladdr2 = fulladdr1 + "/";
+			string fulladdr3 = fulladdr1 + string(":") + scon.port;
+			string fulladdr4 = fulladdr3 + "/";
+			// Определяем путь
+			if(strcmp(toCase(query.method).c_str(), "connect")
+			&& (!strcmp(toCase(query.path).c_str(), toCase(host).c_str())
+			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr1).c_str())
+			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr2).c_str())
+			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr3).c_str())
+			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr4).c_str()))) query.path = "/";
+			// Выполняем удаление из адреса доменного имени
+			else if(strstr(query.path.c_str(), fulladdr1.c_str()) != NULL){
+				// Запоминаем текущий путь
+				string tmp_path = query.path;
+				// Вырезаем домер из пути
+				tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
+				// Если путь существует
+				if(!tmp_path.empty()) query.path = tmp_path;
 			}
-			// Если авторизация найдена
-			if(!auth.empty()){
-				// Выполняем разделение на тип и данные авторизации
-				vector <string> lgn;
-				// Функция разбиения на составляющие
-				split(auth, " ", lgn);
-				// Запоминаем размер массива
-				size = lgn.size();
-				// Если данные получены
-				if(size && (size == 2)){
-					// Запоминаем тип авторизации
-					query.auth = toCase(lgn[0]);
-					// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
-					if(!strcmp(query.auth.c_str(), "basic")){
-						// Выполняем декодирование логина и пароля
-						string dauth = base64_decode(lgn[1].c_str());
-						// Выполняем поиск авторизационных данных
-						size_t pos = dauth.find(":");
-						// Если протокол найден
-						if(pos != string::npos){
-							// Выполняем разделение на логин и пароль
-							vector <string> lp;
-							// Функция разбиения на составляющие
-							split(dauth, ":", lp);
-							// Запоминаем размер массива
-							size = lp.size();
-							// Если данные получены
-							if(size && (size == 2)){
-								// Запоминаем логин
-								query.login = lp[0];
-								// Запоминаем пароль
-								query.password = lp[1];
-							}
-							// Очищаем память выделенную для вектора
-							vector <string> ().swap(lp);
-						}
-					}
-				}
-				// Очищаем память выделенную для вектора
-				vector <string> ().swap(lgn);
+			// Запоминаем хост
+			query.host = scon.host;
+			// Запоминаем порт
+			if(strcmp(scon.port.c_str(), gcon.port.c_str())
+			&& !strcmp(gcon.port.c_str(), "80")){
+				// Запоминаем протокол
+				query.protocol = scon.protocol;
+				// Уделяем предпочтение 443 порту
+				query.port = scon.port;
+			// Запоминаем порт такой какой он есть
+			} else if(checkPort(gcon.port)) {
+				// Запоминаем протокол
+				query.protocol = gcon.protocol;
+				// Запоминаем порт
+				query.port = gcon.port;
+			// Устанавливаем значение порта и протокола по умолчанию
+			} else {
+				// Запоминаем протокол
+				query.protocol = "http";
+				// Устанавливаем http порт
+				query.port = "80";
 			}
 		}
-		// Очищаем память выделенную для вектора
-		vector <string> ().swap(prt);
+		// Если авторизация найдена
+		if(!auth.empty()){
+			// Устанавливаем правило регулярного выражения
+			e = "\\b([A-Za-z]+)\\s+([\\s\\S]+)";
+			// Выполняем поиск протокола
+			regex_search(auth, match, e);
+			// Если данные найдены
+			if(!match.empty() && (match.size() == 3)){
+				// Запоминаем тип авторизации
+				query.auth = toCase(match[1]);
+				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
+				if(!strcmp(query.auth.c_str(), "basic")){
+					// Выполняем декодирование логина и пароля
+					string dauth = base64_decode(match[2]);
+					// Устанавливаем правило регулярного выражения
+					e = "\\b([\\s\\S]+)\\:([\\s\\S]+)";
+					// Выполняем поиск протокола
+					regex_search(dauth, match, e);
+					// Если данные найдены
+					if(!match.empty() && (match.size() == 3)){
+						// Запоминаем логин
+						query.login = match[1];
+						// Запоминаем пароль
+						query.password = match[2];
+					}
+				}
+			}
+		}
 	}
-	// Очищаем память выделенную для вектора
-	vector <string> ().swap(cmd);
 	// Генерируем параметры для запроса
 	createHead();
 }
@@ -587,7 +539,7 @@ Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
 		// Проверяем есть ли закрытие соединения
 		string cc = getHeader("connection", _query.headers);
 		// Если найден размер вложений
-		if(!cl.empty() && (cl.find_first_not_of("0123456789") == string::npos)){
+		if(!cl.empty() && isNumber(cl)){
 			// Определяем размер вложений
 			int body_size = ::atoi(cl.c_str());
 			// Получаем размер вложения
