@@ -643,16 +643,30 @@ void * HttpProxy::connection(void * ctx){
 		bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
 		// Активируем перебор базы событий
 		event_base_dispatch(http->base);
+
+		cout << " DELETE 1 " << endl;
+
 		// Удаляем базу
-		event_base_free(base);
+		event_base_free(http->base);
+
+		cout << " DELETE 2 " << endl;
+
 		// Отключаем подключение для сокетов
 		shutdown(http->sockets.client, SHUT_RDWR);
 		shutdown(http->sockets.server, SHUT_RDWR);
+
+		cout << " DELETE 3 " << endl;
+
 		// Закрываем сокеты
 		close(http->sockets.client);
 		close(http->sockets.server);
+
+		cout << " DELETE 4 " << endl;
+
 		// Удаляем объект подключения
 		delete http;
+
+		cout << " DELETE 5 " << endl;
 	}
 	// Выходим
 	return 0;

@@ -268,12 +268,24 @@ class BufferHttpProxy {
 		 * ~BufferHttpProxy Деструктор
 		 */
 		~BufferHttpProxy(){
+
+			cout << " ====== 1 " << endl;
+
 			// Удаляем событие клиента
 			free_client();
+
+			cout << " ====== 2 " << endl;
+
 			// Удаляем событие сервера
 			free_server();
+
+			cout << " ====== 3 " << endl;
+
 			// Удаляем из списока подключений
 			appconn(false);
+
+			cout << " ====== 4 " << endl;
+
 			// Если парсер не удален
 			if(parser != NULL){
 				// Удаляем парсер
@@ -281,8 +293,13 @@ class BufferHttpProxy {
 				// Запоминаем что данные удалены
 				parser = NULL;
 			}
+
+			cout << " ====== 5 " << endl;
+
 			// Очищаем память выделенную для вектора
 			vector <char> ().swap(request.data);
+
+			cout << " ====== 6 " << endl;
 		}
 		/**
 		 * parse Метод парсинга данных
