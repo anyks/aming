@@ -207,6 +207,17 @@ class BufferHttpProxy {
 			evutil_socket_t server = -1;	// Сокет сервера
 		} __attribute__((packed));
 		/**
+		 * Client Структура с информацией о подключении клиента
+		 */
+		struct Client {
+			bool	connect;	// Метод connect это или нет
+			bool	alive;		// Постоянное подключение или нет
+			bool	https;		// Защищенное подключение или нет
+			string	ip;			// ip адрес клиента
+			string	mac;		// Мак адрес клиента
+			string	useragent;	// userAgent клиента
+		} __attribute__((packed));
+		/**
 		 * appconn Функция которая добавляет или удаляет в список склиента
 		 * @param flag флаг подключения или отключения клиента
 		 */
@@ -227,10 +238,10 @@ class BufferHttpProxy {
 		map <string, Connects>	* connects; 	// Список подключений к прокси серверу
 		Http					parser;			// Объект парсера
 		HttpQuery				response;		// Ответ системы
-		Request					request;		// Данные запроса
+		HttpData				httpData;		// Данные http запроса
 		Events					events;			// Буферы событий
 		Server					server;			// Параметры удаленного сервера
-		Server					client;			// Параметры подключившегося клиента
+		Client					client;			// Параметры подключившегося клиента
 		Proxy					proxy;			// Параметры прокси сервера
 		Sockets					sockets;		// Сокеты подключений
 		/**
@@ -238,9 +249,13 @@ class BufferHttpProxy {
 		 */
 		void begin();
 		/**
-		 * free_server Метод удаления буфера события сервера
+		 * close_client Метод закрытия соединения клиента
 		 */
-		void free_server();
+		void close_client();
+		/**
+		 * close_server Метод закрытия соединения сервера
+		 */
+		void close_server();
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param string  name    имя ресурса
@@ -255,41 +270,16 @@ class BufferHttpProxy {
 		 * ~BufferHttpProxy Деструктор
 		 */
 		~BufferHttpProxy(){
-
-			cout << " ====== 1 " << endl;
-
 			// Очищаем файловый дескриптор сервера
 			free_socket(sockets.server);
 			// Очищаем файловый дескриптор клиента
 			free_socket(sockets.client);
-			
 			// Удаляем событие сервера
 			free_event(&events.server);
-
-			cout << " ====== 2 " << endl;
-
 			// Удаляем событие клиента
 			free_event(&events.client);
-
-			cout << " ====== 3 " << endl;
-
 			// Удаляем из списока подключений
 			appconn(false);
-
-			cout << " ====== 4 " << endl;
-
-			// Очищаем память выделенную для вектора
-			vector <char> ().swap(request.data);
-
-			cout << " ====== 5 " << endl;
-		}
-		/**
-		 * parse Метод парсинга данных
-		 * @return результат работы парсинга
-		 */
-		bool parse(){
-			// Выполняем парсинг данных
-			return parser.parse(request.data.data(), request.data.size() - 1);
 		}
 };
 /**
@@ -338,13 +328,6 @@ class HttpProxy {
 		 */
 		static int set_tcpnodelay(evutil_socket_t fd, LogApp * log);
 		/**
-		 * append_to_buffer Функция добавления в буфер новых данных
-		 * @param data       ссылка на буфер данных
-		 * @param chunk_size размер одной порции данных
-		 * @param buffer     буфер с входящими данными
-		 */
-		static void append_to_buffer(vector <char> &data, size_t chunk_size, const char * buffer);
-		/**
 		 * set_buffer_size Функция установки размеров буфера
 		 * @param  fd         файловый дескриптор (сокет)
 		 * @param  read_size  размер буфера на чтение
@@ -370,6 +353,13 @@ class HttpProxy {
 		 * @param ctx передаваемый объект
 		 */
 		static void * connection(void * ctx);
+		/**
+		 * do_request Функция запроса данных у сервера
+		 * @param bev  буфер события
+		 * @param ctx  передаваемый объект
+		 * @param flag флаг разрешающий новый запрос данных
+		 */
+		static void do_request(struct bufferevent * bev, void * ctx, bool flag = false);
 		/**
 		 * event Функция обработка входящих событий
 		 * @param bev    буфер события

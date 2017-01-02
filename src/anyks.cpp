@@ -280,9 +280,7 @@ void create_proxy(){
 		APP_AUTHOR		// ник или имя автора
 	);
 	// Создаем объект для http прокси-сервера
-	HttpProxy * http = new HttpProxy(logfile, "anyks", "1.0", "127.0.0.1", "192.168.3.43");
-	// Очищаем выделенный объект
-	delete http;
+	HttpProxy http = HttpProxy(logfile, "anyks", "1.0", "127.0.0.1", "192.168.1.202");
 }
 /**
  * run_worker Функция запуска воркера

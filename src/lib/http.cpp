@@ -9,13 +9,201 @@
 
 // Устанавливаем пространство имен
 using namespace std;
+
+/**
+ * toCase Функция перевода в указанный регистр
+ * @param  str  строка для перевода в указанных регистр
+ * @param  flag флаг указания типа регистра
+ * @return      результирующая строка
+ */
+string toCase(string str, bool flag = false){
+	// Переводим в указанный регистр
+	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
+	// Выводим результат
+	return str;
+}
+/**
+ * isNumber Функция проверки является ли строка числом
+ * @param  str строка для проверки
+ * @return     результат проверки
+ */
+bool isNumber(const string &str){
+	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
+		return !isdigit(c);
+	}) == str.end();
+}
+/**
+ * rtrim Функция усечения указанных символов с правой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & rtrim(string &str, const char * t = " \t\n\r\f\v"){
+	str.erase(str.find_last_not_of(t) + 1);
+	return str;
+}
+/**
+ * ltrim Функция усечения указанных символов с левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & ltrim(string &str, const char * t = " \t\n\r\f\v"){
+	str.erase(0, str.find_first_not_of(t));
+	return str;
+}
+/**
+ * trim Функция усечения указанных символов с правой и левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & trim(string &str, const char * t = " \t\n\r\f\v"){
+	return ltrim(rtrim(str, t), t);
+}
+/**
+ * checkPort Функция проверки на качество порта
+ * @param  port входная строка якобы содержащая порт
+ * @return      результат проверки
+ */
+bool checkPort(string str){
+	// Если строка существует
+	if(!str.empty()){
+		// Преобразуем строку в цифры
+		if(::isNumber(str)){
+			// Получаем порт
+			u_int port = ::atoi(str.c_str());
+			// Проверяем диапазон портов
+			if((port > 0) && (port < 65536)) return true;
+		}
+	}
+	// Сообщаем что ничего не нашли
+	return false;
+}
+/**
+ * getHttpRequest Метод получения сформированного http запроса только с добавлением заголовков
+ * @return сформированный http запрос
+ */
+vector <char> HttpData::getHttpRequest(){
+	// Определяем тип прокси
+	bool smart = (this->options & OPT_SMART);
+	// Определяем разрешено ли выводить название агента
+	bool agent = (this->options & OPT_AGENT);
+	// Формируем запрос
+	string request = (this->http + string("\r\n"));
+	// Тип подключения
+	string connection = getHeader("connection");
+	// Добавляем остальные заголовки
+	for(map <string, string>::iterator it = this->headers.begin(); it != this->headers.end(); ++it){
+		// Фильтруем заголовки
+		if((it->first != "connection")
+		&& (it->first != "proxy-authorization")
+		&& (!smart || (smart && (it->first != "proxy-connection")))){
+			// Добавляем оставшиеся заголовки
+			request.append(
+				this->origin[it->first] + string(": ")
+				+ it->second + string("\r\n")
+			);
+		}
+	}
+	// Устанавливаем название прокси
+	if(agent) request.append(string("Proxy-Agent: ") + this->appName + string("/") + this->appVersion + string("\r\n"));
+	// Если это dumb прокси
+	if(!smart){
+		// Проверяем есть ли заголовок соединения прокси
+		string proxy_connection = getHeader("proxy-connection");
+		// Добавляем заголовок закрытия подключения
+		if(proxy_connection.empty()) request.append(string("Proxy-Connection: ") + connection + string("\r\n"));
+	// Если это smart прокси
+	} else {
+		// Получаем заголовок Proxy-Connection
+		string proxy_connection = getHeader("proxy-connection");
+		// Если постоянное соединение не установлено
+		if(!proxy_connection.empty()) connection = proxy_connection;
+	}
+	// Добавляем тип подключения
+	request.append(string("Connection: ") + connection + string("\r\n"));
+	// Запоминаем конец запроса
+	request.append(string("\r\n"));
+	// Создаем результат
+	vector <char> result(request.begin(), request.end());
+	// Выводим результат
+	return result;
+}
+/**
+ * createHead Функция получения сформированного заголовка запроса
+ */
+void HttpData::createHead(){
+	// Определяем тип прокси
+	bool smart = (this->options & OPT_SMART);
+	// Определяем разрешено ли сжатие
+	bool gzip = (this->options & OPT_GZIP);
+	// Определяем разрешено ли выводить название агента
+	bool agent = (this->options & OPT_AGENT);
+	// Определяем разрешено ли постоянное подключение
+	bool keepalive = (this->options & OPT_KEEPALIVE);
+	// Очищаем заголовок
+	this->request.clear();
+	// Создаем строку запроса
+	this->request.append(
+		::toCase(this->method, true)
+		+ string(" ") + this->path
+		+ string(" ") + string("HTTP/")
+		+ this->version + string("\r\n")
+	);
+	/*
+	// Устанавливаем заголовок Host:
+	this->request.append(
+		string("Host: ") + this->host
+		+ string(":") + this->port + string("\r\n")
+	);
+	*/
+	// Устанавливаем заголовок Host:
+	this->request.append(string("Host: ") + this->host + string("\r\n"));
+	// Добавляем useragent
+	if(!this->useragent.empty()) this->request.append(string("User-Agent: ") + this->useragent + string("\r\n"));
+	// Добавляем остальные заголовки
+	for(map <string, string>::iterator it = this->headers.begin(); it != this->headers.end(); ++it){
+		// Фильтруем заголовки
+		if((it->first != "host")
+		&& (it->first != "user-agent")
+		&& (it->first != "connection")
+		&& (it->first != "proxy-authorization")
+		&& (gzip || (!gzip && (it->first != "accept-encoding")))
+		&& (!smart || (smart && (it->first != "proxy-connection")))){
+			// Добавляем оставшиеся заголовки
+			this->request.append(
+				this->origin[it->first] + string(": ")
+				+ it->second + string("\r\n")
+			);
+		}
+	}
+	// Устанавливаем название прокси
+	if(agent) this->request.append(string("Proxy-Agent: ") + this->appName + string("/") + this->appVersion + string("\r\n"));
+	// Если постоянное подключение запрещено
+	if(!keepalive) this->connection = "close";
+	// Добавляем заголовок connection
+	if(!this->connection.empty()){
+		// Устанавливаем заголовок подключения
+		this->request.append(string("Connection: ") + this->connection + string("\r\n"));
+		// Если это dumb прокси
+		if(!smart){
+			// Проверяем есть ли заголовок соединения прокси
+			string pc = getHeader("proxy-connection");
+			// Добавляем заголовок закрытия подключения
+			if(pc.empty()) this->request.append(string("Proxy-Connection: ") + this->connection + string("\r\n"));
+		}
+	}
+	// Запоминаем конец запроса
+	this->request.append(string("\r\n"));
+}
 /**
  * split Функция разделения строк на составляющие
  * @param str   строка для поиска
  * @param delim разделитель
  * @param v     результирующий вектор
  */
-void Http::split(const string &str, const string delim, vector <string> &v){
+void HttpData::split(const string &str, const string delim, vector <string> &v){
 	string::size_type i = 0;
 	string::size_type j = str.find(delim);
 	u_int len = delim.length();
@@ -28,84 +216,605 @@ void Http::split(const string &str, const string delim, vector <string> &v){
 	}
 }
 /**
- * isNumber Функция проверки является ли строка числом
- * @param  str строка для проверки
- * @return     результат проверки
+ * getConnection Функция извлечения данных подключения
+ * @param  str строка запроса
+ * @return     объект с данными запроса
  */
-bool Http::isNumber(const string &str){
-	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
-		return !isdigit(c);
-	}) == str.end();
-}
-/**
- * toCase Функция перевода в указанный регистр
- * @param  str  строка для перевода в указанных регистр
- * @param  flag флаг указания типа регистра
- * @return      результирующая строка
- */
-string Http::toCase(string str, bool flag){
-	// Переводим в указанный регистр
-	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
+Connect HttpData::getConnection(string str){
+	// Полученные данные подключения
+	Connect data;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex ep("\\b([A-Za-z]+):\\/\\/", regex::ECMAScript | regex::icase);
+	// Выполняем поиск протокола
+	regex_search(str, match, ep);
+	// Если протокол найден
+	if(!match.empty() && (match.size() == 2)){
+		// Запоминаем версию протокола
+		data.protocol = ::toCase(match[1]);
+	// Устанавливаем протокол по умолчанию
+	} else data.protocol = ::toCase(this->protocol);
+	// Устанавливаем правило для поиска
+	regex eh("\\b([\\w\\.\\-]+\\.[A-Za-z]+)(?:\\:(\\d+))?", regex::ECMAScript | regex::icase);
+	// Выполняем поиск домена и порта
+	regex_search(str, match, eh);
+	// Если протокол найден
+	if(!match.empty() && (match.size() > 1)){
+		// Запоминаем хост
+		data.host = ::toCase(match[1]);
+		// Если порт найден, тогда запоминаем его
+		if(match.size() == 3) data.port = match[2];
+		// Устанавливаем порт по умолчанию
+		else data.port = "80";
+	}
+	// Устанавливаем номер порта в зависимости от типа протокола
+	if(!strcmp(data.protocol.c_str(), "https")
+	|| !strcmp(this->method.c_str(), "connect")) data.port = "443";
+	// Устанавливаем версию протокола в зависимости от порта
+	if(!strcmp(data.port.c_str(), "443")) data.protocol = "https";
 	// Выводим результат
-	return str;
+	return data;
 }
 /**
- * rtrim Функция усечения указанных символов с правой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
+ * clear Метод очистки структуры
  */
-string & Http::rtrim(string &str, const char * t){
-	str.erase(str.find_last_not_of(t) + 1);
-	return str;
+void HttpData::clear(){
+	// Обнуляем размер
+	this->length = 0;
+	// Очищаем строки
+	this->query.clear();
+	this->http.clear();
+	this->auth.clear();
+	this->method.clear();
+	this->path.clear();
+	this->protocol.clear();
+	this->version.clear();
+	this->host.clear();
+	this->port.clear();
+	this->login.clear();
+	this->password.clear();
+	this->useragent.clear();
+	this->connection.clear();
+	this->request.clear();
+	// Очищаем карту заголовков
+	this->headers.clear();
+	// Очищаем оригинальные заголовки
+	this->origin.clear();
 }
 /**
- * ltrim Функция усечения указанных символов с левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
+ * genDataConnect Метод генерации данных для подключения
  */
-string & Http::ltrim(string &str, const char * t){
-	str.erase(0, str.find_first_not_of(t));
-	return str;
+void HttpData::genDataConnect(){
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([A-Za-z]+)\\s+([\\s\\S]+)\\s+([A-Za-z]+)\\/([\\d\\.]+)", regex::ECMAScript | regex::icase);
+	// Выполняем поиск протокола
+	regex_search(this->http, match, e);
+	// Если данные найдены
+	if(!match.empty() && (match.size() == 5)){
+		// Запоминаем метод запроса
+		this->method = ::toCase(match[1]);
+		// Запоминаем путь запроса
+		this->path = match[2];
+		// Запоминаем протокол запроса
+		this->protocol = ::toCase(match[3]);
+		// Запоминаем версию протокола
+		this->version = match[4];
+		// Извлекаем данные хоста
+		string host = getHeader("host");
+		// Извлекаем данные авторизации
+		string auth = getHeader("proxy-authorization");
+		// Получаем заголовок Proxy-Connection
+		string proxy_connection = getHeader("proxy-connection");
+		// Получаем данные юзерагента
+		this->useragent = getHeader("user-agent");
+		// Получаем данные заголовока коннекта
+		this->connection = ::toCase(getHeader("connection"));
+		// Если постоянное соединение не установлено
+		if((this->options & OPT_SMART) && !proxy_connection.empty()) this->connection = proxy_connection;
+		// Если хост найден
+		if(!host.empty()){
+			// Выполняем получение параметров подключения
+			Connect gcon = getConnection(this->path);
+			// Выполняем получение параметров подключения
+			Connect scon = getConnection(host);
+			// Создаем полный адрес запроса
+			string fulladdr1 = scon.protocol + string("://") + scon.host;
+			string fulladdr2 = fulladdr1 + "/";
+			string fulladdr3 = fulladdr1 + string(":") + scon.port;
+			string fulladdr4 = fulladdr3 + "/";
+			// Определяем путь
+			if(strcmp(::toCase(this->method).c_str(), "connect")
+			&& (!strcmp(::toCase(this->path).c_str(), ::toCase(host).c_str())
+			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr1).c_str())
+			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr2).c_str())
+			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr3).c_str())
+			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr4).c_str()))) this->path = "/";
+			// Выполняем удаление из адреса доменного имени
+			else if(strstr(this->path.c_str(), fulladdr1.c_str()) != NULL){
+				// Запоминаем текущий путь
+				string tmp_path = this->path;
+				// Вырезаем домер из пути
+				tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
+				// Если путь существует
+				if(!tmp_path.empty()) this->path = tmp_path;
+			}
+			// Запоминаем хост
+			this->host = scon.host;
+			// Запоминаем порт
+			if(strcmp(scon.port.c_str(), gcon.port.c_str())
+			&& !strcmp(gcon.port.c_str(), "80")){
+				// Запоминаем протокол
+				this->protocol = scon.protocol;
+				// Уделяем предпочтение 443 порту
+				this->port = scon.port;
+			// Запоминаем порт такой какой он есть
+			} else if(::checkPort(gcon.port)) {
+				// Запоминаем протокол
+				this->protocol = gcon.protocol;
+				// Запоминаем порт
+				this->port = gcon.port;
+			// Устанавливаем значение порта и протокола по умолчанию
+			} else {
+				// Запоминаем протокол
+				this->protocol = "http";
+				// Устанавливаем http порт
+				this->port = "80";
+			}
+		}
+		// Если авторизация найдена
+		if(!auth.empty()){
+			// Устанавливаем правило регулярного выражения
+			regex e("\\b([A-Za-z]+)\\s+([\\s\\S]+)", regex::ECMAScript | regex::icase);
+			// Выполняем поиск протокола
+			regex_search(auth, match, e);
+			// Если данные найдены
+			if(!match.empty() && (match.size() == 3)){
+				// Запоминаем тип авторизации
+				this->auth = ::toCase(match[1]);
+				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
+				if(!strcmp(this->auth.c_str(), "basic")){
+					// Выполняем декодирование логина и пароля
+					string dauth = base64_decode(match[2]);
+					// Устанавливаем правило регулярного выражения
+					regex e("\\b([\\s\\S]+)\\:([\\s\\S]+)", regex::ECMAScript | regex::icase);
+					// Выполняем поиск протокола
+					regex_search(dauth, match, e);
+					// Если данные найдены
+					if(!match.empty() && (match.size() == 3)){
+						// Запоминаем логин
+						this->login = match[1];
+						// Запоминаем пароль
+						this->password = match[2];
+					}
+				}
+			}
+		}
+	}
+	// Генерируем параметры для запроса
+	createHead();
 }
 /**
- * trim Функция усечения указанных символов с правой и левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
+ * isConnect Метод проверяет является ли метод, методом connect
+ * @return результат проверки на метод connect
  */
-string & Http::trim(string &str, const char * t){
-	return ltrim(rtrim(str, t), t);
+bool HttpData::isConnect(){
+	// Сообщаем является ли метод, методом connect
+	return !strcmp(this->method.c_str(), "connect");
 }
 /**
- * getHeaders Функция извлечения данных http запроса
- * @param  str строка http запроса
- * @return     данные http запроса
+ * isClose Метод проверяет должно ли быть закрыто подключение
+ * @return результат проверки на закрытие подключения
  */
-Http::HttpData Http::getHeaders(string str){
-	// Создаем структуру данных
-	HttpData data;
+bool HttpData::isClose(){
+	// Сообщаем должно ли быть закрыто подключение
+	return !strcmp(this->connection.c_str(), "close");
+}
+/**
+ * isHttps Метод проверяет является ли подключение защищенным
+ * @return результат проверки на защищенное подключение
+ */
+bool HttpData::isHttps(){
+	// Сообщаем является ли продключение защищенным
+	return !strcmp(this->protocol.c_str(), "https");
+}
+/**
+ * isAlive Метод определения нужно ли держать соединение для прокси
+ * @return результат проверки
+ */
+bool HttpData::isAlive(){
+	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
+	if(getVersion() > 1){
+		// Проверяем указан ли заголовок отключения
+		if(!strcmp(this->connection.c_str(), "close")) return false;
+		// Иначе сообщаем что подключение должно жить долго
+		return true;
+	// Проверяем указан ли заголовок удержания соединения
+	} else if(!strcmp(this->connection.c_str(), "keep-alive")) return true;
+	// Сообщаем что подключение жить не должно
+	return false;
+}
+/**
+ * size Метод получения размера запроса
+ * @return размер запроса
+ */
+size_t HttpData::size(){
+	// Выводим размер запроса
+	return this->length;
+}
+/**
+ * getPort Метод получения порта запроса
+ * @return порт удаленного ресурса
+ */
+u_int HttpData::getPort(){
+	// Выводим значение переменной
+	return (!this->port.empty() ? ::atoi(this->port.c_str()) : 80);
+}
+/**
+ * getVersion Метод получения версии протокола запроса
+ * @return версия протокола запроса
+ */
+float HttpData::getVersion(){
+	// Выводим значение переменной
+	return (!this->version.empty() ? ::atof(this->version.c_str()) : 1.0);
+}
+/**
+ * Http::getHeader Функция извлекает данные заголовка по его ключу
+ * @param  key ключ заголовка
+ * @return     строка с данными заголовка
+ */
+string HttpData::getHeader(string key){
+	// Проверяем существует ли такой заголовок
+	if(this->headers.count(key) > 0) return this->headers.find(key)->second;
+	// Сообщаем что ничего не найдено
+	return "";
+}
+/**
+ * getHttp Метод получения http запроса
+ * @return http запрос
+ */
+string HttpData::getHttp(){
+	// Выводим значение переменной
+	return this->http;
+}
+/**
+ * getMethod Метод получения метода запроса
+ * @return метод запроса
+ */
+string HttpData::getMethod(){
+	// Выводим значение переменной
+	return this->method;
+}
+/**
+ * getHost Метод получения хоста запроса
+ * @return хост запроса
+ */
+string HttpData::getHost(){
+	// Выводим значение переменной
+	return this->host;
+}
+/**
+ * getPath Метод получения пути запроса
+ * @return путь запроса
+ */
+string HttpData::getPath(){
+	// Выводим значение переменной
+	return this->path;
+}
+/**
+ * getProtocol Метод получения протокола запроса
+ * @return протокол запроса
+ */
+string HttpData::getProtocol(){
+	// Выводим значение переменной
+	return this->protocol;
+}
+/**
+ * getAuth Метод получения метода авторизации запроса
+ * @return метод авторизации
+ */
+string HttpData::getAuth(){
+	// Выводим значение переменной
+	return this->auth;
+}
+/**
+ * getLogin Метод получения логина авторизации запроса
+ * @return логин авторизации
+ */
+string HttpData::getLogin(){
+	// Выводим значение переменной
+	return this->login;
+}
+/**
+ * getPassword Метод получения пароля авторизации запроса
+ * @return пароль авторизации
+ */
+string HttpData::getPassword(){
+	// Выводим значение переменной
+	return this->password;
+}
+/**
+ * getUseragent Метод получения юзерагента запроса
+ * @return юзерагент
+ */
+string HttpData::getUseragent(){
+	// Выводим значение переменной
+	return this->useragent;
+}
+/**
+ * getQuery Метод получения буфера запроса
+ * @return буфер запроса
+ */
+string HttpData::getQuery(){
+	// Выводим значение переменной
+	return this->query;
+}
+/**
+ * setEntitybody Метод добавления данных вложения
+ * @param buffer буфер с данными вложения
+ * @param size   размер буфера
+ */
+bool HttpData::setEntitybody(const char * buffer, size_t size){
+	// Если данные в объекте существуют
+	if(this->length){
+		// Размер вложений
+		u_int body_size = 0;
+		// Проверяем есть ли размер вложений
+		string cl = getHeader("content-length");
+		// Если найден размер вложений
+		// Определяем размер вложений
+		if(!cl.empty() && ::isNumber(cl)) body_size = (::atoi(cl.c_str()) + this->length);
+		// Если вложения не найдены
+		else {
+			// Проверяем есть ли чанкование
+			string ch = getHeader("transfer-encoding");
+			// Если это чанкование
+			if(!ch.empty() && (ch.find("chunked") != string::npos)){
+				// Выполняем поиск подстроки
+				char * pch = strstr(buffer + this->length, "0\r\n\r\n");
+				// Если конец передачи данных мы нашли
+				// Определяем размер вложений
+				if(pch != NULL) body_size = ((pch - buffer) - this->length + 5);
+				// Если конец не найден
+				else {
+					// Ищем дальше
+					pch = strstr(buffer + this->length, "0\r\n");
+					// Если конец передачи данных мы нашли
+					// Определяем размер вложений
+					if(pch != NULL) body_size = ((pch - buffer) - this->length + 3);
+				}
+			// Сообщаем что мы закончили
+			} else return true;
+		}
+		// Если данные вложений есть тогда устанавливаем их и выходим
+		if(body_size <= size){
+			// Извлекаем указанные данные
+			this->entitybody.assign(buffer + this->length, buffer + body_size);
+			// Увеличиваем максимальный размер данных
+			this->length += body_size;
+			// Сообщаем что мы закончили
+			return true;
+		}
+	}
+	// Сообщаем что ничего не найдено
+	return false;
+}
+/**
+ * setMethod Метод установки метода запроса
+ * @param str строка с данными для установки
+ */
+void HttpData::setMethod(const string str){
+	// Запоминаем данные
+	this->method = str;
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setHost Метод установки хоста запроса
+ * @param str строка с данными для установки
+ */
+void HttpData::setHost(const string str){
+	// Запоминаем данные
+	this->host = str;
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setPort Метод установки порта запроса
+ * @param number номер порта для установки
+ */
+void HttpData::setPort(u_int number){
+	// Запоминаем данные
+	this->port = to_string(number);
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setPath Метод установки пути запроса
+ * @param str строка с данными для установки
+ */
+void HttpData::setPath(const string str){
+	// Запоминаем данные
+	this->path = str;
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setProtocol Метод установки протокола запроса
+ * @param str строка с данными для установки
+ */
+void HttpData::setProtocol(const string str){
+	// Запоминаем данные
+	this->protocol = str;
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setVersion Метод установки версии протокола запроса
+ * @param number номер версии протокола
+ */
+void HttpData::setVersion(float number){
+	// Запоминаем данные
+	this->version = to_string(number);
+	// Если это всего один символ тогда дописываем ноль
+	if(this->version.length() == 1) this->version += ".0";
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setAuth Метод установки метода авторизации запроса
+ * @param str строка с данными для установки
+ */
+void HttpData::setAuth(const string str){
+	// Запоминаем данные
+	this->auth = str;
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setUseragent Метод установки юзерагента запроса
+ * @param str строка с данными для установки
+ */
+void HttpData::setUseragent(const string str){
+	// Запоминаем данные
+	this->useragent = str;
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * setClose Метод установки принудительного отключения после запроса
+ */
+void HttpData::setClose(){
+	// Запоминаем данные
+	this->connection = "close";
+	// Выполняем генерацию результирующего запроса
+	createHead();
+}
+/**
+ * createRequest Функция создания ответа сервера
+ * @param  index   индекс в массиве ответа
+ * @param  request номер ответа
+ * @return         объект с данными ответа
+ */
+HttpQuery HttpData::createRequest(u_short index, u_short request){
+	// Устанавливаем дефолтное название прокси
+	string defname = "ProxyAnyks/1.0";
+	// Определяем позицию дефолтного названия
+	size_t pos = this->html[index].find(defname);
+	// Результирующая строка
+	string result;
+	// Если это домен
+	if(pos != string::npos){
+		// Заменяем дефолтное название на указанное
+		result = this->html[index]
+		.replace(pos, defname.length(), this->appName + string("/") + this->appVersion);
+	}
+	// Выводим шаблон сообщения о неудачном отправленном запросе
+	result = this->html[index];
+	// Данные для вывода
+	HttpQuery data(request, result);
+	// Выводим результат
+	return data;
+}
+/**
+ * brokenRequest Метод получения ответа (неудачного отправленного запроса)
+ * @return ответ в формате html
+ */
+HttpQuery HttpData::brokenRequest(){
+	// Выводим результат
+	return createRequest(9, 501);
+}
+/**
+ * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
+ * @return ответ в формате html
+ */
+HttpQuery HttpData::faultConnect(){
+	// Выводим результат
+	return createRequest(6, 502);
+}
+/**
+ * pageNotFound Метод получения ответа (страница не найдена)
+ * @return ответ в формате html
+ */
+HttpQuery HttpData::pageNotFound(){
+	// Выводим результат
+	return createRequest(4, 404);
+}
+/**
+ * faultAuth Метод получения ответа (неудачной авторизации)
+ * @return ответ в формате html
+ */
+HttpQuery HttpData::faultAuth(){
+	// Выводим результат
+	return createRequest(5, 403);
+}
+/**
+ * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
+ * @return ответ в формате html
+ */
+HttpQuery HttpData::requiredAuth(){
+	// Выводим результат
+	return createRequest(2, 407);
+}
+/**
+ * authSuccess Метод получения ответа (подтверждения авторизации)
+ * @return ответ в формате html
+ */
+HttpQuery HttpData::authSuccess(){
+	// Выводим результат
+	return createRequest(0, 200);
+}
+/**
+ * getRequest Метод получения сформированного http запроса
+ * @return сформированный http запрос
+ */
+HttpQuery HttpData::getRequest(){
+	// Данные для вывода
+	HttpQuery data(200, this->request, this->entitybody);
+	// Выводим результат
+	return data;
+}
+/**
+ * HttpData Конструктор
+ * @param  str     строка http запроса
+ * @param  name    название приложения
+ * @param  version версия приложения
+ * @param  options опции http парсера
+ * @return         данные http запроса
+ */
+HttpData::HttpData(string str, string name, string version, u_short options){
 	// Проверяем существуют ли данные
 	if(!str.empty()){
+		// Очищаем полученные данные
+		clear();
+		// Запоминаем название приложения
+		this->appName = name;
+		// Запоминаем версию приложения
+		this->appVersion = version;
+		// Запоминаем параметры http парсера
+		this->options = options;
 		// Определяем конец запроса
 		size_t end_query = str.find("\r\n\r\n");
 		// Если конец запроса найден
 		if(end_query != string::npos){
+			// Копируем данные всего запроса
+			this->query = string(str.c_str(), end_query + 4);
 			// Массив строк
 			vector <string> strings, params;
 			// Выполняем разбиение строк
-			split(str, "\r\n", strings);
+			split(this->query, "\r\n", strings);
 			// Если строки найдены
 			if(!strings.empty()){
 				// Запоминаем http запрос
-				data.http = trim(strings[0]);
+				this->http = ::trim(strings[0]);
 				// Переходим по всему массиву строк
 				for(u_int i = 1; i < strings.size(); i++){
 					// Результат работы регулярного выражения
 					smatch match;
 					// Устанавливаем правило регулярного выражения
-					regex e("\\b([\\w\\-]+)\\s*\\:\\s*([\\s\\S]+)");
+					regex e("\\b([\\w\\-]+)\\s*\\:\\s*([\\s\\S]+)", regex::ECMAScript | regex::icase);
 					// Выполняем поиск протокола
 					regex_search(strings[i], match, e);
 					// Если заголовок найден
@@ -115,197 +824,27 @@ Http::HttpData Http::getHeaders(string str){
 						// Получаем значение
 						string val = match[2];
 						// Запоминаем найденны параметры
-						data.headers.insert(pair <string, string>(toCase(trim(key)), trim(val)));
+						this->headers.insert(pair <string, string>(::toCase(::trim(key)), ::trim(val)));
 						// Запоминаем оригинальные параметры заголовков
-						data.origin.insert(pair <string, string>(toCase(trim(key)), trim(key)));
+						this->origin.insert(pair <string, string>(::toCase(::trim(key)), ::trim(key)));
 					}
 				}
 			}
 			// Получаем длину массива заголовков
-			data.length = end_query + 4;
+			this->length = end_query + 4;
 		}
+		// Генерируем данные подключения
+		genDataConnect();
 	}
-	// Выводим результат
-	return data;
 }
 /**
- * Http::checkPort Функция проверки на качество порта
- * @param  port входная строка якобы содержащая порт
- * @return      результат проверки
+ * ~HttpData Деструктор
  */
-bool Http::checkPort(string str){
-	// Если строка существует
-	if(!str.empty()){
-		// Преобразуем строку в цифры
-		if(isNumber(str)){
-			// Получаем порт
-			u_int port = ::atoi(str.c_str());
-			// Проверяем диапазон портов
-			if((port > 0) && (port < 65536)) return true;
-		}
-	}
-	// Сообщаем что ничего не нашли
-	return false;
-}
-/**
- * getConnection Функция извлечения данных подключения
- * @param  str строка запроса
- * @return     объект с данными запроса
- */
-Http::Connect Http::getConnection(string str){
-	// Полученные данные подключения
-	Connect data;
-	// Результат работы регулярного выражения
-	smatch match;
-	// Устанавливаем правило регулярного выражения
-	regex e("\\b([A-Za-z]+):\\/\\/");
-	// Выполняем поиск протокола
-	regex_search(str, match, e);
-	// Если протокол найден
-	if(!match.empty() && (match.size() == 2)){
-		// Запоминаем версию протокола
-		data.protocol = toCase(match[1]);
-	// Устанавливаем протокол по умолчанию
-	} else data.protocol = toCase(query.protocol);
-	// Устанавливаем правило для поиска
-	e = "\\b([\\w\\.\\-]+\\.[A-Za-z]+)(?:\\:(\\d+))?";
-	// Выполняем поиск домена и порта
-	regex_search(str, match, e);
-	// Если протокол найден
-	if(!match.empty() && (match.size() > 1)){
-		// Запоминаем хост
-		data.host = toCase(match[1]);
-		// Если порт найден, тогда запоминаем его
-		if(match.size() == 3) data.port = match[2];
-		// Устанавливаем порт по умолчанию
-		else data.port = "80";
-	}
-	// Устанавливаем номер порта в зависимости от типа протокола
-	if(!strcmp(data.protocol.c_str(), "https")
-	|| !strcmp(query.method.c_str(), "connect")) data.port = "443";
-	// Устанавливаем версию протокола в зависимости от порта
-	if(!strcmp(data.port.c_str(), "443")) data.protocol = "https";
-	// Выводим результат
-	return data;
-}
-/**
- * Http::getHeader Функция извлекает данные заголовка по его ключу
- * @param  key     ключ заголовка
- * @param  headers массив заголовков
- * @return         строка с данными заголовка
- */
-string Http::getHeader(string key, map <string, string> headers){
-	// Проверяем существует ли такой заголовок
-	if(headers.count(key) > 0) return headers.find(key)->second;
-	// Сообщаем что ничего не найдено
-	return "";
-}
-/**
- * createHead Функция получения сформированного заголовка запроса
- */
-void Http::createHead(){
-	// Определяем тип прокси
-	bool smart = (options & OPT_SMART);
-	// Определяем разрешено ли сжатие
-	bool gzip = (options & OPT_GZIP);
-	// Определяем разрешено ли выводить название агента
-	bool agent = (options & OPT_AGENT);
-	// Определяем разрешено ли постоянное подключение
-	bool keepalive = (options & OPT_KEEPALIVE);
-	// Очищаем заголовок
-	query.request.clear();
-	// Создаем строку запроса
-	query.request.append(
-		toCase(query.method, true)
-		+ string(" ") + query.path
-		+ string(" ") + string("HTTP/")
-		+ query.version + string("\r\n")
-	);
-	/*
-	// Устанавливаем заголовок Host:
-	query.request.append(
-		string("Host: ") + query.host
-		+ string(":") + query.port + string("\r\n")
-	);
-	*/
-	// Устанавливаем заголовок Host:
-	query.request.append(string("Host: ") + query.host + string("\r\n"));
-	// Добавляем useragent
-	if(!query.useragent.empty()) query.request.append(string("User-Agent: ") + query.useragent + string("\r\n"));
-	// Добавляем остальные заголовки
-	for(map <string, string>::iterator it = query.headers.begin(); it != query.headers.end(); ++it){
-		// Фильтруем заголовки
-		if((it->first != "host")
-		&& (it->first != "user-agent")
-		&& (it->first != "connection")
-		&& (it->first != "proxy-authorization")
-		&& (gzip || (!gzip && (it->first != "accept-encoding")))
-		&& (!smart || (smart && (it->first != "proxy-connection")))){
-			// Добавляем оставшиеся заголовки
-			query.request.append(
-				query.origin[it->first] + string(": ")
-				+ it->second + string("\r\n")
-			);
-		}
-	}
-	// Устанавливаем название прокси
-	if(agent) query.request.append(string("Proxy-Agent: ") + this->name + string("/") + this->version + string("\r\n"));
-	// Если постоянное подключение запрещено
-	if(!keepalive) query.connection = "close";
-	// Добавляем заголовок connection
-	if(!query.connection.empty()){
-		// Устанавливаем заголовок подключения
-		query.request.append(string("Connection: ") + query.connection + string("\r\n"));
-		// Если это не smarty
-		if(!smart){
-			// Проверяем есть ли заголовок соединения прокси
-			string pc = getHeader("proxy-connection", query.headers);
-			// Добавляем заголовок закрытия подключения
-			if(pc.empty()) query.request.append(string("Proxy-Connection: ") + query.connection + string("\r\n"));
-		}
-	}
-	// Запоминаем конец запроса
-	query.request.append(string("\r\n"));
-}
-/**
- * isConnect Метод проверяет является ли метод, методом connect
- * @return результат проверки на метод connect
- */
-bool Http::isConnect(){
-	// Сообщаем является ли метод, методом connect
-	return !strcmp(query.method.c_str(), "connect");
-}
-/**
- * isClose Метод проверяет должно ли быть закрыто подключение
- * @return результат проверки на закрытие подключения
- */
-bool Http::isClose(){
-	// Сообщаем должно ли быть закрыто подключение
-	return !strcmp(query.connection.c_str(), "close");
-}
-/**
- * isHttps Метод проверяет является ли подключение защищенным
- * @return результат проверки на защищенное подключение
- */
-bool Http::isHttps(){
-	// Сообщаем является ли продключение защищенным
-	return !strcmp(query.protocol.c_str(), "https");
-}
-/**
- * isAlive Метод определения нужно ли держать соединение для прокси
- * @return результат проверки
- */
-bool Http::isAlive(){
-	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
-	if(getVersion() > 1){
-		// Проверяем указан ли заголовок отключения
-		if(!strcmp(query.connection.c_str(), "close")) return false;
-		// Иначе сообщаем что подключение должно жить долго
-		return true;
-	// Проверяем указан ли заголовок удержания соединения
-	} else if(!strcmp(query.connection.c_str(), "keep-alive")) return true;
-	// Сообщаем что подключение жить не должно
-	return false;
+HttpData::~HttpData(){
+	// Очищаем полученные данные
+	clear();
+	// Очищаем память выделенную для вектора
+	vector <char> ().swap(this->entitybody);
 }
 /**
  * isHttp Метод проверки на то http это или нет
@@ -324,649 +863,111 @@ bool Http::isHttp(const string buffer){
 		// Устанавливаем завершающий символ
 		buf[3] = '\0';
 		// Переходим по всему массиву команд
-		for(int i = 0; i < 8; i++) if(!strcmp(toCase(buf).c_str(), cmds[i])) return true;
+		for(int i = 0; i < 8; i++) if(!strcmp(::toCase(buf).c_str(), cmds[i])) return true;
 	}
 	// Сообщаем что это не http
 	return false;
 }
 /**
- * generateHttp Метод генерации данных http запроса
+ * parse Функция извлечения данных из буфера
+ * @param buffer буфер с входящими запросами
+ * @param size   размер входящих данных
+ * @param flag   обрабатывать весь блок данных
  */
-void Http::generateHttp(){
+size_t Http::parse(const char * buffer, size_t size, bool flag){
+	// Определяем максимальный размер данных
+	size_t maxsize = 0;
 	// Результат работы регулярного выражения
 	smatch match;
+	// Создаем строку для поиска
+	string str(buffer, size);
 	// Устанавливаем правило регулярного выражения
-	regex e("\\b([A-Za-z]+)\\s+([\\s\\S]+)\\s+([A-Za-z]+)\\/([\\d\\.]+)");
+	regex e(
+		"^([^\\r\\n\\s]*)((?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
+		"\\/[\\d\\.]+\\s+\\d+\\s+[A-Za-z]+\\r\\n))(?:[\\w\\-]+\\s*\\:"
+		"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
+		regex::ECMAScript | regex::icase
+	);
 	// Выполняем поиск протокола
-	regex_search(query.http, match, e);
+	regex_search(str, match, e);
 	// Если данные найдены
-	if(!match.empty() && (match.size() == 5)){
-		// Запоминаем метод запроса
-		query.method = toCase(match[1]);
-		// Запоминаем путь запроса
-		query.path = match[2];
-		// Запоминаем протокол запроса
-		query.protocol = toCase(match[3]);
-		// Запоминаем версию протокола
-		query.version = match[4];
-		// Извлекаем данные хоста
-		string host = getHeader("host", query.headers);
-		// Извлекаем данные авторизации
-		string auth = getHeader("proxy-authorization", query.headers);
-		// Получаем заголовок Proxy-Connection
-		string proxy_connection = getHeader("proxy-connection", query.headers);
-		// Получаем данные юзерагента
-		query.useragent = getHeader("user-agent", query.headers);
-		// Получаем данные заголовока коннекта
-		query.connection = toCase(getHeader("connection", query.headers));
-		// Если постоянное соединение не установлено
-		if((options & OPT_SMART) && !proxy_connection.empty()) query.connection = proxy_connection;
-		// Если хост найден
-		if(!host.empty()){
-			// Выполняем получение параметров подключения
-			Connect gcon = getConnection(query.path);
-			// Выполняем получение параметров подключения
-			Connect scon = getConnection(host);
-			// Создаем полный адрес запроса
-			string fulladdr1 = scon.protocol + string("://") + scon.host;
-			string fulladdr2 = fulladdr1 + "/";
-			string fulladdr3 = fulladdr1 + string(":") + scon.port;
-			string fulladdr4 = fulladdr3 + "/";
-			// Определяем путь
-			if(strcmp(toCase(query.method).c_str(), "connect")
-			&& (!strcmp(toCase(query.path).c_str(), toCase(host).c_str())
-			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr1).c_str())
-			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr2).c_str())
-			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr3).c_str())
-			|| !strcmp(toCase(query.path).c_str(), toCase(fulladdr4).c_str()))) query.path = "/";
-			// Выполняем удаление из адреса доменного имени
-			else if(strstr(query.path.c_str(), fulladdr1.c_str()) != NULL){
-				// Запоминаем текущий путь
-				string tmp_path = query.path;
-				// Вырезаем домер из пути
-				tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
-				// Если путь существует
-				if(!tmp_path.empty()) query.path = tmp_path;
-			}
-			// Запоминаем хост
-			query.host = scon.host;
-			// Запоминаем порт
-			if(strcmp(scon.port.c_str(), gcon.port.c_str())
-			&& !strcmp(gcon.port.c_str(), "80")){
-				// Запоминаем протокол
-				query.protocol = scon.protocol;
-				// Уделяем предпочтение 443 порту
-				query.port = scon.port;
-			// Запоминаем порт такой какой он есть
-			} else if(checkPort(gcon.port)) {
-				// Запоминаем протокол
-				query.protocol = gcon.protocol;
-				// Запоминаем порт
-				query.port = gcon.port;
-			// Устанавливаем значение порта и протокола по умолчанию
-			} else {
-				// Запоминаем протокол
-				query.protocol = "http";
-				// Устанавливаем http порт
-				query.port = "80";
-			}
-		}
-		// Если авторизация найдена
-		if(!auth.empty()){
-			// Устанавливаем правило регулярного выражения
-			e = "\\b([A-Za-z]+)\\s+([\\s\\S]+)";
-			// Выполняем поиск протокола
-			regex_search(auth, match, e);
-			// Если данные найдены
-			if(!match.empty() && (match.size() == 3)){
-				// Запоминаем тип авторизации
-				query.auth = toCase(match[1]);
-				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
-				if(!strcmp(query.auth.c_str(), "basic")){
-					// Выполняем декодирование логина и пароля
-					string dauth = base64_decode(match[2]);
-					// Устанавливаем правило регулярного выражения
-					e = "\\b([\\s\\S]+)\\:([\\s\\S]+)";
-					// Выполняем поиск протокола
-					regex_search(dauth, match, e);
-					// Если данные найдены
-					if(!match.empty() && (match.size() == 3)){
-						// Запоминаем логин
-						query.login = match[1];
-						// Запоминаем пароль
-						query.password = match[2];
-					}
-				}
-			}
+	if(!match.empty() && (match.size() == 3)){
+		// Запоминаем первые символы
+		string badchars = match[1];
+		// Увеличиваем значение общих найденных символов
+		maxsize += badchars.length();
+		// Выполняем парсинг http запроса
+		HttpData httpData(match[2], name, version, options);
+		// Добавляем вложенные данные
+		if(httpData.setEntitybody(buffer, size)){
+			// Добавляем в массив объект подключения
+			this->httpData.push_back(httpData);
+			// Увеличиваем общий размер
+			maxsize += httpData.size();
+			// Следующий размер данных
+			size_t nsize = strlen(buffer + maxsize);
+			// Если есть еще данные
+			if(flag && (nsize >= 34) && (nsize <= (size - maxsize))){
+				// Выполняем интерпретацию следующей порции данных
+				return parse(buffer + maxsize, size - maxsize, flag);
+			// Выводим размер так как он есть
+			} else return maxsize;
 		}
 	}
-	// Генерируем параметры для запроса
-	createHead();
+	// Сообщаем что ничего не найдено
+	return 0;
 }
 /**
  * modify Функция модифицирования ответных данных
  * @param data ссылка на данные полученные от сервера
  */
 void Http::modify(vector <char> &data){
-	// Если заголовки не заняты тогда выполняем модификацию
-	if(!_query.length){
-		// Определяем тип прокси
-		bool smart = (options & OPT_SMART);
-		// Определяем разрешено ли выводить название агента
-		bool agent = (options & OPT_AGENT);
-		// Выполняем парсинг http запроса
-		_query = getHeaders(data.data());
-		// Проверяем есть ли заголовок соединения прокси
-		string pc = (!smart ? getHeader("proxy-connection", _query.headers) : "");
-		// Проверяем есть ли заголовок соединения
-		string co = getHeader("connection", _query.headers);
-		// Если заголовок не найден
-		if(pc.empty() && !co.empty()){
-			// Поздиция конца заголовков
-			int pos = -1;
-			// Получаем данные ответа
-			const char * headers = data.data();
-			// Ищем первое вхождение подстроки в строке
-			const char * end_headers = strstr(headers, "\r\n\r\n");
-			// Если завершение заголовка найдено
-			if(end_headers != NULL) pos = end_headers - headers;
-			// Если позиция найдена
-			if(pos > -1){
-				// Копируем заголовки
-				string str(headers, pos);
-				// Устанавливаем название прокси
-				if(agent) str.append(string("\r\nProxy-Agent: ") + this->name + string("/") + this->version);
-				// Добавляем заголовок закрытия подключения, если не smarty
-				if(!smart) str.append(string("\r\nProxy-Connection: ") + co);
-				// Начальные и конечные блоки данных
-				vector <char> first, last;
-				// Заполняем первичные данные структуры
-				first.assign(str.begin(), str.end());
-				// Заполняем последние данные структуры
-				last.assign(data.begin() + pos, data.end());
-				// Объединяем блоки
-				copy(last.begin(), last.end(), back_inserter(first));
-				// Заменяем первоначальный блок с данными
-				data = first;
-			}
-		}
-		// Очищаем объект
-		_query.clear();
+	// Получаем данные ответа
+	const char * headers = data.data();
+	// Создаем объект запроса
+	HttpData httpQuery(headers, this->name, this->version, this->options);
+	// Если данные распарсены
+	if(httpQuery.size()){
+		// Если завершение заголовка найдено
+		u_int pos = (strstr(headers, "\r\n\r\n") - headers) + 4;
+		// Получаем данные запроса
+		vector <char> last, query = httpQuery.getHttpRequest();
+		// Заполняем последние данные структуры
+		last.assign(data.begin() + pos, data.end());
+		// Объединяем блоки
+		copy(last.begin(), last.end(), back_inserter(query));
+		// Заменяем первоначальный блок с данными
+		data = query;
 	}
-}
-/**
- * Http::checkCharEnd Функция проверяет по массиву символов, достигнут ли конец запроса
- * @param  buffer буфер с данными
- * @param  size   размер буфера
- * @param  chs    массив с символами завершающими запрос
- * @return        результат проверки
- */
-bool Http::checkCharEnd(const char * buffer, size_t size, vector <short> chs){
-	// Результат проверки
-	bool check = false;
-	// Выполняем реверс массива
-	reverse(chs.begin(), chs.end());
-	// Переходим по всему массиву
-	for(u_int i = 0; i < chs.size(); i++){
-		// Выполняем проверку завершающих символов
-		if((short) buffer[size - (i + 1)] == chs[i])
-			check = true;
-		else {
-			check = false;
-			break;
-		}
-	}
-	// Выводим результат
-	return check;
-}
-/**
- * checkEnd Функция проверки завершения запроса
- * @param  buffer буфер с входящими данными
- * @param  size   размер входящих данных
- * @return        результат проверки
- */
-Http::HttpEnd Http::checkEnd(const char * buffer, size_t size){
-	// Создаем блок данных
-	HttpEnd data;
-	// Выполняем парсинг http запроса
-	if(!_query.length) _query = getHeaders(buffer);
-	// Если данные существуют
-	if(!_query.http.empty()){
-		// Проверяем есть ли размер вложений
-		string cl = getHeader("content-length", _query.headers);
-		// Проверяем есть ли чанкование
-		string ch = getHeader("transfer-encoding", _query.headers);
-		// Проверяем есть ли закрытие соединения
-		string cc = getHeader("connection", _query.headers);
-		// Если найден размер вложений
-		if(!cl.empty() && isNumber(cl)){
-			// Определяем размер вложений
-			int body_size = ::atoi(cl.c_str());
-			// Получаем размер вложения
-			if(size >= (_query.length + body_size)){
-				// Заполняем структуру данными
-				data.type = 4;
-				// Заполняем размеры
-				data.begin	= _query.length;
-				data.end	= _query.length + body_size;
-			}
-		// Если это чанкование
-		} else if(!ch.empty() && (ch.find("chunked") != string::npos)){
-			// Если конец строки найден
-			if(((size > 5) && (_query.length < size)) // 0\r\n\r\n
-			&& (checkCharEnd(buffer, size, {48, 13, 10, 13, 10})
-			|| checkCharEnd(buffer, size, {48, 10, 10}))){
-				// Заполняем структуру данными
-				data.type = 5;
-				// Заполняем размеры
-				data.begin	= _query.length;
-				data.end	= size;
-			}
-		// Если это автозакрытие подключения
-		} else if(!cc.empty() && (cc == "close")){
-			// Если конец строки найден
-			if(((size > 4) && (_query.length < size)) // \r\n\r\n
-			&& (checkCharEnd(buffer, size, {13, 10, 13, 10})
-			|| checkCharEnd(buffer, size, {10, 10}))){
-				// Заполняем структуру данными
-				data.type = 3;
-				// Заполняем размеры
-				data.begin	= _query.length;
-				data.end	= size;
-			}
-		// Если указан тип данных но длина вложенных данных не указана
-		} else if(!ch.empty()) data.type = 0;
-		// Если найден конечный символ
-		else if((short) buffer[size - 1] == 0) data.type = 2;
-		// Если вложения не найдены
-		else data.type = 1;
-		// Если флаг установлен тогда очищаем структуру
-		if(data.type) _query.clear();
-	// Ечищаем структуру если пришел мусор
-	} else _query.clear();
-	// Выводим результат
-	return data;
-}
-/**
- * parse Метод выполнения парсинга
- * @param  buffer буфер входящих данных из сокета
- * @param  size   размер переданных данных
- * @return        результат определения завершения запроса
- */
-bool Http::parse(const char * buffer, size_t size){
-	// Выполняем проверку завершения передачи данных
-	HttpEnd check = checkEnd(buffer, size);
-	// Если флаг установлен
-	if(check.type){
-		// Выполняем парсинг http запроса
-		query = getHeaders(buffer);
-		// Определяем тип запроса
-		switch(check.type){
-			// Если присутствуют вложения
-			case 3:
-			case 4: {
-				// Извлекаем указанные данные
-				query.entitybody.assign(buffer + check.begin, buffer + check.end);
-				// Добавляем завершающий байт
-				query.entitybody.push_back('\0');
-			} break;
-		}
-		// Генерируем данные
-		generateHttp();
-		// Сообщаем что все удачно получено
-		return true;
-	}
-	// Сообщаем что данные не получены
-	return false;
-}
-/**
- * brokenRequest Метод получения ответа (неудачного отправленного запроса)
- * @return ответ в формате html
- */
-HttpQuery Http::brokenRequest(){
-	// Устанавливаем дефолтное название прокси
-	string defname = "ProxyAnyks/1.0";
-	// Определяем позицию дефолтного названия
-	size_t pos = html[9].find(defname);
-	// Результирующая строка
-	string result;
-	// Если это домен
-	if(pos != string::npos){
-		// Заменяем дефолтное название на указанное
-		result = html[9].replace(pos, defname.length(), this->name + string("/") + this->version);
-	}
-	// Выводим шаблон сообщения о неудачном отправленном запросе
-	result = html[9];
-	// Данные для вывода
-	HttpQuery data(501, result);
-	// Выводим результат
-	return data;
-}
-/**
- * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
- * @return ответ в формате html
- */
-HttpQuery Http::faultConnect(){
-	// Устанавливаем дефолтное название прокси
-	string defname = "ProxyAnyks/1.0";
-	// Определяем позицию дефолтного названия
-	size_t pos = html[6].find(defname);
-	// Результирующая строка
-	string result;
-	// Если это домен
-	if(pos != string::npos){
-		// Заменяем дефолтное название на указанное
-		result = html[6].replace(pos, defname.length(), this->name + string("/") + this->version);
-	}
-	// Выводим шаблон сообщения о неудачном подключении
-	result = html[6];
-	// Данные для вывода
-	HttpQuery data(502, result);
-	// Выводим результат
-	return data;
-}
-/**
- * pageNotFound Метод получения ответа (страница не найдена)
- * @return ответ в формате html
- */
-HttpQuery Http::pageNotFound(){
-	// Устанавливаем дефолтное название прокси
-	string defname = "ProxyAnyks/1.0";
-	// Определяем позицию дефолтного названия
-	size_t pos = html[4].find(defname);
-	// Результирующая строка
-	string result;
-	// Если это домен
-	if(pos != string::npos){
-		// Заменяем дефолтное название на указанное
-		result = html[4].replace(pos, defname.length(), this->name + string("/") + this->version);
-	}
-	// Выводим шаблон сообщения о неудачном подключении
-	result = html[4];
-	// Данные для вывода
-	HttpQuery data(404, result);
-	// Выводим результат
-	return data;
-}
-/**
- * faultAuth Метод получения ответа (неудачной авторизации)
- * @return ответ в формате html
- */
-HttpQuery Http::faultAuth(){
-	// Устанавливаем дефолтное название прокси
-	string defname = "ProxyAnyks/1.0";
-	// Определяем позицию дефолтного названия
-	size_t pos = html[5].find(defname);
-	// Результирующая строка
-	string result;
-	// Если это домен
-	if(pos != string::npos){
-		// Выводим шаблон сообщения о неудачной авторизации
-		result = html[5].replace(pos, defname.length(), this->name + string("/") + this->version);
-	}
-	// Выводим шаблон сообщения о неудачной авторизации
-	result = html[5];
-	// Данные для вывода
-	HttpQuery data(403, result);
-	// Выводим результат
-	return data;
-}
-/**
- * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
- * @return ответ в формате html
- */
-HttpQuery Http::requiredAuth(){
-	// Устанавливаем дефолтное название прокси
-	string defname = "ProxyAnyks/1.0";
-	// Определяем позицию дефолтного названия
-	size_t pos = html[2].find(defname);
-	// Результирующая строка
-	string result;
-	// Если это домен
-	if(pos != string::npos){
-		// Выводим шаблон сообщения о неудачной авторизации
-		result = html[2].replace(pos, defname.length(), this->name + string("/") + this->version);
-	}
-	// Выводим шаблон сообщения о требовании авторизации
-	result = html[2];
-	// Данные для вывода
-	HttpQuery data(407, result);
-	// Выводим результат
-	return data;
-}
-/**
- * authSuccess Метод получения ответа (подтверждения авторизации)
- * @return ответ в формате html
- */
-HttpQuery Http::authSuccess(){
-	// Устанавливаем дефолтное название прокси
-	string defname = "ProxyAnyks/1.0";
-	// Определяем позицию дефолтного названия
-	size_t pos = html[0].find(defname);
-	// Результирующая строка
-	string result;
-	// Если это домен
-	if(pos != string::npos){
-		// Выводим шаблон сообщения о неудачной авторизации
-		result = html[0].replace(pos, defname.length(), this->name + string("/") + this->version);
-	}
-	// Выводим шаблон сообщения о том что авторизация пройдена
-	result = html[0];
-	// Данные для вывода
-	HttpQuery data(200, result);
-	// Выводим результат
-	return data;
-}
-/**
- * getQuery Метод получения сформированного http запроса
- * @return сформированный http запрос
- */
-HttpQuery Http::getQuery(){
-	// Данные для вывода
-	HttpQuery data(200, query.request, query.entitybody);
-	// Выводим результат
-	return data;
-}
-/**
- * getMethod Метод получения метода запроса
- * @return метод запроса
- */
-string Http::getMethod(){
-	// Выводим значение переменной
-	return query.method;
-}
-/**
- * getHost Метод получения хоста запроса
- * @return хост запроса
- */
-string Http::getHost(){
-	// Выводим значение переменной
-	return query.host;
-}
-/**
- * getPath Метод получения пути запроса
- * @return путь запроса
- */
-string Http::getPath(){
-	// Выводим значение переменной
-	return query.path;
-}
-/**
- * getProtocol Метод получения протокола запроса
- * @return протокол запроса
- */
-string Http::getProtocol(){
-	// Выводим значение переменной
-	return query.protocol;
-}
-/**
- * getAuth Метод получения метода авторизации запроса
- * @return метод авторизации
- */
-string Http::getAuth(){
-	// Выводим значение переменной
-	return query.auth;
-}
-/**
- * getLogin Метод получения логина авторизации запроса
- * @return логин авторизации
- */
-string Http::getLogin(){
-	// Выводим значение переменной
-	return query.login;
-}
-/**
- * getPassword Метод получения пароля авторизации запроса
- * @return пароль авторизации
- */
-string Http::getPassword(){
-	// Выводим значение переменной
-	return query.password;
-}
-/**
- * getUseragent Метод получения юзерагента запроса
- * @return юзерагент
- */
-string Http::getUseragent(){
-	// Выводим значение переменной
-	return query.useragent;
-}
-/**
- * getPort Метод получения порта запроса
- * @return порт удаленного ресурса
- */
-u_int Http::getPort(){
-	// Выводим значение переменной
-	return (!query.port.empty() ? ::atoi(query.port.c_str()) : 80);
-}
-/**
- * getVersion Метод получения версии протокола запроса
- * @return версия протокола запроса
- */
-float Http::getVersion(){
-	// Выводим значение переменной
-	return (!query.version.empty() ? ::atof(query.version.c_str()) : 1.0);
-}
-/**
- * setMethod Метод установки метода запроса
- * @param str строка с данными для установки
- */
-void Http::setMethod(const string str){
-	// Запоминаем данные
-	query.method = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setHost Метод установки хоста запроса
- * @param str строка с данными для установки
- */
-void Http::setHost(const string str){
-	// Запоминаем данные
-	query.host = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setPort Метод установки порта запроса
- * @param number номер порта для установки
- */
-void Http::setPort(u_int number){
-	// Запоминаем данные
-	query.port = to_string(number);
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setPath Метод установки пути запроса
- * @param str строка с данными для установки
- */
-void Http::setPath(const string str){
-	// Запоминаем данные
-	query.path = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setProtocol Метод установки протокола запроса
- * @param str строка с данными для установки
- */
-void Http::setProtocol(const string str){
-	// Запоминаем данные
-	query.protocol = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setVersion Метод установки версии протокола запроса
- * @param number номер версии протокола
- */
-void Http::setVersion(float number){
-	// Запоминаем данные
-	query.version = to_string(number);
-	// Если это всего один символ тогда дописываем ноль
-	if(query.version.length() == 1) query.version += ".0";
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setClose Метод установки принудительного отключения после запроса
- */
-void Http::setClose(){
-	// Запоминаем данные
-	query.connection = "close";
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setAuth Метод установки метода авторизации запроса
- * @param str строка с данными для установки
- */
-void Http::setAuth(const string str){
-	// Запоминаем данные
-	query.auth = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
-}
-/**
- * setUseragent Метод установки юзерагента запроса
- * @param str строка с данными для установки
- */
-void Http::setUseragent(const string str){
-	// Запоминаем данные
-	query.useragent = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * Http::clear Метод очистки всех полученных данных
  */
 void Http::clear(){
-	// Очищаем заголовки
-	_query.clear();
-	query.clear();
+	// Очищаем массив с объектами запросов
+	this->httpData.clear();
 }
 /**
  * Http Конструктор
- * @param str строка содержащая название прокси сервера
- * @param opt параметры прокси сервера
- * @param ver версия прокси сервера
+ * @param name строка содержащая название прокси сервера
+ * @param opt  параметры прокси сервера
+ * @param ver  версия прокси сервера
  */
-Http::Http(const string str, u_short opt, const string ver){
+Http::Http(const string name, u_short opt, const string ver){
 	// Если имя передано то запоминаем его
-	this->name = str;
+	this->name = name;
 	// Устанавливаем версию системы
 	this->version = ver;
 	// Запоминаем тип прокси сервера
 	this->options = opt;
 }
 /**
- * Http Деструктор
+ * ~Http Деструктор
  */
 Http::~Http(){
-	// Очищаем заголовки
-	_query.clear();
-	query.clear();
+	// Очищаем полученные данные
+	clear();
 	// Очищаем память выделенную для вектора
-	vector <char> ().swap(query.entitybody);
+	vector <HttpData> ().swap(this->httpData);
 }

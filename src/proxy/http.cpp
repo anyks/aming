@@ -16,9 +16,9 @@ using namespace std;
  */
 void BufferHttpProxy::appconn(bool flag){
 	// Если такое подключение найдено
-	if((*this->connects).count(this->client.host) > 0){
+	if((*this->connects).count(this->client.ip) > 0){
 		// Получаем объект текущего коннекта
-		Connects * connect = &((*this->connects).find(this->client.host)->second);
+		Connects * connect = &((*this->connects).find(this->client.ip)->second);
 		// Выполняем захват мютекса
 		connect->lock();
 		// Если нужно добавить подключение
@@ -33,13 +33,13 @@ void BufferHttpProxy::appconn(bool flag){
 		// Выполняем разблокировку мютекса
 		connect->unlock();
 		// Проверяем есть ли еще подключения
-		if(connect->end()) (*this->connects).erase(this->client.host);
+		if(connect->end()) (*this->connects).erase(this->client.ip);
 	// Если нужно добавить подключение
 	} else if(flag){
 		// Создаем объект подключения
 		Connects connect;
 		// Добавляем в список новое подключение
-		(*this->connects).insert(pair <string, Connects> (this->client.host, connect));
+		(*this->connects).insert(pair <string, Connects> (this->client.ip, connect));
 	}
 }
 /**
@@ -50,11 +50,22 @@ void BufferHttpProxy::begin(){
 	this->appconn(true);
 }
 /**
- * free_server Метод удаления буфера события сервера
+ * close_server Метод закрытия соединения сервера
  */
-void BufferHttpProxy::free_server(){
+void BufferHttpProxy::close_server(){
+	// Отключаемся от сервера
+	this->free_socket(this->sockets.server);
 	// Удаляем событие сервера
 	this->free_event(&this->events.server);
+}
+/**
+ * close_client Метод закрытия соединения клиента
+ */
+void BufferHttpProxy::close_client(){
+	// Отключаемся от сервера
+	this->free_socket(this->sockets.client);
+	// Удаляем событие сервера
+	this->free_event(&this->events.client);
 }
 /**
  * free_socket Метод отключения сокета
@@ -162,33 +173,6 @@ int HttpProxy::set_tcpnodelay(evutil_socket_t fd, LogApp * log){
 	return 0;
 }
 /**
- * append_to_buffer Функция добавления в буфер новых данных
- * @param data       ссылка на буфер данных
- * @param chunk_size размер одной порции данных
- * @param buffer     буфер с входящими данными
- */
-void HttpProxy::append_to_buffer(vector <char> &data, size_t chunk_size, const char * buffer){
-	// Определяем количество общих данных
-	size_t total = (!data.empty() ? data.size() - 1 : 0);
-	// Устанавливаем параметры по умолчанию
-	total += chunk_size;
-	// Выполняем увеличение размера вектора
-	data.resize(total + 1);
-	// Вспомогательные переменные для заполнения вектора данными
-	size_t i = total - chunk_size, j = 0;
-	// Добавляем все полученные байты в массив
-	while(i < total){
-		// Заполняем вектор полученными символами
-		data[i] = (char) buffer[j];
-		i++;	// Изменяем смещение по вектору
-		j++;	// Изменяем смещение по буферу данных
-	}
-	// Добавляем нулевой символ
-	data[total] = '\0';
-	// Выходим
-	return;
-}
-/**
  * set_buffer_size Функция установки размеров буфера
  * @param  fd         файловый дескриптор (сокет)
  * @param  read_size  размер буфера на чтение
@@ -229,10 +213,10 @@ bool HttpProxy::check_auth(void * ctx){
 		// Проль
 		const char * password = "k.frolovv@gmail.com";
 		// Проверяем логин и пароль
-		if(!strcmp(http->parser.getLogin().c_str(), username)
-		&& !strcmp(http->parser.getPassword().c_str(), password)) return true;
+		if(!strcmp(http->httpData.getLogin().c_str(), username)
+		&& !strcmp(http->httpData.getPassword().c_str(), password)) return true;
 		// Выводим в лог информацию о неудачном подключении
-		http->proxy.log->write(LOG_MESSAGE, "auth client [%s] to proxy wrong!", http->client.host.c_str());
+		http->proxy.log->write(LOG_MESSAGE, "auth client [%s] to proxy wrong!", http->client.ip.c_str());
 	}
 	// Сообщаем что проверка не прошла
 	return false;
@@ -248,13 +232,13 @@ int HttpProxy::connect_server(void * ctx){
 	// Если подключение не передано
 	if(http != NULL){
 		// Получаем данные хоста
-		hostent * sh = gethostbyname(http->parser.getHost().c_str());
+		hostent * sh = gethostbyname(http->httpData.getHost().c_str());
 		// Если данные хоста найдены
 		if(sh){
 			// ip адрес ресурса
 			string ip;
 			// Получаем порт сервера
-			u_int port = http->parser.getPort();
+			u_int port = http->httpData.getPort();
 			// Извлекаем ip адрес
 			for(u_int i = 0; sh->h_addr_list[i] != 0; ++i){
 				struct in_addr addr;
@@ -266,7 +250,7 @@ int HttpProxy::connect_server(void * ctx){
 				// Если хост и порт сервера не совпадают тогда очищаем данные
 				if((http->events.server != NULL)
 				&& ((http->server.host != ip)
-				|| (http->server.port != port))) http->free_server();
+				|| (http->server.port != port))) http->close_server();
 				// Если сервер еще не подключен
 				if(http->events.server == NULL){
 					// Сокет подключения
@@ -283,7 +267,7 @@ int HttpProxy::connect_server(void * ctx){
 					// Создаем сокет для подключения
 					if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
 						// Выводим в лог сообщение
-						http->proxy.log->write(LOG_ERROR, "creating socket to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.host.c_str());
+						http->proxy.log->write(LOG_ERROR, "creating socket to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.ip.c_str());
 						// Выходим
 						return 0;
 					}
@@ -315,7 +299,7 @@ int HttpProxy::connect_server(void * ctx){
 					// Устанавливаем размеры буферов
 					set_buffer_size(http->sockets.server, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
 					// Если подключение постоянное
-					if(http->parser.isAlive()){
+					if(http->client.alive){
 						// Устанавливаем TCP_NODELAY для сервера и клиента
 						set_tcpnodelay(http->sockets.server, http->proxy.log);
 						set_tcpnodelay(http->sockets.client, http->proxy.log);
@@ -331,9 +315,7 @@ int HttpProxy::connect_server(void * ctx){
 					// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
 					if(bufferevent_socket_connect(http->events.server, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0){
 						// Выводим в лог сообщение
-						http->proxy.log->write(LOG_ERROR, "connecting to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.host.c_str());
-						// Очищаем буфер сервера
-						http->free_server();
+						http->proxy.log->write(LOG_ERROR, "connecting to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.ip.c_str());
 						// Выходим
 						return -1;
 					}
@@ -343,14 +325,14 @@ int HttpProxy::connect_server(void * ctx){
 					http->proxy.log->write(
 						LOG_MESSAGE,
 						"connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
-						http->client.host.c_str(),
-						http->parser.getHost().c_str(),
+						http->client.ip.c_str(),
+						http->httpData.getHost().c_str(),
 						http->server.host.c_str(),
 						http->server.port,
 						http->server.mac.c_str(),
-						http->parser.getMethod().c_str(),
-						http->parser.getPath().c_str(),
-						http->parser.getUseragent().c_str(),
+						http->httpData.getMethod().c_str(),
+						http->httpData.getPath().c_str(),
+						http->httpData.getUseragent().c_str(),
 						http->sockets.client
 					);
 					// Сообщаем что все удачно
@@ -361,14 +343,14 @@ int HttpProxy::connect_server(void * ctx){
 					http->proxy.log->write(
 						LOG_MESSAGE,
 						"last connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
-						http->client.host.c_str(),
-						http->parser.getHost().c_str(),
+						http->client.ip.c_str(),
+						http->httpData.getHost().c_str(),
 						http->server.host.c_str(),
 						http->server.port,
 						http->server.mac.c_str(),
-						http->parser.getMethod().c_str(),
-						http->parser.getPath().c_str(),
-						http->parser.getUseragent().c_str(),
+						http->httpData.getMethod().c_str(),
+						http->httpData.getPath().c_str(),
+						http->httpData.getUseragent().c_str(),
 						http->sockets.client
 					);
 					// Сообщаем что все удачно
@@ -380,9 +362,9 @@ int HttpProxy::connect_server(void * ctx){
 		http->proxy.log->write(
 			LOG_ERROR,
 			"host server = %s not found, port = %d, client = %s",
-			http->parser.getHost().c_str(),
-			http->parser.getPort(),
-			http->client.host.c_str()
+			http->httpData.getHost().c_str(),
+			http->httpData.getPort(),
+			http->client.ip.c_str()
 		);
 		// Выходим
 		return 0;
@@ -412,13 +394,12 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				// Выводим в лог сообщение
 				http->proxy.log->write(
 					LOG_ACCESS,
-					"connect client [%s], useragent = %s, socket = %d to server [%s:%d], host = %s",
-					http->client.host.c_str(),
-					http->parser.getUseragent().c_str(),
+					"connect client [%s], useragent = %s, socket = %d to server [%s:%d]",
+					http->client.ip.c_str(),
+					http->client.useragent.c_str(),
 					current_fd,
 					http->server.host.c_str(),
-					http->server.port,
-					http->parser.getHost().c_str()
+					http->server.port
 				);
 			}
 		// Если это ошибка или завершение работы
@@ -436,9 +417,9 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				http->proxy.log->write(
 					LOG_ACCESS,
 					"closing client [%s] from server [%s:%d], socket = %d",
-					http->client.host.c_str(),
-					http->parser.getHost().c_str(),
-					http->parser.getPort(),
+					http->client.ip.c_str(),
+					http->server.host.c_str(),
+					http->server.port,
 					current_fd
 				);
 			// Если отключился сервер
@@ -447,15 +428,17 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				http->proxy.log->write(
 					LOG_ACCESS,
 					"closing server [%s:%d] from client [%s], socket = %d",
-					http->parser.getHost().c_str(),
-					http->parser.getPort(),
-					http->client.host.c_str(),
+					http->server.host.c_str(),
+					http->server.port,
+					http->client.ip.c_str(),
 					current_fd
 				);
+				// Если сервер закрыл сове соединение
+				// Закрываем соединение с клиентом
+				if(!http->client.connect) http->close_client();
 			}
 		}
-	// Отключаемся
-	} else bufferevent_free(bev);
+	}
 	// Выходим
 	return;
 }
@@ -469,21 +452,21 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
-		// Определяем тип прокси
-		bool smart = (http->proxy.options & OPT_SMART);
-		// Определяем разрешено ли выводить название агента
-		bool agent = (http->proxy.options & OPT_AGENT);
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
-		// Устанавливаем таймаут ожидания результата
-		struct timeval tread = {http->proxy.timeout.keepalive, 0};
 		// Устанавливаем таймаут записи результата
 		struct timeval twrite = {http->proxy.timeout.write, 0};
-		// Устанавливаем таймауты
-		bufferevent_set_timeouts(http->events.client, &tread, &twrite);
+		// Если соединение постоянное
+		if(http->client.alive){
+			// Устанавливаем таймаут ожидания результата
+			struct timeval tread = {http->proxy.timeout.keepalive, 0};
+			// Устанавливаем таймауты
+			bufferevent_set_timeouts(http->events.client, &tread, &twrite);
+		// Если соединение не постоянное то ставим таймер только на запись
+		} else bufferevent_set_timeouts(http->events.client, NULL, &twrite);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
-		if(smart && !agent) evbuffer_add_buffer(output, input);
+		if(http->client.connect) evbuffer_add_buffer(output, input);
 		// Иначе изменяем заголовки
 		else {
 			// Получаем размер входящих данных
@@ -510,16 +493,119 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 				http->parser.modify(headers);
 				// Добавляем в новый буфер модифицированные заголовки
 				evbuffer_add(tmp, headers.data(), headers.size());
-			// Если в буфере заголовки не найдены тогда просто записываем данные в новый буфер
-			} else evbuffer_add(tmp, buffer, len);
-			// Удаляем данные из буфера
-			evbuffer_drain(input, len);
-			// Отправляем данные клиенту
-			evbuffer_add_buffer(output, tmp);
+				// Удаляем данные из буфера
+				evbuffer_drain(input, len);
+				// Отправляем данные клиенту
+				evbuffer_add_buffer(output, tmp);
+			// Выводим данные так как они есть
+			} else evbuffer_add_buffer(output, input);
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
 			// Удаляем буфер данных
 			delete [] buffer;
+		}
+	}
+	// Выходим
+	return;
+}
+/**
+ * do_request Функция запроса данных у сервера
+ * @param bev  буфер события
+ * @param ctx  передаваемый объект
+ * @param flag флаг разрешающий новый запрос данных
+ */
+void HttpProxy::do_request(struct bufferevent * bev, void * ctx, bool flag){
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
+	// Если подключение не передано
+	if(http != NULL){
+		// Определяем connect прокси разрешен
+		bool conn_enabled = (http->proxy.options & OPT_CONNECT);
+		// Если данные еще не заполнены, но они есть в массиве
+		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
+			// Очищаем таймауты
+			bufferevent_set_timeouts(bev, NULL, NULL);
+			// Очищаем объект ответа
+			http->response.clear();
+			// Получаем первый элемент из массива
+			vector <HttpData>::iterator httpData = http->parser.httpData.begin();
+			// Запоминаем данные объекта http запроса
+			http->httpData = * httpData;
+			// Если авторизация не прошла
+			if(!http->auth) http->auth = check_auth(http);
+			// Если нужно запросить пароль
+			if(!http->auth && (http->httpData.getLogin().empty()
+			|| http->httpData.getPassword().empty())){
+				// Формируем ответ клиенту
+				http->response = http->httpData.requiredAuth();
+			// Сообщаем что авторизация не удачная
+			} else if(!http->auth) {
+				// Формируем ответ клиенту
+				http->response = http->httpData.faultAuth();
+			// Если авторизация прошла
+			} else {
+				// Выполняем подключение к удаленному серверу
+				int connect = connect_server(http);
+				// Если сокет существует
+				if(connect > 0){
+					// Заполняем структуру клиента
+					http->client.alive		= http->httpData.isAlive();
+					http->client.https		= http->httpData.isHttps();
+					http->client.connect	= http->httpData.isConnect();
+					http->client.useragent	= http->httpData.getUseragent();
+					// Определяем порт, если это метод connect
+					if(http->client.connect && (conn_enabled || http->client.https))
+						// Формируем ответ клиенту
+						http->response = http->httpData.authSuccess();
+					// Если connect разрешен только для https подключений
+					else if(!conn_enabled && http->client.connect)
+						// Сообращем что подключение запрещено
+						http->response = http->httpData.faultConnect();
+					// Иначе делаем запрос на получение данных
+					else {
+						// Указываем что нужно отключится сразу после отправки запроса
+						if(!http->client.alive) http->httpData.setClose();
+						// Формируем запрос на сервер
+						http->response = http->httpData.getRequest();
+						// Устанавливаем таймаут ожидания результата
+						struct timeval tread = {http->proxy.timeout.read, 0};
+						// Устанавливаем таймаут записи результата
+						struct timeval twrite = {http->proxy.timeout.write, 0};
+						// Устанавливаем таймауты
+						bufferevent_set_timeouts(http->events.server, &tread, &twrite);
+						// Отправляем серверу сообщение
+						bufferevent_write(http->events.server, http->response.data(), http->response.size());
+						// Удаляем объект подключения
+						http->parser.httpData.erase(httpData);
+						// Если данные в массиве существуют тогда продолжаем загрузку
+						if(!http->parser.httpData.empty()) do_request(bev, http, true);
+						// Очищаем объект http данных если запросов больше нет
+						else http->httpData.clear();
+						// Выходим
+						return;
+					}
+				// Если подключение не удачное то сообщаем об этом
+				} else if(connect == 0) http->response = http->httpData.faultConnect();
+				// Если подключение удалено, выходим
+				else return;
+			}
+			// Ответ готов
+			if(!http->response.empty()){
+				// Устанавливаем таймаут записи результата
+				struct timeval twrite = {http->proxy.timeout.write, 0};
+				// Если это код разрешающий коннект
+				if(http->response.code == 200){
+					// Устанавливаем таймаут ожидания результата
+					struct timeval tread = {http->proxy.timeout.keepalive, 0};
+					// Устанавливаем таймауты
+					bufferevent_set_timeouts(bev, &tread, &twrite);
+				// Если это завершение работы то устанавливаем таймер только на запись
+				} else bufferevent_set_timeouts(bev, NULL, &twrite);
+				// Отправляем клиенту сообщение
+				bufferevent_write(bev, http->response.data(), http->response.size());
+				// Удаляем объект подключения
+				http->parser.httpData.erase(httpData);
+			}
 		}
 	}
 	// Выходим
@@ -535,111 +621,46 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
+		// Метод подключения, не connect
+		bool not_connect = true;
 		// Определяем connect прокси разрешен
 		bool conn_enabled = (http->proxy.options & OPT_CONNECT);
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input = bufferevent_get_input(bev);
 		// Если авторизация прошла, и коннект произведен
-		if((http->response.code == 200)
-		&& http->parser.isConnect()
-		&& (conn_enabled || http->parser.isHttps())){
-			// Получаем буферы входящих данных и исходящих
-			struct evbuffer * output = bufferevent_get_output(http->events.server);
-			// Устанавливаем таймаут ожидания результата
-			struct timeval tread = {http->proxy.timeout.read, 0};
-			// Устанавливаем таймаут записи результата
-			struct timeval twrite = {http->proxy.timeout.write, 0};
-			// Устанавливаем таймауты
-			bufferevent_set_timeouts(http->events.server, &tread, &twrite);
-			// Выводим ответ сервера
-			evbuffer_add_buffer(output, input);
+		if((http->response.code == 200) && http->httpData.size()){
+			// Если это метод connect
+			if(http->client.connect && (conn_enabled || http->client.https)){
+				// Запоминаем что это метод connect
+				not_connect = false;
+				// Получаем буферы входящих данных и исходящих
+				struct evbuffer * output = bufferevent_get_output(http->events.server);
+				// Устанавливаем таймаут ожидания результата
+				struct timeval tread = {http->proxy.timeout.read, 0};
+				// Устанавливаем таймаут записи результата
+				struct timeval twrite = {http->proxy.timeout.write, 0};
+				// Устанавливаем таймауты
+				bufferevent_set_timeouts(http->events.server, &tread, &twrite);
+				// Выводим ответ сервера
+				evbuffer_add_buffer(output, input);
+			}
+		}
 		// Если это обычный запрос
-		} else {
+		if(not_connect){
 			// Получаем размер входящих данных
 			size_t len = evbuffer_get_length(input);
 			// Создаем буфер данных
 			char * buffer = new char[len];
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
-			// Склеиваем полученные данные
-			append_to_buffer(http->request.data, len, buffer);
+			// Выполняем парсинг данных
+			size_t size = http->parser.parse(buffer, len);
 			// Удаляем данные из буфера
-			evbuffer_drain(input, len);
+			evbuffer_drain(input, size);
 			// Удаляем буфер данных
 			delete [] buffer;
-			// Выполняем парсинг полученных данных
-			if(!http->request.data.empty() && http->parse()){
-				// Очищаем таймауты
-				bufferevent_set_timeouts(bev, NULL, NULL);
-				// Скидываем количество отправляемых данных
-				http->request.offset = 0;
-				// Очищаем буфер данных
-				http->request.data.clear();
-				// Очищаем объект ответа
-				http->response.clear();
-				// Если авторизация не прошла
-				if(!http->auth) http->auth = check_auth(http);
-				// Если нужно запросить пароль
-				if(!http->auth && (http->parser.getLogin().empty()
-				|| http->parser.getPassword().empty())){
-					// Формируем ответ клиенту
-					http->response = http->parser.requiredAuth();
-				// Сообщаем что авторизация не удачная
-				} else if(!http->auth) {
-					// Формируем ответ клиенту
-					http->response = http->parser.faultAuth();
-				// Если авторизация прошла
-				} else {
-					// Выполняем подключение к удаленному серверу
-					int connect = connect_server(http);
-					// Если сокет существует
-					if(connect > 0){
-						// Определяем порт, если это метод connect
-						if(http->parser.isConnect() && (conn_enabled || http->parser.isHttps()))
-							// Формируем ответ клиенту
-							http->response = http->parser.authSuccess();
-						// Если connect разрешен только для https подключений
-						else if(!conn_enabled && http->parser.isConnect())
-							// Сообращем что подключение запрещено
-							http->response = http->parser.faultConnect();
-						// Иначе делаем запрос на получение данных
-						else {
-							// Указываем что нужно отключится сразу после отправки запроса
-							if(!http->parser.isAlive()) http->parser.setClose();
-							// Формируем запрос на сервер
-							http->response = http->parser.getQuery();
-							// Устанавливаем таймаут ожидания результата
-							struct timeval tread = {http->proxy.timeout.read, 0};
-							// Устанавливаем таймаут записи результата
-							struct timeval twrite = {http->proxy.timeout.write, 0};
-							// Устанавливаем таймауты
-							bufferevent_set_timeouts(http->events.server, &tread, &twrite);
-							// Отправляем серверу сообщение
-							bufferevent_write(http->events.server, http->response.data(), http->response.size());
-							// Выходим
-							return;
-						}
-					// Если подключение не удачное то сообщаем об этом
-					} else if(connect == 0) http->response = http->parser.faultConnect();
-					// Если подключение удалено, выходим
-					else return;
-				}
-				// Ответ готов
-				if(!http->response.empty()){
-					// Устанавливаем таймаут записи результата
-					struct timeval twrite = {http->proxy.timeout.write, 0};
-					// Если это код разрешающий коннект
-					if(http->response.code == 200){
-						// Устанавливаем таймаут ожидания результата
-						struct timeval tread = {http->proxy.timeout.keepalive, 0};
-						// Устанавливаем таймауты
-						bufferevent_set_timeouts(bev, &tread, &twrite);
-					// Если это завершение работы то устанавливаем таймер только на запись
-					} else bufferevent_set_timeouts(bev, NULL, &twrite);
-					// Отправляем клиенту сообщение
-					bufferevent_write(bev, http->response.data(), http->response.size());
-				}
-			}
+			// Выполняем загрузку данных
+			do_request(bev, http);
 		}
 	}
 	// Выходим
@@ -655,9 +676,9 @@ void * HttpProxy::connection(void * ctx){
 	// Если подключение не передано
 	if(http != NULL){
 		// Если такое подключение найдено
-		if((*http->connects).count(http->client.host) > 0){
+		if((*http->connects).count(http->client.ip) > 0){
 			// Получаем объект текущего коннекта
-			Connects * connect = &((*http->connects).find(http->client.host)->second);
+			Connects * connect = &((*http->connects).find(http->client.ip)->second);
 			// Выполняем захват мютекса
 			connect->lock();
 			// Если количество подключений достигло предела
@@ -685,18 +706,10 @@ void * HttpProxy::connection(void * ctx){
 		bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
 		// Активируем перебор базы событий
 		event_base_dispatch(http->base);
-
-		cout << " DELETE 1 " << endl;
-
 		// Удаляем базу
 		event_base_free(http->base);
-
-		cout << " DELETE 2 " << endl;
-
 		// Удаляем объект подключения
 		delete http;
-
-		cout << " DELETE 3 " << endl;
 	}
 	// Выходим
 	return 0;
@@ -757,11 +770,11 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Устанавливаем неблокирующий режим для сокета
 		set_nonblock(fd, proxy->server.log);
 		// Получаем данные подключившегося клиента
-		string host = gethost(address, socklen);
+		string ip = gethost(address, socklen);
 		// Получаем данные мак адреса клиента
 		string mac = getmac(address);
 		// Выводим в лог сообщение
-		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", host.c_str(), mac.c_str(), fd);
+		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), fd);
 		// Создаем новый объект подключения
 		BufferHttpProxy * http = new BufferHttpProxy(proxy->server.name, proxy->server.version, proxy->server.options);
 		// Запоминаем параметры прокси сервера
@@ -773,7 +786,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Запоминаем данные мак адреса
 		http->client.mac = mac;
 		// Запоминаем данные клиента
-		http->client.host = host;
+		http->client.ip = ip;
 		// Создаем поток
 		pthread_t thread;
 		// Выполняем активацию потока

@@ -126,27 +126,32 @@ void LogApp::write_to_file(u_short type, const char * message){
 			int datelen = strftime(datefile, sizeof(datefile), dateformat.c_str(), timeinfo);
 			// Устанавливаем конец строки
 			datefile[datelen] = '\0';
-			// Создаем буфер для данных лога
-			char * filedata = new char[size];
+			// Строка чтения из файла
+			string filedata;
 			// Открываем файл на чтение
-			file = fopen(filename.c_str(), "r");
-			// Считываем до тех пор пока не прочитаем все
-			if(fread(filedata, 512, size, file) > 0){
+			ifstream logfile(filename.c_str());
+			// Если файл открыт
+			if(logfile.is_open()){
 				// Создаем адрес сжатого файла
 				string gzlogfile = filename;
 				// Заменяем название файла
 				gzlogfile.replace(gzlogfile.length() - 4, 4, string(datefile) + ".log.gz");
 				// Открываем файл на сжатие
 				gzFile gz = gzopen(gzlogfile.c_str(), "w6h");
-				// Выполняем сжатие файла
-				gzwrite(gz, filedata, strlen(filedata));
+				// Считываем до тех пор пока все удачно
+				while(logfile.good()){
+					// Считываем строку из файла
+					getline(logfile, filedata);
+					// Добавляем конец строки
+					filedata += "\r\n";
+					// Выполняем сжатие файла
+					gzwrite(gz, filedata.c_str(), filedata.size());
+				}
 				// Закрываем сжатый файл
 				gzclose(gz);
+				// Закрываем файл
+				logfile.close();
 			}
-			// Закрываем файл
-			fclose(file);
-			// Удаляем буфер лога
-			delete [] filedata;
 			// Удаляем файл
 			remove(filename.c_str());
 		}

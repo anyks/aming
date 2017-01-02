@@ -11,6 +11,7 @@
 #include <iostream>
 #include <cstdio>
 #include <string>
+#include <fstream>
 #include <time.h>
 #include <zlib.h>
 #include <sys/types.h>

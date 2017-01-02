@@ -41,6 +41,15 @@ using namespace std;
 #define OPT_PGZIP 0x40
 
 /**
+ * Connect Структура подключения
+ */
+struct Connect {
+	string host;		// Хост
+	string port;		// Порт
+	string protocol;	// Протокол
+} __attribute__((packed));
+
+/**
  * HttpQuery Класс данных для выполнения запросов на удаленном сервере
  */
 class HttpQuery {
@@ -110,78 +119,31 @@ class HttpQuery {
 };
 
 /**
- * Http Класс содержит данные парсинга http запроса
+ * HttpData Класс http данных
  */
-class Http {
+class HttpData {
 	private:
-		/**
-		 * HttpEnd Структура подержащая данные проверки, полной передачи данных
-		 */
-		struct HttpEnd {
-			u_short	type = 0;
-			size_t	begin = 0, end = 0;
-		} __attribute__((packed));
-		/**
-		 * Connect Структура подключения
-		 */
-		struct Connect {
-			string host;		// Хост
-			string port;		// Порт
-			string protocol;	// Протокол
-		} __attribute__((packed));
-		/**
-		 * HttpData Структура http данных
-		 */
-		struct HttpData {
-			string					http;		// http запрос
-			string					auth;		// Тип авторизации
-			string					method;		// Метод запроса
-			string					path;		// Путь запроса
-			string					protocol;	// Протокол запроса
-			string					version;	// Версия протокола
-			string					host;		// Хост запроса
-			string					port;		// Порт запроса
-			string					login;		// Логин
-			string					password;	// Пароль
-			string					useragent;	// UserAgent браузера
-			string					connection;	// Заголовок connection
-			string					request;	// Результирующий заголовок для запроса
-			size_t					length = 0;	// Количество заголовков
-			vector <char>			entitybody;	// Данные http вложений
-			map <string, string>	headers;	// Заголовки http запроса
-			map <string, string>	origin;		// Оригинальные http заголовки
-			/**
-			 * clear Метод очистки структуры
-			 */
-			void clear(){
-				// Обнуляем размер
-				length = 0;
-				// Очищаем строки
-				http.clear();
-				auth.clear();
-				method.clear();
-				path.clear();
-				protocol.clear();
-				version.clear();
-				host.clear();
-				port.clear();
-				login.clear();
-				password.clear();
-				useragent.clear();
-				connection.clear();
-				request.clear();
-				// Очищаем карту заголовков
-				headers.clear();
-				// Очищаем оригинальные заголовки
-				origin.clear();
-			}
-		} __attribute__((packed));
-		// Данные http запроса
-		HttpData _query, query;
-		// Параметры прокси сервера
-		u_short options;
-		// Название и версия прокси сервера
-		string name, version;
+		u_short					options;	// Параметры прокси сервера
+		string					appName;	// Название приложения
+		string					appVersion;	// Версия приложения
+		string					query;		// Данные запроса
+		string					http;		// http запрос
+		string					auth;		// Тип авторизации
+		string					method;		// Метод запроса
+		string					path;		// Путь запроса
+		string					protocol;	// Протокол запроса
+		string					version;	// Версия протокола
+		string					host;		// Хост запроса
+		string					port;		// Порт запроса
+		string					login;		// Логин
+		string					password;	// Пароль
+		string					useragent;	// UserAgent браузера
+		string					connection;	// Заголовок connection
+		string					request;	// Результирующий заголовок для запроса
+		size_t					length = 0;	// Количество заголовков
+		vector <char>			entitybody;	// Данные http вложений
+		map <string, string>	headers;	// Заголовки http запроса
+		map <string, string>	origin;		// Оригинальные http заголовки
 		// Шаблоны ответов
 		string html[12] = {
 			// Подключение разрешено [0]
@@ -274,6 +236,14 @@ class Http {
 			"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
 		};
 		/**
+		 * createHead Функция получения сформированного заголовка запроса
+		 */
+		void createHead();
+		/**
+		 * genDataConnect Метод генерации данных для подключения
+		 */
+		void genDataConnect();
+		/**
 		 * split Функция разделения строк на составляющие
 		 * @param str   строка для поиска
 		 * @param delim разделитель
@@ -281,81 +251,16 @@ class Http {
 		 */
 		void split(const string &str, const string delim, vector <string> &v);
 		/**
-		 * isNumber Функция проверки является ли строка числом
-		 * @param  str строка для проверки
-		 * @return     результат проверки
-		 */
-		bool isNumber(const string &str);
-		/**
-		 * toCase Функция перевода в указанный регистр
-		 * @param  str  строка для перевода в указанных регистр
-		 * @param  flag флаг указания типа регистра
-		 * @return      результирующая строка
-		 */
-		string toCase(string str, bool flag = false);
-		/**
-		 * rtrim Функция усечения указанных символов с правой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & rtrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * ltrim Функция усечения указанных символов с левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & ltrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * trim Функция усечения указанных символов с правой и левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & trim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * getHeaders Функция извлечения данных http запроса
-		 * @param  str строка http запроса
-		 * @return     данные http запроса
-		 */
-		HttpData getHeaders(string str);
-		/**
-		 * Http::checkPort Функция проверки на качество порта
-		 * @param  port входная строка якобы содержащая порт
-		 * @return      результат проверки
-		 */
-		bool checkPort(string port);
-		/**
-		 * Http::checkCharEnd Функция проверяет по массиву символов, достигнут ли конец запроса
-		 * @param  buffer буфер с данными
-		 * @param  size   размер буфера
-		 * @param  chs    массив с символами завершающими запрос
-		 * @return        результат проверки
-		 */
-		bool checkCharEnd(const char * buffer, size_t size, vector <short> chs);
-		/**
 		 * getConnection Функция извлечения данных подключения
 		 * @param  str строка запроса
 		 * @return     объект с данными запроса
 		 */
 		Connect getConnection(string str);
-		/**
-		 * getHeader Функция извлекает данные заголовка по его ключу
-		 * @param  key     ключ заголовка
-		 * @param  headers массив заголовков
-		 * @return         строка с данными заголовка
-		 */
-		string getHeader(string key, map <string, string> headers);
-		/**
-		 * createHead Функция получения сформированного заголовка запроса
-		 */
-		void createHead();
-		/**
-		 * generateHttp Метод генерации данных http запроса
-		 */
-		void generateHttp();
 	public:
+		/**
+		 * clear Метод очистки структуры
+		 */
+		void clear();
 		/**
 		 * isConnect Метод проверяет является ли метод, методом connect
 		 * @return результат проверки на метод connect
@@ -377,60 +282,31 @@ class Http {
 		 */
 		bool isAlive();
 		/**
-		 * isHttp Метод проверки на то http это или нет
-		 * @param  buffer буфер входящих данных
-		 * @return        результат проверки
+		 * size Метод получения размера запроса
+		 * @return размер запроса
 		 */
-		bool isHttp(const string buffer);
+		size_t size();
 		/**
-		 * parse Метод выполнения парсинга
-		 * @param  buffer буфер входящих данных из сокета
-		 * @param  size   размер переданных данных
-		 * @return        результат определения завершения запроса
+		 * getPort Метод получения порта запроса
+		 * @return порт удаленного ресурса
 		 */
-		bool parse(const char * buffer, size_t size);
+		u_int getPort();
 		/**
-		 * checkEnd Функция проверки завершения запроса
-		 * @param  buffer буфер с входящими данными
-		 * @param  size   размер входящих данных
-		 * @return        результат проверки
+		 * getVersion Метод получения версии протокола запроса
+		 * @return версия протокола запроса
 		 */
-		HttpEnd checkEnd(const char * buffer, size_t size);
+		float getVersion();
 		/**
-		 * brokenRequest Метод получения ответа (неудачного отправленного запроса)
-		 * @return ответ в формате html
+		 * getHeader Функция извлекает данные заголовка по его ключу
+		 * @param  key ключ заголовка
+		 * @return     строка с данными заголовка
 		 */
-		HttpQuery brokenRequest();
+		string getHeader(string key);
 		/**
-		 * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
-		 * @return ответ в формате html
+		 * getHttp Метод получения http запроса
+		 * @return http запрос
 		 */
-		HttpQuery faultConnect();
-		/**
-		 * pageNotFound Метод получения ответа (страница не найдена)
-		 * @return ответ в формате html
-		 */
-		HttpQuery pageNotFound();
-		/**
-		 * faultAuth Метод получения ответа (неудачной авторизации)
-		 * @return ответ в формате html
-		 */
-		HttpQuery faultAuth();
-		/**
-		 * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
-		 * @return ответ в формате html
-		 */
-		HttpQuery requiredAuth();
-		/**
-		 * authSuccess Метод получения ответа (подтверждения авторизации)
-		 * @return ответ в формате html
-		 */
-		HttpQuery authSuccess();
-		/**
-		 * getQuery Метод получения сформированного http запроса
-		 * @return сформированный http запрос
-		 */
-		HttpQuery getQuery();
+		string getHttp();
 		/**
 		 * getMethod Метод получения метода запроса
 		 * @return метод запроса
@@ -472,20 +348,16 @@ class Http {
 		 */
 		string getUseragent();
 		/**
-		 * getPort Метод получения порта запроса
-		 * @return порт удаленного ресурса
+		 * getQuery Метод получения буфера запроса
+		 * @return буфер запроса
 		 */
-		u_int getPort();
+		string getQuery();
 		/**
-		 * getVersion Метод получения версии протокола запроса
-		 * @return версия протокола запроса
+		 * setEntitybody Метод добавления данных вложения
+		 * @param buffer буфер с данными вложения
+		 * @param size   размер буфера
 		 */
-		float getVersion();
-		/**
-		 * modify Функция модифицирования ответных данных
-		 * @param data ссылка на данные полученные от сервера
-		 */
-		void modify(vector <char> &data);
+		bool setEntitybody(const char * buffer, size_t size);
 		/**
 		 * setMethod Метод установки метода запроса
 		 * @param str строка с данными для установки
@@ -531,18 +403,117 @@ class Http {
 		 */
 		void setClose();
 		/**
+		 * createRequest Функция создания ответа сервера
+		 * @param  index   индекс в массиве ответа
+		 * @param  request номер ответа
+		 * @return         объект с данными ответа
+		 */
+		HttpQuery createRequest(u_short index, u_short request);
+		/**
+		 * brokenRequest Метод получения ответа (неудачного отправленного запроса)
+		 * @return ответ в формате html
+		 */
+		HttpQuery brokenRequest();
+		/**
+		 * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
+		 * @return ответ в формате html
+		 */
+		HttpQuery faultConnect();
+		/**
+		 * pageNotFound Метод получения ответа (страница не найдена)
+		 * @return ответ в формате html
+		 */
+		HttpQuery pageNotFound();
+		/**
+		 * faultAuth Метод получения ответа (неудачной авторизации)
+		 * @return ответ в формате html
+		 */
+		HttpQuery faultAuth();
+		/**
+		 * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
+		 * @return ответ в формате html
+		 */
+		HttpQuery requiredAuth();
+		/**
+		 * authSuccess Метод получения ответа (подтверждения авторизации)
+		 * @return ответ в формате html
+		 */
+		HttpQuery authSuccess();
+		/**
+		 * getRequest Метод получения сформированного http запроса
+		 * @return сформированный http запрос
+		 */
+		HttpQuery getRequest();
+		/**
+		 * getHttpRequest Метод получения сформированного http запроса только с добавлением заголовков
+		 * @return сформированный http запрос
+		 */
+		vector <char> getHttpRequest();
+		/**
+		 * HttpData Конструктор
+		 * @param  str     строка http запроса
+		 * @param  name    название приложения
+		 * @param  version версия приложения
+		 * @param  options опции http парсера
+		 * @return         данные http запроса
+		 */
+		HttpData(string str = "", string name = APP_NAME, string version = APP_VERSION, u_short options = 0x00);
+		/**
+		 * ~HttpData Деструктор
+		 */
+		~HttpData();
+};
+
+/**
+ * Http Класс содержит данные парсинга http запроса
+ */
+class Http {
+	private:
+		/**
+		 * HttpEnd Структура подержащая данные проверки, полной передачи данных
+		 */
+		struct HttpEnd {
+			u_short	type = 0;
+			size_t	begin = 0, end = 0;
+		} __attribute__((packed));
+		// Параметры прокси сервера
+		u_short options;
+		// Название и версия прокси сервера
+		string name, version;
+	public:
+		// Массив объектов подключений
+		vector <HttpData> httpData;
+		/**
+		 * isHttp Метод проверки на то http это или нет
+		 * @param  buffer буфер входящих данных
+		 * @return        результат проверки
+		 */
+		bool isHttp(const string buffer);
+		/**
+		 * parse Функция извлечения данных из буфера
+		 * @param buffer буфер с входящими запросами
+		 * @param size   размер входящих данных
+		 * @param flag   обрабатывать весь блок данных
+		 */
+		size_t parse(const char * buffer, size_t size, bool flag = false);
+		/**
+		 * modify Функция модифицирования ответных данных
+		 * @param data ссылка на данные полученные от сервера
+		 */
+		void modify(vector <char> &data);
+		/**
 		 * Http::clear Метод очистки всех полученных данных
 		 */
 		void clear();
 		/**
 		 * Http Конструктор
-		 * @param str строка содержащая название прокси сервера
-		 * @param opt параметры прокси сервера
-		 * @param ver версия прокси сервера
+		 * @param name строка содержащая название прокси сервера
+		 * @param opt  параметры прокси сервера
+		 * @param ver  версия прокси сервера
 		 */
-		Http(const string str = APP_NAME, u_short opt = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG), const string ver = APP_VERSION);
+		Http(const string name = APP_NAME, u_short opt = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG), const string ver = APP_VERSION);
 		/**
-		 * Http Деструктор
+		 * ~Http Деструктор
 		 */
 		~Http();
 };
