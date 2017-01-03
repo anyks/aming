@@ -435,7 +435,7 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				);
 				// Если сервер закрыл сове соединение
 				// Закрываем соединение с клиентом
-				if(!http->client.connect) http->close_client();
+				if(!http->client.connect && (events | BEV_EVENT_EOF)) http->close_client();
 			}
 		}
 	}
@@ -493,12 +493,12 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 				http->parser.modify(headers);
 				// Добавляем в новый буфер модифицированные заголовки
 				evbuffer_add(tmp, headers.data(), headers.size());
-				// Удаляем данные из буфера
-				evbuffer_drain(input, len);
 				// Отправляем данные клиенту
 				evbuffer_add_buffer(output, tmp);
 			// Выводим данные так как они есть
 			} else evbuffer_add_buffer(output, input);
+			// Удаляем данные из буфера
+			evbuffer_drain(input, len);
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
 			// Удаляем буфер данных

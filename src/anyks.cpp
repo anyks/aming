@@ -6,12 +6,12 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
 // MacOS X
-// g++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+// g++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
 // Linux
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // Debug:
 // ulimit -c unlimited
 // ./bin/http
@@ -25,6 +25,7 @@
 #include <sys/file.h>
 #include <sys/signal.h>
 #include "./lib/log.h"
+#include "./lib/osopt.h"
 #include "./proxy/http.h"
 
 // Название и версия прокси-сервера
@@ -338,6 +339,8 @@ int main(int argc, char * argv[]){
 	setlocale(LC_ALL, "");
 	// Создаем модуль лога
 	logfile = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src");
+	// Устанавливаем настройки операционной системы
+	OsOpt osopt(logfile, true);
 	// Выполняем запуск приложения от имени пользователя
 	privbind(APP_USER, APP_GROUP);
 	/*
