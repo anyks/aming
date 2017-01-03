@@ -128,12 +128,14 @@ void OsOpt::run(){
 			} break;
 			// Если это Linux
 			case 5: {
+				// for max connections
+				exec("sysctl -w net.core.somaxconn=49152");
 				// allow testing with buffers up to 128MB
-				exec("sysctl -w net.core.rmem_max = 134217728");
-				exec("sysctl -w net.core.wmem_max = 134217728");
+				exec("sysctl -w net.core.rmem_max=134217728");
+				exec("sysctl -w net.core.wmem_max=134217728");
 				// increase Linux autotuning TCP buffer limit to 64MB
-				exec("sysctl -w net.ipv4.tcp_rmem = 4096 87380 67108864");
-				exec("sysctl -w net.ipv4.tcp_wmem = 4096 65536 67108864");
+				exec("sysctl -w net.ipv4.tcp_rmem=4096 87380 67108864");
+				exec("sysctl -w net.ipv4.tcp_wmem=4096 65536 67108864");
 				// recommended for hosts with jumbo frames enabled
 				exec("sysctl -w net.ipv4.tcp_mtu_probing=1");
 				// recommended for CentOS7/Debian8 hosts
