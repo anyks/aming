@@ -30,6 +30,10 @@ using namespace std;
 #define EVLOOP_NONBLOCK			0x02
 #define EVLOOP_NO_EXIT_ON_EMPTY	0x04
 
+// Флаги таймеров
+#define TM_SERVER	0x01
+#define TM_CLIENT	0x02
+
 // Внутренний интерфейс
 #define INTERNAL_IP "127.0.0.1"
 // Внешний интерфейс
@@ -256,6 +260,13 @@ class BufferHttpProxy {
 		 * close_server Метод закрытия соединения сервера
 		 */
 		void close_server();
+		/**
+		 * set_timeout Метод установки таймаутов
+		 * @param type  тип подключения (клиент или сервер)
+		 * @param read  таймаут на чтение
+		 * @param write таймаут на запись
+		 */
+		void set_timeout(u_short type, bool read = false, bool write = false);
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param string  name    имя ресурса

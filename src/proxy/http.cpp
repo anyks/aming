@@ -98,6 +98,28 @@ void BufferHttpProxy::free_event(struct bufferevent ** event){
 	}
 }
 /**
+ * set_timeout Метод установки таймаутов
+ * @param type  тип подключения (клиент или сервер)
+ * @param read  таймаут на чтение
+ * @param write таймаут на запись
+ */
+void BufferHttpProxy::set_timeout(u_short type, bool read, bool write){
+	// Устанавливаем таймаут ожидания результата на чтение с сервера
+	struct timeval _read = {this->proxy.timeout.read, 0};
+	// Устанавливаем таймаут записи результата на запись
+	struct timeval _write = {this->proxy.timeout.write, 0};
+	// Устанавливаем таймаут ожидания результата на чтение с клиента
+	struct timeval _keepalive = {this->proxy.timeout.keepalive, 0};
+	// Устанавливаем таймауты для сервера
+	if((type & TM_SERVER) && (this->events.server != NULL))
+		// Устанавливаем таймауты
+		bufferevent_set_timeouts(this->events.server, (read ? &_read : NULL), (write ? &_write : NULL));
+	// Устанавливаем таймауты для клиента
+	if((type & TM_CLIENT) && (this->events.client != NULL))
+		// Устанавливаем таймауты
+		bufferevent_set_timeouts(this->events.client, (read ? &_keepalive : NULL), (write ? &_write : NULL));
+}
+/**
  * getmac Метод определения мак адреса клиента
  * @param  address структура параметров подключения
  * @return данные мак адреса
@@ -455,16 +477,10 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
-		// Устанавливаем таймаут записи результата
-		struct timeval twrite = {http->proxy.timeout.write, 0};
-		// Если соединение постоянное
-		if(http->client.alive){
-			// Устанавливаем таймаут ожидания результата
-			struct timeval tread = {http->proxy.timeout.keepalive, 0};
-			// Устанавливаем таймауты
-			bufferevent_set_timeouts(http->events.client, &tread, &twrite);
+		// Если соединение постоянное, устанавливаем таймер на клиента
+		if(http->client.alive) http->set_timeout(TM_CLIENT, true, true);
 		// Если соединение не постоянное то ставим таймер только на запись
-		} else bufferevent_set_timeouts(http->events.client, NULL, &twrite);
+		else http->set_timeout(TM_CLIENT, false, true);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
 		if(http->client.connect) evbuffer_add_buffer(output, input);
 		// Иначе изменяем заголовки
@@ -523,8 +539,8 @@ void HttpProxy::do_request(struct bufferevent * bev, void * ctx, bool flag){
 		bool conn_enabled = (http->proxy.options & OPT_CONNECT);
 		// Если данные еще не заполнены, но они есть в массиве
 		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
-			// Очищаем таймауты
-			bufferevent_set_timeouts(bev, NULL, NULL);
+			// Очищаем таймеры для клиента и сервера
+			http->set_timeout(TM_CLIENT | TM_SERVER);
 			// Очищаем объект ответа
 			http->response.clear();
 			// Получаем первый элемент из массива
@@ -567,12 +583,8 @@ void HttpProxy::do_request(struct bufferevent * bev, void * ctx, bool flag){
 						if(!http->client.alive) http->httpData.setClose();
 						// Формируем запрос на сервер
 						http->response = http->httpData.getRequest();
-						// Устанавливаем таймаут ожидания результата
-						struct timeval tread = {http->proxy.timeout.read, 0};
-						// Устанавливаем таймаут записи результата
-						struct timeval twrite = {http->proxy.timeout.write, 0};
-						// Устанавливаем таймауты
-						bufferevent_set_timeouts(http->events.server, &tread, &twrite);
+						// Устанавливаем таймер на сервер
+						http->set_timeout(TM_SERVER, true, true);
 						// Отправляем серверу сообщение
 						bufferevent_write(http->events.server, http->response.data(), http->response.size());
 						// Удаляем объект подключения
@@ -591,16 +603,10 @@ void HttpProxy::do_request(struct bufferevent * bev, void * ctx, bool flag){
 			}
 			// Ответ готов
 			if(!http->response.empty()){
-				// Устанавливаем таймаут записи результата
-				struct timeval twrite = {http->proxy.timeout.write, 0};
-				// Если это код разрешающий коннект
-				if(http->response.code == 200){
-					// Устанавливаем таймаут ожидания результата
-					struct timeval tread = {http->proxy.timeout.keepalive, 0};
-					// Устанавливаем таймауты
-					bufferevent_set_timeouts(bev, &tread, &twrite);
+				// Если это код разрешающий коннект, устанавливаем таймер для клиента
+				if(http->response.code == 200) http->set_timeout(TM_CLIENT, true, true);
 				// Если это завершение работы то устанавливаем таймер только на запись
-				} else bufferevent_set_timeouts(bev, NULL, &twrite);
+				else http->set_timeout(TM_CLIENT, false, true);
 				// Отправляем клиенту сообщение
 				bufferevent_write(bev, http->response.data(), http->response.size());
 				// Удаляем объект подключения
@@ -635,18 +641,18 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 				not_connect = false;
 				// Получаем буферы входящих данных и исходящих
 				struct evbuffer * output = bufferevent_get_output(http->events.server);
-				// Устанавливаем таймаут ожидания результата
-				struct timeval tread = {http->proxy.timeout.read, 0};
-				// Устанавливаем таймаут записи результата
-				struct timeval twrite = {http->proxy.timeout.write, 0};
-				// Устанавливаем таймауты
-				bufferevent_set_timeouts(http->events.server, &tread, &twrite);
+				// Удаляем таймер для клиента
+				http->set_timeout(TM_CLIENT);
+				// Устанавливаем таймер для сервера
+				http->set_timeout(TM_SERVER, true, true);
 				// Выводим ответ сервера
 				evbuffer_add_buffer(output, input);
 			}
 		}
 		// Если это обычный запрос
 		if(not_connect){
+			// Удаляем таймер для сервера
+			http->set_timeout(TM_SERVER);
 			// Получаем размер входящих данных
 			size_t len = evbuffer_get_length(input);
 			// Создаем буфер данных
