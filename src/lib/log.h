@@ -12,8 +12,11 @@
 #include <cstdio>
 #include <string>
 #include <fstream>
+#include <unistd.h>
 #include <time.h>
 #include <zlib.h>
+#include <pwd.h>
+#include <grp.h>
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -41,6 +44,10 @@ using namespace std;
  */
 class LogApp {
 	private:
+		// Пользователь от которого устанавливаются права на каталог
+		string user;
+		// Группа к которой принадлежит пользователь
+		string group;
 		// Название системы
 		string name;
 		// Адрес каталога где хранятся логи
@@ -51,6 +58,29 @@ class LogApp {
 		u_short type;
 		// Размер максимального лог файла в килобайтах
 		size_t size;
+		/**
+		 * is_number Функция проверки является ли строка числом
+		 * @param  str строка для проверки
+		 * @return     результат проверки
+		 */
+		bool isNumber(const string &str);
+		/**
+		 * getUid Функция вывода идентификатора пользователя
+		 * @param  name имя пользователя
+		 * @return      полученный идентификатор пользователя
+		 */
+		uid_t getUid(const char * name);
+		/**
+		 * getGid Функция вывода идентификатора группы пользователя
+		 * @param  name название группы пользователя
+		 * @return      полученный идентификатор группы пользователя
+		 */
+		gid_t getGid(const char * name);
+		/**
+		 * setOwner Функция установки владельца на каталог
+		 * @param path путь к файлу или каталогу для установки владельца
+		 */
+		void setOwner(const char * path);
 		/**
 		 * getOsName Функция определения операционной системы
 		 * @return название операционной системы
@@ -162,8 +192,10 @@ class LogApp {
 		 * @param dir     адрес куда следует сохранять логи
 		 * @param size    размер файла лога
 		 * @param enabled активирован модуль или деактивирован
+		 * @param user    пользователь от которого устанавливается права на каталог
+		 * @param group   группа к которому принадлежит пользователь
 		 */
-		LogApp(u_short type = TOLOG_CONSOLE, const char * name = "anyks", const char * dir = DIR_LOG, size_t size = SIZE_LOG, bool enabled = true);
+		LogApp(u_short type = TOLOG_CONSOLE, const char * name = "anyks", const char * dir = DIR_LOG, size_t size = SIZE_LOG, bool enabled = true, string user = "", string group = "");
 };
 
 #endif // _LOG_ANYKS_

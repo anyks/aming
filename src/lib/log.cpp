@@ -31,6 +31,72 @@ const char * LogApp::getOsName(){
 	#endif
 }
 /**
+ * is_number Функция проверки является ли строка числом
+ * @param  str строка для проверки
+ * @return     результат проверки
+ */
+bool LogApp::isNumber(const string &str){
+	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
+		return !isdigit(c);
+	}) == str.end();
+}
+/**
+ * getUid Функция вывода идентификатора пользователя
+ * @param  name имя пользователя
+ * @return      полученный идентификатор пользователя
+ */
+uid_t LogApp::getUid(const char * name){
+	// Получаем идентификатор имени пользователя
+	struct passwd * pwd = getpwnam(name);
+	// Если идентификатор пользователя не найден
+	if(pwd == NULL){
+		// Выводим сообщение об ошибке
+		printf("failed to get userId from username [%s]\r\n", name);
+		// Выходим из приложения
+		exit(1);
+	}
+	// Выводим идентификатор пользователя
+	return pwd->pw_uid;
+}
+/**
+ * getGid Функция вывода идентификатора группы пользователя
+ * @param  name название группы пользователя
+ * @return      полученный идентификатор группы пользователя
+ */
+gid_t LogApp::getGid(const char * name){
+	// Получаем идентификатор группы пользователя
+	struct group * grp = getgrnam(name);
+	// Если идентификатор группы не найден
+	if(grp == NULL){
+		// Выводим сообщение об ошибке
+		printf("failed to get groupId from groupname [%s]\r\n", name);
+		// Выходим из приложения
+		exit(1);
+	}
+	// Выводим идентификатор группы пользователя
+	return grp->gr_gid;
+}
+/**
+ * setOwner Функция установки владельца на каталог
+ * @param path путь к файлу или каталогу для установки владельца
+ */
+void LogApp::setOwner(const char * path){
+	uid_t uid;	// Идентификатор пользователя
+	gid_t gid;	// Идентификатор группы
+	// Размер строкового типа данных
+	string::size_type sz;
+	// Если идентификатор пользователя пришел в виде числа
+	if(isNumber(this->user)) uid = stoi(this->user, &sz);
+	// Если идентификатор пользователя пришел в виде названия
+	else uid = getUid(this->user.c_str());
+	// Если идентификатор группы пришел в виде числа
+	if(isNumber(this->group)) gid = stoi(this->group, &sz);
+	// Если идентификатор группы пришел в виде названия
+	else gid = getGid(this->group.c_str());
+	// Устанавливаем права на каталог
+	chown(path, uid, gid);
+}
+/**
  * makePath Функция создания каталога для хранения логов
  * @param  path адрес для каталога
  * @return      результат создания каталога
@@ -41,9 +107,13 @@ bool LogApp::makePath(const char * path){
 		// Устанавливаем параметры каталога
 		mode_t mode = 0755;
 		// Создаем каталог
-		if(mkdir(path, mode) == 0) return true;
+		if(mkdir(path, mode) == 0){
+			// Устанавливаем права на каталог
+			setOwner(path);
+			// Сообщаем что все удачно
+			return true;
 		// Если каталог не создан тогда сообщаем об ошибке
-		else return false;
+		} else return false;
 	}
 	// Сообщаем что все создано удачно
 	return true;
@@ -104,6 +174,8 @@ void LogApp::write_to_file(u_short type, const char * message){
 	FILE * file = NULL;
 	// Проверяем существует ли файл лога
 	if(isFileExist(filename.c_str())){
+		// Устанавливаем права на файл лога
+		setOwner(filename.c_str());
 		// Открываем файл на чтение в бинарном виде
 		file = fopen(filename.c_str(), "rb");
 		// Перемещаемся в конец файла
@@ -377,8 +449,10 @@ void LogApp::welcome(
  * @param dir     адрес куда следует сохранять логи
  * @param size    размер файла лога
  * @param enabled активирован модуль или деактивирован
+ * @param user    пользователь от которого устанавливается права на каталог
+ * @param group   группа к которому принадлежит пользователь
  */
-LogApp::LogApp(u_short type, const char * name, const char * dir, size_t size, bool enabled){
+LogApp::LogApp(u_short type, const char * name, const char * dir, size_t size, bool enabled, string user, string group){
 	// Запоминаем тип модуля
 	this->type = type;
 	// Запоминаем активирован модуль или нет
@@ -391,4 +465,8 @@ LogApp::LogApp(u_short type, const char * name, const char * dir, size_t size, b
 	this->size = (size <= 102400 ? size : 102400);
 	// Переводим все в киллобайты
 	this->size *= 1024;
+	// Устанавливаем имя пользователя
+	this->user = user;
+	// Устанавливаем группу пользователя
+	this->group = group;
 }

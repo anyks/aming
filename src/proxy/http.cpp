@@ -11,6 +11,105 @@
 using namespace std;
 
 /**
+ * get Метод получения количества подключений
+ * @return количество активных подключений
+ */
+inline size_t Connects::get(){
+	// Выводим количество подключений
+	return this->connects;
+}
+/**
+ * end Метод проверки на конец всех подключений
+ * @return проверка на достижения нуля
+ */
+inline bool Connects::end(){
+	// Если количество подключений меньше 1 то сообщаем об этом
+	return !(this->connects > 0);
+}
+/**
+ * inc Метод инкреминации количества подключений
+ */
+inline void Connects::inc(){
+	// Выполняем инкремент
+	this->connects++;
+}
+/**
+ * dec Метод декрементации количества подключений
+ */
+inline void Connects::dec(){
+	// Выполняем декрементацию
+	if(this->connects > 0) this->connects--;
+}
+/**
+ * lock Метод блокировки мютекса
+ */
+inline void Connects::lock(){
+	// Лочим мютекс
+	pthread_mutex_lock(&this->mutex);
+}
+/**
+ * unlock Метод разблокировки мютекса
+ */
+inline void Connects::unlock(){
+	// Разлочим мютекс
+	pthread_mutex_unlock(&this->mutex);
+}
+/**
+ * signal Метод отправки сигнала первому блокированному потоку
+ */
+inline void Connects::signal(){
+	// Отправляем сигнал
+	pthread_cond_signal(&this->condition);
+}
+/**
+ * broadcastSignal Метод отправки сигналов всем блокированным потокам
+ */
+inline void Connects::broadcastSignal(){
+	// Выполняем вещание
+	pthread_cond_broadcast(&this->condition);
+}
+/**
+ * wait Метод блокировки потока
+ */
+inline void Connects::wait(){
+	// Блокируем поток
+	pthread_cond_wait(&this->condition, &this->mutex);
+}
+/**
+ * Connects Конструктор
+ */
+Connects::Connects(){
+	// Устанавливаем первоначальное значение коннекта
+	this->connects = 1;
+	// Инициализируем мютекс
+	pthread_mutex_init(&this->mutex, 0);
+	// Инициализируем переменную состояния
+	pthread_cond_init(&this->condition, 0);
+}
+/**
+ * ~Connects Деструктор
+ */
+Connects::~Connects(){
+	// Удаляем мютекс
+	pthread_mutex_destroy(&this->mutex);
+	// Удаляем переменную состояния
+	pthread_cond_destroy(&this->condition);
+}
+/**
+ * lock Метод блокировки мютекса
+ */
+inline void BufferHttpProxy::lock(){
+	// Лочим мютекс
+	pthread_mutex_lock(&this->mutex);
+}
+/**
+ * unlock Метод разблокировки мютекса
+ */
+inline void BufferHttpProxy::unlock(){
+	// Разлочим мютекс
+	pthread_mutex_unlock(&this->mutex);
+}
+/**
  * appconn Функция которая добавляет или удаляет в список склиента
  * @param flag флаг подключения или отключения клиента
  */
@@ -43,43 +142,18 @@ void BufferHttpProxy::appconn(bool flag){
 	}
 }
 /**
- * begin Метод активации подключения
- */
-void BufferHttpProxy::begin(){
-	// Добавляем в список подключений
-	this->appconn(true);
-}
-/**
- * close_server Метод закрытия соединения сервера
- */
-void BufferHttpProxy::close_server(){
-	// Отключаемся от сервера
-	this->free_socket(this->sockets.server);
-	// Удаляем событие сервера
-	this->free_event(&this->events.server);
-}
-/**
- * close_client Метод закрытия соединения клиента
- */
-void BufferHttpProxy::close_client(){
-	// Отключаемся от сервера
-	this->free_socket(this->sockets.client);
-	// Удаляем событие сервера
-	this->free_event(&this->events.client);
-}
-/**
  * free_socket Метод отключения сокета
  * @param fd ссылка на файловый дескриптор (сокет)
  */
-void BufferHttpProxy::free_socket(evutil_socket_t &fd){
+void BufferHttpProxy::free_socket(evutil_socket_t * fd){
 	// Если сокет существует
-	if(fd > -1){
+	if(*fd > -1){
 		// Отключаем подключение для сокета
-		shutdown(fd, SHUT_RDWR);
+		shutdown(*fd, SHUT_RDWR);
 		// Закрываем сокет
-		close(fd);
+		close(*fd);
 		// Сообщаем что сокет закрыт
-		fd = -1;
+		*fd = -1;
 	}
 }
 /**
@@ -96,6 +170,39 @@ void BufferHttpProxy::free_event(struct bufferevent ** event){
 		// Устанавливаем что событие удалено
 		*event = NULL;
 	}
+}
+/**
+ * begin Метод активации подключения
+ */
+void BufferHttpProxy::begin(){
+	// Добавляем в список подключений
+	this->appconn(true);
+}
+/**
+ * close_client Метод закрытия соединения клиента
+ */
+void BufferHttpProxy::close_client(){
+	// Захватываем поток
+	this->lock();
+	// Закрываем сокет
+	free_socket(&this->sockets.client);
+	// Закрываем буфер события
+	free_event(&this->events.client);
+	// Отпускаем поток
+	this->unlock();
+}
+/**
+ * close_server Метод закрытия соединения сервера
+ */
+void BufferHttpProxy::close_server(){
+	// Захватываем поток
+	this->lock();
+	// Закрываем сокет
+	free_socket(&this->sockets.server);
+	// Закрываем буфер события
+	free_event(&this->events.server);
+	// Отпускаем поток
+	this->unlock();
 }
 /**
  * set_timeout Метод установки таймаутов
@@ -118,6 +225,33 @@ void BufferHttpProxy::set_timeout(u_short type, bool read, bool write){
 	if((type & TM_CLIENT) && (this->events.client != NULL))
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.client, (read ? &_keepalive : NULL), (write ? &_write : NULL));
+}
+/**
+ * BufferHttpProxy Конструктор
+ * @param string  name    имя ресурса
+ * @param string  version версия ресурса
+ * @param u_short options параметры прокси сервера
+ */
+BufferHttpProxy::BufferHttpProxy(string name, string version, u_short options){
+	// Инициализируем мютекс
+	pthread_mutex_init(&this->mutex, 0);
+	// Создаем объект для работы с http заголовками
+	this->parser = Http(name, options, version);
+}
+/**
+ * ~BufferHttpProxy Деструктор
+ */
+BufferHttpProxy::~BufferHttpProxy(){
+	// Очищаем буфер событий клиента
+	close_client();
+	// Очищаем буфер событий сервера
+	close_server();
+	// Удаляем из списока подключений
+	appconn(false);
+	// Удаляем базу событий
+	event_base_loopexit(this->base, NULL);
+	// Удаляем мютекс
+	pthread_mutex_destroy(&this->mutex);
 }
 /**
  * getmac Метод определения мак адреса клиента
@@ -444,6 +578,10 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 					http->server.port,
 					current_fd
 				);
+				// Закрываем подключение к серверу
+				http->close_server();
+				// Закрываем подключение к клиенту
+				http->close_client();
 			// Если отключился сервер
 			} else {
 				// Выводим в лог сообщение
@@ -458,6 +596,8 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				// Если сервер закрыл сове соединение
 				// Закрываем соединение с клиентом
 				if(!http->client.connect && (events | BEV_EVENT_EOF)) http->close_client();
+				// Закрываем подключение к серверу
+				http->close_server();
 			}
 		}
 	}
@@ -700,10 +840,8 @@ void * HttpProxy::connection(void * ctx){
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 		// Устанавливаем размеры буферов
 		set_buffer_size(http->sockets.client, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
-		// Устанавливаем таймаут ожидания запроса
-		struct timeval tread = {http->proxy.timeout.keepalive, 0};
-		// Устанавливаем таймауты
-		bufferevent_set_timeouts(http->events.client, &tread, NULL);
+		// Устанавливаем таймер для клиента
+		http->set_timeout(TM_CLIENT, true);
 		// Устанавливаем коллбеки
 		bufferevent_setcb(http->events.client, &HttpProxy::read_client, NULL, &HttpProxy::event, http);
 		// Активируем буферы событий на чтение и запись
@@ -712,8 +850,6 @@ void * HttpProxy::connection(void * ctx){
 		bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
 		// Активируем перебор базы событий
 		event_base_dispatch(http->base);
-		// Удаляем базу
-		event_base_free(http->base);
 		// Удаляем объект подключения
 		delete http;
 	}

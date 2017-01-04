@@ -16,14 +16,15 @@
 // ulimit -c unlimited
 // ./bin/http
 // gdb ./bin/http ./http.core
+// $ lldb --core "/cores/core.xxxxx"
+//   (lldb) bt all
 #include <unistd.h>
 #include <signal.h>
-#include <pwd.h>
-#include <grp.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/file.h>
 #include <sys/signal.h>
+#include <sys/resource.h>
 #include "./lib/log.h"
 #include "./lib/osopt.h"
 #include "./proxy/http.h"
@@ -54,6 +55,20 @@
 pid_t cpid = -1;
 // Объект log модуля
 LogApp * logfile = NULL;
+/**
+ * enableCoreDumps Функция активации создания дампа ядра
+ * @return результат установки лимитов дампов ядра
+ */
+static bool enableCoreDumps(){
+	// Структура лимитов дампов
+	struct rlimit limit;
+	// Устанавливаем текущий лимит равный бесконечности
+	limit.rlim_cur = RLIM_INFINITY;
+	// Устанавливаем максимальный лимит равный бесконечности
+	limit.rlim_max = RLIM_INFINITY;
+	// Выводим результат установки лимита дампов ядра
+	return (setrlimit(RLIMIT_CORE, &limit) == 0);
+}
 /**
  * is_number Функция проверки является ли строка числом
  * @param  str строка для проверки
@@ -171,34 +186,34 @@ void rm_pidfile(const char * filename, int ext){
 void signal_log(int signum){
 	// Определяем данные сигнала
 	switch(signum){
-		case SIGABRT:	logfile->write(LOG_ERROR, "Сигнал посылаемый функцией abort() [%d]", signum);						break;
-		case SIGALRM:	logfile->write(LOG_ERROR, "Сигнал истечения времени, заданного alarm() [%d]", signum);				break;
-		case SIGBUS:	logfile->write(LOG_ERROR, "Неправильное обращение в физическую память [%d]", signum);				break;
-		case SIGCHLD:	logfile->write(LOG_ERROR, "Дочерний процесс завершен или остановлен [%d]", signum);					break;
-		case SIGCONT:	logfile->write(LOG_ERROR, "Продолжить выполнение ранее остановленного процесса [%d]", signum);		break;
-		case SIGFPE:	logfile->write(LOG_ERROR, "Ошибочная арифметическая операция [%d]", signum);						break;
-		case SIGHUP:	logfile->write(LOG_ERROR, "Закрытие терминала [%d]", signum);										break;
-		case SIGILL:	logfile->write(LOG_ERROR, "Недопустимая инструкция процессора [%d]", signum);						break;
-		case SIGINT:	logfile->write(LOG_ERROR, "Сигнал прерывания (Ctrl-C) с терминала [%d]", signum);					break;
-		case SIGKILL:	logfile->write(LOG_ERROR, "Безусловное завершение [%d]", signum);									break;
-		case SIGPIPE:	logfile->write(LOG_ERROR, "Запись в разорванное соединение (пайп, сокет) [%d]", signum);			break;
-		case SIGQUIT:	logfile->write(LOG_ERROR, "Сигнал «Quit» с терминала (Ctrl-\\) [%d]", signum);						break;
-		case SIGSEGV:	logfile->write(LOG_ERROR, "Нарушение при обращении в память [%d]", signum);							break;
-		case SIGSTOP:	logfile->write(LOG_ERROR, "Остановка выполнения процесса [%d]", signum);							break;
-		case SIGTERM:	logfile->write(LOG_ERROR, "Сигнал завершения (сигнал по умолчанию для утилиты kill) [%d]", signum);	break;
-		case SIGTSTP:	logfile->write(LOG_ERROR, "Сигнал остановки с терминала (Ctrl-Z) [%d]", signum);					break;
-		case SIGTTIN:	logfile->write(LOG_ERROR, "Попытка чтения с терминала фоновым процессом [%d]", signum);				break;
-		case SIGTTOU:	logfile->write(LOG_ERROR, "Попытка записи на терминал фоновым процессом [%d]", signum);				break;
-		case SIGUSR1:	logfile->write(LOG_ERROR, "Пользовательский сигнал № 1 [%d]", signum);								break;
-		case SIGUSR2:	logfile->write(LOG_ERROR, "Пользовательский сигнал № 2 [%d]", signum);								break;
-		// case SIGPOLL: logfile->write(LOG_ERROR, "Событие, отслеживаемое poll() [%d]", signum);							break;
-		case SIGPROF:	logfile->write(LOG_ERROR, "Истечение таймера профилирования [%d]", signum);							break;
-		case SIGSYS:	logfile->write(LOG_ERROR, "Неправильный системный вызов [%d]", signum);								break;
-		case SIGTRAP:	logfile->write(LOG_ERROR, "Ловушка трассировки или брейкпоинт [%d]", signum);						break;
-		case SIGURG:	logfile->write(LOG_ERROR, "На сокете получены срочные данные [%d]", signum);						break;
-		case SIGVTALRM:	logfile->write(LOG_ERROR, "Истечение «виртуального таймера» [%d]", signum);							break;
-		case SIGXCPU:	logfile->write(LOG_ERROR, "Процесс превысил лимит процессорного времени [%d]", signum);				break;
-		case SIGXFSZ:	logfile->write(LOG_ERROR, "Процесс превысил допустимый размер файла [%d]", signum);					break;
+		case SIGABRT:	logfile->write(LOG_ERROR, "Process abort signal [%d]", signum);									break;
+		case SIGALRM:	logfile->write(LOG_ERROR, "Alarm clock [%d]", signum);											break;
+		case SIGBUS:	logfile->write(LOG_ERROR, "Access to an undefined portion of a memory object [%d]", signum);	break;
+		case SIGCHLD:	logfile->write(LOG_ERROR, "Child process terminated, stopped, or continued [%d]", signum);		break;
+		case SIGCONT:	logfile->write(LOG_ERROR, "Continue executing, if stopped [%d]", signum);						break;
+		case SIGFPE:	logfile->write(LOG_ERROR, "Erroneous arithmetic operation [%d]", signum);						break;
+		case SIGHUP:	logfile->write(LOG_ERROR, "Hangup [%d]", signum);												break;
+		case SIGILL:	logfile->write(LOG_ERROR, "Illegal instruction [%d]", signum);									break;
+		case SIGINT:	logfile->write(LOG_ERROR, "Terminal interrupt signal [%d]", signum);							break;
+		case SIGKILL:	logfile->write(LOG_ERROR, "Kill (cannot be caught or ignored) [%d]", signum);					break;
+		case SIGPIPE:	logfile->write(LOG_ERROR, "Write on a pipe with no one to read it [%d]", signum);				break;
+		case SIGQUIT:	logfile->write(LOG_ERROR, "Terminal quit signal [%d]", signum);									break;
+		case SIGSEGV:	logfile->write(LOG_ERROR, "Invalid memory reference [%d]", signum);								break;
+		case SIGSTOP:	logfile->write(LOG_ERROR, "Stop executing (cannot be caught or ignored) [%d]", signum);			break;
+		case SIGTERM:	logfile->write(LOG_ERROR, "Termination signal [%d]", signum);									break;
+		case SIGTSTP:	logfile->write(LOG_ERROR, "Terminal stop signal [%d]", signum);									break;
+		case SIGTTIN:	logfile->write(LOG_ERROR, "Background process attempting read [%d]", signum);					break;
+		case SIGTTOU:	logfile->write(LOG_ERROR, "Background process attempting write [%d]", signum);					break;
+		case SIGUSR1:	logfile->write(LOG_ERROR, "User-defined signal 1 [%d]", signum);								break;
+		case SIGUSR2:	logfile->write(LOG_ERROR, "User-defined signal 2 [%d]", signum);								break;
+		// case SIGPOLL: logfile->write(LOG_ERROR, "Pollable event [%d]", signum);										break;
+		case SIGPROF:	logfile->write(LOG_ERROR, "Profiling timer expired [%d]", signum);								break;
+		case SIGSYS:	logfile->write(LOG_ERROR, "Bad system call [%d]", signum);										break;
+		case SIGTRAP:	logfile->write(LOG_ERROR, "Trace / breakpoint trap [%d]", signum);								break;
+		case SIGURG:	logfile->write(LOG_ERROR, "High bandwidth data is available at a socket [%d]", signum);			break;
+		case SIGVTALRM:	logfile->write(LOG_ERROR, "Virtual timer expired [%d]", signum);								break;
+		case SIGXCPU:	logfile->write(LOG_ERROR, "CPU time limit exceeded [%d]", signum);								break;
+		case SIGXFSZ:	logfile->write(LOG_ERROR, "File size limit exceeded [%d]", signum);								break;
 	}
 }
 /**
@@ -337,8 +352,10 @@ void run_worker(){
 int main(int argc, char * argv[]){
 	// Активируем локаль
 	setlocale(LC_ALL, "");
+	// Активируем лимиты дампов ядра
+	enableCoreDumps();
 	// Создаем модуль лога
-	logfile = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src");
+	logfile = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src", SIZE_LOG, true, APP_USER, APP_GROUP);
 	// Устанавливаем настройки операционной системы
 	OsOpt osopt(logfile, true);
 	// Выполняем запуск приложения от имени пользователя

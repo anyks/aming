@@ -54,24 +54,25 @@ using namespace std;
 #define KEEP_ALIVE_TIMEOUT 5
 
 /**
- * Timeout Структура таймаутов
- */
-struct Timeout {
-	u_short read;		// Таймаут времени на чтение
-	u_short write;		// Таймаут времени на запись
-	u_short keepalive;	// Таймаут ожидания коннекта
-} __attribute__((packed));
-/**
- * BufferSize Структура размеров буфера
- */
-struct BufferSize {
-	int read;		// Буфер на чтение
-	int write;		// Буфер на запись
-} __attribute__((packed));
-/**
  * Proxy Структура прокси сервера
  */
 struct Proxy {
+	/**
+	 * Timeout Структура таймаутов
+	 */
+	struct Timeout {
+		u_short read;		// Таймаут времени на чтение
+		u_short write;		// Таймаут времени на запись
+		u_short keepalive;	// Таймаут ожидания коннекта
+	} __attribute__((packed));
+	/**
+	 * BufferSize Структура размеров буфера
+	 */
+	struct BufferSize {
+		int read;		// Буфер на чтение
+		int write;		// Буфер на запись
+	} __attribute__((packed));
+	// Переменные структуры
 	string		name;		// Название прокси сервера
 	string		version;	// Версия прокси сервера
 	string		internal;	// Внутренний адрес прокси сервера
@@ -94,99 +95,62 @@ class Connects {
 		 * get Метод получения количества подключений
 		 * @return количество активных подключений
 		 */
-		inline size_t get(){
-			// Выводим количество подключений
-			return connects;
-		}
+		inline size_t get();
 		/**
 		 * end Метод проверки на конец всех подключений
 		 * @return проверка на достижения нуля
 		 */
-		inline bool end(){
-			// Если количество подключений меньше 1 то сообщаем об этом
-			return !(connects > 0);
-		}
+		inline bool end();
 		/**
 		 * inc Метод инкреминации количества подключений
 		 */
-		inline void inc(){
-			// Выполняем инкремент
-			connects++;
-		}
+		inline void inc();
 		/**
 		 * dec Метод декрементации количества подключений
 		 */
-		inline void dec(){
-			// Выполняем декрементацию
-			if(connects > 0) connects--;
-		}
+		inline void dec();
 		/**
 		 * lock Метод блокировки мютекса
 		 */
-		inline void lock(){
-			// Лочим мютекс
-			pthread_mutex_lock(&mutex);
-		}
+		inline void lock();
 		/**
 		 * unlock Метод разблокировки мютекса
 		 */
-		inline void unlock(){
-			// Разлочим мютекс
-			pthread_mutex_unlock(&mutex);
-		}
+		inline void unlock();
 		/**
 		 * signal Метод отправки сигнала первому блокированному потоку
 		 */
-		inline void signal(){
-			// Отправляем сигнал
-			pthread_cond_signal(&condition);
-		}
+		inline void signal();
 		/**
 		 * broadcastSignal Метод отправки сигналов всем блокированным потокам
 		 */
-		inline void broadcastSignal(){
-			// Выполняем вещание
-			pthread_cond_broadcast(&condition);
-		}
+		inline void broadcastSignal();
 		/**
 		 * wait Метод блокировки потока
 		 */
-		inline void wait(){
-			// Блокируем поток
-			pthread_cond_wait(&condition, &mutex);
-		}
+		inline void wait();
 		/**
 		 * Connects Конструктор
 		 */
-		Connects(){
-			// Устанавливаем первоначальное значение коннекта
-			connects = 1;
-			// Инициализируем мютекс
-			pthread_mutex_init(&mutex, 0);
-			// Инициализируем переменную состояния
-			pthread_cond_init(&condition, 0);
-		}
+		Connects();
 		/**
 		 * ~Connects Деструктор
 		 */
-		~Connects(){
-			// Удаляем мютекс
-			pthread_mutex_destroy(&mutex);
-			// Удаляем переменную состояния
-			pthread_cond_destroy(&condition);
-		}
+		~Connects();
 };
 /**
  * BufferHttpProxy Класс для работы с данными прокси сервера
  */
 class BufferHttpProxy {
 	private:
+		// Мютекс
+		pthread_mutex_t	mutex;
 		/**
 		 * Events Буферы событий
 		 */
 		struct Events {
 			struct bufferevent * client = NULL;	// Буфер событий клиента
-			struct bufferevent * server = NULL; // Буфер событий сервера
+			struct bufferevent * server = NULL;	// Буфер событий сервера
 		} __attribute__((packed));
 		/**
 		 * Request Буфер данных
@@ -199,9 +163,9 @@ class BufferHttpProxy {
 		 * Server Данные текущего сервера
 		 */
 		struct Server {
-			u_int	port;	// Порт
-			string	host;	// Хост адрес
-			string	mac;	// Мак адрес
+			u_int	port	= 0;	// Порт
+			string	host	= "";	// Хост адрес
+			string	mac		= "";	// Мак адрес
 		} __attribute__((packed));
 		/**
 		 * Sockets Сокеты клиента и сервера
@@ -214,13 +178,21 @@ class BufferHttpProxy {
 		 * Client Структура с информацией о подключении клиента
 		 */
 		struct Client {
-			bool	connect;	// Метод connect это или нет
-			bool	alive;		// Постоянное подключение или нет
-			bool	https;		// Защищенное подключение или нет
-			string	ip;			// ip адрес клиента
-			string	mac;		// Мак адрес клиента
-			string	useragent;	// userAgent клиента
+			bool	connect		= false;	// Метод connect это или нет
+			bool	alive		= false;	// Постоянное подключение или нет
+			bool	https		= false;	// Защищенное подключение или нет
+			string	ip			= "";		// ip адрес клиента
+			string	mac			= "";		// Мак адрес клиента
+			string	useragent	= "";		// userAgent клиента
 		} __attribute__((packed));
+		/**
+		 * lock Метод блокировки мютекса
+		 */
+		inline void lock();
+		/**
+		 * unlock Метод разблокировки мютекса
+		 */
+		inline void unlock();
 		/**
 		 * appconn Функция которая добавляет или удаляет в список склиента
 		 * @param flag флаг подключения или отключения клиента
@@ -230,7 +202,7 @@ class BufferHttpProxy {
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)
 		 */
-		void free_socket(evutil_socket_t &fd);
+		void free_socket(evutil_socket_t * fd);
 		/**
 		 * free_event Метод удаления буфера события
 		 * @param event указатель на объект буфера события
@@ -243,11 +215,11 @@ class BufferHttpProxy {
 		Http					parser;			// Объект парсера
 		HttpQuery				response;		// Ответ системы
 		HttpData				httpData;		// Данные http запроса
+		Sockets					sockets;		// Сокеты подключений
 		Events					events;			// Буферы событий
 		Server					server;			// Параметры удаленного сервера
 		Client					client;			// Параметры подключившегося клиента
 		Proxy					proxy;			// Параметры прокси сервера
-		Sockets					sockets;		// Сокеты подключений
 		/**
 		 * begin Метод активации подключения
 		 */
@@ -273,25 +245,11 @@ class BufferHttpProxy {
 		 * @param string  version версия ресурса
 		 * @param u_short options параметры прокси сервера
 		 */
-		BufferHttpProxy(string name, string version, u_short options){
-			// Создаем объект для работы с http заголовками
-			parser = Http(name, options, version);
-		}
+		BufferHttpProxy(string name, string version, u_short options);
 		/**
 		 * ~BufferHttpProxy Деструктор
 		 */
-		~BufferHttpProxy(){
-			// Очищаем файловый дескриптор сервера
-			free_socket(sockets.server);
-			// Очищаем файловый дескриптор клиента
-			free_socket(sockets.client);
-			// Удаляем событие сервера
-			free_event(&events.server);
-			// Удаляем событие клиента
-			free_event(&events.client);
-			// Удаляем из списока подключений
-			appconn(false);
-		}
+		~BufferHttpProxy();
 };
 /**
  * HttpProxy Класс http прокси
