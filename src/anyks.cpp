@@ -6,12 +6,12 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
 // MacOS X
-// g++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+// g++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
 // Linux
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http.cpp ./lib/base64.cpp ./lib/log.cpp ./lib/osopt.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // Debug:
 // ulimit -c unlimited
 // ./bin/http
@@ -25,9 +25,10 @@
 #include <sys/file.h>
 #include <sys/signal.h>
 #include <sys/resource.h>
-#include "./lib/log.h"
-#include "./lib/osopt.h"
+#include "./lib/log/log.h"
+#include "./lib/osopt/osopt.h"
 #include "./proxy/http.h"
+#include "./lib/ini/ini.h"
 
 // Название и версия прокси-сервера
 #define APP_NAME "ANYKS"
@@ -360,6 +361,20 @@ int main(int argc, char * argv[]){
 	OsOpt osopt(logfile, true);
 	// Выполняем запуск приложения от имени пользователя
 	privbind(APP_USER, APP_GROUP);
+
+	INI reader("./config.ini");
+
+    if (reader.ParseError() < 0) {
+        std::cout << "Can't load 'test.ini'\n";
+        return 1;
+    }
+    cout << "Config loaded from 'test.ini': version="
+              << reader.GetInteger("blocking", "maxtryauth", -1) << ", name="
+              << reader.Get("proxy", "user", "UNKNOWN") << ", group="
+              << reader.Get("proxy", "group", "UNKNOWN") << ", port="
+              << reader.GetReal("http", "port", -1) << ", debug="
+              << reader.GetBoolean("proxy", "debug", true) << "\n";
+
 	/*
 	// Наши ID процесса и сессии
 	pid_t pid, sid;

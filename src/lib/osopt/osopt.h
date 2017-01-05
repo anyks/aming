@@ -12,7 +12,7 @@
 #include <string>
 #include <iostream>
 #include <stdlib.h>
-#include "log.h"
+#include "../log/log.h"
 
 // Устанавливаем область видимости
 using namespace std;

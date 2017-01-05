@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <sys/types.h>
-#include "base64.h"
+#include "../base64/base64.h"
 
 // Устанавливаем пространство имен
 using namespace std;

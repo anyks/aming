@@ -19,8 +19,8 @@
 #include <event2/listener.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
-#include "../lib/log.h"
-#include "../lib/http.h"
+#include "../lib/log/log.h"
+#include "../lib/http/http.h"
 
 // Устанавливаем область видимости
 using namespace std;
