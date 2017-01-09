@@ -3,7 +3,7 @@
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
-*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
+*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
 #include "osopt.h"
 
@@ -42,6 +42,130 @@ OsOpt::OsData OsOpt::getOsName(){
 	#endif
 	// Выводим результат
 	return result;
+}
+/**
+ * setPidfile Функция создания pid файла
+ * @param filename название файла pid
+ */
+void OsOpt::setPidfile(const char * filename){
+	// Открываем файл на запись
+	FILE * f = fopen(filename, "w");
+	// Если файл открыт
+	if(f){
+		// Записываем в файл pid процесса
+		fprintf(f, "%u", getpid());
+		// Закрываем файл
+		fclose(f);
+	}
+}
+/**
+ * rmPidfile Функция удаления pid файла
+ * @param filename название файла pid
+ * @param ext      тип ошибки
+ */
+void OsOpt::rmPidfile(const char * filename, int ext){
+	// Удаляем файл
+	remove(filename);
+	// Выходим из приложения
+	exit(ext);
+}
+/**
+ * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
+ * @param  maxfd максимальное количество файловых дескрипторов
+ * @return       количество установленных файловых дескрипторов
+ */
+int OsOpt::setFdLimit(u_int maxfd){
+	// Структура для установки лимитов
+	struct rlimit lim;
+	// зададим текущий лимит на кол-во открытых дискриптеров
+	lim.rlim_cur = maxfd;
+	// зададим максимальный лимит на кол-во открытых дискриптеров
+	lim.rlim_max = maxfd;
+	// установим указанное кол-во
+	return setrlimit(RLIMIT_NOFILE, &lim);
+}
+/**
+ * enableCoreDumps Функция активации создания дампа ядра
+ * @return результат установки лимитов дампов ядра
+ */
+bool OsOpt::enableCoreDumps(){
+	// Структура лимитов дампов
+	struct rlimit limit;
+	// Устанавливаем текущий лимит равный бесконечности
+	limit.rlim_cur = RLIM_INFINITY;
+	// Устанавливаем максимальный лимит равный бесконечности
+	limit.rlim_max = RLIM_INFINITY;
+	// Выводим результат установки лимита дампов ядра
+	return (setrlimit(RLIMIT_CORE, &limit) == 0);
+}
+/**
+ * isNumber Функция проверки является ли строка числом
+ * @param  str строка для проверки
+ * @return     результат проверки
+ */
+bool OsOpt::isNumber(const string &str){
+	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
+		return !isdigit(c);
+	}) == str.end();
+}
+/**
+ * getUid Функция вывода идентификатора пользователя
+ * @param  name имя пользователя
+ * @return      полученный идентификатор пользователя
+ */
+uid_t OsOpt::getUid(const char * name){
+	// Получаем идентификатор имени пользователя
+	struct passwd * pwd = getpwnam(name);
+	// Если идентификатор пользователя не найден
+	if(pwd == NULL){
+		// Выводим сообщение об ошибке
+		this->log->write(LOG_ERROR, "failed to get userId from username [%s]", name);
+		// Выходим из приложения
+		exit(0);
+	}
+	// Выводим идентификатор пользователя
+	return pwd->pw_uid;
+}
+/**
+ * getGid Функция вывода идентификатора группы пользователя
+ * @param  name название группы пользователя
+ * @return      полученный идентификатор группы пользователя
+ */
+gid_t OsOpt::getGid(const char * name){
+	// Получаем идентификатор группы пользователя
+	struct group * grp = getgrnam(name);
+	// Если идентификатор группы не найден
+	if(grp == NULL){
+		// Выводим сообщение об ошибке
+		this->log->write(LOG_ERROR, "failed to get groupId from groupname [%s]", name);
+		// Выходим из приложения
+		exit(0);
+	}
+	// Выводим идентификатор группы пользователя
+	return grp->gr_gid;
+}
+/**
+ * privBind Функция запускает приложение от имени указанного пользователя
+ * @param user  название или идентификатор пользователя
+ * @param group название или идентификатор группы пользователя
+ */
+void OsOpt::privBind(const string &user, const string &group){
+	uid_t uid;	// Идентификатор пользователя
+	gid_t gid;	// Идентификатор группы
+	// Размер строкового типа данных
+	string::size_type sz;
+	// Если идентификатор пользователя пришел в виде числа
+	if(isNumber(user)) uid = stoi(user, &sz);
+	// Если идентификатор пользователя пришел в виде названия
+	else uid = getUid(user.c_str());
+	// Если идентификатор группы пришел в виде числа
+	if(isNumber(group)) gid = stoi(group, &sz);
+	// Если идентификатор группы пришел в виде названия
+	else gid = getGid(group.c_str());
+	// Устанавливаем идентификатор пользователя
+	setuid(uid);
+	// Устанавливаем идентификатор группы
+	setgid(gid);
 }
 /**
  * exec Метод запуска внешней оболочки

@@ -28,158 +28,11 @@
 #include "./lib/log/log.h"
 #include "./lib/osopt/osopt.h"
 #include "./proxy/http.h"
-#include "./lib/ini/ini.h"
-
-// Название и версия прокси-сервера
-#define APP_NAME "ANYKS"
-#define APP_VERSION "1.0"
-#define APP_COPYRIGHT "ANYKS LLC"
-#define APP_SITE "http://anyks.com"
-#define APP_EMAIL "info@anyks.com"
-#define APP_SUPPORT "support@anyks.com"
-#define APP_AUTHOR "forman"
-
-// Данные пользователя от имени которого запускается приложение
-#define APP_USER "forman" // "501"
-#define APP_GROUP "admin" // "80"
-
-// Порты по умолчанию
-#define HTTP_PORT 8080
-#define SOCKS5_PORT 1080
-
-// Максимальное количество открытых сокетов (по дефолту в системе 1024)
-#define MAX_FDS 1024 * 10
-// Адрес файла pid
-#define PID_FILE "/var/run/anyksProxy.pid"
 
 // Пиды дочернего воркера
 pid_t cpid = -1;
 // Объект log модуля
 LogApp * logfile = NULL;
-/**
- * enableCoreDumps Функция активации создания дампа ядра
- * @return результат установки лимитов дампов ядра
- */
-static bool enableCoreDumps(){
-	// Структура лимитов дампов
-	struct rlimit limit;
-	// Устанавливаем текущий лимит равный бесконечности
-	limit.rlim_cur = RLIM_INFINITY;
-	// Устанавливаем максимальный лимит равный бесконечности
-	limit.rlim_max = RLIM_INFINITY;
-	// Выводим результат установки лимита дампов ядра
-	return (setrlimit(RLIMIT_CORE, &limit) == 0);
-}
-/**
- * is_number Функция проверки является ли строка числом
- * @param  str строка для проверки
- * @return     результат проверки
- */
-bool is_number(const string &str){
-	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
-		return !isdigit(c);
-	}) == str.end();
-}
-/**
- * get_uid Функция вывода идентификатора пользователя
- * @param  name имя пользователя
- * @return      полученный идентификатор пользователя
- */
-uid_t get_uid(const char * name){
-	// Получаем идентификатор имени пользователя
-	struct passwd * pwd = getpwnam(name);
-	// Если идентификатор пользователя не найден
-	if(pwd == NULL){
-		// Выводим сообщение об ошибке
-		logfile->write(LOG_ERROR, "failed to get userId from username [%s]", name);
-		// Выходим из приложения
-		exit(1);
-	}
-	// Выводим идентификатор пользователя
-	return pwd->pw_uid;
-}
-/**
- * get_gid Функция вывода идентификатора группы пользователя
- * @param  name название группы пользователя
- * @return      полученный идентификатор группы пользователя
- */
-gid_t get_gid(const char * name){
-	// Получаем идентификатор группы пользователя
-	struct group * grp = getgrnam(name);
-	// Если идентификатор группы не найден
-	if(grp == NULL){
-		// Выводим сообщение об ошибке
-		logfile->write(LOG_ERROR, "failed to get groupId from groupname [%s]", name);
-		// Выходим из приложения
-		exit(1);
-	}
-	// Выводим идентификатор группы пользователя
-	return grp->gr_gid;
-}
-/**
- * privbind Функция запускает приложение от имени указанного пользователя
- * @param user  название или идентификатор пользователя
- * @param group название или идентификатор группы пользователя
- */
-void privbind(const string user, const string group){
-	uid_t uid;	// Идентификатор пользователя
-	gid_t gid;	// Идентификатор группы
-	// Размер строкового типа данных
-	string::size_type sz;
-	// Если идентификатор пользователя пришел в виде числа
-	if(is_number(user)) uid = stoi(user, &sz);
-	// Если идентификатор пользователя пришел в виде названия
-	else uid = get_uid(user.c_str());
-	// Если идентификатор группы пришел в виде числа
-	if(is_number(group)) gid = stoi(group, &sz);
-	// Если идентификатор группы пришел в виде названия
-	else gid = get_gid(group.c_str());
-	// Устанавливаем идентификатор пользователя
-	setuid(uid);
-	// Устанавливаем идентификатор группы
-	setgid(gid);
-}
-/**
- * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
- * @param  maxfd максимальное количество файловых дескрипторов
- * @return       количество установленных файловых дескрипторов
- */
-int set_fd_limit(u_int maxfd){
-	// Структура для установки лимитов
-	struct rlimit lim;
-	// зададим текущий лимит на кол-во открытых дискриптеров
-	lim.rlim_cur = maxfd;
-	// зададим максимальный лимит на кол-во открытых дискриптеров
-	lim.rlim_max = maxfd;
-	// установим указанное кол-во
-	return setrlimit(RLIMIT_NOFILE, &lim);
-}
-/**
- * set_pidfile Функция создания pid файла
- * @param filename название файла pid
- */
-void set_pidfile(const char * filename){
-	// Открываем файл на запись
-	FILE * f = fopen(filename, "w");
-	// Если файл открыт
-	if(f){
-		// Записываем в файл pid процесса
-		fprintf(f, "%u", getpid());
-		// Закрываем файл
-		fclose(f);
-	}
-}
-/**
- * rm_pidfile Функция удаления pid файла
- * @param filename название файла pid
- * @param ext      тип ошибки
- */
-void rm_pidfile(const char * filename, int ext){
-	// Удаляем файл
-	remove(filename);
-	// Выходим из приложения
-	exit(ext);
-}
 /**
  * signal_log Функция вывода значения сигнала в лог
  * @param signum номер сигнала
@@ -247,7 +100,7 @@ void sigterm_handler(int signum){
 		// Удаляем дочерний воркер
 		kill(cpid, SIGTERM);
 		// Удаляем pid файл
-		rm_pidfile(PID_FILE, EXIT_FAILURE);
+		// rmPidfile(PID_FILE, EXIT_FAILURE);
 	}
 	// Выходим
 	exit(0);
@@ -260,7 +113,7 @@ void sigsegv_handler(int signum){
 	// Логируем сообщение о сигнале
 	signal_log(signum);
 	// Если это родительский пид, удаляем pid файл
-	if(cpid > 0) rm_pidfile(PID_FILE, EXIT_FAILURE);
+	// if(cpid > 0) rmPidfile(PID_FILE, EXIT_FAILURE);
 	// перепосылка сигнала
 	signal(signum, SIG_DFL);
 	// Выходим
@@ -271,7 +124,7 @@ void sigsegv_handler(int signum){
  */
 void create_proxy(){
 	// Установим максимальное кол-во дискрипторов которое можно открыть
-	set_fd_limit(MAX_FDS);
+	// setFdLimit(MAX_FDS);
 	// Выводим приглашение
 	logfile->welcome(
 		APP_NAME,		// название приложения
@@ -310,7 +163,7 @@ void run_worker(){
 			// Сообщаем что произошла ошибка потока
 			perror("fork");
 			// Выходим из потока
-			exit(1);
+			exit(0);
 		} break;
 		// Если это дочерний поток значит все нормально и продолжаем работу
 		case 0: create_proxy(); break;
@@ -323,7 +176,7 @@ void run_worker(){
 				// Ожидаем завершение работы дочернего процесса
 				pid_t pid = waitpid(cpid, &status, WUNTRACED | WCONTINUED);
 				// Если дочерний процесс не определен тогда выходим
-				if(pid == -1){
+				if(pid < 0){
 					perror("waitpid");
 					exit(EXIT_FAILURE);
 				}
@@ -353,28 +206,14 @@ void run_worker(){
 int main(int argc, char * argv[]){
 	// Активируем локаль
 	setlocale(LC_ALL, "");
-	// Активируем лимиты дампов ядра
-	enableCoreDumps();
 	// Создаем модуль лога
 	logfile = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src", SIZE_LOG, true, APP_USER, APP_GROUP);
 	// Устанавливаем настройки операционной системы
 	OsOpt osopt(logfile, true);
+	// Активируем лимиты дампов ядра
+	osopt.enableCoreDumps();
 	// Выполняем запуск приложения от имени пользователя
-	privbind(APP_USER, APP_GROUP);
-
-	INI reader("./config.ini");
-
-    if (reader.ParseError() < 0) {
-        std::cout << "Can't load 'test.ini'\n";
-        return 1;
-    }
-    cout << "Config loaded from 'test.ini': version="
-              << reader.GetInteger("blocking", "maxtryauth", -1) << ", name="
-              << reader.Get("proxy", "user", "UNKNOWN") << ", group="
-              << reader.Get("proxy", "group", "UNKNOWN") << ", port="
-              << reader.GetReal("http", "port", -1) << ", debug="
-              << reader.GetBoolean("proxy", "debug", true) << "\n";
-
+	osopt.privBind(APP_USER, APP_GROUP);
 	/*
 	// Наши ID процесса и сессии
 	pid_t pid, sid;

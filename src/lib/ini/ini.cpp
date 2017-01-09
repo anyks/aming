@@ -47,8 +47,10 @@ bool INI::GetBoolean(const string &section, const string &name, bool default_val
 	string valstr = Get(section, name, "");
 	// Convert to lower case to make string comparisons case-insensitive
 	transform(valstr.begin(), valstr.end(), valstr.begin(), ::tolower);
-	if((valstr == "true") || (valstr == "yes") || (valstr == "on") || (valstr == "1")) return true;
-	else if((valstr == "false") || (valstr == "no") || (valstr == "off") || (valstr == "0")) return false;
+	if((valstr.compare("true") == 0) || (valstr.compare("yes") == 0)
+	|| (valstr.compare("on") == 0) || (valstr.compare("1") == 0)) return true;
+	else if((valstr.compare("false") == 0) || (valstr.compare("no") == 0)
+	|| (valstr.compare("off") == 0) || (valstr.compare("0") == 0)) return false;
 	else return default_value;
 }
 

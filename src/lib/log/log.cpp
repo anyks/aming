@@ -3,7 +3,7 @@
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
-*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
+*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
 #include "log.h"
 
@@ -53,7 +53,7 @@ uid_t LogApp::getUid(const char * name){
 		// Выводим сообщение об ошибке
 		printf("failed to get userId from username [%s]\r\n", name);
 		// Выходим из приложения
-		exit(1);
+		exit(0);
 	}
 	// Выводим идентификатор пользователя
 	return pwd->pw_uid;
@@ -71,7 +71,7 @@ gid_t LogApp::getGid(const char * name){
 		// Выводим сообщение об ошибке
 		printf("failed to get groupId from groupname [%s]\r\n", name);
 		// Выходим из приложения
-		exit(1);
+		exit(0);
 	}
 	// Выводим идентификатор группы пользователя
 	return grp->gr_gid;
@@ -157,7 +157,7 @@ void LogApp::write_to_file(u_short type, const char * message){
 		// Сообщаем что каталог не может быть создан
 		perror("Unable to create directory for log files");
 		// Выходим из приложения
-		exit(1);
+		exit(0);
 	}
 	// Стартовая строка
 	string filename;

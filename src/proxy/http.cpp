@@ -3,7 +3,7 @@
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
-*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
+*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
 #include "http.h"
 
@@ -546,7 +546,7 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 		// Если подключение удачное
 		if(events & BEV_EVENT_CONNECTED){
 			// Если это сервер
-			if(subject == "server"){
+			if(subject.compare("server") == 0){
 				// Выводим в лог сообщение
 				http->proxy.log->write(
 					LOG_ACCESS,
@@ -568,7 +568,7 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				if(err) http->proxy.log->write(LOG_ERROR, "DNS error: %s", evutil_gai_strerror(err));
 			}
 			// Если отключился клиент
-			if(subject == "client"){
+			if(subject.compare("client") == 0){
 				// Выводим в лог сообщение
 				http->proxy.log->write(
 					LOG_ACCESS,
