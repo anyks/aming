@@ -65,6 +65,10 @@
 #define SITES_BLACK_LIST false
 #define SITES_WHITE_LIST false
 
+// Модуль скрытия заголовков
+#define HIDE_HEADERS_REQUEST false
+#define HIDE_HEADERS_RESPONSE false
+
 // Модуль IPv4
 #define IPV4_EXTERNAL "0.0.0.0"
 #define IPV4_INTERNAL "127.0.0.1"
@@ -111,11 +115,19 @@ class Config {
 			string internal;	// IP адрес интерфейса на котором будут приниматься запросы от клиентов
 		} __attribute__((packed));
 		/**
+		 * Hideheader Удалять указанные http заголовки из запроса или ответа
+		 */
+		struct Hideheader {
+			bool request;	// Убирать заголовки в запросе
+			bool response;	// Убирать заголовки в ответе
+		} __attribute__((packed));
+		/**
 		 * Logs Параметры логов
 		 */
 		struct Logs {
 			bool files;		// Разрешить хранить логи в файлах
 			bool enabled;	// Разрешить ведение логов
+			string dir;		// Адрес каталога для хранения логов
 		} __attribute__((packed));
 		/**
 		 * Authorization Параметры авторизации
@@ -165,24 +177,25 @@ class Config {
 			string piddir;	// Адрес хранения pid файла
 			string confdir;	// Адрес хранения конфигурационных файлов
 		} __attribute__((packed));
-		// Основные данные приложения
-		Ipv6 ipv6;						// Подключение по IPv6
-		Ipv4 ipv4;						// Подключение по IPv4
-		Logs logs;						// Параметры логов
-		Proxy proxy;					// Параметры самого прокси-сервера
-		Bloking bloking;				// Блокировка плохих запросов
-		Listsites listsites;			// Списки сайтов
-		Authorization authorization;	// Параметры авторизации
-		// Основные параметры прокси
-		u_short options;
 		// Адрес конфигурационного файла
 		string filename;
 	public:
+		// Основные данные приложения
+		struct Ipv6 ipv6;					// Подключение по IPv6
+		struct Ipv4 ipv4;					// Подключение по IPv4
+		struct Logs logs;					// Параметры логов
+		struct Proxy proxy;					// Параметры самого прокси-сервера
+		struct Bloking bloking;				// Блокировка плохих запросов
+		struct Listsites listsites;			// Списки сайтов
+		struct Hideheader hideheader;		// Удалять указанные http заголовки из запроса или ответа
+		struct Authorization authorization;	// Параметры авторизации
+		// Основные параметры прокси
+		u_short options;
 		/**
 		 * Config Конструктор модуля конфигурационного файла
 		 * @param filename адрес конфигурационного файла
 		 */
-		Config(const string & filename);
+		Config(const string filename = "");
 };
 
 #endif // _CONFIG_ANYKS_

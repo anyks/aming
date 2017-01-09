@@ -6,12 +6,12 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
 // MacOS X
-// g++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+// clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
 // Linux
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/x86_64-linux-gnu/5/libstdc++.a
 // FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // Debug:
 // ulimit -c unlimited
 // ./bin/http
@@ -27,12 +27,17 @@
 #include <sys/resource.h>
 #include "./lib/log/log.h"
 #include "./lib/osopt/osopt.h"
+#include "./lib/config/conf.h"
 #include "./proxy/http.h"
 
 // Пиды дочернего воркера
 pid_t cpid = -1;
 // Объект log модуля
 LogApp * logfile = NULL;
+// Объект конфигурационного файла
+Config * config = NULL;
+// Объект взаимодействия с ОС
+OsOpt * osopt = NULL;
 /**
  * signal_log Функция вывода значения сигнала в лог
  * @param signum номер сигнала
@@ -100,7 +105,7 @@ void sigterm_handler(int signum){
 		// Удаляем дочерний воркер
 		kill(cpid, SIGTERM);
 		// Удаляем pid файл
-		// rmPidfile(PID_FILE, EXIT_FAILURE);
+		if(osopt != NULL) osopt->rmPid(EXIT_FAILURE);
 	}
 	// Выходим
 	exit(0);
@@ -113,7 +118,10 @@ void sigsegv_handler(int signum){
 	// Логируем сообщение о сигнале
 	signal_log(signum);
 	// Если это родительский пид, удаляем pid файл
-	// if(cpid > 0) rmPidfile(PID_FILE, EXIT_FAILURE);
+	if((cpid > 0) && (osopt != NULL)){
+		// Удаляем pid файл
+		osopt->rmPid(EXIT_FAILURE);
+	}
 	// перепосылка сигнала
 	signal(signum, SIG_DFL);
 	// Выходим
@@ -124,7 +132,8 @@ void sigsegv_handler(int signum){
  */
 void create_proxy(){
 	// Установим максимальное кол-во дискрипторов которое можно открыть
-	// setFdLimit(MAX_FDS);
+	osopt->setFdLimit();
+	/*
 	// Выводим приглашение
 	logfile->welcome(
 		APP_NAME,		// название приложения
@@ -149,6 +158,7 @@ void create_proxy(){
 		APP_SUPPORT,	// адрес электронной почты службы поддержки
 		APP_AUTHOR		// ник или имя автора
 	);
+	*/
 	// Создаем объект для http прокси-сервера
 	HttpProxy http = HttpProxy(logfile, "anyks", "1.0", "127.0.0.1", "192.168.1.202");
 }
@@ -206,38 +216,46 @@ void run_worker(){
 int main(int argc, char * argv[]){
 	// Активируем локаль
 	setlocale(LC_ALL, "");
+
+	string configfile = "./config.ini";
+
+	// Создаем объект конфигурации
+	config = new Config(configfile);
+
+	cout << " ----------- " << argv << endl;
+
 	// Создаем модуль лога
 	logfile = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src", SIZE_LOG, true, APP_USER, APP_GROUP);
 	// Устанавливаем настройки операционной системы
-	OsOpt osopt(logfile, true);
+	osopt = new OsOpt(logfile, config, true);
 	// Активируем лимиты дампов ядра
-	osopt.enableCoreDumps();
+	osopt->enableCoreDumps();
 	// Выполняем запуск приложения от имени пользователя
-	osopt.privBind(APP_USER, APP_GROUP);
+	osopt->privBind();
 	/*
 	// Наши ID процесса и сессии
 	pid_t pid, sid;
 	// Ответвляемся от родительского процесса
 	pid = fork();
 	// Если пид не создан тогда выходим
-	if(pid < 0) rm_pidfile(PID_FILE, EXIT_FAILURE);
+	if(pid < 0) osopt->rmPid(EXIT_FAILURE);
 	// Если с PID'ом все получилось, то родительский процесс можно завершить.
-	if(pid > 0) rm_pidfile(PID_FILE, EXIT_SUCCESS);
+	if(pid > 0) osopt->rmPid(EXIT_SUCCESS);
 	// Изменяем файловую маску
 	umask(0);
 	// Здесь можно открывать любые журналы
 	// Создание нового SID для дочернего процесса
 	sid = setsid();
 	// Если идентификатор сессии дочернего процесса не существует
-	if(sid < 0) rm_pidfile(PID_FILE, EXIT_FAILURE);
+	if(sid < 0) osopt->rmPid(EXIT_FAILURE);
 	// Изменяем текущий рабочий каталог
-	if((chdir("/")) < 0) rm_pidfile(PID_FILE, EXIT_FAILURE);
+	if((chdir("/")) < 0) osopt->rmPid(EXIT_FAILURE);
 	// Закрываем стандартные файловые дескрипторы
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
 	// Создаем pid файл
-	set_pidfile(PID_FILE);
+	osopt->mkPid();
 	*/
 	// Устанавливаем сигнал установки подключения
 	signal(SIGPIPE, sigpipe_handler);	// Запись в разорванное соединение (пайп, сокет)
@@ -259,8 +277,12 @@ int main(int argc, char * argv[]){
 	signal(SIGTTOU, sigterm_handler);	// Попытка записи на терминал фоновым процессом
 	// Запускаем воркер
 	run_worker();
+	// Удаляем объект взаимодействия с ОС
+	delete osopt;
 	// Удаляем лог
 	delete logfile;
+	// Удаляем конфиг
+	delete config;
 	// Выходим
 	return 0;
 }

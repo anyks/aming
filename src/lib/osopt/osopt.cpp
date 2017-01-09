@@ -44,43 +44,50 @@ OsOpt::OsData OsOpt::getOsName(){
 	return result;
 }
 /**
- * setPidfile Функция создания pid файла
- * @param filename название файла pid
+ * mkPid Функция создания pid файла
  */
-void OsOpt::setPidfile(const char * filename){
-	// Открываем файл на запись
-	FILE * f = fopen(filename, "w");
-	// Если файл открыт
-	if(f){
-		// Записываем в файл pid процесса
-		fprintf(f, "%u", getpid());
-		// Закрываем файл
-		fclose(f);
+void OsOpt::mkPid(){
+	// Если конфигурационный объект существует
+	if(config != NULL){
+		// Создаем адрес pid файла
+		string filename = (config->proxy.piddir + string("/") + config->proxy.name + ".pid");
+		// Открываем файл на запись
+		FILE * f = fopen(filename.c_str(), "w");
+		// Если файл открыт
+		if(f){
+			// Записываем в файл pid процесса
+			fprintf(f, "%u", getpid());
+			// Закрываем файл
+			fclose(f);
+		}
 	}
 }
 /**
- * rmPidfile Функция удаления pid файла
- * @param filename название файла pid
- * @param ext      тип ошибки
+ * rmPid Функция удаления pid файла
+ * @param ext тип ошибки
  */
-void OsOpt::rmPidfile(const char * filename, int ext){
-	// Удаляем файл
-	remove(filename);
-	// Выходим из приложения
-	exit(ext);
+void OsOpt::rmPid(int ext){
+	// Если конфигурационный объект существует
+	if(config != NULL){
+		// Создаем адрес pid файла
+		string filename = (config->proxy.piddir + string("/") + config->proxy.name + ".pid");
+		// Удаляем файл
+		remove(filename.c_str());
+		// Выходим из приложения
+		exit(ext);
+	}
 }
 /**
  * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
- * @param  maxfd максимальное количество файловых дескрипторов
- * @return       количество установленных файловых дескрипторов
+ * @return количество установленных файловых дескрипторов
  */
-int OsOpt::setFdLimit(u_int maxfd){
+int OsOpt::setFdLimit(){
 	// Структура для установки лимитов
 	struct rlimit lim;
 	// зададим текущий лимит на кол-во открытых дискриптеров
-	lim.rlim_cur = maxfd;
+	lim.rlim_cur = config->proxy.maxfds;
 	// зададим максимальный лимит на кол-во открытых дискриптеров
-	lim.rlim_max = maxfd;
+	lim.rlim_max = config->proxy.maxfds;
 	// установим указанное кол-во
 	return setrlimit(RLIMIT_NOFILE, &lim);
 }
@@ -146,22 +153,20 @@ gid_t OsOpt::getGid(const char * name){
 }
 /**
  * privBind Функция запускает приложение от имени указанного пользователя
- * @param user  название или идентификатор пользователя
- * @param group название или идентификатор группы пользователя
  */
-void OsOpt::privBind(const string &user, const string &group){
+void OsOpt::privBind(){
 	uid_t uid;	// Идентификатор пользователя
 	gid_t gid;	// Идентификатор группы
 	// Размер строкового типа данных
 	string::size_type sz;
 	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber(user)) uid = stoi(user, &sz);
+	if(isNumber(config->proxy.user)) uid = stoi(config->proxy.user, &sz);
 	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid(user.c_str());
+	else uid = getUid(config->proxy.user.c_str());
 	// Если идентификатор группы пришел в виде числа
-	if(isNumber(group)) gid = stoi(group, &sz);
+	if(isNumber(config->proxy.group)) gid = stoi(config->proxy.group, &sz);
 	// Если идентификатор группы пришел в виде названия
-	else gid = getGid(group.c_str());
+	else gid = getGid(config->proxy.group.c_str());
 	// Устанавливаем идентификатор пользователя
 	setuid(uid);
 	// Устанавливаем идентификатор группы
@@ -329,11 +334,13 @@ void OsOpt::disable(){
 /**
  * OsOpt Конструктор
  * @param log     объект лога для вывода информации
+ * @param config  объект конфигурационных файлов
  * @param enabled модуль активирован или деактивирован
  */
-OsOpt::OsOpt(LogApp * log, bool enabled){
+OsOpt::OsOpt(LogApp * log, Config * config, bool enabled){
 	// Запоминаем настройки системы
 	this->log		= log;
+	this->config	= config;
 	this->enabled	= enabled;
 	// Если модуль активирован тогда запускаем активацию
 	if(this->enabled) run();

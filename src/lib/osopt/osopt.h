@@ -15,6 +15,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include "../log/log.h"
+#include "../config/conf.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -33,14 +34,10 @@ class OsOpt {
 		} __attribute__((packed));
 		// Объект лога
 		LogApp * log = NULL;
+		// Объект конфигурационного файла
+		Config * config = NULL;
 		// Активация модуля
 		bool enabled = false;
-		/**
-		 * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
-		 * @param  maxfd максимальное количество файловых дескрипторов
-		 * @return       количество установленных файловых дескрипторов
-		 */
-		int setFdLimit(u_int maxfd);
 		/**
 		 * isNumber Функция проверки является ли строка числом
 		 * @param  str строка для проверки
@@ -95,28 +92,30 @@ class OsOpt {
 		 */
 		bool enableCoreDumps();
 		/**
-		 * setPidfile Функция создания pid файла
-		 * @param filename название файла pid
+		 * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
+		 * @return количество установленных файловых дескрипторов
 		 */
-		void setPidfile(const char * filename);
+		int setFdLimit();
 		/**
-		 * rmPidfile Функция удаления pid файла
-		 * @param filename название файла pid
-		 * @param ext      тип ошибки
+		 * mkPid Функция создания pid файла
 		 */
-		void rmPidfile(const char * filename, int ext);
+		void mkPid();
+		/**
+		 * rmPid Функция удаления pid файла
+		 * @param ext тип ошибки
+		 */
+		void rmPid(int ext);
 		/**
 		 * privBind Функция запускает приложение от имени указанного пользователя
-		 * @param user  название или идентификатор пользователя
-		 * @param group название или идентификатор группы пользователя
 		 */
-		void privBind(const string &user, const string &group);
+		void privBind();
 		/**
 		 * OsOpt Конструктор
 		 * @param log     объект лога для вывода информации
+		 * @param config  объект конфигурационных файлов
 		 * @param enabled модуль активирован или деактивирован
 		 */
-		OsOpt(LogApp * log = NULL, bool enabled = false);
+		OsOpt(LogApp * log = NULL, Config * config = NULL, bool enabled = false);
 };
 
 #endif // _OS_ANYKS_
