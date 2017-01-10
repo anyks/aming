@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#include "../config/conf.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -34,30 +35,21 @@ using namespace std;
 #define TOLOG_FILES 0x02
 #define TOLOG_DATABASE 0x04
 
-// Адрес расположения логов
-#define DIR_LOG "/var/log"
-// Размер файла лога в кбт
-#define SIZE_LOG 1024
-
 /**
  * LogApp Класс для работы с логами
  */
 class LogApp {
 	private:
-		// Пользователь от которого устанавливаются права на каталог
-		string user;
-		// Группа к которой принадлежит пользователь
-		string group;
 		// Название системы
 		string name;
-		// Адрес каталога где хранятся логи
-		string dirlog;
 		// Разрешено использовать лог или запрещено
 		bool enabled;
 		// Тип логов (1 - запись в файл, 2 - запись в коносль, 3 - запись в базу данных)
 		u_short type;
 		// Размер максимального лог файла в килобайтах
 		size_t size;
+		// Конфигурационные данные
+		Config * config = NULL;
 		/**
 		 * is_number Функция проверки является ли строка числом
 		 * @param  str строка для проверки
@@ -140,62 +132,14 @@ class LogApp {
 		void disable();
 		/**
 		 * welcome Функция выводящая приглашение
-		 * @param appname     название приложения
-		 * @param name        пользовательское название
-		 * @param version     версия приложения
-		 * @param host        хост на котором поднято приложение
-		 * @param ipv4        активация IPv4
-		 * @param ipv6        активация IPv6
-		 * @param gzip_t      активация обмена сжатыми данными
-		 * @param gzip_r      сжимать полученные не сжатые данные
-		 * @param smart       активация умного прокси
-		 * @param keepalive   активация постоянных подключений
-		 * @param http        тип поднятого прокси
-		 * @param socks5      тип поднятого прокси
-		 * @param connect     активация коннект прокси
-		 * @param maxcon      максимальное количество подключений
-		 * @param http_port   порт http прокси
-		 * @param socks5_port порт socks5 прокси
-		 * @param copyright   копирайт автора прокси
-		 * @param site        сайт автора прокси
-		 * @param email       адрес электронной почты автора
-		 * @param support     адрес электронной почты службы поддержки
-		 * @param author      ник или имя автора
 		 */
-		void welcome(
-			const char * appname,
-			const char * name,
-			const char * version,
-			const char * host,
-			bool ipv4,
-			bool ipv6,
-			bool gzip_t,
-			bool gzip_r,
-			bool smart,
-			bool keepalive,
-			bool http,
-			bool socks5,
-			bool connect,
-			int maxcon,
-			u_int http_port,
-			u_int socks5_port,
-			const char * copyright,
-			const char * site,
-			const char * email,
-			const char * support,
-			const char * author
-		);
+		void welcome();
 		/**
 		 * LogApp Конструктор log класса
+		 * @param config  конфигурационные данные
 		 * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль, TOLOG_DATABASE - запись в базу данных)
-		 * @param name    название системы
-		 * @param dir     адрес куда следует сохранять логи
-		 * @param size    размер файла лога
-		 * @param enabled активирован модуль или деактивирован
-		 * @param user    пользователь от которого устанавливается права на каталог
-		 * @param group   группа к которому принадлежит пользователь
 		 */
-		LogApp(u_short type = TOLOG_CONSOLE, const char * name = "anyks", const char * dir = DIR_LOG, size_t size = SIZE_LOG, bool enabled = true, string user = "", string group = "");
+		LogApp(Config * config = NULL, u_short type = TOLOG_CONSOLE);
 };
 
 #endif // _LOG_ANYKS_

@@ -96,14 +96,19 @@ int OsOpt::setFdLimit(){
  * @return результат установки лимитов дампов ядра
  */
 bool OsOpt::enableCoreDumps(){
-	// Структура лимитов дампов
-	struct rlimit limit;
-	// Устанавливаем текущий лимит равный бесконечности
-	limit.rlim_cur = RLIM_INFINITY;
-	// Устанавливаем максимальный лимит равный бесконечности
-	limit.rlim_max = RLIM_INFINITY;
-	// Выводим результат установки лимита дампов ядра
-	return (setrlimit(RLIMIT_CORE, &limit) == 0);
+	// Если отладка включена
+	if(config->proxy.debug){
+		// Структура лимитов дампов
+		struct rlimit limit;
+		// Устанавливаем текущий лимит равный бесконечности
+		limit.rlim_cur = RLIM_INFINITY;
+		// Устанавливаем максимальный лимит равный бесконечности
+		limit.rlim_max = RLIM_INFINITY;
+		// Выводим результат установки лимита дампов ядра
+		return (setrlimit(RLIMIT_CORE, &limit) == 0);
+	}
+	// Сообщаем что операция не удачная
+	return false;
 }
 /**
  * isNumber Функция проверки является ли строка числом
@@ -335,13 +340,17 @@ void OsOpt::disable(){
  * OsOpt Конструктор
  * @param log     объект лога для вывода информации
  * @param config  объект конфигурационных файлов
- * @param enabled модуль активирован или деактивирован
  */
-OsOpt::OsOpt(LogApp * log, Config * config, bool enabled){
-	// Запоминаем настройки системы
-	this->log		= log;
-	this->config	= config;
-	this->enabled	= enabled;
-	// Если модуль активирован тогда запускаем активацию
-	if(this->enabled) run();
+OsOpt::OsOpt(LogApp * log, Config * config){
+	// Если конфигурационный файл передан
+	if((config != NULL) && (log != NULL)){
+		// Запоминаем настройки системы
+		this->log		= log;
+		this->config	= config;
+		this->enabled	= this->config->proxy.optimos;
+		// Если модуль активирован тогда запускаем активацию
+		if(this->enabled) run();
+		// Активируем лимиты дампов ядра
+		enableCoreDumps();
+	}
 }

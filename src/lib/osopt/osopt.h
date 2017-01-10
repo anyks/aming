@@ -39,6 +39,11 @@ class OsOpt {
 		// Активация модуля
 		bool enabled = false;
 		/**
+		 * enableCoreDumps Функция активации создания дампа ядра
+		 * @return результат установки лимитов дампов ядра
+		 */
+		bool enableCoreDumps();
+		/**
 		 * isNumber Функция проверки является ли строка числом
 		 * @param  str строка для проверки
 		 * @return     результат проверки
@@ -87,11 +92,6 @@ class OsOpt {
 		 */
 		void disable();
 		/**
-		 * enableCoreDumps Функция активации создания дампа ядра
-		 * @return результат установки лимитов дампов ядра
-		 */
-		bool enableCoreDumps();
-		/**
 		 * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
 		 * @return количество установленных файловых дескрипторов
 		 */
@@ -113,9 +113,8 @@ class OsOpt {
 		 * OsOpt Конструктор
 		 * @param log     объект лога для вывода информации
 		 * @param config  объект конфигурационных файлов
-		 * @param enabled модуль активирован или деактивирован
 		 */
-		OsOpt(LogApp * log = NULL, Config * config = NULL, bool enabled = false);
+		OsOpt(LogApp * log = NULL, Config * config = NULL);
 };
 
 #endif // _OS_ANYKS_

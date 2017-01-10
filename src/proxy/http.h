@@ -21,6 +21,7 @@
 #include <event2/bufferevent.h>
 #include "../lib/log/log.h"
 #include "../lib/http/http.h"
+#include "../lib/config/conf.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -31,56 +32,15 @@ using namespace std;
 #define EVLOOP_NO_EXIT_ON_EMPTY	0x04
 
 // Флаги таймеров
-#define TM_SERVER	0x01
-#define TM_CLIENT	0x02
-
-// Внутренний интерфейс
-#define INTERNAL_IP "127.0.0.1"
-// Внешний интерфейс
-#define EXTERNAL_IP "0.0.0.0"
-// Максимальное количество подключений с одного клиента
-#define MAX_CONNECTS 100
-// Максимальный размер буфера
-#define BUFFER_WRITE_SIZE -1 // 2048
-// Максимальный размер буфера для чтения http данных
-#define BUFFER_READ_SIZE -1 // 4096
-// Порт сервера
-#define SERVER_PORT 5555
-// Таймаут времени на чтение
-#define READ_TIMEOUT 10
-// Таймаут времени на запись
-#define WRITE_TIMEOUT 8
-// Таймаут ожидания коннекта
-#define KEEP_ALIVE_TIMEOUT 5
+#define TM_SERVER 0x01
+#define TM_CLIENT 0x02
 
 /**
  * Proxy Структура прокси сервера
  */
 struct Proxy {
-	/**
-	 * Timeout Структура таймаутов
-	 */
-	struct Timeout {
-		u_short read;		// Таймаут времени на чтение
-		u_short write;		// Таймаут времени на запись
-		u_short keepalive;	// Таймаут ожидания коннекта
-	} __attribute__((packed));
-	/**
-	 * BufferSize Структура размеров буфера
-	 */
-	struct BufferSize {
-		int read;		// Буфер на чтение
-		int write;		// Буфер на запись
-	} __attribute__((packed));
-	// Переменные структуры
-	string		name;		// Название прокси сервера
-	string		version;	// Версия прокси сервера
-	string		internal;	// Внутренний адрес прокси сервера
-	string		external;	// Внешний адрес прокси сервера
-	u_short		options;	// Параметры прокси сервера
-	Timeout		timeout;	// Таймауты прокси сервера
-	BufferSize	bsize;		// Размеры буферов
-	LogApp		* log;		// Указатель на объект ведения логов
+	LogApp * log;		// Объект ведения логов
+	Config * config;	// Объект конфигурационных данных
 } __attribute__((packed));
 /**
  * Connects Класс подключений к прокси серверу
@@ -242,10 +202,9 @@ class BufferHttpProxy {
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param string  name    имя ресурса
-		 * @param string  version версия ресурса
 		 * @param u_short options параметры прокси сервера
 		 */
-		BufferHttpProxy(string name, string version, u_short options);
+		BufferHttpProxy(string name, u_short options);
 		/**
 		 * ~BufferHttpProxy Деструктор
 		 */
@@ -366,35 +325,10 @@ class HttpProxy {
 	public:
 		/**
 		 * HttpProxy Конструктор
-		 * @param log        указатель на объект ведения логов
-		 * @param name       название прокси сервера
-		 * @param version    версия прокси сервера
-		 * @param internal   внутренний хост прокси сервера
-		 * @param external   внешний хост прокси сервера
-		 * @param port       порт прокси сервера
-		 * @param buffrsize  размер буфера сокета на чтение
-		 * @param buffwsize  размер буфера сокета на запись
-		 * @param maxcls     максимальное количество подключаемых клиентов к прокси серверу (-1 автоматически)
-		 * @param rtm        таймаут на чтение данных из сокета сервера
-		 * @param wtm        таймаут на запись данных из сокета клиента и сервера
-		 * @param katm       таймаут на чтение данных из сокета клиента
-		 * @param options    опции прокси сервера
+		 * @param log    объект ведения логов
+		 * @param config объект конфигурационных данных
 		 */
-		HttpProxy(
-			LogApp			* log		= NULL,
-			const char		* name		= "anyks",
-			const char		* version	= APP_VERSION,
-			const char		* internal	= INTERNAL_IP,
-			const char		* external	= EXTERNAL_IP,
-			u_int			port		= SERVER_PORT,
-			int				buffrsize	= BUFFER_READ_SIZE,
-			int				buffwsize	= BUFFER_WRITE_SIZE,
-			int				maxcls		= SOMAXCONN,
-			u_short			rtm			= READ_TIMEOUT,
-			u_short			wtm			= WRITE_TIMEOUT,
-			u_short			katm		= KEEP_ALIVE_TIMEOUT,
-			u_short			options		= OPT_CONNECT | OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG | OPT_PGZIP
-		);
+		HttpProxy(LogApp * log = NULL, Config * config = NULL);
 		/**
 		 * HttpProxy Конструктор
 		 */

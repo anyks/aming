@@ -14,10 +14,13 @@
 // clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 // Debug:
 // ulimit -c unlimited
-// ./bin/http
+// ./bin/http /Volumes/Data/Work/proxy/src/config.ini
 // gdb ./bin/http ./http.core
 // $ lldb --core "/cores/core.xxxxx"
 //   (lldb) bt all
+// Отладка в реальном режиме времени
+// lldb ./bin/http /Volumes/Data/Work/proxy/src/config.ini
+// lldb r
 #include <unistd.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -133,34 +136,10 @@ void sigsegv_handler(int signum){
 void create_proxy(){
 	// Установим максимальное кол-во дискрипторов которое можно открыть
 	osopt->setFdLimit();
-	/*
 	// Выводим приглашение
-	logfile->welcome(
-		APP_NAME,		// название приложения
-		"anyks",		// пользовательское название
-		APP_VERSION,	// версия приложения
-		"0.0.0.0",		// хост на котором поднято приложение
-		true,			// активация IPv4
-		false,			// активация IPv6
-		true,			// активация обмена сжатыми данными
-		true,			// сжимать полученные не сжатые данные
-		true,			// активация умного прокси
-		true,			// активация постоянных подключений
-		true,			// тип поднятого прокси
-		true,			// тип поднятого прокси
-		true,			// активация коннект прокси
-		-1,				// максимальное количество подключений
-		HTTP_PORT,		// порт http прокси
-		SOCKS5_PORT,	// порт socks5 прокси
-		APP_COPYRIGHT,	// копирайт автора прокси
-		APP_SITE,		// сайт автора прокси
-		APP_EMAIL,		// адрес электронной почты автора
-		APP_SUPPORT,	// адрес электронной почты службы поддержки
-		APP_AUTHOR		// ник или имя автора
-	);
-	*/
+	logfile->welcome();
 	// Создаем объект для http прокси-сервера
-	HttpProxy http = HttpProxy(logfile, "anyks", "1.0", "127.0.0.1", "192.168.1.202");
+	HttpProxy http = HttpProxy(logfile, config);
 }
 /**
  * run_worker Функция запуска воркера
@@ -216,47 +195,40 @@ void run_worker(){
 int main(int argc, char * argv[]){
 	// Активируем локаль
 	setlocale(LC_ALL, "");
-
-	string configfile = "./config.ini";
-
+	// Получаем адрес конфигурационного файла
+	string configfile = (argc >= 2 ? argv[1] : "");
 	// Создаем объект конфигурации
 	config = new Config(configfile);
-
-	cout << " ----------- " << argv << endl;
-
 	// Создаем модуль лога
-	logfile = new LogApp(TOLOG_FILES | TOLOG_CONSOLE, "anyks", "/Volumes/Data/Work/proxy/src", SIZE_LOG, true, APP_USER, APP_GROUP);
+	logfile = new LogApp(config, TOLOG_FILES | TOLOG_CONSOLE);
 	// Устанавливаем настройки операционной системы
-	osopt = new OsOpt(logfile, config, true);
-	// Активируем лимиты дампов ядра
-	osopt->enableCoreDumps();
+	osopt = new OsOpt(logfile, config);
 	// Выполняем запуск приложения от имени пользователя
 	osopt->privBind();
-	/*
-	// Наши ID процесса и сессии
-	pid_t pid, sid;
-	// Ответвляемся от родительского процесса
-	pid = fork();
-	// Если пид не создан тогда выходим
-	if(pid < 0) osopt->rmPid(EXIT_FAILURE);
-	// Если с PID'ом все получилось, то родительский процесс можно завершить.
-	if(pid > 0) osopt->rmPid(EXIT_SUCCESS);
-	// Изменяем файловую маску
-	umask(0);
-	// Здесь можно открывать любые журналы
-	// Создание нового SID для дочернего процесса
-	sid = setsid();
-	// Если идентификатор сессии дочернего процесса не существует
-	if(sid < 0) osopt->rmPid(EXIT_FAILURE);
-	// Изменяем текущий рабочий каталог
-	if((chdir("/")) < 0) osopt->rmPid(EXIT_FAILURE);
-	// Закрываем стандартные файловые дескрипторы
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
-	// Создаем pid файл
-	osopt->mkPid();
-	*/
+	// Если запуск должен быть в виде демона
+	if(config->proxy.daemon){
+		// Ответвляемся от родительского процесса
+		pid_t pid = fork();
+		// Если пид не создан тогда выходим
+		if(pid < 0) osopt->rmPid(EXIT_FAILURE);
+		// Если с PID'ом все получилось, то родительский процесс можно завершить.
+		if(pid > 0) osopt->rmPid(EXIT_SUCCESS);
+		// Изменяем файловую маску
+		umask(0);
+		// Здесь можно открывать любые журналы
+		// Создание нового SID для дочернего процесса
+		pid_t sid = setsid();
+		// Если идентификатор сессии дочернего процесса не существует
+		if(sid < 0) osopt->rmPid(EXIT_FAILURE);
+		// Изменяем текущий рабочий каталог
+		if((chdir("/")) < 0) osopt->rmPid(EXIT_FAILURE);
+		// Закрываем стандартные файловые дескрипторы
+		close(STDIN_FILENO);
+		close(STDOUT_FILENO);
+		close(STDERR_FILENO);
+		// Создаем pid файл
+		osopt->mkPid();
+	}
 	// Устанавливаем сигнал установки подключения
 	signal(SIGPIPE, sigpipe_handler);	// Запись в разорванное соединение (пайп, сокет)
 	// signal(SIGCHLD, sigchld_handler);// Дочерний процесс завершен или остановлен

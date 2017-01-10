@@ -212,31 +212,36 @@ void BufferHttpProxy::close_server(){
  */
 void BufferHttpProxy::set_timeout(u_short type, bool read, bool write){
 	// Устанавливаем таймаут ожидания результата на чтение с сервера
-	struct timeval _read = {this->proxy.timeout.read, 0};
+	struct timeval _read = {this->proxy.config->timeouts.read, 0};
 	// Устанавливаем таймаут записи результата на запись
-	struct timeval _write = {this->proxy.timeout.write, 0};
+	struct timeval _write = {this->proxy.config->timeouts.write, 0};
 	// Устанавливаем таймаут ожидания результата на чтение с клиента
-	struct timeval _keepalive = {this->proxy.timeout.keepalive, 0};
+	struct timeval _keepalive = {this->proxy.config->timeouts.keepalive, 0};
 	// Устанавливаем таймауты для сервера
-	if((type & TM_SERVER) && (this->events.server != NULL))
+	if((type & TM_SERVER) && (this->events.server != NULL)){
+		// Если время постоянного подключения меньше 1 секунды значит таймер ставить не надо
+		if(this->proxy.config->timeouts.keepalive < 1) read = false;
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.server, (read ? &_read : NULL), (write ? &_write : NULL));
+	}
 	// Устанавливаем таймауты для клиента
-	if((type & TM_CLIENT) && (this->events.client != NULL))
+	if((type & TM_CLIENT) && (this->events.client != NULL)){
+		// Если время постоянного подключения меньше 1 секунды значит таймер ставить не надо
+		if(this->proxy.config->timeouts.keepalive < 1) read = false;
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.client, (read ? &_keepalive : NULL), (write ? &_write : NULL));
+	}
 }
 /**
  * BufferHttpProxy Конструктор
  * @param string  name    имя ресурса
- * @param string  version версия ресурса
  * @param u_short options параметры прокси сервера
  */
-BufferHttpProxy::BufferHttpProxy(string name, string version, u_short options){
+BufferHttpProxy::BufferHttpProxy(string name, u_short options){
 	// Инициализируем мютекс
 	pthread_mutex_init(&this->mutex, 0);
 	// Создаем объект для работы с http заголовками
-	this->parser = Http(name, options, version);
+	this->parser = Http(name, options);
 }
 /**
  * ~BufferHttpProxy Деструктор
@@ -409,6 +414,15 @@ int HttpProxy::connect_server(void * ctx){
 				|| (http->server.port != port))) http->close_server();
 				// Если сервер еще не подключен
 				if(http->events.server == NULL){
+					// Создаем хост подключения
+					string host;
+					// Определяем тип подключения
+					switch(http->proxy.config->proxy.ipver){
+						// Для протокола IPv4
+						case 4: host = http->proxy.config->ipv4.external; break;
+						// Для протокола IPv6
+						case 6: host = http->proxy.config->ipv6.external; break;
+					}
 					// Сокет подключения
 					evutil_socket_t sock = -1;
 					// Запоминаем хост и порт сервера
@@ -434,11 +448,11 @@ int HttpProxy::connect_server(void * ctx){
 					// Устанавливаем произвольный порт для локального подключения
 					local_addr.sin_port = htons(0);
 					// Устанавливаем адрес для локальго подключения
-					local_addr.sin_addr.s_addr = inet_addr(http->proxy.external.c_str());
+					local_addr.sin_addr.s_addr = inet_addr(host.c_str());
 					// Выполняем бинд на сокет
 					if(::bind(http->sockets.server, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0){
 						// Выводим в лог сообщение
-						http->proxy.log->write(LOG_ERROR, "bind local network [%s] error", "192.168.3.43");
+						http->proxy.log->write(LOG_ERROR, "bind local network [%s] error", host.c_str());
 						// Выходим
 						return 0;
 					}
@@ -453,7 +467,7 @@ int HttpProxy::connect_server(void * ctx){
 					// Разблокируем сокет
 					// set_nonblock(http->sockets.server, http->log);
 					// Устанавливаем размеры буферов
-					set_buffer_size(http->sockets.server, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
+					set_buffer_size(http->sockets.server, http->proxy.config->buffers.read, http->proxy.config->buffers.write, http->proxy.log);
 					// Если подключение постоянное
 					if(http->client.alive){
 						// Устанавливаем TCP_NODELAY для сервера и клиента
@@ -676,7 +690,7 @@ void HttpProxy::do_request(struct bufferevent * bev, void * ctx, bool flag){
 	// Если подключение не передано
 	if(http != NULL){
 		// Определяем connect прокси разрешен
-		bool conn_enabled = (http->proxy.options & OPT_CONNECT);
+		bool conn_enabled = (http->proxy.config->options & OPT_CONNECT);
 		// Если данные еще не заполнены, но они есть в массиве
 		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
 			// Очищаем таймеры для клиента и сервера
@@ -770,7 +784,7 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 		// Метод подключения, не connect
 		bool not_connect = true;
 		// Определяем connect прокси разрешен
-		bool conn_enabled = (http->proxy.options & OPT_CONNECT);
+		bool conn_enabled = (http->proxy.config->options & OPT_CONNECT);
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input = bufferevent_get_input(bev);
 		// Если авторизация прошла, и коннект произведен
@@ -779,14 +793,17 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 			if(http->client.connect && (conn_enabled || http->client.https)){
 				// Запоминаем что это метод connect
 				not_connect = false;
-				// Получаем буферы входящих данных и исходящих
-				struct evbuffer * output = bufferevent_get_output(http->events.server);
-				// Удаляем таймер для клиента
-				http->set_timeout(TM_CLIENT);
-				// Устанавливаем таймер для сервера
-				http->set_timeout(TM_SERVER, true, true);
-				// Выводим ответ сервера
-				evbuffer_add_buffer(output, input);
+				// Если сервер подключен
+				if(http->events.server != NULL){
+					// Получаем буферы входящих данных и исходящих
+					struct evbuffer * output = bufferevent_get_output(http->events.server);
+					// Удаляем таймер для клиента
+					http->set_timeout(TM_CLIENT);
+					// Устанавливаем таймер для сервера
+					http->set_timeout(TM_SERVER, true, true);
+					// Выводим ответ сервера
+					evbuffer_add_buffer(output, input);
+				}
 			}
 		}
 		// Если это обычный запрос
@@ -828,7 +845,7 @@ void * HttpProxy::connection(void * ctx){
 			// Выполняем захват мютекса
 			connect->lock();
 			// Если количество подключений достигло предела
-			if(connect->get() >= MAX_CONNECTS) connect->wait();
+			if(connect->get() >= http->proxy.config->proxy.maxcon) connect->wait();
 			// Выполняем разблокировку мютекса
 			connect->unlock();
 		}
@@ -839,7 +856,7 @@ void * HttpProxy::connection(void * ctx){
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 		// Устанавливаем размеры буферов
-		set_buffer_size(http->sockets.client, http->proxy.bsize.read, http->proxy.bsize.write, http->proxy.log);
+		set_buffer_size(http->sockets.client, http->proxy.config->buffers.read, http->proxy.config->buffers.write, http->proxy.log);
 		// Устанавливаем таймер для клиента
 		http->set_timeout(TM_CLIENT, true);
 		// Устанавливаем коллбеки
@@ -918,7 +935,7 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Выводим в лог сообщение
 		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), fd);
 		// Создаем новый объект подключения
-		BufferHttpProxy * http = new BufferHttpProxy(proxy->server.name, proxy->server.version, proxy->server.options);
+		BufferHttpProxy * http = new BufferHttpProxy(proxy->server.config->proxy.name, proxy->server.config->options);
 		// Запоминаем параметры прокси сервера
 		http->proxy = proxy->server;
 		// Запоминаем список подключений
@@ -939,60 +956,29 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 }
 /**
  * HttpProxy Конструктор
- * @param log        указатель на объект ведения логов
- * @param name       название прокси сервера
- * @param version    версия прокси сервера
- * @param internal   внутренний хост прокси сервера
- * @param external   внешний хост прокси сервера
- * @param port       порт прокси сервера
- * @param buffrsize  размер буфера сокета на чтение
- * @param buffwsize  размер буфера сокета на запись
- * @param maxcls     максимальное количество подключаемых клиентов к прокси серверу (-1 автоматически)
- * @param rtm        таймаут на чтение данных из сокета сервера
- * @param wtm        таймаут на запись данных из сокета клиента и сервера
- * @param katm       таймаут на чтение данных из сокета клиента
- * @param options    опции прокси сервера
+ * @param log    объект ведения логов
+ * @param config объект конфигурационных данных
  */
-HttpProxy::HttpProxy(
-	LogApp * log,
-	const char * name,
-	const char * version,
-	const char * internal,
-	const char * external,
-	u_int port,
-	int buffrsize,
-	int buffwsize,
-	int maxcls,
-	u_short rtm,
-	u_short wtm,
-	u_short katm,
-	u_short options
-){
+HttpProxy::HttpProxy(LogApp * log, Config * config){
 	// Если лог существует
-	if(log != NULL){
+	if((log != NULL) && (config != NULL)){
 		// Запоминаем параметры прокси сервера
-		this->server = {
-			name,		// Запоминаем название системы
-			version,	// Запоминаем версию системы
-			internal,	// Запоминаем внутренний адрес прокси сервера
-			external,	// Запоминаем внешний адрес прокси сервера
-			options,	// Запоминаем тип прокси сервера
-			{
-				rtm,	// Запоминаем Read timeout
-				wtm,	// Запоминаем Write timeout
-				katm,	// Запоминаем Keep-Alive timeout
-			},{
-				buffrsize,	// Размер буфера на чтение
-				buffwsize	// Размер буфера на запись
-			},
-			log // Запоминаем объект ведения логов
-		};
+		this->server = {log, config};
 		// Структура для создания сервера приложения
 		struct sockaddr_in sin;
 		// Создаем новую базу
 		struct event_base * base = event_base_new();
+		// Создаем хост подключения
+		string host;
+		// Определяем тип подключения
+		switch(this->server.config->proxy.ipver){
+			// Для протокола IPv4
+			case 4: host = this->server.config->ipv4.internal; break;
+			// Для протокола IPv6
+			case 6: host = this->server.config->ipv6.internal; break;
+		}
 		// Структура определяющая параметры сервера приложений
-		struct hostent * server = gethostbyname(internal);
+		struct hostent * server = gethostbyname(host.c_str());
 		// Очищаем всю структуру
 		memset(&sin, 0, sizeof(sin));
 		// Listen on 0.0.0.0
@@ -1002,7 +988,7 @@ HttpProxy::HttpProxy(
 		// Указываем адрес прокси сервера
 		sin.sin_addr.s_addr = * ((unsigned long *) server->h_addr);
 		// Указываем локальный порт
-		sin.sin_port = htons(port);
+		sin.sin_port = htons(this->server.config->proxy.port);
 		// Вешаем приложение на порт
 		listener = evconnlistener_new_bind(
 			base, &HttpProxy::accept_connect, this,
@@ -1010,7 +996,7 @@ HttpProxy::HttpProxy(
 			// LEV_OPT_THREADSAFE |
 			LEV_OPT_CLOSE_ON_FREE,// |
 			// LEV_OPT_LEAVE_SOCKETS_BLOCKING,
-			maxcls, (struct sockaddr *) &sin, sizeof(sin)
+			this->server.config->proxy.allcon, (struct sockaddr *) &sin, sizeof(sin)
 		);
 		// Если подключение не удалось
 		if(!listener){

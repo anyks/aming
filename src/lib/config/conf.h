@@ -10,11 +10,13 @@
 
 #include <string>
 #include <iostream>
+#include <sys/stat.h>
 #include "../ini/ini.h"
 
-// Название и версия прокси-сервера
+// Данные приложения
 #define APP_NAME "ANYKS"
 #define APP_VERSION "1.0"
+#define APP_YEAR "2017"
 #define APP_COPYRIGHT "ANYKS LLC"
 #define APP_SITE "http://anyks.com"
 #define APP_EMAIL "info@anyks.com"
@@ -61,6 +63,9 @@
 // Максимальное количество подключений с одного клиента
 #define MAX_CONNECTS 100
 
+// Общее количество одновременных подключений к прокси серверу (-1 = auto)
+#define ALL_CONNECTS -1
+
 // Модуль разрешенных списков файлов
 #define SITES_BLACK_LIST false
 #define SITES_WHITE_LIST false
@@ -77,9 +82,19 @@
 #define IPV6_EXTERNAL "::0"
 #define IPV6_INTERNAL "::1"
 
+// Размеры буферов клиента
+#define BUFFER_WRITE_SIZE -1
+#define BUFFER_READ_SIZE -1
+
+// Таймауты подключения
+#define TIMEOUTS_READ 10
+#define TIMEOUTS_WRITE 8
+#define TIMEOUTS_KEEPALIVE 5
+
 // Модуль логов
 #define LOGS_ENABLED true
 #define LOGS_FILES true
+#define LOGS_SIZE 1024
 
 // Модуль авторизаций
 #define AUTH_OS_USERS true
@@ -100,6 +115,21 @@ using namespace std;
  */
 class Config {
 	private:
+		/**
+		 * Timeout Структура таймаутов
+		 */
+		struct Timeouts {
+			u_short read;		// Таймаут времени на чтение
+			u_short write;		// Таймаут времени на запись
+			u_short keepalive;	// Таймаут ожидания коннекта
+		} __attribute__((packed));
+		/**
+		 * BufferSize Структура размеров буфера
+		 */
+		struct BufferSize {
+			int read;		// Буфер на чтение
+			int write;		// Буфер на запись
+		} __attribute__((packed));
 		/**
 		 * Ipv4 Подключение по IPv4
 		 */
@@ -127,6 +157,7 @@ class Config {
 		struct Logs {
 			bool files;		// Разрешить хранить логи в файлах
 			bool enabled;	// Разрешить ведение логов
+			u_int size;		// Размер файла лога в Кб
 			string dir;		// Адрес каталога для хранения логов
 		} __attribute__((packed));
 		/**
@@ -157,6 +188,7 @@ class Config {
 		 * Proxy Параметры самого прокси-сервера
 		 */
 		struct Proxy {
+			int allcon;		// Общее количество одновременных подключений к прокси серверу
 			u_int ipver;	// Версия протокола интернета (4, 6)
 			u_int type;		// Тип прокси сервера (http = 1, socks5 = 2, redirect = 3)
 			u_int port;		// Порт прокси сервера
@@ -179,6 +211,12 @@ class Config {
 		} __attribute__((packed));
 		// Адрес конфигурационного файла
 		string filename;
+		/**
+		 * isFileExist Функция проверки существования файла
+		 * @param  path адрес каталога
+		 * @return      результат проверки
+		 */
+		bool isFileExist(const char * path);
 	public:
 		// Основные данные приложения
 		struct Ipv6 ipv6;					// Подключение по IPv6
@@ -186,6 +224,8 @@ class Config {
 		struct Logs logs;					// Параметры логов
 		struct Proxy proxy;					// Параметры самого прокси-сервера
 		struct Bloking bloking;				// Блокировка плохих запросов
+		struct Timeouts timeouts;			// Таймауты подключений
+		struct BufferSize buffers;			// Размеры буферов передачи данных
 		struct Listsites listsites;			// Списки сайтов
 		struct Hideheader hideheader;		// Удалять указанные http заголовки из запроса или ответа
 		struct Authorization authorization;	// Параметры авторизации

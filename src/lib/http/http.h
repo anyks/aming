@@ -17,28 +17,10 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include "../base64/base64.h"
+#include "../config/conf.h"
 
 // Устанавливаем пространство имен
 using namespace std;
-
-// Название и версия прокси сервера
-#define APP_NAME "ANYKS"
-#define APP_VERSION "1.0"
-
-// Флаг разрешения connect прокси сервера
-#define OPT_CONNECT 0x01
-// Флаг вывода названия прокси сервера
-#define OPT_AGENT 0x02
-// Флаг разрешения сжатия данных методом gzip
-#define OPT_GZIP 0x04
-// Флаг разрешающий smart прокси сервер
-#define OPT_SMART 0x08
-// Флаг разрешающий постоянное соединение
-#define OPT_KEEPALIVE 0x10
-// Флаг разрешающий логирование данных
-#define OPT_LOG 0x20
-// Флаг разрешающий сжатие не сжатых данных
-#define OPT_PGZIP 0x40
 
 /**
  * Connect Структура подключения
@@ -507,11 +489,10 @@ class Http {
 		void clear();
 		/**
 		 * Http Конструктор
-		 * @param name строка содержащая название прокси сервера
-		 * @param opt  параметры прокси сервера
-		 * @param ver  версия прокси сервера
+		 * @param name    строка содержащая название прокси сервера
+		 * @param options параметры прокси сервера
 		 */
-		Http(const string name = APP_NAME, u_short opt = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG), const string ver = APP_VERSION);
+		Http(const string name = APP_NAME, u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
 		/**
 		 * ~Http Деструктор
 		 */

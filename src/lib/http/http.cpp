@@ -950,17 +950,16 @@ void Http::clear(){
 }
 /**
  * Http Конструктор
- * @param name строка содержащая название прокси сервера
- * @param opt  параметры прокси сервера
- * @param ver  версия прокси сервера
+ * @param name    строка содержащая название прокси сервера
+ * @param options параметры прокси сервера
  */
-Http::Http(const string name, u_short opt, const string ver){
+Http::Http(const string name, u_short options){
 	// Если имя передано то запоминаем его
 	this->name = name;
-	// Устанавливаем версию системы
-	this->version = ver;
 	// Запоминаем тип прокси сервера
-	this->options = opt;
+	this->options = options;
+	// Устанавливаем версию системы
+	this->version = APP_VERSION;
 }
 /**
  * ~Http Деструктор
