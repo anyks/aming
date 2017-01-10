@@ -410,7 +410,7 @@ int HttpProxy::connect_server(void * ctx){
 			if(!ip.empty()){
 				// Если хост и порт сервера не совпадают тогда очищаем данные
 				if((http->events.server != NULL)
-				&& ((http->server.host != ip)
+				&& ((http->server.host.compare(ip) != 0)
 				|| (http->server.port != port))) http->close_server();
 				// Если сервер еще не подключен
 				if(http->events.server == NULL){
@@ -465,7 +465,7 @@ int HttpProxy::connect_server(void * ctx){
 					// Обнуляем серверную структуру
 					bzero(&(server_addr.sin_zero), 8);
 					// Разблокируем сокет
-					// set_nonblock(http->sockets.server, http->log);
+					set_nonblock(http->sockets.server, http->proxy.log);
 					// Устанавливаем размеры буферов
 					set_buffer_size(http->sockets.server, http->proxy.config->buffers.read, http->proxy.config->buffers.write, http->proxy.log);
 					// Если подключение постоянное
@@ -592,10 +592,10 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 					http->server.port,
 					current_fd
 				);
-				// Закрываем подключение к серверу
-				http->close_server();
 				// Закрываем подключение к клиенту
 				http->close_client();
+				// Закрываем подключение к серверу
+				http->close_server();
 			// Если отключился сервер
 			} else {
 				// Выводим в лог сообщение
@@ -609,7 +609,8 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 				);
 				// Если сервер закрыл сове соединение
 				// Закрываем соединение с клиентом
-				if(!http->client.connect && (events | BEV_EVENT_EOF)) http->close_client();
+				if((!http->client.connect && (events | BEV_EVENT_EOF))
+				|| !(events | BEV_EVENT_EOF)) http->close_client();
 				// Закрываем подключение к серверу
 				http->close_server();
 			}
