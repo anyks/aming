@@ -592,10 +592,6 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 					http->server.port,
 					current_fd
 				);
-				// Закрываем подключение к клиенту
-				http->close_client();
-				// Закрываем подключение к серверу
-				http->close_server();
 			// Если отключился сервер
 			} else {
 				// Выводим в лог сообщение
@@ -607,13 +603,11 @@ void HttpProxy::event(struct bufferevent * bev, short events, void * ctx){
 					http->client.ip.c_str(),
 					current_fd
 				);
-				// Если сервер закрыл сове соединение
-				// Закрываем соединение с клиентом
-				if((!http->client.connect && (events | BEV_EVENT_EOF))
-				|| !(events | BEV_EVENT_EOF)) http->close_client();
-				// Закрываем подключение к серверу
-				http->close_server();
 			}
+			// Закрываем соединение с клиентом
+			http->close_client();
+			// Закрываем подключение к серверу
+			http->close_server();
 		}
 	}
 	// Выходим
