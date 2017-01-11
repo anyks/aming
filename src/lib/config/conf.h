@@ -216,7 +216,7 @@ class Config {
 		 * @param  speed пропускная способность сети в мегабитах
 		 * @return       размер буфера в байтах
 		 */
-		int getSizeBuffer(int speed = -1);
+		int getSizeBuffer(float speed = -1);
 		/**
 		 * isFileExist Функция проверки существования файла
 		 * @param  path адрес каталога

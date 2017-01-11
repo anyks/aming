@@ -28,7 +28,7 @@ bool Config::isFileExist(const char * path){
  * @param  speed пропускная способность сети в мегабитах
  * @return       размер буфера в байтах
  */
-int Config::getSizeBuffer(int speed){
+int Config::getSizeBuffer(float speed){
 	/*
 	* Help - http://www.securitylab.ru/analytics/243414.php
 	*
@@ -40,7 +40,7 @@ int Config::getSizeBuffer(int speed){
 	*
 	*/
 	// Размер буфера по умолчанию
-	int size = speed;
+	int size = (int) speed;
 	// Если скорость установлена тогда расчитываем размер буфера
 	if(speed > -1) size = (2 * 0.04) * ((speed * 1000) / 8);
 	// Выводим результат
@@ -361,9 +361,9 @@ Config::Config(const string filename){
 		// Заполняем структуру buffers
 		this->buffers = {
 			// Скорость входящего подключения
-			getSizeBuffer((int) ini.GetInteger("speed", "input", BUFFER_READ_SIZE)),
+			getSizeBuffer((float) ini.GetReal("speed", "input", BUFFER_READ_SIZE)),
 			// Скорость исходящего подключения
-			getSizeBuffer((int) ini.GetInteger("speed", "output", BUFFER_WRITE_SIZE))
+			getSizeBuffer((float) ini.GetReal("speed", "output", BUFFER_WRITE_SIZE))
 		};
 	}
 }
