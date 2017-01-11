@@ -24,6 +24,29 @@ bool Config::isFileExist(const char * path){
 	return (info.st_mode & S_IFMT) != 0;
 }
 /**
+ * getSizeBuffer Функция получения размера буфера в байтах
+ * @param  speed пропускная способность сети в мегабитах
+ * @return       размер буфера в байтах
+ */
+int Config::getSizeBuffer(int speed){
+	/*
+	* Help - http://www.securitylab.ru/analytics/243414.php
+	*
+	* 0.04 - Пропускная способность сети 40 милисекунд
+	* 100 - Скорость в мегабитах (Мб) на пользователя
+	* 8 - Количество бит в байте
+	* 1000 - количество байт в мегабайте
+	* (2 * 0.04) * ((100 * 1000) / 8)  = 1000 байт
+	*
+	*/
+	// Размер буфера по умолчанию
+	int size = speed;
+	// Если скорость установлена тогда расчитываем размер буфера
+	if(speed > -1) size = (2 * 0.04) * ((speed * 1000) / 8);
+	// Выводим результат
+	return size;
+}
+/**
  * Config Конструктор модуля конфигурационного файла
  * @param filename адрес конфигурационного файла
  */
@@ -182,9 +205,9 @@ Config::Config(const string filename){
 		// Заполняем структуру buffers
 		this->buffers = {
 			// Скорость входящего подключения
-			BUFFER_READ_SIZE,
+			getSizeBuffer(BUFFER_READ_SIZE),
 			// Скорость исходящего подключения
-			BUFFER_WRITE_SIZE
+			getSizeBuffer(BUFFER_WRITE_SIZE)
 		};
 	// Если все нормально то выполняем извлечение данных из конфигурационного файла
 	} else {
@@ -338,9 +361,9 @@ Config::Config(const string filename){
 		// Заполняем структуру buffers
 		this->buffers = {
 			// Скорость входящего подключения
-			(int) ini.GetInteger("speed", "input", BUFFER_READ_SIZE),
+			getSizeBuffer((int) ini.GetInteger("speed", "input", BUFFER_READ_SIZE)),
 			// Скорость исходящего подключения
-			(int) ini.GetInteger("speed", "output", BUFFER_WRITE_SIZE)
+			getSizeBuffer((int) ini.GetInteger("speed", "output", BUFFER_WRITE_SIZE))
 		};
 	}
 }

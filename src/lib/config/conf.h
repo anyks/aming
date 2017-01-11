@@ -212,6 +212,12 @@ class Config {
 		// Адрес конфигурационного файла
 		string filename;
 		/**
+		 * getSizeBuffer Функция получения размера буфера в байтах
+		 * @param  speed пропускная способность сети в мегабитах
+		 * @return       размер буфера в байтах
+		 */
+		int getSizeBuffer(int speed = -1);
+		/**
 		 * isFileExist Функция проверки существования файла
 		 * @param  path адрес каталога
 		 * @return      результат проверки
