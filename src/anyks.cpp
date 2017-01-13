@@ -193,9 +193,9 @@ void run_worker(){
  * @return      код выхода из приложения
  */
 int main(int argc, char * argv[]){
-	// Активируем локаль
-	// setlocale(LC_ALL, "");
-	setlocale(LC_ALL, "en_US.UTF-8");
+	// Активируем локаль приложения
+	setlocale(LC_ALL, "");
+	// setlocale(LC_ALL, "en_US.UTF-8");
 	// Получаем адрес конфигурационного файла
 	string configfile = (argc >= 2 ? argv[1] : "");
 	// Создаем объект конфигурации
@@ -207,7 +207,7 @@ int main(int argc, char * argv[]){
 	// Выполняем запуск приложения от имени пользователя
 	osopt->privBind();
 	// Если запуск должен быть в виде демона
-	if(config->proxy.daemon){
+	if(!config->proxy.debug && config->proxy.daemon){
 		// Ответвляемся от родительского процесса
 		pid_t pid = fork();
 		// Если пид не создан тогда выходим
@@ -230,31 +230,30 @@ int main(int argc, char * argv[]){
 		// Создаем pid файл
 		osopt->mkPid();
 	}
-	/*
-	// Устанавливаем сигнал установки подключения
-	signal(SIGPIPE, sigpipe_handler);	// Запись в разорванное соединение (пайп, сокет)
-	// signal(SIGCHLD, sigchld_handler);// Дочерний процесс завершен или остановлен
-	signal(SIGSEGV, sigsegv_handler);	// Нарушение при обращении в память (Segmentation fault: 11)
-	signal(SIGILL, sigsegv_handler);	// Недопустимая инструкция процессора (Illegal instruction: 4)
-	signal(SIGBUS, sigsegv_handler);	// Неправильное обращение в физическую память
-	signal(SIGFPE, sigsegv_handler);	// Ошибочная арифметическая операция
-	signal(SIGSYS, sigsegv_handler);	// Неправильный системный вызов
-	signal(SIGTRAP, sigsegv_handler);	// Ловушка трассировки или брейкпоинт
-	signal(SIGXCPU, sigsegv_handler);	// Процесс превысил лимит процессорного времени
-	signal(SIGXFSZ, sigsegv_handler);	// Процесс превысил допустимый размер файла
-	signal(SIGTERM, sigterm_handler);	// Сигнал завершения (сигнал по умолчанию для утилиты kill)
-	signal(SIGINT, sigterm_handler);	// Сигнал прерывания (Ctrl-C) с терминала
-	signal(SIGQUIT, sigterm_handler);	// Сигнал «Quit» с терминала (Ctrl-\)
-	signal(SIGTSTP, sigterm_handler);	// Сигнал остановки с терминала (Ctrl-Z)
-	signal(SIGHUP, sigterm_handler);	// Закрытие терминала
-	signal(SIGTTIN, sigterm_handler);	// Попытка чтения с терминала фоновым процессом
-	signal(SIGTTOU, sigterm_handler);	// Попытка записи на терминал фоновым процессом
-	// Запускаем воркер
-	run_worker();
-	*/
-
-	create_proxy();
-	
+	// Если режим отладки не включен
+	if(!config->proxy.debug){
+		// Устанавливаем сигнал установки подключения
+		signal(SIGPIPE, sigpipe_handler);	// Запись в разорванное соединение (пайп, сокет)
+		// signal(SIGCHLD, sigchld_handler);// Дочерний процесс завершен или остановлен
+		signal(SIGSEGV, sigsegv_handler);	// Нарушение при обращении в память (Segmentation fault: 11)
+		signal(SIGILL, sigsegv_handler);	// Недопустимая инструкция процессора (Illegal instruction: 4)
+		signal(SIGBUS, sigsegv_handler);	// Неправильное обращение в физическую память
+		signal(SIGFPE, sigsegv_handler);	// Ошибочная арифметическая операция
+		signal(SIGSYS, sigsegv_handler);	// Неправильный системный вызов
+		signal(SIGTRAP, sigsegv_handler);	// Ловушка трассировки или брейкпоинт
+		signal(SIGXCPU, sigsegv_handler);	// Процесс превысил лимит процессорного времени
+		signal(SIGXFSZ, sigsegv_handler);	// Процесс превысил допустимый размер файла
+		signal(SIGTERM, sigterm_handler);	// Сигнал завершения (сигнал по умолчанию для утилиты kill)
+		signal(SIGINT, sigterm_handler);	// Сигнал прерывания (Ctrl-C) с терминала
+		signal(SIGQUIT, sigterm_handler);	// Сигнал «Quit» с терминала (Ctrl-\)
+		signal(SIGTSTP, sigterm_handler);	// Сигнал остановки с терминала (Ctrl-Z)
+		signal(SIGHUP, sigterm_handler);	// Закрытие терминала
+		signal(SIGTTIN, sigterm_handler);	// Попытка чтения с терминала фоновым процессом
+		signal(SIGTTOU, sigterm_handler);	// Попытка записи на терминал фоновым процессом
+		// Запускаем воркер
+		run_worker();
+	// Запускаем прокси сервер в главном потоке
+	} else create_proxy();
 	// Удаляем объект взаимодействия с ОС
 	delete osopt;
 	// Удаляем лог

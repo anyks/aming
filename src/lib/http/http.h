@@ -127,7 +127,6 @@ class HttpQuery {
 		 */
 		~HttpQuery();
 };
-
 /**
  * HttpData Класс http данных
  */
@@ -468,7 +467,6 @@ class HttpData {
 		 */
 		~HttpData();
 };
-
 /**
  * Http Класс содержит данные парсинга http запроса
  */
