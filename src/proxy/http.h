@@ -227,8 +227,6 @@ class HttpProxy {
 		map <string, Connects> connects;
 		// Параметры прокси сервера
 		Proxy server;
-		// Слушатель порат
-		struct evconnlistener * listener = NULL;
 		/**
 		 * getmac Метод определения мак адреса клиента
 		 * @param  address структура параметров подключения
@@ -337,10 +335,6 @@ class HttpProxy {
 		 * @param config объект конфигурационных данных
 		 */
 		HttpProxy(LogApp * log = NULL, Config * config = NULL);
-		/**
-		 * HttpProxy Конструктор
-		 */
-		~HttpProxy();
 };
 
 #endif // _HTTP_PROXY_ANYKS_

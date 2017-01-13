@@ -1015,8 +1015,8 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 		sin.sin_addr.s_addr = * ((unsigned long *) server->h_addr);
 		// Указываем локальный порт
 		sin.sin_port = htons(this->server.config->proxy.port);
-		// Вешаем приложение на порт
-		listener = evconnlistener_new_bind(
+		// Слушаем порт прокси сервера
+		struct evconnlistener * listener = evconnlistener_new_bind(
 			base, &HttpProxy::accept_connect, this,
 			LEV_OPT_REUSEABLE |
 			// LEV_OPT_THREADSAFE |
@@ -1041,12 +1041,9 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 		event_base_dispatch(base);
 		// Активируем перебор базы событий
 		// event_base_loop(base, EVLOOP_NO_EXIT_ON_EMPTY);
+		// Удаляем слушателя
+		evconnlistener_free(listener);
+		// Удаляем базу данных
+		event_base_free(base);
 	}
-}
-/**
- * HttpProxy Конструктор
- */
-HttpProxy::~HttpProxy(){
-	// Удаляем слушателя
-	evconnlistener_free(listener);
 }
