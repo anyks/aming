@@ -198,9 +198,7 @@ Config::Config(const string filename){
 			// Таймаут времени на чтение
 			TIMEOUTS_READ,
 			// Таймаут времени на запись
-			TIMEOUTS_WRITE,
-			// Таймаут ожидания коннекта
-			TIMEOUTS_KEEPALIVE
+			TIMEOUTS_WRITE
 		};
 		// Заполняем структуру buffers
 		this->buffers = {
@@ -354,9 +352,7 @@ Config::Config(const string filename){
 			// Таймаут времени на чтение
 			(u_short) ini.GetInteger("timeouts", "read", TIMEOUTS_READ),
 			// Таймаут времени на запись
-			(u_short) ini.GetInteger("timeouts", "write", TIMEOUTS_WRITE),
-			// Таймаут ожидания коннекта
-			(u_short) ini.GetInteger("timeouts", "keepalive", TIMEOUTS_KEEPALIVE)
+			(u_short) ini.GetInteger("timeouts", "write", TIMEOUTS_WRITE)
 		};
 		// Заполняем структуру buffers
 		this->buffers = {

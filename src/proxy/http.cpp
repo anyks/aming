@@ -113,7 +113,7 @@ inline void BufferHttpProxy::unlock(){
  * appconn Функция которая добавляет или удаляет в список склиента
  * @param flag флаг подключения или отключения клиента
  */
-void BufferHttpProxy::appconn(bool flag){
+void BufferHttpProxy::appconn(const bool flag){
 	// Если такое подключение найдено
 	if((*this->connects).count(this->client.ip) > 0){
 		// Получаем объект текущего коннекта
@@ -210,34 +210,29 @@ void BufferHttpProxy::close_server(){
  * @param read  таймаут на чтение
  * @param write таймаут на запись
  */
-void BufferHttpProxy::set_timeout(u_short type, bool read, bool write){
+void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
 	// Устанавливаем таймаут ожидания результата на чтение с сервера
 	struct timeval _read = {this->proxy.config->timeouts.read, 0};
 	// Устанавливаем таймаут записи результата на запись
 	struct timeval _write = {this->proxy.config->timeouts.write, 0};
-	// Устанавливаем таймаут ожидания результата на чтение с клиента
-	struct timeval _keepalive = {this->proxy.config->timeouts.keepalive, 0};
+	// Если время постоянного подключения меньше 1 секунды значит таймер ставить не надо
+	if(this->proxy.config->timeouts.read < 1)	read	= false;
+	if(this->proxy.config->timeouts.write < 1)	write	= false;
 	// Устанавливаем таймауты для сервера
-	if((type & TM_SERVER) && (this->events.server != NULL)){
-		// Если время постоянного подключения меньше 1 секунды значит таймер ставить не надо
-		if(this->proxy.config->timeouts.keepalive < 1) read = false;
+	if((type & TM_SERVER) && (this->events.server != NULL))
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.server, (read ? &_read : NULL), (write ? &_write : NULL));
-	}
 	// Устанавливаем таймауты для клиента
-	if((type & TM_CLIENT) && (this->events.client != NULL)){
-		// Если время постоянного подключения меньше 1 секунды значит таймер ставить не надо
-		if(this->proxy.config->timeouts.keepalive < 1) read = false;
+	if((type & TM_CLIENT) && (this->events.client != NULL))
 		// Устанавливаем таймауты
-		bufferevent_set_timeouts(this->events.client, (read ? &_keepalive : NULL), (write ? &_write : NULL));
-	}
+		bufferevent_set_timeouts(this->events.client, (read ? &_read : NULL), (write ? &_write : NULL));
 }
 /**
  * BufferHttpProxy Конструктор
  * @param string  name    имя ресурса
  * @param u_short options параметры прокси сервера
  */
-BufferHttpProxy::BufferHttpProxy(string name, u_short options){
+BufferHttpProxy::BufferHttpProxy(const string name, const u_short options){
 	// Инициализируем мютекс
 	pthread_mutex_init(&this->mutex, 0);
 	// Создаем объект для работы с http заголовками
@@ -640,32 +635,27 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 			char * buffer = new char[len];
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
-			// Создаем буфер для исходящих данных
-			struct evbuffer * tmp = evbuffer_new();
-			// Создаем указатель поиска в буфере
-			struct evbuffer_ptr ptr;
-			// Выполняем инициализацию указателя
-			evbuffer_ptr_set(input, &ptr, 0, EVBUFFER_PTR_SET);
-			// Строка для поиска конца блока с заголовками
-			const char * str = "\r\n\r\n";
-			// Выполняем поиск конца блока с заголовками
-			ptr = evbuffer_search(input, str, strlen(str), &ptr);
-			// Если в буфере нашли заголовки
-			if(ptr.pos > -1){
+			// Если заголовки запроса не получены
+			if(http->headers.response.empty()){
 				// Добавляем полученный буфер в вектор
 				vector <char> headers(buffer, buffer + len);
-				// Выполняем модификацию заголовков
-				http->parser.modify(headers);
-				// Добавляем в новый буфер модифицированные заголовки
-				evbuffer_add(tmp, headers.data(), headers.size());
-				// Отправляем данные клиенту
-				evbuffer_add_buffer(output, tmp);
-			// Выводим данные так как они есть
+				// Если буферы созданы
+				if(http->headers.response.create(headers.data())){
+					// Создаем буфер для исходящих данных
+					struct evbuffer * tmp = evbuffer_new();
+					// Выполняем модификацию заголовков
+					http->parser.modify(headers);
+					// Добавляем в новый буфер модифицированные заголовки
+					evbuffer_add(tmp, headers.data(), headers.size());
+					// Отправляем данные клиенту
+					evbuffer_add_buffer(output, tmp);
+					// Удаляем данные из буфера
+					evbuffer_drain(input, len);
+					// Удаляем временный буфер
+					evbuffer_free(tmp);
+				}
+			// Если заголовки получены, выводим так как есть
 			} else evbuffer_add_buffer(output, input);
-			// Удаляем данные из буфера
-			evbuffer_drain(input, len);
-			// Удаляем временный буфер
-			evbuffer_free(tmp);
 			// Удаляем буфер данных
 			delete [] buffer;
 		}
@@ -776,33 +766,71 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
-		// Метод подключения, не connect
-		bool not_connect = true;
 		// Определяем connect прокси разрешен
 		bool conn_enabled = (http->proxy.config->options & OPT_CONNECT);
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input = bufferevent_get_input(bev);
-		// Если авторизация прошла, и коннект произведен
-		if((http->response.code == 200) && http->httpData.size()){
-			// Если это метод connect
-			if(http->client.connect && (conn_enabled || http->client.https)){
-				// Запоминаем что это метод connect
-				not_connect = false;
-				// Если сервер подключен
-				if(http->events.server != NULL){
-					// Получаем буферы входящих данных и исходящих
-					struct evbuffer * output = bufferevent_get_output(http->events.server);
-					// Удаляем таймер для клиента
-					http->set_timeout(TM_CLIENT);
-					// Устанавливаем таймер для сервера
-					http->set_timeout(TM_SERVER, true, true);
-					// Выводим ответ сервера
-					evbuffer_add_buffer(output, input);
-				}
+		// Если это метод connect
+		if(http->client.connect && (conn_enabled || http->client.https)){
+			
+			/*
+			// Получаем размер входящих данных
+			size_t len = evbuffer_get_length(input);
+			// Создаем буфер данных
+			char * buffer = new char[len];
+			// Копируем в буфер полученные данные
+			evbuffer_copyout(input, buffer, len);
+
+			buffer[len] = '\0';
+
+			cout << " ========= INPUT2 ========= " << buffer << endl;
+
+			delete [] buffer;
+			*/
+			// Удаляем данные из буфера
+			// evbuffer_drain(input, len);
+
+			// Если сервер подключен
+			if(http->events.server != NULL){
+				// Получаем буферы входящих данных и исходящих
+				struct evbuffer * output = bufferevent_get_output(http->events.server);
+				// Удаляем таймер для клиента
+				http->set_timeout(TM_CLIENT);
+				// Устанавливаем таймер для сервера
+				http->set_timeout(TM_SERVER, true, true);
+
+				/*
+				// Создаем буфер для исходящих данных
+				// struct evbuffer * tmp = evbuffer_new();
+				string kk = u8"GET ws://echo.websocket.org/?encoding=text HTTP/1.1\r\n"
+				"Host: echo.websocket.org\r\n"
+				"Connection: Upgrade\r\n"
+				"Pragma: no-cache\r\n"
+				"Cache-Control: no-cache\r\n"
+				"Upgrade: websocket\r\n"
+				"Origin: http://www.websocket.org\r\n"
+				"Sec-WebSocket-Version: 13\r\n"
+				"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36\r\n"
+				"Accept-Encoding: gzip, deflate, sdch\r\n"
+				"Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4\r\n"
+				"Cookie: _ga=GA1.2.1668669090.1484055479; _gat=1; __zlcmid=eWg8lIavrjOJOs\r\n"
+				"Sec-WebSocket-Key: Dyv3lMbFdUe2u2MeZWdrkg==\r\n"
+				"Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n\r\n";
+				// Добавляем в новый буфер модифицированные заголовки
+				// evbuffer_add(tmp, kk, strlen(kk));
+				
+				bufferevent_write(http->events.server, kk.data(), kk.size());
+
+
+				cout << " ----------- " << endl;
+				*/
+
+
+				// Выводим ответ сервера
+				evbuffer_add_buffer(output, input);
 			}
-		}
 		// Если это обычный запрос
-		if(not_connect){
+		} else if(!http->client.connect) {
 			// Удаляем таймер для сервера
 			http->set_timeout(TM_SERVER);
 			// Получаем размер входящих данных
@@ -811,6 +839,8 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 			char * buffer = new char[len];
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
+			// Выполняем получение заголовков входящего запроса
+			http->headers.request.create(buffer);
 			// Выполняем парсинг данных
 			size_t size = http->parser.parse(buffer, len);
 			// Удаляем данные из буфера
@@ -819,7 +849,8 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 			delete [] buffer;
 			// Выполняем загрузку данных
 			do_request(bev, http);
-		}
+		// Закрываем соединение с клиентом
+		} else http->close_client();
 	}
 	// Выходим
 	return;

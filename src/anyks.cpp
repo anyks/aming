@@ -194,7 +194,8 @@ void run_worker(){
  */
 int main(int argc, char * argv[]){
 	// Активируем локаль
-	setlocale(LC_ALL, "");
+	// setlocale(LC_ALL, "");
+	setlocale(LC_ALL, "en_US.UTF-8");
 	// Получаем адрес конфигурационного файла
 	string configfile = (argc >= 2 ? argv[1] : "");
 	// Создаем объект конфигурации
@@ -229,6 +230,7 @@ int main(int argc, char * argv[]){
 		// Создаем pid файл
 		osopt->mkPid();
 	}
+	/*
 	// Устанавливаем сигнал установки подключения
 	signal(SIGPIPE, sigpipe_handler);	// Запись в разорванное соединение (пайп, сокет)
 	// signal(SIGCHLD, sigchld_handler);// Дочерний процесс завершен или остановлен
@@ -249,6 +251,10 @@ int main(int argc, char * argv[]){
 	signal(SIGTTOU, sigterm_handler);	// Попытка записи на терминал фоновым процессом
 	// Запускаем воркер
 	run_worker();
+	*/
+
+	create_proxy();
+	
 	// Удаляем объект взаимодействия с ОС
 	delete osopt;
 	// Удаляем лог

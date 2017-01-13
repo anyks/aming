@@ -87,9 +87,8 @@
 #define BUFFER_READ_SIZE -1
 
 // Таймауты подключения
-#define TIMEOUTS_READ 10
+#define TIMEOUTS_READ 5
 #define TIMEOUTS_WRITE 8
-#define TIMEOUTS_KEEPALIVE 5
 
 // Модуль логов
 #define LOGS_ENABLED true
@@ -119,9 +118,8 @@ class Config {
 		 * Timeout Структура таймаутов
 		 */
 		struct Timeouts {
-			u_short read;		// Таймаут времени на чтение
-			u_short write;		// Таймаут времени на запись
-			u_short keepalive;	// Таймаут ожидания коннекта
+			u_short read;	// Таймаут времени на чтение
+			u_short write;	// Таймаут времени на запись
 		} __attribute__((packed));
 		/**
 		 * BufferSize Структура размеров буфера

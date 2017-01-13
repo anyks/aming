@@ -23,81 +23,109 @@
 using namespace std;
 
 /**
- * Connect Структура подключения
+ * HttpHeaders Класс http заголовков
  */
-struct Connect {
-	string host;		// Хост
-	string port;		// Порт
-	string protocol;	// Протокол
-} __attribute__((packed));
-
+class HttpHeaders {
+	private:
+		/**
+		 * Header Структура содержащая данные заголовка
+		 */
+		struct Header {
+			string head;	// Заголовок
+			string value;	// значение заголовка
+		} __attribute__((packed));
+		// Заголовки http запроса
+		map <string, Header> headers;
+		/**
+		 * split Функция разделения строк на составляющие
+		 * @param str   строка для поиска
+		 * @param delim разделитель
+		 * @param v     результирующий вектор
+		 */
+		void split(const string &str, const string delim, vector <string> &v);
+	public:
+		/**
+		 * getHeader Функция извлекает данные заголовка по его ключу
+		 * @param  key ключ заголовка
+		 * @return     строка с данными заголовка
+		 */
+		HttpHeaders::Header getHeader(string key);
+		/**
+		 * clear Метод очистки данных
+		 */
+		void clear();
+		/**
+		 * create Метод создания объекта http заголовков
+		 * @param buffer буфер с текстовыми данными
+		 */
+		bool create(const char * buffer);
+		/**
+		 * empty Метод определяет наличие данных
+		 * @return проверка о наличи данных
+		 */
+		bool empty();
+		/**
+		 * size Метод получения размера
+		 * @return данные размера
+		 */
+		size_t size();
+		/**
+		 * cbegin Метод получения начального итератора
+		 * @return начальный итератор
+		 */
+		map <string, Header>::const_iterator cbegin() const noexcept;
+		/**
+		 * cend Метод получения конечного итератора
+		 * @return конечный итератор
+		 */
+		map <string, Header>::const_iterator cend() const noexcept;
+		/**
+		 * ~HttpHeaders Деструктор
+		 */
+		~HttpHeaders();
+};
 /**
  * HttpQuery Класс данных для выполнения запросов на удаленном сервере
  */
 class HttpQuery {
 	private:
 		// Результирующий вектор
-		vector <char> _result;
+		vector <char> result;
 	public:
 		// Код сообщения
 		short code;
 		// Смещение в буфере
 		size_t offset = 0;
 		/**
+		 * clear Метод очистки данных
+		 */
+		void clear();
+		/**
+		 * data Метод получения данных запроса
+		 * @return данные запроса
+		 */
+		const char * data();
+		/**
+		 * size Метод получения размера
+		 * @return данные размера
+		 */
+		size_t size();
+		/**
+		 * empty Метод определяет наличие данных
+		 * @return проверка о наличи данных
+		 */
+		bool empty();
+		/**
 		 * HttpQuery Конструктор
 		 * @param code       код сообщения
 		 * @param mess       данные сообщения
 		 * @param entitybody вложенные данные
 		 */
-		HttpQuery(short _code = 0, string _mess = "", vector <char> _entitybody = {}){
-			// Очищаем вектор
-			_result.clear();
-			// Если строка существует
-			if(!_mess.empty()){
-				// Устанавливаем код сообщения
-				code = _code;
-				// Копируем в вектор сам запрос
-				_result.assign(_mess.begin(), _mess.end());
-				// Если данные существуют
-				if(!_entitybody.empty()){
-					// Копируем в результирующий вектор данные вложения
-					copy(_entitybody.begin(), _entitybody.end(), back_inserter(_result));
-				}
-			}
-		}
+		HttpQuery(short code = 0, string mess = "", vector <char> entitybody = {});
 		/**
 		 * ~HttpQuery Деструктор
 		 */
-		~HttpQuery(){
-			// Очищаем все переменные
-			code	= 0;
-			offset	= 0;
-			vector <char> ().swap(_result);
-		}
-		/**
-		 * clear Метод очистки данных
-		 */
-		void clear(){
-			// Очищаем все переменные
-			code	= 0;
-			offset	= 0;
-			_result.clear();
-		}
-		/**
-		 * data Метод получения данных запроса
-		 * @return данные запроса
-		 */
-		const char * data(){return (!_result.empty() ? _result.data() : "");}
-		/**
-		 * size Метод получения размера
-		 * @return данные размера
-		 */
-		size_t size(){return _result.size();}
-		/**
-		 * empty Метод определяет наличие данных
-		 * @return проверка о наличи данных
-		 */
-		bool empty(){return _result.empty();}
+		~HttpQuery();
 };
 
 /**
@@ -105,27 +133,35 @@ class HttpQuery {
  */
 class HttpData {
 	private:
-		u_short					options;	// Параметры прокси сервера
-		string					appName;	// Название приложения
-		string					appVersion;	// Версия приложения
-		string					query;		// Данные запроса
-		string					http;		// http запрос
-		string					auth;		// Тип авторизации
-		string					method;		// Метод запроса
-		string					path;		// Путь запроса
-		string					protocol;	// Протокол запроса
-		string					version;	// Версия протокола
-		string					host;		// Хост запроса
-		string					port;		// Порт запроса
-		string					login;		// Логин
-		string					password;	// Пароль
-		string					useragent;	// UserAgent браузера
-		string					connection;	// Заголовок connection
-		string					request;	// Результирующий заголовок для запроса
-		size_t					length = 0;	// Количество заголовков
-		vector <char>			entitybody;	// Данные http вложений
-		map <string, string>	headers;	// Заголовки http запроса
-		map <string, string>	origin;		// Оригинальные http заголовки
+		/**
+		 * Connect Структура подключения
+		 */
+		struct Connect {
+			string host;		// Хост
+			string port;		// Порт
+			string protocol;	// Протокол
+		} __attribute__((packed));
+		// Основные переменные класса
+		u_short			options;	// Параметры прокси сервера
+		string			appName;	// Название приложения
+		string			appVersion;	// Версия приложения
+		string			query;		// Данные запроса
+		string			http;		// http запрос
+		string			auth;		// Тип авторизации
+		string			method;		// Метод запроса
+		string			path;		// Путь запроса
+		string			protocol;	// Протокол запроса
+		string			version;	// Версия протокола
+		string			host;		// Хост запроса
+		string			port;		// Порт запроса
+		string			login;		// Логин
+		string			password;	// Пароль
+		string			useragent;	// UserAgent браузера
+		string			connection;	// Заголовок connection
+		string			request;	// Результирующий заголовок для запроса
+		size_t			length = 0;	// Количество заголовков
+		vector <char>	entitybody;	// Данные http вложений
+		HttpHeaders		headers;	// Заголовки http запроса
 		// Шаблоны ответов
 		string html[12] = {
 			// Подключение разрешено [0]
@@ -226,13 +262,6 @@ class HttpData {
 		 */
 		void genDataConnect();
 		/**
-		 * split Функция разделения строк на составляющие
-		 * @param str   строка для поиска
-		 * @param delim разделитель
-		 * @param v     результирующий вектор
-		 */
-		void split(const string &str, const string delim, vector <string> &v);
-		/**
 		 * getConnection Функция извлечения данных подключения
 		 * @param  str строка запроса
 		 * @return     объект с данными запроса
@@ -278,12 +307,6 @@ class HttpData {
 		 * @return версия протокола запроса
 		 */
 		float getVersion();
-		/**
-		 * getHeader Функция извлекает данные заголовка по его ключу
-		 * @param  key ключ заголовка
-		 * @return     строка с данными заголовка
-		 */
-		string getHeader(string key);
 		/**
 		 * getHttp Метод получения http запроса
 		 * @return http запрос
@@ -432,14 +455,14 @@ class HttpData {
 		 */
 		vector <char> getHttpRequest();
 		/**
-		 * HttpData Конструктор
+		 * init Метод инициализации класса
 		 * @param  str     строка http запроса
 		 * @param  name    название приложения
 		 * @param  version версия приложения
 		 * @param  options опции http парсера
 		 * @return         данные http запроса
 		 */
-		HttpData(string str = "", string name = APP_NAME, string version = APP_VERSION, u_short options = 0x00);
+		void init(const string str, const string name, const string version, const u_short options);
 		/**
 		 * ~HttpData Деструктор
 		 */

@@ -106,6 +106,13 @@ class BufferHttpProxy {
 		// Мютекс
 		pthread_mutex_t	mutex;
 		/**
+		 * Headers Заголовки http запросов
+		 */
+		struct Headers {
+			HttpHeaders	request;	// Заголовки http запроса
+			HttpHeaders	response;	// Заголовки http ответа
+		} __attribute__((packed));
+		/**
 		 * Events Буферы событий
 		 */
 		struct Events {
@@ -157,7 +164,7 @@ class BufferHttpProxy {
 		 * appconn Функция которая добавляет или удаляет в список склиента
 		 * @param flag флаг подключения или отключения клиента
 		 */
-		void appconn(bool flag);
+		void appconn(const bool flag);
 		/**
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)
@@ -175,6 +182,7 @@ class BufferHttpProxy {
 		Http					parser;			// Объект парсера
 		HttpQuery				response;		// Ответ системы
 		HttpData				httpData;		// Данные http запроса
+		Headers					headers;		// Данные http заголовков
 		Sockets					sockets;		// Сокеты подключений
 		Events					events;			// Буферы событий
 		Server					server;			// Параметры удаленного сервера
@@ -198,13 +206,13 @@ class BufferHttpProxy {
 		 * @param read  таймаут на чтение
 		 * @param write таймаут на запись
 		 */
-		void set_timeout(u_short type, bool read = false, bool write = false);
+		void set_timeout(const u_short type, bool read = false, bool write = false);
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param string  name    имя ресурса
 		 * @param u_short options параметры прокси сервера
 		 */
-		BufferHttpProxy(string name, u_short options);
+		BufferHttpProxy(const string name, const u_short options);
 		/**
 		 * ~BufferHttpProxy Деструктор
 		 */
