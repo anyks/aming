@@ -254,11 +254,11 @@ BufferHttpProxy::~BufferHttpProxy(){
 	pthread_mutex_destroy(&this->mutex);
 }
 /**
- * getmac Метод определения мак адреса клиента
+ * get_mac Метод определения мак адреса клиента
  * @param  address структура параметров подключения
  * @return данные мак адреса
  */
-string HttpProxy::getmac(struct sockaddr * address){
+string HttpProxy::get_mac(struct sockaddr * address){
 	// Буфер для копирования мак адреса
 	char buff[256];
 	// Получаем указатель на мак адрес
@@ -273,12 +273,12 @@ string HttpProxy::getmac(struct sockaddr * address){
 	return buff;
 }
 /**
- * gethost Функция получения данных хоста
+ * get_host Функция получения данных хоста
  * @param  address структура параметров подключения
  * @param  socklen размер структуры
  * @return         данные полученного хоста
  */
-string HttpProxy::gethost(struct sockaddr * address, int socklen){
+string HttpProxy::get_host(struct sockaddr * address, int socklen){
 	// Буферы данных
 	char hbuf[256], sbuf[256];
 	// Извлекаем данные из структуры подключений
@@ -475,7 +475,7 @@ int HttpProxy::connect_server(void * ctx){
 					return -1;
 				}
 				// Получаем данные мак адреса клиента
-				http->server.mac = getmac((struct sockaddr *) &server_addr);
+				http->server.mac = get_mac((struct sockaddr *) &server_addr);
 				// Выводим в лог сообщение о новом коннекте
 				http->proxy.log->write(
 					LOG_MESSAGE,
@@ -630,6 +630,14 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 				vector <char> headers(buffer, buffer + len);
 				// Если буферы созданы
 				if(http->headers.response.create(headers.data())){
+					// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
+					if((strstr(headers.data(), "101 Switching Protocols") != NULL)
+					&& !http->headers.response.getHeader("upgrade").value.empty()
+					&& (http->headers.response.getHeader("connection").value.find("Upgrade") != string::npos)){
+						// Устанавливаем что это соединение CONNECT,
+						// для будущего обмена данными, так как они будут приходить бинарные
+						http->client.connect = true;
+					}
 					// Создаем буфер для исходящих данных
 					struct evbuffer * tmp = evbuffer_new();
 					// Выполняем модификацию заголовков
@@ -761,24 +769,6 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 		struct evbuffer * input = bufferevent_get_input(bev);
 		// Если это метод connect
 		if(http->client.connect && (conn_enabled || http->client.https)){
-			
-			/*
-			// Получаем размер входящих данных
-			size_t len = evbuffer_get_length(input);
-			// Создаем буфер данных
-			char * buffer = new char[len];
-			// Копируем в буфер полученные данные
-			evbuffer_copyout(input, buffer, len);
-
-			buffer[len] = '\0';
-
-			cout << " ========= INPUT2 ========= " << buffer << endl;
-
-			delete [] buffer;
-			*/
-			// Удаляем данные из буфера
-			// evbuffer_drain(input, len);
-
 			// Если сервер подключен
 			if(http->events.server != NULL){
 				// Получаем буферы входящих данных и исходящих
@@ -787,34 +777,6 @@ void HttpProxy::read_client(struct bufferevent * bev, void * ctx){
 				http->set_timeout(TM_CLIENT);
 				// Устанавливаем таймер для сервера
 				http->set_timeout(TM_SERVER, true, true);
-
-				/*
-				// Создаем буфер для исходящих данных
-				// struct evbuffer * tmp = evbuffer_new();
-				string kk = u8"GET ws://echo.websocket.org/?encoding=text HTTP/1.1\r\n"
-				"Host: echo.websocket.org\r\n"
-				"Connection: Upgrade\r\n"
-				"Pragma: no-cache\r\n"
-				"Cache-Control: no-cache\r\n"
-				"Upgrade: websocket\r\n"
-				"Origin: http://www.websocket.org\r\n"
-				"Sec-WebSocket-Version: 13\r\n"
-				"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36\r\n"
-				"Accept-Encoding: gzip, deflate, sdch\r\n"
-				"Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4\r\n"
-				"Cookie: _ga=GA1.2.1668669090.1484055479; _gat=1; __zlcmid=eWg8lIavrjOJOs\r\n"
-				"Sec-WebSocket-Key: Dyv3lMbFdUe2u2MeZWdrkg==\r\n"
-				"Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n\r\n";
-				// Добавляем в новый буфер модифицированные заголовки
-				// evbuffer_add(tmp, kk, strlen(kk));
-				
-				bufferevent_write(http->events.server, kk.data(), kk.size());
-
-
-				cout << " ----------- " << endl;
-				*/
-
-
 				// Выводим ответ сервера
 				evbuffer_add_buffer(output, input);
 			}
@@ -944,9 +906,9 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Устанавливаем неблокирующий режим для сокета
 		set_nonblock(fd, proxy->server.log);
 		// Получаем данные подключившегося клиента
-		string ip = gethost(address, socklen);
+		string ip = get_host(address, socklen);
 		// Получаем данные мак адреса клиента
-		string mac = getmac(address);
+		string mac = get_mac(address);
 		// Выводим в лог сообщение
 		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), fd);
 		// Создаем новый объект подключения
@@ -954,9 +916,9 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		// Определяем тип подключения
 		switch(proxy->server.config->proxy.ipver){
 			// Для протокола IPv4
-			case 4: http->dns.setFamily(AF_INET); break;
+			case 4: http->dns.setFamily(AF_INET);	break;
 			// Для протокола IPv6
-			case 6: http->dns.setFamily(AF_INET6); break;
+			case 6: http->dns.setFamily(AF_INET6);	break;
 		}
 		// Добавляем нейм сервера
 		http->dns.setNameServers(proxy->server.config->proxy.resolver);

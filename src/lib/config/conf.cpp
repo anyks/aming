@@ -101,7 +101,7 @@ int Config::getSizeBuffer(float speed){
 	// Размер буфера по умолчанию
 	int size = (int) speed;
 	// Если скорость установлена тогда расчитываем размер буфера
-	if(speed > -1) size = (2 * 0.04) * ((speed * 1000) / 8);
+	if(speed > -1) size = ((2 * 0.04) * ((speed * 1000) / 8)) * 100;
 	// Выводим результат
 	return size;
 }
@@ -234,11 +234,18 @@ Config::Config(const string filename){
 			LOGS_DIR
 		};
 		// Удалять указанные http заголовки из запроса или ответа
-		this->hideheader = {
+		this->rmheader = {
 			// Убирать заголовки в запросе
-			HIDE_HEADERS_REQUEST,
+			RM_HEADERS_REQUEST,
 			// Убирать заголовки в ответе
-			HIDE_HEADERS_RESPONSE
+			RM_HEADERS_RESPONSE
+		};
+		// Устанавливать указанные http заголовки в запрос или ответ
+		this->setheader = {
+			// Установить заголовки в запрос
+			SET_HEADERS_REQUEST,
+			// Установить заголовки в ответ
+			SET_HEADERS_RESPONSE
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
@@ -394,11 +401,18 @@ Config::Config(const string filename){
 			ini.Get("logs", "dir", LOGS_DIR)
 		};
 		// Удалять указанные http заголовки из запроса или ответа
-		this->hideheader = {
+		this->rmheader = {
 			// Убирать заголовки в запросе
-			ini.GetBoolean("hideheader", "request", HIDE_HEADERS_REQUEST),
+			ini.GetBoolean("rmheader", "request", RM_HEADERS_REQUEST),
 			// Убирать заголовки в ответе
-			ini.GetBoolean("hideheader", "response", HIDE_HEADERS_RESPONSE)
+			ini.GetBoolean("rmheader", "response", RM_HEADERS_RESPONSE)
+		};
+		// Установить указанные http заголовки в запрос или ответ
+		this->setheader = {
+			// Установить заголовки в запрос
+			ini.GetBoolean("setheader", "request", SET_HEADERS_REQUEST),
+			// Установить заголовки в ответ
+			ini.GetBoolean("setheader", "response", SET_HEADERS_RESPONSE)
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {

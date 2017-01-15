@@ -230,18 +230,18 @@ class HttpProxy {
 		// Параметры прокси сервера
 		Proxy server;
 		/**
-		 * getmac Метод определения мак адреса клиента
+		 * get_mac Метод определения мак адреса клиента
 		 * @param  address структура параметров подключения
 		 * @return данные мак адреса
 		 */
-		static string getmac(struct sockaddr * address);
+		static string get_mac(struct sockaddr * address);
 		/**
-		 * gethost Функция получения данных хоста
+		 * get_host Функция получения данных хоста
 		 * @param  address структура параметров подключения
 		 * @param  socklen размер структуры
 		 * @return         данные полученного хоста
 		 */
-		static string gethost(struct sockaddr * address, int socklen);
+		static string get_host(struct sockaddr * address, int socklen);
 		/**
 		 * spawn_thread Функция создания треда
 		 * @param  thread объект треда

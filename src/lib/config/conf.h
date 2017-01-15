@@ -73,8 +73,12 @@
 #define SITES_WHITE_LIST false
 
 // Модуль скрытия заголовков
-#define HIDE_HEADERS_REQUEST false
-#define HIDE_HEADERS_RESPONSE false
+#define RM_HEADERS_REQUEST false
+#define RM_HEADERS_RESPONSE false
+
+// Модуль установки заголовков
+#define SET_HEADERS_REQUEST false
+#define SET_HEADERS_RESPONSE false
 
 // Модуль IPv4
 #define IPV4_EXTERNAL "0.0.0.0"
@@ -145,9 +149,9 @@ class Config {
 			string internal;	// IP адрес интерфейса на котором будут приниматься запросы от клиентов
 		} __attribute__((packed));
 		/**
-		 * Hideheader Удалять указанные http заголовки из запроса или ответа
+		 * Header http заголовки из запроса или ответа
 		 */
-		struct Hideheader {
+		struct Header {
 			bool request;	// Убирать заголовки в запросе
 			bool response;	// Убирать заголовки в ответе
 		} __attribute__((packed));
@@ -258,10 +262,11 @@ class Config {
 		struct Logs logs;					// Параметры логов
 		struct Proxy proxy;					// Параметры самого прокси-сервера
 		struct Bloking bloking;				// Блокировка плохих запросов
+		struct Header rmheader;				// Удалять указанные http заголовки из запроса или ответа
+		struct Header setheader;			// Установить указанные http заголовки в запрос или ответ
 		struct Timeouts timeouts;			// Таймауты подключений
 		struct BufferSize buffers;			// Размеры буферов передачи данных
 		struct Listsites listsites;			// Списки сайтов
-		struct Hideheader hideheader;		// Удалять указанные http заголовки из запроса или ответа
 		struct Authorization authorization;	// Параметры авторизации
 		// Основные параметры прокси
 		u_short options;

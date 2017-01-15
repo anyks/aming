@@ -290,6 +290,8 @@ vector <char> HttpData::getHttpRequest(){
 	string request = (this->http + string("\r\n"));
 	// Тип подключения
 	string connection = this->headers.getHeader("connection").value;
+	// Если заголовок не найден тогда устанавливаем по умолчанию
+	if(connection.empty()) connection = "close";
 	// Добавляем остальные заголовки
 	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
 		// Фильтруем заголовки
