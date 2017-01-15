@@ -387,140 +387,129 @@ int HttpProxy::connect_server(void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
-		// Получаем данные хоста
-		hostent * sh = gethostbyname(http->httpData.getHost().c_str());
-		// Если данные хоста найдены
-		if(sh){
-			// ip адрес ресурса
-			string ip;
-			// Получаем порт сервера
-			u_int port = http->httpData.getPort();
-			// Извлекаем ip адрес
-			for(u_int i = 0; sh->h_addr_list[i] != 0; ++i){
-				struct in_addr addr;
-				memcpy(&addr, sh->h_addr_list[i], sizeof(struct in_addr));
-				ip = inet_ntoa(addr);
-			}
-			// Если ip адрес существует
-			if(!ip.empty()){
-				// Если хост и порт сервера не совпадают тогда очищаем данные
-				if((http->events.server != NULL)
-				&& ((http->server.host.compare(ip) != 0)
-				|| (http->server.port != port))) http->close_server();
-				// Если сервер еще не подключен
-				if(http->events.server == NULL){
-					// Создаем хост подключения
-					string host;
-					// Определяем тип подключения
-					switch(http->proxy.config->proxy.ipver){
-						// Для протокола IPv4
-						case 4: host = http->proxy.config->ipv4.external; break;
-						// Для протокола IPv6
-						case 6: host = http->proxy.config->ipv6.external; break;
-					}
-					// Сокет подключения
-					evutil_socket_t sock = -1;
-					// Запоминаем хост и порт сервера
-					http->server.host = ip;
-					http->server.port = port;
-					// Структуры серверного и локального подключений
-					struct sockaddr_in server_addr, local_addr;
-					// Очищаем всю структуру для клиента
-					memset(&local_addr, 0, sizeof(local_addr));
-					// Очищаем всю структуру для сервера
-					memset(&server_addr, 0, sizeof(server_addr));
-					// Создаем сокет для подключения
-					if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
-						// Выводим в лог сообщение
-						http->proxy.log->write(LOG_ERROR, "creating socket to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.ip.c_str());
-						// Выходим
-						return 0;
-					}
-					// Запоминаем сокет сервера
-					http->sockets.server = sock;
-					// Неважно, IPv4 или IPv6
-					local_addr.sin_family = AF_UNSPEC;
-					// Устанавливаем произвольный порт для локального подключения
-					local_addr.sin_port = htons(0);
-					// Устанавливаем адрес для локальго подключения
-					local_addr.sin_addr.s_addr = inet_addr(host.c_str());
-					// Выполняем бинд на сокет
-					if(::bind(http->sockets.server, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0){
-						// Выводим в лог сообщение
-						http->proxy.log->write(LOG_ERROR, "bind local network [%s] error", host.c_str());
-						// Выходим
-						return 0;
-					}
-					// Неважно, IPv4 или IPv6
-					server_addr.sin_family = AF_UNSPEC;
-					// Устанавливаем порт для локального подключения
-					server_addr.sin_port = htons(http->server.port);
-					// Устанавливаем адрес для удаленного подключения
-					server_addr.sin_addr.s_addr = inet_addr(http->server.host.c_str());
-					// Обнуляем серверную структуру
-					bzero(&(server_addr.sin_zero), 8);
-					// Разблокируем сокет
-					set_nonblock(http->sockets.server, http->proxy.log);
-					// Устанавливаем размеры буферов
-					set_buffer_size(http->sockets.server, http->proxy.config->buffers.read, http->proxy.config->buffers.write, http->proxy.log);
-					// Если подключение постоянное
-					if(http->client.alive){
-						// Устанавливаем TCP_NODELAY для сервера и клиента
-						set_tcpnodelay(http->sockets.server, http->proxy.log);
-						set_tcpnodelay(http->sockets.client, http->proxy.log);
-					}
-					// Создаем буфер событий для сервера
-					http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-					// Устанавливаем коллбеки
-					bufferevent_setcb(http->events.server, &HttpProxy::read_server, NULL, &HttpProxy::event, http);
-					// Активируем буферы событий на чтение и запись
-					bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
-					// Очищаем буферы событий при завершении работы
-					bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
-					// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
-					if(bufferevent_socket_connect(http->events.server, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0){
-						// Выводим в лог сообщение
-						http->proxy.log->write(LOG_ERROR, "connecting to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.ip.c_str());
-						// Выходим
-						return -1;
-					}
-					// Получаем данные мак адреса клиента
-					http->server.mac = getmac((struct sockaddr *) &server_addr);
-					// Выводим в лог сообщение о новом коннекте
-					http->proxy.log->write(
-						LOG_MESSAGE,
-						"connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
-						http->client.ip.c_str(),
-						http->httpData.getHost().c_str(),
-						http->server.host.c_str(),
-						http->server.port,
-						http->server.mac.c_str(),
-						http->httpData.getMethod().c_str(),
-						http->httpData.getPath().c_str(),
-						http->httpData.getUseragent().c_str(),
-						http->sockets.client
-					);
-					// Сообщаем что все удачно
-					return 1;
-				// Если сервер уже подключен, сообщаем что все удачно
-				} else {
-					// Выводим в лог сообщение о новом коннекте
-					http->proxy.log->write(
-						LOG_MESSAGE,
-						"last connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
-						http->client.ip.c_str(),
-						http->httpData.getHost().c_str(),
-						http->server.host.c_str(),
-						http->server.port,
-						http->server.mac.c_str(),
-						http->httpData.getMethod().c_str(),
-						http->httpData.getPath().c_str(),
-						http->httpData.getUseragent().c_str(),
-						http->sockets.client
-					);
-					// Сообщаем что все удачно
-					return 2;
+		// Получаем порт сервера
+		u_int port = http->httpData.getPort();
+		// ip адрес ресурса
+		string ip = http->dns.resolve(http->httpData.getHost());
+		// Если ip адрес существует
+		if(!ip.empty()){
+			// Если хост и порт сервера не совпадают тогда очищаем данные
+			if((http->events.server != NULL)
+			&& ((http->server.host.compare(ip) != 0)
+			|| (http->server.port != port))) http->close_server();
+			// Если сервер еще не подключен
+			if(http->events.server == NULL){
+				// Создаем хост подключения
+				string host;
+				// Определяем тип подключения
+				switch(http->proxy.config->proxy.ipver){
+					// Для протокола IPv4
+					case 4: host = http->proxy.config->ipv4.external; break;
+					// Для протокола IPv6
+					case 6: host = http->proxy.config->ipv6.external; break;
 				}
+				// Сокет подключения
+				evutil_socket_t sock = -1;
+				// Запоминаем хост и порт сервера
+				http->server.host = ip;
+				http->server.port = port;
+				// Структуры серверного и локального подключений
+				struct sockaddr_in server_addr, local_addr;
+				// Очищаем всю структуру для клиента
+				memset(&local_addr, 0, sizeof(local_addr));
+				// Очищаем всю структуру для сервера
+				memset(&server_addr, 0, sizeof(server_addr));
+				// Создаем сокет для подключения
+				if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
+					// Выводим в лог сообщение
+					http->proxy.log->write(LOG_ERROR, "creating socket to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.ip.c_str());
+					// Выходим
+					return 0;
+				}
+				// Запоминаем сокет сервера
+				http->sockets.server = sock;
+				// Неважно, IPv4 или IPv6
+				local_addr.sin_family = AF_UNSPEC;
+				// Устанавливаем произвольный порт для локального подключения
+				local_addr.sin_port = htons(0);
+				// Устанавливаем адрес для локальго подключения
+				local_addr.sin_addr.s_addr = inet_addr(host.c_str());
+				// Выполняем бинд на сокет
+				if(::bind(http->sockets.server, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0){
+					// Выводим в лог сообщение
+					http->proxy.log->write(LOG_ERROR, "bind local network [%s] error", host.c_str());
+					// Выходим
+					return 0;
+				}
+				// Неважно, IPv4 или IPv6
+				server_addr.sin_family = AF_UNSPEC;
+				// Устанавливаем порт для локального подключения
+				server_addr.sin_port = htons(http->server.port);
+				// Устанавливаем адрес для удаленного подключения
+				server_addr.sin_addr.s_addr = inet_addr(http->server.host.c_str());
+				// Обнуляем серверную структуру
+				bzero(&(server_addr.sin_zero), 8);
+				// Разблокируем сокет
+				set_nonblock(http->sockets.server, http->proxy.log);
+				// Устанавливаем размеры буферов
+				set_buffer_size(http->sockets.server, http->proxy.config->buffers.read, http->proxy.config->buffers.write, http->proxy.log);
+				// Если подключение постоянное
+				if(http->client.alive){
+					// Устанавливаем TCP_NODELAY для сервера и клиента
+					set_tcpnodelay(http->sockets.server, http->proxy.log);
+					set_tcpnodelay(http->sockets.client, http->proxy.log);
+				}
+				// Создаем буфер событий для сервера
+				http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+				// Устанавливаем коллбеки
+				bufferevent_setcb(http->events.server, &HttpProxy::read_server, NULL, &HttpProxy::event, http);
+				// Активируем буферы событий на чтение и запись
+				bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
+				// Очищаем буферы событий при завершении работы
+				bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
+				// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
+				if(bufferevent_socket_connect(http->events.server, (struct sockaddr *) &server_addr, sizeof(struct sockaddr)) < 0){
+					// Выводим в лог сообщение
+					http->proxy.log->write(LOG_ERROR, "connecting to server = %s, port = %d, client = %s", ip.c_str(), port, http->client.ip.c_str());
+					// Выходим
+					return -1;
+				}
+				// Получаем данные мак адреса клиента
+				http->server.mac = getmac((struct sockaddr *) &server_addr);
+				// Выводим в лог сообщение о новом коннекте
+				http->proxy.log->write(
+					LOG_MESSAGE,
+					"connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
+					http->client.ip.c_str(),
+					http->httpData.getHost().c_str(),
+					http->server.host.c_str(),
+					http->server.port,
+					http->server.mac.c_str(),
+					http->httpData.getMethod().c_str(),
+					http->httpData.getPath().c_str(),
+					http->httpData.getUseragent().c_str(),
+					http->sockets.client
+				);
+				// Сообщаем что все удачно
+				return 1;
+			// Если сервер уже подключен, сообщаем что все удачно
+			} else {
+				// Выводим в лог сообщение о новом коннекте
+				http->proxy.log->write(
+					LOG_MESSAGE,
+					"last connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
+					http->client.ip.c_str(),
+					http->httpData.getHost().c_str(),
+					http->server.host.c_str(),
+					http->server.port,
+					http->server.mac.c_str(),
+					http->httpData.getMethod().c_str(),
+					http->httpData.getPath().c_str(),
+					http->httpData.getUseragent().c_str(),
+					http->sockets.client
+				);
+				// Сообщаем что все удачно
+				return 2;
 			}
 		}
 		// Выводим в лог сообщение
@@ -962,6 +951,15 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), fd);
 		// Создаем новый объект подключения
 		BufferHttpProxy * http = new BufferHttpProxy(proxy->server.config->proxy.name, proxy->server.config->options);
+		// Определяем тип подключения
+		switch(proxy->server.config->proxy.ipver){
+			// Для протокола IPv4
+			case 4: http->dns.setFamily(AF_INET); break;
+			// Для протокола IPv6
+			case 6: http->dns.setFamily(AF_INET6); break;
+		}
+		// Добавляем нейм сервера
+		http->dns.setNameServers(proxy->server.config->proxy.resolver);
 		// Запоминаем параметры прокси сервера
 		http->proxy = proxy->server;
 		// Запоминаем список подключений
@@ -990,6 +988,8 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 	if((log != NULL) && (config != NULL)){
 		// Запоминаем параметры прокси сервера
 		this->server = {log, config};
+		// Создаем объект dns ресолвера
+		DNSResolver dns(log, 0, this->server.config->proxy.resolver);
 		// Структура для создания сервера приложения
 		struct sockaddr_in sin;
 		// Создаем новую базу
@@ -999,12 +999,22 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 		// Определяем тип подключения
 		switch(this->server.config->proxy.ipver){
 			// Для протокола IPv4
-			case 4: host = this->server.config->ipv4.internal; break;
+			case 4: {
+				// Запоминаем внутренний адрес прокси сервера
+				host = this->server.config->ipv4.internal;
+				// Добавляем тип протокола в ресолвер
+				dns.setFamily(AF_INET);
+			} break;
 			// Для протокола IPv6
-			case 6: host = this->server.config->ipv6.internal; break;
+			case 6: {
+				// Запоминаем внутренний адрес прокси сервера
+				host = this->server.config->ipv6.internal;
+				// Добавляем тип протокола в ресолвер
+				dns.setFamily(AF_INET6);
+			} break;
 		}
 		// Структура определяющая параметры сервера приложений
-		struct hostent * server = gethostbyname(host.c_str());
+		struct hostent * server = gethostbyname(dns.resolve(host).c_str());
 		// Очищаем всю структуру
 		memset(&sin, 0, sizeof(sin));
 		// Listen on 0.0.0.0

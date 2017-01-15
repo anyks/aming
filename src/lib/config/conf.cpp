@@ -11,6 +11,65 @@
 using namespace std;
 
 /**
+ * rtrim Функция усечения указанных символов с правой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & Config::rtrim(string &str, const char * t){
+	str.erase(str.find_last_not_of(t) + 1);
+	return str;
+}
+/**
+ * ltrim Функция усечения указанных символов с левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & Config::ltrim(string &str, const char * t){
+	str.erase(0, str.find_first_not_of(t));
+	return str;
+}
+/**
+ * trim Функция усечения указанных символов с правой и левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & Config::trim(string &str, const char * t){
+	return ltrim(rtrim(str, t), t);
+}
+/**
+ * getResolver Метод извлечения dns серверов из строки в массив
+ * @param  str строка с dns серверами
+ * @return     массив с dns серверами
+ */
+vector <string> Config::getResolver(const string str){
+	vector <string> resolver;
+	// Если строка передана
+	if(!str.empty()){
+		string dns, delim = ",";
+		string::size_type i = 0;
+		string::size_type j = str.find(delim);
+		u_int len = delim.length();
+		// Выполняем разбиение строк
+		while(j != string::npos){
+			dns = str.substr(i, j - i);
+			resolver.push_back(trim(dns));
+			i = ++j + (len - 1);
+			j = str.find(delim, j);
+			if(j == string::npos){
+				dns = str.substr(i, str.length());
+				resolver.push_back(trim(dns));
+			}
+		}
+		// Если данные не существуют то устанавливаем строку по умолчанию
+		if(resolver.empty()) resolver.push_back(str);
+	}
+	// Выводим результат
+	return resolver;
+}
+/**
  * isFileExist Функция проверки существования файла
  * @param  path адрес каталога
  * @return      результат проверки
@@ -133,6 +192,8 @@ Config::Config(const string filename){
 			PID_DIR,
 			// Адрес хранения конфигурационных файлов
 			CONFIG_DIR,
+			// Список dns серверов
+			PROXY_RESOLVER
 		};
 		// Заполняем структуру bloking
 		this->bloking = {
@@ -245,6 +306,10 @@ Config::Config(const string filename){
 			// Порт redirect прокси
 			case 3: proxy_port = PROXY_REDIRECT_PORT;	break;
 		}
+		// Массив dns серверов
+		vector <string> resolver = getResolver(ini.Get("proxy", "resolver", ""));
+		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
+		if(resolver.empty()) resolver = PROXY_RESOLVER;
 		// Заполняем структуру proxy
 		this->proxy = {
 			// Общее количество одновременных подключений к прокси серверу
@@ -287,6 +352,8 @@ Config::Config(const string filename){
 			ini.Get("proxy", "piddir", PID_DIR),
 			// Адрес хранения конфигурационных файлов
 			ini.Get("proxy", "confdir", CONFIG_DIR),
+			// Список dns серверов
+			resolver
 		};
 		// Заполняем структуру bloking
 		this->bloking = {

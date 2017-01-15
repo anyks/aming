@@ -22,6 +22,7 @@
 #include "../lib/log/log.h"
 #include "../lib/http/http.h"
 #include "../lib/config/conf.h"
+#include "../lib/dns/dns.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -176,18 +177,19 @@ class BufferHttpProxy {
 		 */
 		void free_event(struct bufferevent ** event);
 	public:
-		bool					auth = false;	// Флаг авторизации
-		struct event_base		* base;			// База событий
-		map <string, Connects>	* connects; 	// Список подключений к прокси серверу
-		Http					parser;			// Объект парсера
-		HttpQuery				response;		// Ответ системы
-		HttpData				httpData;		// Данные http запроса
-		Headers					headers;		// Данные http заголовков
-		Sockets					sockets;		// Сокеты подключений
-		Events					events;			// Буферы событий
-		Server					server;			// Параметры удаленного сервера
-		Client					client;			// Параметры подключившегося клиента
-		Proxy					proxy;			// Параметры прокси сервера
+		bool					auth		= false;	// Флаг авторизации
+		struct event_base		* base		= NULL;		// База событий
+		map <string, Connects>	* connects	= NULL; 	// Список подключений к прокси серверу
+		DNSResolver				dns;					// Создаем объект dns ресолвера
+		Http					parser;					// Объект парсера
+		HttpQuery				response;				// Ответ системы
+		HttpData				httpData;				// Данные http запроса
+		Headers					headers;				// Данные http заголовков
+		Sockets					sockets;				// Сокеты подключений
+		Events					events;					// Буферы событий
+		Server					server;					// Параметры удаленного сервера
+		Client					client;					// Параметры подключившегося клиента
+		Proxy					proxy;					// Параметры прокси сервера
 		/**
 		 * begin Метод активации подключения
 		 */
