@@ -99,7 +99,7 @@
 // Модуль авторизаций
 #define AUTH_OS_USERS true
 #define AUTH_FILE_USERS false
-#define AUTH_NO false
+#define AUTH_ENABLED false
 
 // Модуль блокировок
 #define FIREWALL_MAX_TRYAUTH 10
@@ -168,7 +168,7 @@ class Config {
 		struct Authorization {
 			bool osusers;	// Активировать авторизацию через пользователей в операционной системе
 			bool listusers;	// Активировать авторизацию через файл со списком пользователей и ip/mac адресами
-			bool noauth;	// Без авторизации
+			bool enabled;	// Разрешить авторизацию пользователя
 		} __attribute__((packed));
 		/**
 		 * Firewall Блокировка плохих запросов
@@ -250,16 +250,16 @@ class Config {
 		bool isFileExist(const char * path);
 	public:
 		// Основные данные приложения
-		struct Ipv6 ipv6;					// Подключение по IPv6
-		struct Ipv4 ipv4;					// Подключение по IPv4
-		struct Logs logs;					// Параметры логов
-		struct Proxy proxy;					// Параметры самого прокси-сервера
-		struct Header rmheader;				// Удалять указанные http заголовки из запроса или ответа
-		struct Header setheader;			// Установить указанные http заголовки в запрос или ответ
-		struct Firewall firewall;			// Параметры файервола
-		struct Timeouts timeouts;			// Таймауты подключений
-		struct BufferSize buffers;			// Размеры буферов передачи данных
-		struct Authorization authorization;	// Параметры авторизации
+		struct Ipv6 ipv6;			// Подключение по IPv6
+		struct Ipv4 ipv4;			// Подключение по IPv4
+		struct Logs logs;			// Параметры логов
+		struct Proxy proxy;			// Параметры самого прокси-сервера
+		struct Header rmheader;		// Удалять указанные http заголовки из запроса или ответа
+		struct Header setheader;	// Установить указанные http заголовки в запрос или ответ
+		struct Firewall firewall;	// Параметры файервола
+		struct Timeouts timeouts;	// Таймауты подключений
+		struct BufferSize buffers;	// Размеры буферов передачи данных
+		struct Authorization auth;	// Параметры авторизации
 		// Основные параметры прокси
 		u_short options;
 		/**

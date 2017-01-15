@@ -210,14 +210,14 @@ Config::Config(const string filename){
 			// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
 			FIREWALL_TIME_LOOP
 		};
-		// Заполняем структуру authorization
-		this->authorization = {
+		// Заполняем структуру auth
+		this->auth = {
 			// Активировать авторизацию через пользователей в операционной системе
 			AUTH_OS_USERS,
 			// Активировать авторизацию через файл со списком пользователей и ip/mac адресами
 			AUTH_FILE_USERS,
-			// Без авторизации
-			AUTH_NO
+			// Разрешить авторизацию пользователя
+			AUTH_ENABLED
 		};
 		// Заполняем структуру logs
 		this->logs = {
@@ -374,14 +374,14 @@ Config::Config(const string filename){
 			// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
 			ini.Get("firewall", "timeblockloop", FIREWALL_TIME_LOOP)
 		};
-		// Заполняем структуру authorization
-		this->authorization = {
+		// Заполняем структуру auth
+		this->auth = {
 			// Активировать авторизацию через пользователей в операционной системе
 			ini.GetBoolean("authorization", "osusers", AUTH_OS_USERS),
 			// Активировать авторизацию через файл со списком пользователей и ip/mac адресами
 			ini.GetBoolean("authorization", "listusers", AUTH_FILE_USERS),
-			// Без авторизации
-			ini.GetBoolean("authorization", "noauth", AUTH_NO)
+			// Разрешить авторизацию пользователя
+			ini.GetBoolean("authorization", "enabled", AUTH_ENABLED)
 		};
 		// Заполняем структуру logs
 		this->logs = {
