@@ -832,8 +832,6 @@ void * HttpProxy::connection(void * ctx){
 		http->base = event_base_new();
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-		// Устанавливаем размеры буферов
-		set_buffer_size(http->sockets.client, http->proxy.config->buffers.read, http->proxy.config->buffers.write, http->proxy.log);
 		// Устанавливаем таймер для клиента
 		http->set_timeout(TM_CLIENT, true);
 		// Устанавливаем коллбеки
