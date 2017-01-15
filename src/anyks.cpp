@@ -138,6 +138,8 @@ void create_proxy(){
 	osopt->setFdLimit();
 	// Выводим приглашение
 	logfile->welcome();
+	// Выполняем запуск приложения от имени пользователя
+	osopt->privBind();
 	// Создаем объект для http прокси-сервера
 	HttpProxy http = HttpProxy(logfile, config);
 }
@@ -204,8 +206,6 @@ int main(int argc, char * argv[]){
 	logfile = new LogApp(config, TOLOG_FILES | TOLOG_CONSOLE);
 	// Устанавливаем настройки операционной системы
 	osopt = new OsOpt(logfile, config);
-	// Выполняем запуск приложения от имени пользователя
-	osopt->privBind();
 	// Если запуск должен быть в виде демона
 	if(!config->proxy.debug && config->proxy.daemon){
 		// Ответвляемся от родительского процесса

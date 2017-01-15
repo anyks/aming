@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <event2/dns.h>
 #include <event2/util.h>
 #include <event2/event.h>

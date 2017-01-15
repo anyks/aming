@@ -24,18 +24,18 @@ OsOpt::OsData OsOpt::getOsName(){
 	#elif _WIN64
 		// Заполняем структуру
 		result = {"Windows 64-bit", 2};
-	#elif __unix || __unix__
-		// Заполняем структуру
-		result = {"Unix", 3};
 	#elif __APPLE__ || __MACH__
 		// Заполняем структуру
-		result = {"Mac OSX", 4};
+		result = {"Mac OSX", 3};
 	#elif __linux__
 		// Заполняем структуру
-		result = {"Linux", 5};
+		result = {"Linux", 4};
 	#elif __FreeBSD__
 		// Заполняем структуру
-		result = {"FreeBSD", 6};
+		result = {"FreeBSD", 5};
+	#elif __unix || __unix__
+		// Заполняем структуру
+		result = {"Unix", 6};
 	#else
 		// Заполняем структуру
 		result = {"Other", 7};
@@ -243,7 +243,7 @@ void OsOpt::run(){
 				exec("netsh interface tcp set global autotuninglevel=normal");
 			} break;
 			// Если это MacOS X
-			case 4: {
+			case 3: {
 				// OSX default of 3 is not big enough
 				exec("sysctl -w net.inet.tcp.win_scale_factor=8");
 				// increase OSX TCP autotuning maximums
@@ -261,7 +261,7 @@ void OsOpt::run(){
 				exec("sysctl -w kern.ipc.somaxconn=49152");
 			} break;
 			// Если это Linux
-			case 5: {
+			case 4: {
 				// for max connections
 				exec("sysctl -w net.core.somaxconn=49152");
 				// allow testing with buffers up to 128MB
@@ -282,7 +282,7 @@ void OsOpt::run(){
 				if(!algorithm.empty()) exec(string("sysctl -w net.ipv4.tcp_congestion_control=") + algorithm);
 			} break;
 			// Если это FreeBSD
-			case 6: {
+			case 5: {
 				// set to at least 16MB for 10GE hosts
 				exec("sysctl -w kern.ipc.maxsockbuf=16777216");
 				// set autotuning maximum to at least 16MB too
@@ -297,8 +297,6 @@ void OsOpt::run(){
 				// increase autotuning step size
 				exec("sysctl -w net.inet.tcp.sendbuf_inc=16384");
 				exec("sysctl -w net.inet.tcp.recvbuf_inc=524288");
-				// turn off inflight limiting
-				exec("sysctl -w net.inet.tcp.inflight.enable=0");
 				// set this on test/measurement hosts
 				exec("sysctl -w net.inet.tcp.hostcache.expire=1");
 				// for max connections

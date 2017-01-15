@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <pwd.h>
 #include <grp.h>
+#include <sys/resource.h>
 #include "../log/log.h"
 #include "../config/conf.h"
 
