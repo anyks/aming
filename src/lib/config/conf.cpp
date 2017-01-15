@@ -178,8 +178,6 @@ Config::Config(const string filename){
 			PROXY_DEDLOCK,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			PROXY_OPTIMOS,
-			// Активировать ограничение трафика пользователей
-			PROXY_BANDLIMIN,
 			// Активировать кеширование часто-запрашиваемых страниц
 			PROXY_CACHE,
 			// Идентификатор группы пользователя под которым запускается прокси
@@ -195,23 +193,22 @@ Config::Config(const string filename){
 			// Список dns серверов
 			PROXY_RESOLVER
 		};
-		// Заполняем структуру bloking
-		this->bloking = {
+		// Заполняем структуру firewall
+		this->firewall = {
 			// Количество неудачных попыток авторизации
-			BLOCK_MAX_TRYAUTH,
+			FIREWALL_MAX_TRYAUTH,
 			// Разрешить блокирование пользователя после неудачных попыток авторизации
-			BLOCK_AUTH,
+			FIREWALL_AUTH,
 			// Разрешить блокирование зацикливающих запросов
-			BLOCK_LOOP,
-			// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
-			BLOCK_TIME_LOOP
-		};
-		// Заполняем структуру listsites
-		this->listsites = {
+			FIREWALL_LOOP,
 			// Активировать черный список сайтов или портов
-			SITES_BLACK_LIST,
+			FIREWALL_BLACK_LIST,
 			// Активировать белый список сайтов или портов
-			SITES_WHITE_LIST
+			FIREWALL_WHITE_LIST,
+			// Активировать ограничение трафика пользователей
+			FIREWALL_BANDLIMIN,
+			// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
+			FIREWALL_TIME_LOOP
 		};
 		// Заполняем структуру authorization
 		this->authorization = {
@@ -345,8 +342,6 @@ Config::Config(const string filename){
 			ini.GetBoolean("proxy", "deblock", PROXY_DEDLOCK),
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			ini.GetBoolean("proxy", "optimos", PROXY_OPTIMOS),
-			// Активировать ограничение трафика пользователей
-			ini.GetBoolean("proxy", "bandlimin", PROXY_BANDLIMIN),
 			// Активировать кеширование часто-запрашиваемых страниц
 			ini.GetBoolean("proxy", "cache", PROXY_CACHE),
 			// Идентификатор группы пользователя под которым запускается прокси
@@ -362,23 +357,22 @@ Config::Config(const string filename){
 			// Список dns серверов
 			resolver
 		};
-		// Заполняем структуру bloking
-		this->bloking = {
+		// Заполняем структуру firewall
+		this->firewall = {
 			// Количество неудачных попыток авторизации
-			(u_int) ini.GetInteger("blocking", "maxtryauth", BLOCK_MAX_TRYAUTH),
+			(u_int) ini.GetInteger("firewall", "maxtryauth", FIREWALL_MAX_TRYAUTH),
 			// Разрешить блокирование пользователя после неудачных попыток авторизации
-			ini.GetBoolean("blocking", "blockauth", BLOCK_AUTH),
+			ini.GetBoolean("firewall", "blockauth", FIREWALL_AUTH),
 			// Разрешить блокирование зацикливающих запросов
-			ini.GetBoolean("blocking", "blockloop", BLOCK_LOOP),
-			// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
-			ini.Get("blocking", "timeblockloop", BLOCK_TIME_LOOP)
-		};
-		// Заполняем структуру listsites
-		this->listsites = {
+			ini.GetBoolean("firewall", "blockloop", FIREWALL_LOOP),
 			// Активировать черный список сайтов или портов
-			ini.GetBoolean("listsites", "blacklist", SITES_BLACK_LIST),
+			ini.GetBoolean("firewall", "blacklist", FIREWALL_BLACK_LIST),
 			// Активировать белый список сайтов или портов
-			ini.GetBoolean("listsites", "whitelist", SITES_WHITE_LIST)
+			ini.GetBoolean("firewall", "whitelist", FIREWALL_WHITE_LIST),
+			// Активировать ограничение трафика пользователей
+			ini.GetBoolean("firewall", "bandlimin", FIREWALL_BANDLIMIN),
+			// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
+			ini.Get("firewall", "timeblockloop", FIREWALL_TIME_LOOP)
 		};
 		// Заполняем структуру authorization
 		this->authorization = {

@@ -343,7 +343,7 @@ void LogApp::welcome(){
 		const char * _transfer = (this->config->proxy.transfer ? "yes" : "no");
 		const char * _deblock = (this->config->proxy.deblock ? "yes" : "no");
 		const char * _optimos = (this->config->proxy.optimos ? "yes" : "no");
-		const char * _bandlimin = (this->config->proxy.bandlimin ? "yes" : "no");
+		const char * _bandlimin = (this->config->firewall.bandlimin ? "yes" : "no");
 		const char * _cache = (this->config->proxy.cache ? "yes" : "no");
 		const char * _allcon = (this->config->proxy.allcon > 0 ? to_string(this->config->proxy.allcon).c_str() : "auto");
 		// Данные прокси сервера

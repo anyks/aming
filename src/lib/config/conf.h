@@ -44,7 +44,6 @@
 #define PROXY_FORWARD true
 #define PROXY_DEDLOCK false
 #define PROXY_OPTIMOS false
-#define PROXY_BANDLIMIN false
 #define PROXY_CACHE false
 #define PROXY_DEBUG false
 #define PROXY_DAEMON false
@@ -67,10 +66,6 @@
 
 // Общее количество одновременных подключений к прокси серверу (-1 = auto)
 #define ALL_CONNECTS -1
-
-// Модуль разрешенных списков файлов
-#define SITES_BLACK_LIST false
-#define SITES_WHITE_LIST false
 
 // Модуль скрытия заголовков
 #define RM_HEADERS_REQUEST false
@@ -107,10 +102,13 @@
 #define AUTH_NO false
 
 // Модуль блокировок
-#define BLOCK_MAX_TRYAUTH 10
-#define BLOCK_AUTH false
-#define BLOCK_LOOP true
-#define BLOCK_TIME_LOOP "60s"
+#define FIREWALL_MAX_TRYAUTH 10
+#define FIREWALL_AUTH false
+#define FIREWALL_LOOP true
+#define FIREWALL_BLACK_LIST false
+#define FIREWALL_WHITE_LIST false
+#define FIREWALL_BANDLIMIN false
+#define FIREWALL_TIME_LOOP "60s"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -173,19 +171,15 @@ class Config {
 			bool noauth;	// Без авторизации
 		} __attribute__((packed));
 		/**
-		 * Listsites Списки сайтов
+		 * Firewall Блокировка плохих запросов
 		 */
-		struct Listsites {
-			bool blacklist;		// Активировать черный список сайтов или портов
-			bool whitelist;		// Активировать белый список сайтов или портов
-		} __attribute__((packed));
-		/**
-		 * Bloking Блокировка плохих запросов
-		 */
-		struct Bloking {
+		struct Firewall {
 			u_int maxtryauth;		// 10 неудачных попыток авторизации
 			bool blockauth;			// Разрешить блокирование пользователя после неудачных попыток авторизации
 			bool blockloop;			// Разрешить блокирование зацикливающих запросов
+			bool blacklist;			// Активировать черный список сайтов или портов
+			bool whitelist;			// Активировать белый список сайтов или портов
+			bool bandlimin;			// Активировать ограничение трафика пользователей
 			string timeblockloop;	// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
 		} __attribute__((packed));
 		/**
@@ -205,7 +199,6 @@ class Config {
 			bool forward;				// Прямой прокси (доступ во внешнюю сеть)
 			bool deblock;				// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
 			bool optimos;				// Оптимизировать настройки операционной системы (нужен root доступ)
-			bool bandlimin;				// Активировать ограничение трафика пользователей
 			bool cache;					// Активировать кеширование часто-запрашиваемых страниц
 			string user;				// Идентификатор группы пользователя под которым запускается прокси
 			string group;				// Идентификатор пользователя под которым запускается прокси
@@ -261,12 +254,11 @@ class Config {
 		struct Ipv4 ipv4;					// Подключение по IPv4
 		struct Logs logs;					// Параметры логов
 		struct Proxy proxy;					// Параметры самого прокси-сервера
-		struct Bloking bloking;				// Блокировка плохих запросов
 		struct Header rmheader;				// Удалять указанные http заголовки из запроса или ответа
 		struct Header setheader;			// Установить указанные http заголовки в запрос или ответ
+		struct Firewall firewall;			// Параметры файервола
 		struct Timeouts timeouts;			// Таймауты подключений
 		struct BufferSize buffers;			// Размеры буферов передачи данных
-		struct Listsites listsites;			// Списки сайтов
 		struct Authorization authorization;	// Параметры авторизации
 		// Основные параметры прокси
 		u_short options;
