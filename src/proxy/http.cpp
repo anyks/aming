@@ -620,41 +620,45 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 		else {
 			// Получаем размер входящих данных
 			size_t len = evbuffer_get_length(input);
-			// Создаем буфер данных
-			char * buffer = new char[len];
-			// Копируем в буфер полученные данные
-			evbuffer_copyout(input, buffer, len);
-			// Если заголовки запроса не получены
-			if(http->headers.response.empty()){
-				// Добавляем полученный буфер в вектор
-				vector <char> headers(buffer, buffer + len);
-				// Если буферы созданы
-				if(http->headers.response.create(headers.data())){
-					// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
-					if((strstr(headers.data(), "101 Switching Protocols") != NULL)
-					&& !http->headers.response.getHeader("upgrade").value.empty()
-					&& (http->headers.response.getHeader("connection").value.find("Upgrade") != string::npos)){
-						// Устанавливаем что это соединение CONNECT,
-						// для будущего обмена данными, так как они будут приходить бинарные
-						http->client.connect = true;
+			// Если данные получены
+			if(len){
+				// Создаем буфер данных
+				char * buffer = new char[len];
+				// Копируем в буфер полученные данные
+				evbuffer_copyout(input, buffer, len);
+				// Если заголовки запроса не получены
+				if(http->headers.response.empty()){
+					// Добавляем полученный буфер в вектор
+					vector <char> headers(buffer, buffer + len);
+					// Если буферы созданы
+					if(http->headers.response.create(headers.data())){
+						// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
+						if((strstr(headers.data(), "101 Switching Protocols") != NULL)
+						&& !http->headers.response.getHeader("upgrade").value.empty()
+						&& (http->headers.response.getHeader("connection").value.find("Upgrade") != string::npos)){
+							// Устанавливаем что это соединение CONNECT,
+							// для будущего обмена данными, так как они будут приходить бинарные
+							http->client.connect = true;
+						}
+						// Создаем буфер для исходящих данных
+						struct evbuffer * tmp = evbuffer_new();
+						// Выполняем модификацию заголовков
+						http->parser.modify(headers);
+						// Добавляем в новый буфер модифицированные заголовки
+						evbuffer_add(tmp, headers.data(), headers.size());
+						// Отправляем данные клиенту
+						evbuffer_add_buffer(output, tmp);
+						// Удаляем данные из буфера
+						evbuffer_drain(input, len);
+						// Удаляем временный буфер
+						evbuffer_free(tmp);
 					}
-					// Создаем буфер для исходящих данных
-					struct evbuffer * tmp = evbuffer_new();
-					// Выполняем модификацию заголовков
-					http->parser.modify(headers);
-					// Добавляем в новый буфер модифицированные заголовки
-					evbuffer_add(tmp, headers.data(), headers.size());
-					// Отправляем данные клиенту
-					evbuffer_add_buffer(output, tmp);
-					// Удаляем данные из буфера
-					evbuffer_drain(input, len);
-					// Удаляем временный буфер
-					evbuffer_free(tmp);
-				}
-			// Если заголовки получены, выводим так как есть
-			} else evbuffer_add_buffer(output, input);
-			// Удаляем буфер данных
-			delete [] buffer;
+				// Если заголовки получены, выводим так как есть
+				} else evbuffer_add_buffer(output, input);
+				// Удаляем буфер данных
+				delete [] buffer;
+			// Закрываем соединение с клиентом
+			} else http->close_client();
 		}
 	}
 	// Выходим
@@ -680,7 +684,7 @@ void HttpProxy::do_request(struct bufferevent * bev, void * ctx, bool flag){
 			// Очищаем объект ответа
 			http->response.clear();
 			// Получаем первый элемент из массива
-			vector <HttpData>::iterator httpData = http->parser.httpData.begin();
+			auto httpData = http->parser.httpData.begin();
 			// Запоминаем данные объекта http запроса
 			http->httpData = * httpData;
 			// Если авторизация не прошла
@@ -747,6 +751,8 @@ void HttpProxy::do_request(struct bufferevent * bev, void * ctx, bool flag){
 				bufferevent_write(bev, http->response.data(), http->response.size());
 				// Удаляем объект подключения
 				http->parser.httpData.erase(httpData);
+				// Закрываем соединение с клиентом
+				if(http->response.code != 200) http->close_client();
 			}
 		}
 	}
