@@ -33,7 +33,7 @@ class HttpHeaders {
 		struct Header {
 			string head;	// Заголовок
 			string value;	// значение заголовка
-		} __attribute__((packed));
+		};
 		// Заголовки http запроса
 		map <string, Header> headers;
 		/**
@@ -139,7 +139,7 @@ class HttpData {
 			string host;		// Хост
 			string port;		// Порт
 			string protocol;	// Протокол
-		} __attribute__((packed));
+		};
 		// Основные переменные класса
 		u_short			options;	// Параметры прокси сервера
 		string			appName;	// Название приложения
@@ -478,7 +478,7 @@ class Http {
 		struct HttpEnd {
 			u_short	type = 0;
 			size_t	begin = 0, end = 0;
-		} __attribute__((packed));
+		};
 		// Параметры прокси сервера
 		u_short options;
 		// Название и версия прокси сервера

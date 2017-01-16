@@ -32,7 +32,7 @@ class OsOpt {
 		struct OsData {
 			string	name;	// Название операционной системы
 			u_int	type;	// Тип операционной системы
-		} __attribute__((packed));
+		};
 		// Объект лога
 		LogApp * log = NULL;
 		// Объект конфигурационного файла

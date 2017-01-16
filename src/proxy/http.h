@@ -42,7 +42,7 @@ using namespace std;
 struct Proxy {
 	LogApp * log;		// Объект ведения логов
 	Config * config;	// Объект конфигурационных данных
-} __attribute__((packed));
+};
 /**
  * Connects Класс подключений к прокси серверу
  */
@@ -112,21 +112,21 @@ class BufferHttpProxy {
 		struct Headers {
 			HttpHeaders	request;	// Заголовки http запроса
 			HttpHeaders	response;	// Заголовки http ответа
-		} __attribute__((packed));
+		};
 		/**
 		 * Events Буферы событий
 		 */
 		struct Events {
 			struct bufferevent * client = NULL;	// Буфер событий клиента
 			struct bufferevent * server = NULL;	// Буфер событий сервера
-		} __attribute__((packed));
+		};
 		/**
 		 * Request Буфер данных
 		 */
 		struct Request {
 			vector <char>	data;			// Данные в буфере
 			size_t			offset	= 0;	// Смещение в буфере
-		} __attribute__((packed));
+		};
 		/**
 		 * Server Данные текущего сервера
 		 */
@@ -134,14 +134,14 @@ class BufferHttpProxy {
 			u_int	port	= 0;	// Порт
 			string	host	= "";	// Хост адрес
 			string	mac		= "";	// Мак адрес
-		} __attribute__((packed));
+		};
 		/**
 		 * Sockets Сокеты клиента и сервера
 		 */
 		struct Sockets {
 			evutil_socket_t client = -1;	// Сокет клиента
 			evutil_socket_t server = -1;	// Сокет сервера
-		} __attribute__((packed));
+		};
 		/**
 		 * Client Структура с информацией о подключении клиента
 		 */
@@ -152,7 +152,7 @@ class BufferHttpProxy {
 			string	ip			= "";		// ip адрес клиента
 			string	mac			= "";		// Мак адрес клиента
 			string	useragent	= "";		// userAgent клиента
-		} __attribute__((packed));
+		};
 		/**
 		 * lock Метод блокировки мютекса
 		 */

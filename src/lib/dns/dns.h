@@ -37,7 +37,7 @@ class DNSResolver {
 			string domain;				// Название домена
 			LogApp * log;				// Объект ведения логов
 			struct event_base * base;	// База событий
-		} __attribute__((packed));
+		};
 		// Тип протокола интернета AF_INET или AF_INET6
 		int family;
 		// Объект ведения логов

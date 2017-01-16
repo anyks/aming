@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <string>
 #include <fstream>
+#include <algorithm>
 #include <unistd.h>
 #include <time.h>
 #include <zlib.h>

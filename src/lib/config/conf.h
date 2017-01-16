@@ -124,35 +124,35 @@ class Config {
 		struct Timeouts {
 			u_short read;	// Таймаут времени на чтение
 			u_short write;	// Таймаут времени на запись
-		} __attribute__((packed));
+		};
 		/**
 		 * BufferSize Структура размеров буфера
 		 */
 		struct BufferSize {
 			int read;		// Буфер на чтение
 			int write;		// Буфер на запись
-		} __attribute__((packed));
+		};
 		/**
 		 * Ipv4 Подключение по IPv4
 		 */
 		struct Ipv4 {
 			string external;	// Внешний интерфейс, через который будут уходить запросы от сервера
 			string internal;	// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-		} __attribute__((packed));
+		};
 		/**
 		 * Ipv6 Подключение по IPv6
 		 */
 		struct Ipv6 {
 			string external;	// Внешний интерфейс, через который будут уходить запросы от сервера
 			string internal;	// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-		} __attribute__((packed));
+		};
 		/**
 		 * Header http заголовки из запроса или ответа
 		 */
 		struct Header {
 			bool request;	// Убирать заголовки в запросе
 			bool response;	// Убирать заголовки в ответе
-		} __attribute__((packed));
+		};
 		/**
 		 * Logs Параметры логов
 		 */
@@ -161,7 +161,7 @@ class Config {
 			bool enabled;	// Разрешить ведение логов
 			u_int size;		// Размер файла лога в Кб
 			string dir;		// Адрес каталога для хранения логов
-		} __attribute__((packed));
+		};
 		/**
 		 * Authorization Параметры авторизации
 		 */
@@ -169,7 +169,7 @@ class Config {
 			bool osusers;	// Активировать авторизацию через пользователей в операционной системе
 			bool listusers;	// Активировать авторизацию через файл со списком пользователей и ip/mac адресами
 			bool enabled;	// Разрешить авторизацию пользователя
-		} __attribute__((packed));
+		};
 		/**
 		 * Firewall Блокировка плохих запросов
 		 */
@@ -181,7 +181,7 @@ class Config {
 			bool whitelist;			// Активировать белый список сайтов или портов
 			bool bandlimin;			// Активировать ограничение трафика пользователей
 			string timeblockloop;	// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
-		} __attribute__((packed));
+		};
 		/**
 		 * Proxy Параметры самого прокси-сервера
 		 */
@@ -206,7 +206,7 @@ class Config {
 			string piddir;				// Адрес хранения pid файла
 			string confdir;				// Адрес хранения конфигурационных файлов
 			vector <string> resolver;	// Массив со списком dns серверов
-		} __attribute__((packed));
+		};
 		// Адрес конфигурационного файла
 		string filename;
 		/**
@@ -250,16 +250,16 @@ class Config {
 		bool isFileExist(const char * path);
 	public:
 		// Основные данные приложения
-		struct Ipv6 ipv6;			// Подключение по IPv6
-		struct Ipv4 ipv4;			// Подключение по IPv4
-		struct Logs logs;			// Параметры логов
-		struct Proxy proxy;			// Параметры самого прокси-сервера
-		struct Header rmheader;		// Удалять указанные http заголовки из запроса или ответа
-		struct Header setheader;	// Установить указанные http заголовки в запрос или ответ
-		struct Firewall firewall;	// Параметры файервола
-		struct Timeouts timeouts;	// Таймауты подключений
-		struct BufferSize buffers;	// Размеры буферов передачи данных
-		struct Authorization auth;	// Параметры авторизации
+		Ipv6 ipv6;			// Подключение по IPv6
+		Ipv4 ipv4;			// Подключение по IPv4
+		Logs logs;			// Параметры логов
+		Proxy proxy;		// Параметры самого прокси-сервера
+		Header rmheader;	// Удалять указанные http заголовки из запроса или ответа
+		Header setheader;	// Установить указанные http заголовки в запрос или ответ
+		Firewall firewall;	// Параметры файервола
+		Timeouts timeouts;	// Таймауты подключений
+		BufferSize buffers;	// Размеры буферов передачи данных
+		Authorization auth;	// Параметры авторизации
 		// Основные параметры прокси
 		u_short options;
 		/**

@@ -4,10 +4,6 @@
 // Go to the project home page for more info:
 //
 // https://github.com/benhoyt/inih
-
-#include <algorithm>
-#include <cctype>
-#include <cstdlib>
 #include "ini.h"
 
 using namespace std;

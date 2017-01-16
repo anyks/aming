@@ -10,7 +10,11 @@
 
 #include <map>
 #include <string>
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
 #include <stdlib.h>
+#include <algorithm>
 
 /* Max params */
 #define MAX_SECTION 50
