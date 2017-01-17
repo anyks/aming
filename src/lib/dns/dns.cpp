@@ -62,10 +62,14 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 			}
 			// Если ip адреса получены, выводим ip адрес в случайном порядке
 			if(!ips.empty()){
-				// рандомизация генератора случайных чисел
-				srand(time(0));
-				// Получаем ip адрес
-				domainData->ip = ips[0 + rand() % ips.size()];
+				// Если количество элементов больше 1
+				if(ips.size() > 1){
+					// рандомизация генератора случайных чисел
+					srand(time(0));
+					// Получаем ip адрес
+					domainData->ip = ips[0 + rand() % ips.size()];
+				// Выводим только первый элемент
+				} else domainData->ip = ips[0];
 			}
 			// Очищаем структуру данных домена
 			evutil_freeaddrinfo(addr);

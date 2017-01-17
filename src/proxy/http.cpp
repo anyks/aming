@@ -515,10 +515,11 @@ int HttpProxy::connect_server(void * ctx){
 		// Выводим в лог сообщение
 		http->proxy.log->write(
 			LOG_ERROR,
-			"host server = %s not found, port = %d, client = %s",
+			"host server = %s not found, port = %d, client = %s, socket = %d",
 			http->httpData.getHost().c_str(),
 			http->httpData.getPort(),
-			http->client.ip.c_str()
+			http->client.ip.c_str(),
+			http->sockets.client
 		);
 		// Выходим
 		return 0;

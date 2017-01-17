@@ -735,7 +735,7 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
 			// Если это чанкование
 			if(!ch.empty() && (ch.find("chunked") != string::npos)){
 				// Выполняем поиск подстроки
-				char * pch = strstr(buffer + this->length, "0\r\n\r\n");
+				const char * pch = strstr(buffer + this->length, "0\r\n\r\n");
 				// Если конец передачи данных мы нашли
 				// Определяем размер вложений
 				if(pch != NULL) body_size = ((pch - buffer) - this->length + 5);
