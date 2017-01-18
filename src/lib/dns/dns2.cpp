@@ -6,7 +6,7 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
 
-#include "dns.h"
+#include "dns2.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -22,6 +22,10 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 	DomainData * domainData = reinterpret_cast <DomainData *> (ctx);
 	// Если данные получены
 	if(domainData != NULL){
+		// Полученный ip адрес
+		string ip;
+		// Полученные ip адреса
+		vector <string> ips;
 		// Если возникла ошибка
 		if(errcode){
 			// Выводим в лог сообщение
@@ -55,24 +59,36 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 						} break;
 					}
 					// Запоминаем полученный ip адрес
-					domainData->ips.push_back(ip);
+					ips.push_back(ip);
 				}
 			}
-			// Очищаем структуру данных домена
-			evutil_freeaddrinfo(addr);
 		}
-		// Удаляем события из базы событий
-		event_base_loopbreak(domainData->base);
+		// Если ip адреса получены, выводим ip адрес в случайном порядке
+		if(!ips.empty()){
+			// Если количество элементов больше 1
+			if(ips.size() > 1){
+				// рандомизация генератора случайных чисел
+				srand(time(0));
+				// Получаем ip адрес
+				ip = ips[rand() % ips.size()];
+			// Выводим только первый элемент
+			} else ip = ips[0];
+		}
+		// Выводим готовый результат
+		domainData->fn(ip, domainData->ctx);
+		// Удаляем передаваемый объект
+		delete domainData;
 	}
+	// Очищаем структуру данных домена
+	evutil_freeaddrinfo(addr);
 }
 /**
  * resolve Метод ресолвинга домена
- * @param  domain название домена
- * @return        ip адрес домена
+ * @param domain название домена
+ * @param fn     функция обратного вызова срабатывающая при получении данных
+ * @param ctx    указатель на объект передаваемый пользователем
  */
-string DNSResolver::resolve(const string domain){
-	// IP адрес домена
-	string ip;
+void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 	// Если домен передан
 	if(!domain.empty()){
 		// Результат работы регулярного выражения
@@ -97,38 +113,44 @@ string DNSResolver::resolve(const string domain){
 			hints.ai_protocol = IPPROTO_TCP;
 			// Создаем объект домен
 			DomainData * domainData = new DomainData;
+			// Устанавливаем функцию обратного вызова
+			domainData->fn = fn;
+			// Запоминаем указатель на объект пользователя
+			domainData->ctx = ctx;
+			// Запоминаем название искомого домена
+			domainData->domain = domain;
 			// Запоминаем объект лога
 			domainData->log = this->log;
-			// Запоминаем объект базы событий
-			domainData->base = this->base;
 			// Устанавливаем тип протокола интернета
 			domainData->family = this->family;
-			// Добавляем доменное имя
-			domainData->domain = domain;
 			// Выполняем dns запрос
 			struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
 			// Выводим в лог сообщение
 			if((req == NULL) && (this->log != NULL)) this->log->write(LOG_ERROR, "request for %s returned immediately", domain.c_str());
-			// Запускаем базу событий
-			event_base_dispatch(this->base);
-			// Если ip адреса получены, выводим ip адрес в случайном порядке
-			if(!domainData->ips.empty()){
-				// Если количество элементов больше 1
-				if(domainData->ips.size() > 1){
-					// рандомизация генератора случайных чисел
-					srand(time(0));
-					// Получаем ip адрес
-					ip = domainData->ips[rand() % domainData->ips.size()];
-				// Выводим только первый элемент
-				} else ip = domainData->ips[0];
-			}
-			// Удаляем объект домена
-			delete domainData;
 		// Если передан домен то возвращаем его
-		} else ip = domain;
+		} else fn(domain, ctx);
 	}
-	// Выводим ip адрес
-	return ip;
+	// Выходим
+	return;
+}
+/**
+ * createDNSBase Метод создания dns базы
+ */
+void DNSResolver::createDNSBase(){
+	// Если база событий существует
+	if(this->base != NULL){
+		// Очищаем базу данных dns
+		if(this->dnsbase != NULL) evdns_base_free(this->dnsbase, 0);
+		// Создаем базу данных dns
+		this->dnsbase = evdns_base_new(this->base, 0);
+		// Если база dns не создана
+		if(!this->dnsbase && (this->log != NULL)){
+			// Выводим в лог сообщение
+			this->log->write(LOG_ERROR, "dns base does not created!");
+		}
+	}
+	// Если нейм сервера переданы
+	setNameServers(this->servers);
 }
 /**
  * setFamily Метод установки интернет протокола
@@ -147,77 +169,73 @@ void DNSResolver::setLog(LogApp * log){
 	if(log != NULL) this->log = log;
 }
 /**
- * setNameServer Метод добавления сервера dns
- * @param nameserver ip адрес dns сервера
+ * setBase Установка базы данных событий
+ * @param base указатель на объект базы данных событий
  */
-void DNSResolver::setNameServer(const string nameserver){
+void DNSResolver::setBase(struct event_base * base){
+	// Создаем базу данных событий
+	this->base = base;
+	// Создаем dns базу
+	createDNSBase();
+}
+/**
+ * setNameServer Метод добавления сервера dns
+ * @param server ip адрес dns сервера
+ */
+void DNSResolver::setNameServer(const string server){
 	// Если dns сервер передан
-	if(!nameserver.empty()){
+	if(!server.empty() && (this->dnsbase != NULL)){
 		// Добавляем dns сервер в базу dns
-		if(evdns_base_nameserver_ip_add(this->dnsbase, nameserver.c_str()) != 0){
+		if(evdns_base_nameserver_ip_add(this->dnsbase, server.c_str()) != 0){
 			// Выводим в лог сообщение
-			if(this->log != NULL) this->log->write(LOG_ERROR, "name server [%s] does not add!", nameserver.c_str());
+			if(this->log != NULL) this->log->write(LOG_ERROR, "name server [%s] does not add!", server.c_str());
 		}
 	}
 }
 /**
  * setNameServers Метод добавления серверов dns
- * @param nameserver ip адреса dns серверов
+ * @param server ip адреса dns серверов
  */
-void DNSResolver::setNameServers(vector <string> nameservers){
+void DNSResolver::setNameServers(vector <string> servers){
 	// Если нейм сервера переданы
-	if(!nameservers.empty()){
+	if(!servers.empty()){
+		// Запоминаем dns сервера
+		this->servers = servers;
 		// Переходим по всем нейм серверам и добавляем их
-		for(u_int i = 0; i < nameservers.size(); i++){
+		for(u_int i = 0; i < this->servers.size(); i++){
 			// Добавляем сервер dns в базу dns
-			setNameServer(nameservers[i]);
+			setNameServer(this->servers[i]);
 		}
 	}
 }
 /**
  * DNSResolver Конструктор
- * @param log         объект ведения логов
- * @param family      тип интернет протокола IPv4 или IPv6
- * @param nameservers массив dns серверов
+ * @param log     объект ведения логов
+ * @param base    база данных событий
+ * @param family  тип интернет протокола IPv4 или IPv6
+ * @param servers массив dns серверов
  */
-DNSResolver::DNSResolver(LogApp * log, const int family, vector <string> nameservers){
+DNSResolver::DNSResolver(LogApp * log, struct event_base * base, int family, vector <string> servers){
 	// Запоминаем объект лога
 	this->log = log;
+	// Создаем базу данных событий
+	this->base = base;
 	// Запоминаем тип интернет протокола
 	this->family = family;
-	// Создаем базу данных событий
-	this->base = event_base_new();
-	// Создаем базу данных dns
-	this->dnsbase = evdns_base_new(this->base, 0);
-	// Если база событий не создана
-	if(!this->base){
-		// Выводим в лог сообщение
-		if(this->log != NULL) this->log->write(LOG_ERROR, "event base does not created!");
-		// Выходим из приложения
-		exit(1);
-	}
-	// Если база dns не создана
-	if(!this->dnsbase){
-		// Выводим в лог сообщение
-		if(this->log != NULL) this->log->write(LOG_ERROR, "dns base does not created!");
-		// Выходим из приложения
-		exit(1);
-	}
-	// Если нейм сервера переданы
-	if(!nameservers.empty()){
-		// Переходим по всем нейм серверам и добавляем их
-		for(u_int i = 0; i < nameservers.size(); i++){
-			// Добавляем сервер dns в базу dns
-			setNameServer(nameservers[i]);
-		}
-	}
+	// Запоминаем dns сервера
+	this->servers = servers;
+	// Создаем dns базу
+	createDNSBase();
 }
 /**
  * ~DNSResolver Деструктор
  */
 DNSResolver::~DNSResolver(){
 	// Удаляем базу данных dns
-	evdns_base_free(this->dnsbase, 0);
-	// Удаляем базу данных событий
-	event_base_free(this->base);
+	if(this->dnsbase != NULL){
+		// Очищаем базу данных dns
+		evdns_base_free(this->dnsbase, 0);
+		// Обнуляем указатель
+		this->dnsbase = NULL;
+	}
 }

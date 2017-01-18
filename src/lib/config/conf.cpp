@@ -272,6 +272,15 @@ Config::Config(const string filename){
 			// Скорость исходящего подключения
 			getSizeBuffer(BUFFER_WRITE_SIZE)
 		};
+		// Заполняем структуру постоянного подключения keepalive
+		this->keepalive = {
+			// Максимальное количество попыток
+			KEEPALIVE_CNT,
+			// Интервал времени в секундах через которое происходит проверка подключения
+			KEEPALIVE_IDLE,
+			// Интервал времени в секундах между попытками
+			KEEPALIVE_INTVL
+		};
 	// Если все нормально то выполняем извлечение данных из конфигурационного файла
 	} else {
 		// Активируем разрешение connect прокси сервера
@@ -285,7 +294,7 @@ Config::Config(const string filename){
 		// Активируем разрешающий smart прокси сервер
 		this->options = (this->options | ((ini.Get("proxy", "skill", "dumb").compare("smart") == 0) ? OPT_SMART : OPT_NULL));
 		// Активируем постоянное соединение
-		this->options = (this->options | (ini.GetBoolean("proxy", "keepalive", true) ? OPT_KEEPALIVE : OPT_NULL));
+		this->options = (this->options | (ini.GetBoolean("keepalive", "keepalive", true) ? OPT_KEEPALIVE : OPT_NULL));
 		// Активируем логирование данных
 		this->options = (this->options | (ini.GetBoolean("logs", "enabled", true) ? OPT_LOG : OPT_NULL));
 		// Тип прокси сервера
@@ -435,6 +444,15 @@ Config::Config(const string filename){
 			getSizeBuffer((float) ini.GetReal("speed", "input", BUFFER_READ_SIZE)),
 			// Скорость исходящего подключения
 			getSizeBuffer((float) ini.GetReal("speed", "output", BUFFER_WRITE_SIZE))
+		};
+		// Заполняем структуру постоянного подключения keepalive
+		this->keepalive = {
+			// Максимальное количество попыток
+			(int) ini.GetInteger("keepalive", "keepcnt", KEEPALIVE_CNT),
+			// Интервал времени в секундах через которое происходит проверка подключения
+			(int) ini.GetInteger("keepalive", "keepidle", KEEPALIVE_IDLE),
+			// Интервал времени в секундах между попытками
+			(int) ini.GetInteger("keepalive", "keepintvl", KEEPALIVE_INTVL)
 		};
 	}
 }

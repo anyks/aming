@@ -65,7 +65,7 @@
 #define MAX_CONNECTS 100
 
 // Общее количество одновременных подключений к прокси серверу (-1 = auto)
-#define ALL_CONNECTS -1
+#define ALL_CONNECTS 100
 
 // Модуль скрытия заголовков
 #define RM_HEADERS_REQUEST false
@@ -95,6 +95,11 @@
 #define LOGS_ENABLED true
 #define LOGS_FILES true
 #define LOGS_SIZE 1024
+
+// Модуль постоянного подключения
+#define KEEPALIVE_CNT 10
+#define KEEPALIVE_IDLE 5
+#define KEEPALIVE_INTVL 3
 
 // Модуль авторизаций
 #define AUTH_OS_USERS true
@@ -145,6 +150,14 @@ class Config {
 		struct Ipv6 {
 			string external;	// Внешний интерфейс, через который будут уходить запросы от сервера
 			string internal;	// IP адрес интерфейса на котором будут приниматься запросы от клиентов
+		};
+		/**
+		 * Keepalive Параметры постоянного подключения
+		 */
+		struct Keepalive {
+			int keepcnt;	// Максимальное количество попыток
+			int keepidle;	// Интервал времени в секундах через которое происходит проверка подключения
+			int keepintvl;	// Интервал времени в секундах между попытками
 		};
 		/**
 		 * Header http заголовки из запроса или ответа
@@ -250,16 +263,17 @@ class Config {
 		bool isFileExist(const char * path);
 	public:
 		// Основные данные приложения
-		Ipv6 ipv6;			// Подключение по IPv6
-		Ipv4 ipv4;			// Подключение по IPv4
-		Logs logs;			// Параметры логов
-		Proxy proxy;		// Параметры самого прокси-сервера
-		Header rmheader;	// Удалять указанные http заголовки из запроса или ответа
-		Header setheader;	// Установить указанные http заголовки в запрос или ответ
-		Firewall firewall;	// Параметры файервола
-		Timeouts timeouts;	// Таймауты подключений
-		BufferSize buffers;	// Размеры буферов передачи данных
-		Authorization auth;	// Параметры авторизации
+		Ipv6 ipv6;				// Подключение по IPv6
+		Ipv4 ipv4;				// Подключение по IPv4
+		Logs logs;				// Параметры логов
+		Proxy proxy;			// Параметры самого прокси-сервера
+		Header rmheader;		// Удалять указанные http заголовки из запроса или ответа
+		Header setheader;		// Установить указанные http заголовки в запрос или ответ
+		Firewall firewall;		// Параметры файервола
+		Timeouts timeouts;		// Таймауты подключений
+		BufferSize buffers;		// Размеры буферов передачи данных
+		Authorization auth;		// Параметры авторизации
+		Keepalive keepalive;	// Постоянное подключение
 		// Основные параметры прокси
 		u_short options;
 		/**

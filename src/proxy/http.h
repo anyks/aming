@@ -13,16 +13,18 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/resource.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <sys/resource.h>
 #include <event2/listener.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 #include "../lib/log/log.h"
 #include "../lib/http/http.h"
 #include "../lib/config/conf.h"
-#include "../lib/dns/dns.h"
+#include "../lib/dns/dns2.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -229,6 +231,13 @@ class HttpProxy {
 		map <string, Connects> connects;
 		// Параметры прокси сервера
 		Proxy server;
+		// Создаем новую базу
+		struct event_base * base = NULL;
+		/**
+		 * create_server Функция создания прокси сервера
+		 * @return сокет прокси сервера
+		 */
+		evutil_socket_t create_server();
 		/**
 		 * get_mac Метод определения мак адреса клиента
 		 * @param  address структура параметров подключения
@@ -263,6 +272,23 @@ class HttpProxy {
 		 * @return      результат работы функции
 		 */
 		static int set_tcpnodelay(evutil_socket_t fd, LogApp * log);
+		/**
+		 * set_reuseaddr Функция разрешающая повторно использовать сокет после его удаления
+		 * @param  fd   файловый дескриптор (сокет)
+		 * @param  log  указатель на объект ведения логов
+		 * @return      результат работы функции
+		 */
+		static int set_reuseaddr(evutil_socket_t fd, LogApp * log);
+		/**
+		 * set_keepalive Функция устанавливает постоянное подключение на сокет
+		 * @param  fd      файловый дескриптор (сокет)
+		 * @param  log     указатель на объект ведения логов
+		 * @param  cnt     максимальное количество попыток
+		 * @param  idle    время через которое происходит проверка подключения
+		 * @param  intvl   время между попытками
+		 * @return         результат работы функции
+		 */
+		static int set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle, int intvl);
 		/**
 		 * set_buffer_size Функция установки размеров буфера
 		 * @param  fd         файловый дескриптор (сокет)
@@ -337,6 +363,10 @@ class HttpProxy {
 		 * @param config объект конфигурационных данных
 		 */
 		HttpProxy(LogApp * log = NULL, Config * config = NULL);
+		/**
+		 * ~HttpProxy Деструктор
+		 */
+		~HttpProxy();
 };
 
 #endif // _HTTP_PROXY_ANYKS_
