@@ -214,10 +214,9 @@ class BufferHttpProxy {
 		void set_timeout(const u_short type, bool read = false, bool write = false);
 		/**
 		 * BufferHttpProxy Конструктор
-		 * @param string  name    имя ресурса
-		 * @param u_short options параметры прокси сервера
+		 * @param config объект конфигурационных данных
 		 */
-		BufferHttpProxy(const string name, const u_short options);
+		BufferHttpProxy(Config * config = NULL);
 		/**
 		 * ~BufferHttpProxy Деструктор
 		 */
@@ -241,17 +240,17 @@ class HttpProxy {
 		evutil_socket_t create_server();
 		/**
 		 * get_mac Метод определения мак адреса клиента
-		 * @param  address структура параметров подключения
-		 * @return данные мак адреса
+		 * @param  ctx указатель на объект подключения
+		 * @return     данные мак адреса
 		 */
-		static string get_mac(struct sockaddr * address);
+		static string get_mac(void * ctx);
 		/**
-		 * get_host Функция получения данных хоста
-		 * @param  address структура параметров подключения
-		 * @param  socklen размер структуры
-		 * @return         данные полученного хоста
+		 * get_ip Функция получения данных ip адреса
+		 * @param  family тип интернет протокола
+		 * @param  ctx    указатель на объект подключения
+		 * @return        данные ip адреса
 		 */
-		static string get_host(struct sockaddr * address, int socklen);
+		static string get_ip(int family, void * ctx);
 		/**
 		 * spawn_thread Функция создания треда
 		 * @param  thread объект треда
@@ -356,7 +355,14 @@ class HttpProxy {
 		 * @param socklen  размер входящих данных
 		 * @param ctx      передаваемый объект
 		 */
-		static void accept_connect(struct evconnlistener * listener, evutil_socket_t fd, struct sockaddr * address, int socklen, void * ctx);
+		// static void accept_connect(struct evconnlistener * listener, evutil_socket_t fd, struct sockaddr * address, int socklen, void * ctx);
+		/**
+		 * accept_connect Функция подключения к серверу
+		 * @param fd    файловый дескриптор (сокет)
+		 * @param event событие на которое сработала функция обратного вызова
+		 * @param ctx   объект передаваемый как значение
+		 */
+		static void accept_connect(evutil_socket_t fd, short event, void * ctx);
 	public:
 		/**
 		 * HttpProxy Конструктор
@@ -364,10 +370,6 @@ class HttpProxy {
 		 * @param config объект конфигурационных данных
 		 */
 		HttpProxy(LogApp * log = NULL, Config * config = NULL);
-		/**
-		 * ~HttpProxy Деструктор
-		 */
-		~HttpProxy();
 };
 
 #endif // _HTTP_PROXY_ANYKS_

@@ -229,14 +229,13 @@ void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
 }
 /**
  * BufferHttpProxy Конструктор
- * @param string  name    имя ресурса
- * @param u_short options параметры прокси сервера
+ * @param config объект конфигурационных данных
  */
-BufferHttpProxy::BufferHttpProxy(const string name, const u_short options){
+BufferHttpProxy::BufferHttpProxy(Config * config){
 	// Инициализируем мютекс
 	pthread_mutex_init(&this->mutex, 0);
 	// Создаем объект для работы с http заголовками
-	this->parser = Http(name, options);
+	if(config != NULL) this->parser = Http(config->proxy.name, config->options);
 }
 /**
  * ~BufferHttpProxy Деструктор
@@ -255,14 +254,16 @@ BufferHttpProxy::~BufferHttpProxy(){
 }
 /**
  * get_mac Метод определения мак адреса клиента
- * @param  address структура параметров подключения
- * @return данные мак адреса
+ * @param  ctx указатель на объект подключения
+ * @return     данные мак адреса
  */
-string HttpProxy::get_mac(struct sockaddr * address){
+string HttpProxy::get_mac(void * ctx){
 	// Буфер для копирования мак адреса
 	char buff[256];
+	// Получаем данные адреса
+	struct sockaddr * s = reinterpret_cast <struct sockaddr *> (ctx);
 	// Получаем указатель на мак адрес
-	unsigned char * ptr = (unsigned char *) address->sa_data;
+	unsigned char * ptr = (unsigned char *) s->sa_data;
 	// Записываем в буфер данные мак адреса
 	sprintf(
 		buff, "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -273,18 +274,37 @@ string HttpProxy::get_mac(struct sockaddr * address){
 	return buff;
 }
 /**
- * get_host Функция получения данных хоста
- * @param  address структура параметров подключения
- * @param  socklen размер структуры
- * @return         данные полученного хоста
+ * get_ip Функция получения данных ip адреса
+ * @param  family тип интернет протокола
+ * @param  ctx    указатель на объект подключения
+ * @return        данные ip адреса
  */
-string HttpProxy::get_host(struct sockaddr * address, int socklen){
-	// Буферы данных
-	char hbuf[256], sbuf[256];
-	// Извлекаем данные из структуры подключений
-	int s = getnameinfo(address, socklen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV);
-	// Если данные извлечены верно
-	if(s == 0) return hbuf;
+string HttpProxy::get_ip(int family, void * ctx){
+	// Определяем тип интернет протокола
+	switch(family){
+		// Если это IPv4
+		case AF_INET: {
+			// Создаем буфер для получения ip адреса
+			char ipstr[INET_ADDRSTRLEN];
+			// Получаем данные адреса
+			struct sockaddr_in * s = reinterpret_cast <struct sockaddr_in *> (ctx);
+			// Копируем полученные данные
+			inet_ntop(family, &s->sin_addr, ipstr, sizeof(ipstr));
+			// Выводим результат
+			return ipstr;
+		}
+		// Если это IPv6
+		case AF_INET6: {
+			// Создаем буфер для получения ip адреса
+			char ipstr[INET6_ADDRSTRLEN];
+			// Получаем данные адреса
+			struct sockaddr_in6 * s = reinterpret_cast <struct sockaddr_in6 *> (ctx);
+			// Копируем полученные данные
+			inet_ntop(family, &s->sin6_addr, ipstr, sizeof(ipstr));
+			// Выводим результат
+			return ipstr;
+		}
+	}
 	// Сообщаем что ничего не найдено
 	return "";
 }
@@ -1004,8 +1024,8 @@ bool HttpProxy::spawn_thread(pthread_t * thread, void * ctx){
  * @param socklen  размер входящих данных
  * @param ctx      передаваемый объект
  */
+/*
 void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t fd, struct sockaddr * address, int socklen, void * ctx){
-	/*
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если прокси существует
@@ -1048,67 +1068,171 @@ void HttpProxy::accept_connect(struct evconnlistener * listener, evutil_socket_t
 	}
 	// Выходим
 	return;
-	*/
+}
+*/
+/**
+ * accept_connect Функция подключения к серверу
+ * @param fd    файловый дескриптор (сокет)
+ * @param event событие на которое сработала функция обратного вызова
+ * @param ctx   объект передаваемый как значение
+ */
+void HttpProxy::accept_connect(evutil_socket_t fd, short event, void * ctx){
+	// Получаем объект прокси сервера
+	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
+	// Если прокси существует
+	if(proxy != NULL){
+		// IP и MAC адрес подключения
+		string ip, mac;
+		// Сокет подключившегося клиента
+		evutil_socket_t socket = -1;
+		// Определяем тип подключения
+		switch(proxy->server.config->proxy.ipver){
+			// Для протокола IPv4
+			case 4: {
+				// Структура получения
+				struct sockaddr_in client;
+				// Размер структуры подключения
+				socklen_t len = sizeof(client);
+				// Определяем разрешено ли подключение к прокси серверу
+				socket = accept(fd, reinterpret_cast <struct sockaddr *> (&client), &len);
+				// Если сокет не создан тогда выходим
+				if(socket < 1) return;
+				// Получаем данные подключившегося клиента
+				ip = get_ip(AF_INET, &client);
+				// Получаем данные мак адреса клиента
+				mac = get_mac(&client);
+			} break;
+			// Для протокола IPv6
+			case 6: {
+				// Структура получения
+				struct sockaddr_in6 client;
+				// Размер структуры подключения
+				socklen_t len = sizeof(client);
+				// Определяем разрешено ли подключение к прокси серверу
+				socket = accept(fd, reinterpret_cast <struct sockaddr *> (&client), &len);
+				// Если сокет не создан тогда выходим
+				if(socket < 1) return;
+				// Получаем данные подключившегося клиента
+				ip = get_ip(AF_INET6, &client);
+				// Получаем данные мак адреса клиента
+				mac = get_mac(&client);
+			} break;
+		}
+		// Устанавливаем неблокирующий режим для сокета
+		set_nonblock(socket, proxy->server.log);
+		// Устанавливаем разрешение на повторное использование сокета
+		set_reuseaddr(socket, proxy->server.log);
+		// Выводим в лог сообщение
+		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), socket);
+		// Создаем новый объект подключения
+		BufferHttpProxy * http = new BufferHttpProxy(proxy->server.config);
+		// Запоминаем параметры прокси сервера
+		http->proxy = proxy->server;
+		// Запоминаем список подключений
+		http->connects = &proxy->connects;
+		// Запоминаем файловый дескриптор текущего подключения
+		http->sockets.client = socket;
+		// Запоминаем данные мак адреса
+		http->client.mac = mac;
+		// Запоминаем данные клиента
+		http->client.ip = ip;
+		// Создаем поток
+		pthread_t thread;
+		// Выполняем активацию потока
+		spawn_thread(&thread, http);
+	}
 }
 /**
  * create_server Функция создания прокси сервера
  * @return сокет прокси сервера
  */
 evutil_socket_t HttpProxy::create_server(){
-	// Создаем хост подключения
-	string host;
-	// Тип интернет протокола
-	int family;
-	// Структура для сервера
-	struct sockaddr_in sin;
+	// Сокет сервера
+	evutil_socket_t sock = -1;
 	// Определяем тип подключения
 	switch(this->server.config->proxy.ipver){
 		// Для протокола IPv4
 		case 4: {
 			// Запоминаем внутренний адрес прокси сервера
-			host = this->server.config->ipv4.internal;
-			// Запоминаем тип протокола в ресолвер
-			family = AF_INET;
+			string host = this->server.config->ipv4.internal;
+			// Структура для сервера
+			struct sockaddr_in sin;
+			// Заполняем структуру сервера нулями
+			memset(&sin, 0, sizeof(sin));
+			// Получаем данные хоста удаленного сервера по его названию
+			struct hostent * server = gethostbyname2(host.c_str(), AF_INET);
+			// Указываем версию интернет протокола
+			sin.sin_family = AF_INET;
+			// Указываем адрес прокси сервера
+			sin.sin_addr.s_addr = * ((unsigned long *) server->h_addr);
+			// Указываем порт сервера
+			sin.sin_port = htons(this->server.config->proxy.port);
+			// Получаем сокет сервера
+			sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			// Создаем сокет
+			if(sock < 0){
+				// Выводим в консоль информацию
+				this->server.log->write(LOG_ERROR, "[-] could not create socket");
+				// Выходим
+				return -1;
+			}
+			// Устанавливаем неблокирующий режим для сокета
+			set_nonblock(sock, this->server.log);
+			// Устанавливаем неблокирующий режим
+			set_tcpnodelay(sock, this->server.log);
+			// Устанавливаем разрешение на повторное использование сокета
+			set_reuseaddr(sock, this->server.log);
+			// Выполняем биндинг сокета
+			if(::bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0){
+				// Выводим в консоль информацию
+				this->server.log->write(LOG_ERROR, "[-] bind error");
+				// Выходим
+				return -1;
+			}
 		} break;
 		// Для протокола IPv6
 		case 6: {
+			// Буфер содержащий адрес IPv6
+			char straddr[50];
 			// Запоминаем внутренний адрес прокси сервера
-			host = this->server.config->ipv6.internal;
-			// Запоминаем тип протокола в ресолвер
-			family = AF_INET6;
+			string host = this->server.config->ipv6.internal;
+			// Структура для сервера
+			struct sockaddr_in6 sin6;
+			// Заполняем структуру сервера нулями
+			memset(&sin6, 0, sizeof(sin6));
+			// Получаем данные хоста удаленного сервера по его названию
+			struct hostent * server = gethostbyname2(host.c_str(), AF_INET6);
+			// Указываем версию интернет протокола
+			sin6.sin6_family = AF_INET6;
+			// Указываем адрес прокси сервера
+			inet_ntop(AF_INET6, (struct in_addr *) server->h_addr, straddr, sizeof(straddr));
+			// Копируем полученный ip адрес
+			memcpy(sin6.sin6_addr.s6_addr, straddr, sizeof(straddr));
+			// Указываем порт сервера
+			sin6.sin6_port = htons(this->server.config->proxy.port);
+			// Получаем сокет сервера
+			sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+			// Создаем сокет
+			if(sock < 0){
+				// Выводим в консоль информацию
+				this->server.log->write(LOG_ERROR, "[-] could not create socket");
+				// Выходим
+				return -1;
+			}
+			// Устанавливаем неблокирующий режим для сокета
+			set_nonblock(sock, this->server.log);
+			// Устанавливаем неблокирующий режим
+			set_tcpnodelay(sock, this->server.log);
+			// Устанавливаем разрешение на повторное использование сокета
+			set_reuseaddr(sock, this->server.log);
+			// Выполняем биндинг сокета
+			if(::bind(sock, (struct sockaddr *) &sin6, sizeof(sin6)) < 0){
+				// Выводим в консоль информацию
+				this->server.log->write(LOG_ERROR, "[-] bind error");
+				// Выходим
+				return -1;
+			}
 		} break;
-	}
-	// Сокет сервера
-	evutil_socket_t sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
-	// Создаем сокет
-	if(sock < 0){
-		// Выводим в консоль информацию
-		this->server.log->write(LOG_ERROR, "[-] could not create socket");
-		// Выходим
-		return -1;
-	}
-	// Заполняем структуру сервера нулями
-	memset(&sin, 0, sizeof(sin));
-	// Получаем данные хоста удаленного сервера по его названию
-	struct hostent * server = gethostbyname(host.c_str());
-	// Указываем версию интернет протокола
-	sin.sin_family = family;
-	// Указываем адрес прокси сервера
-	sin.sin_addr.s_addr = * ((unsigned long *) server->h_addr);
-	// Указываем порт сервера
-	sin.sin_port = htons(this->server.config->proxy.port);
-	// Устанавливаем неблокирующий режим для сокета
-	set_nonblock(sock, this->server.log);
-	// Устанавливаем неблокирующий режим
-	set_tcpnodelay(sock, this->server.log);
-	// Устанавливаем разрешение на повторное использование сокета
-	set_reuseaddr(sock, this->server.log);
-	// Выполняем биндинг сокета
-	if(::bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0){
-		// Выводим в консоль информацию
-		this->server.log->write(LOG_ERROR, "[-] bind error");
-		// Выходим
-		return -1;
 	}
 	// Выполняем чтение сокета
 	if(listen(sock, this->server.config->proxy.allcon) < 0){
@@ -1130,8 +1254,6 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 	if((log != NULL) && (config != NULL)){
 		// Запоминаем параметры прокси сервера
 		this->server = {log, config};
-		// Создаем новую базу
-		this->base = event_base_new();
 		// Создаем прокси сервер
 		evutil_socket_t socket = create_server();
 		// Определяем максимальное количество потоков
@@ -1152,11 +1274,24 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 				case 0: {
 					// Выводим в консоль информацию
 					this->server.log->write(LOG_MESSAGE, "[-] start service: pid = %i, socket = %i", getpid(), socket);
-
-					cout << " ++++++++ " << this->base << endl;
-
-					while(true){sleep(5);}
-
+					// Создаем новую базу
+					this->base = event_base_new();
+					// Добавляем событие в базу
+					struct event * evnt = event_new(this->base, socket, EV_READ | EV_PERSIST, &HttpProxy::accept_connect, this);
+					// Активируем событие
+					event_add(evnt, NULL);
+					// Активируем перебор базы событий
+					event_base_loop(this->base, EVLOOP_NO_EXIT_ON_EMPTY);
+					// Отключаем подключение для сокета
+					shutdown(socket, SHUT_RDWR);
+					// Закрываем сокет
+					close(socket);
+					// Удаляем событие
+					event_del(evnt);
+					// Очищаем событие
+					event_free(evnt);
+					// Удаляем объект базы событий
+					event_base_free(this->base);
 				} break;
 			}
 		}
@@ -1243,11 +1378,4 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 		evconnlistener_free(listener);
 		*/
 	}
-}
-/**
- * ~HttpProxy Деструктор
- */
-HttpProxy::~HttpProxy(){
-	// Удаляем объект базы событий
-	event_base_free(this->base);
 }
