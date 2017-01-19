@@ -9,27 +9,7 @@
 
 // Устанавливаем область видимости
 using namespace std;
-/**
- * getOsName Функция определения операционной системы
- * @return название операционной системы
- */
-const char * LogApp::getOsName(){
-	#ifdef _WIN32
-		return "Windows 32-bit";
-	#elif _WIN64
-		return "Windows 64-bit";
-	#elif __APPLE__ || __MACH__
-		return "Mac OSX";
-	#elif __linux__
-		return "Linux";
-	#elif __FreeBSD__
-		return "FreeBSD";
-	#elif __unix || __unix__
-		return "Unix";
-	#else
-		return "Other";
-	#endif
-}
+
 /**
  * is_number Функция проверки является ли строка числом
  * @param  str строка для проверки
@@ -422,7 +402,8 @@ void LogApp::welcome(){
 		"*   connect:              %s\n*   type:                 %s\n"
 		"*   internet protocol:    IPv%i\n*   skill:                %s\n"
 		"*   internal ip:          %s\n*   external ip:          %s\n"
-		"*   port:                 %i\n*   operating system:     %s\n"
+		"*   port:                 %i\n*   cpu cores:            %i\n"
+		"*   cpu name:             %s\n*   operating system:     %s\n"
 		"*   date start proxy:     %s\n*\n*   Contact Developer:\n"
 		"*   copyright:            %s\n*   site:                 %s\n"
 		"*   e-mail:               %s\n*   support:              %s\n"
@@ -443,7 +424,8 @@ void LogApp::welcome(){
 			proxytype.c_str(), this->config->proxy.ipver,
 			proxyskill.c_str(), internal.c_str(),
 			external.c_str(), this->config->proxy.port,
-			getOsName(), date, copyright.c_str(),
+			this->config->os.ncpu, this->config->os.cpu.c_str(),
+			this->config->os.name.c_str(), date, copyright.c_str(),
 			site.c_str(), email.c_str(), support.c_str(), author.c_str()
 		);
 		// Выводим в консоль сообщение

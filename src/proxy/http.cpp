@@ -730,8 +730,13 @@ void HttpProxy::read_server(struct bufferevent * bev, void * ctx){
 				} else evbuffer_add_buffer(output, input);
 				// Удаляем буфер данных
 				delete [] buffer;
-			// Закрываем соединение с клиентом
-			} else http->close_client();
+			// Закрываем соединение
+			} else {
+				// Закрываем соединение с клиентом
+				http->close_client();
+				// Закрываем подключение к серверу
+				http->close_server();
+			}
 		}
 	}
 	// Выходим
@@ -1129,8 +1134,44 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 		this->base = event_base_new();
 		// Создаем прокси сервер
 		evutil_socket_t socket = create_server();
+		// Определяем максимальное количество потоков
+		int max_works = (this->server.config->proxy.maxworks ? this->server.config->proxy.maxworks : this->server.config->os.ncpu);
+		// Наши ID процесса и сессии
+		pid_t * pid = new pid_t[max_works];
+		// Создаем дочерние потоки (от 1 потому что 0-й это этот же процесс)
+		for(u_int i = 0; i < max_works; i++){
+			// Определяем тип потока
+			switch(pid[i] = fork()){
+				// Если поток не создан
+				case -1:
+					// Выводим в консоль информацию
+					this->server.log->write(LOG_ERROR, "[-] create fork error");
+					// Выходим из потока
+					exit(1);
+				// Если это дочерний поток значит все нормально и продолжаем работу
+				case 0: {
+					// Выводим в консоль информацию
+					this->server.log->write(LOG_MESSAGE, "[-] start service: pid = %i, socket = %i", getpid(), socket);
 
-		cout << " ++++++ " << socket << endl;
+					cout << " ++++++++ " << this->base << endl;
+
+					while(true){sleep(5);}
+
+				} break;
+			}
+		}
+		// Статус воркера
+		int status;
+		// Ждем завершение работы потомка (от 1 потому что 0-й это этот же процесс а он не может ждать завершения самого себя)
+		for(u_int i = 1; i < max_works; i++){
+			// Ожидаем завершения процесса
+			waitpid(pid[i], &status, 0);
+			// Выводим в консоль информацию
+			this->server.log->write(LOG_ERROR, "[-] end service: pid = %i, status = %i", pid[i], WTERMSIG(status));
+		}
+		// Удаляем массив пидов
+		delete [] pid;
+		
 
 		/*
 		// Запоминаем параметры прокси сервера

@@ -26,7 +26,7 @@ OsOpt::OsData OsOpt::getOsName(){
 		result = {"Windows 64-bit", 2};
 	#elif __APPLE__ || __MACH__
 		// Заполняем структуру
-		result = {"Mac OSX", 3};
+		result = {"MacOS X", 3};
 	#elif __linux__
 		// Заполняем структуру
 		result = {"Linux", 4};
@@ -90,6 +90,70 @@ int OsOpt::setFdLimit(){
 	lim.rlim_max = config->proxy.maxfds;
 	// установим указанное кол-во
 	return setrlimit(RLIMIT_NOFILE, &lim);
+}
+/**
+ * getNumberParam Метод получения заначений ядра sysctl
+ * @param  name название параметра
+ * @return      значение параметра
+ */
+long OsOpt::getNumberParam(string name){
+	// Параметр искомого значения
+	int param;
+	// Получаем размер искомого параметра
+	size_t len = sizeof(param);
+	// Запрашиваем искомые данные
+	if(sysctlbyname(name.c_str(), &param, &len, NULL, 0) < 0){
+		// Выводим сообщение в консоль
+		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
+	}
+	// Выводим результат
+	return param;
+}
+/**
+ * getParam Метод получения заначений ядра sysctl
+ * @param  name название параметра
+ * @return      значение параметра
+ */
+string OsOpt::getStringParam(string name){
+	// Создаем буфер для чтения данных
+	char buffer[128];
+	// Получаем размер буфера
+	size_t len = sizeof(buffer);
+	// Заполняем буфер нулями
+	memset(buffer, 0, len);
+	// Запрашиваем искомые данные
+	if(sysctlbyname(name.c_str(), &buffer, &len, NULL, 0) < 0){
+		// Выводим сообщение в консоль
+		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
+	}
+	// Выводим результат
+	return buffer;
+}
+/**
+ * setParam Метод установки значений ядра sysctl
+ * @param name  название параметра
+ * @param param данные параметра
+ */
+void OsOpt::setParam(string name, int param){
+	// Устанавливаем новые параметры настройки ядра
+	if(sysctlbyname(name.c_str(), NULL, 0, &param, sizeof(param)) < 0){
+		// Выводим сообщение в консоль
+		this->log->write(LOG_ERROR, "filed set param: %s -> %i", name.c_str(), param);
+	}
+}
+/**
+ * setParam Метод установки значений ядра sysctl
+ * @param name  название параметра
+ * @param param данные параметра
+ */
+void OsOpt::setParam(string name, string param){
+	// Получаем значение параметра для установки
+	const char * value = param.c_str();
+	// Устанавливаем новые параметры настройки ядра
+	if(sysctlbyname(name.c_str(), NULL, 0, (void *) value, param.size()) < 0){
+		// Выводим сообщение в консоль
+		this->log->write(LOG_ERROR, "filed set param: %s -> %s", name.c_str(), param.c_str());
+	}
 }
 /**
  * enableCoreDumps Функция активации создания дампа ядра
@@ -214,7 +278,7 @@ string OsOpt::getCongestionControl(string str){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
-	regex e("^[\\w\\._\\-]+\\s*\\:.*\\s*(cubic|htcp)", regex::ECMAScript | regex::icase);
+	regex e("(cubic|htcp)", regex::ECMAScript | regex::icase);
 	// Выполняем поиск протокола
 	regex_search(str, match, e);
 	// Если протокол найден
@@ -245,67 +309,67 @@ void OsOpt::run(){
 			// Если это MacOS X
 			case 3: {
 				// OSX default of 3 is not big enough
-				exec("sysctl -w net.inet.tcp.win_scale_factor=8");
+				setParam("net.inet.tcp.win_scale_factor", 8);
 				// increase OSX TCP autotuning maximums
-				exec("sysctl -w net.inet.tcp.autorcvbufmax=33554432");
-				exec("sysctl -w net.inet.tcp.autosndbufmax=33554432");
+				setParam("net.inet.tcp.autorcvbufmax", 33554432);
+				setParam("net.inet.tcp.autosndbufmax", 33554432);
 				// for other customs
-				exec("sysctl -w net.inet.tcp.sendspace=1042560");
-				exec("sysctl -w net.inet.tcp.recvspace=1042560");
-				exec("sysctl -w net.inet.tcp.slowstart_flightsize=20");
-				exec("sysctl -w net.inet.tcp.local_slowstart_flightsize=20");
+				setParam("net.inet.tcp.sendspace", 1042560);
+				setParam("net.inet.tcp.recvspace", 1042560);
+				setParam("net.inet.tcp.slowstart_flightsize", 20);
+				setParam("net.inet.tcp.local_slowstart_flightsize", 20);
 				// for 10G hosts it would be nice to increase this too, but
 				// 4G seems to be the limit for some OSX installations
-				exec("sysctl -w kern.ipc.maxsockbuf=6291456");
+				setParam("kern.ipc.maxsockbuf", 6291456);
 				// for max connections
-				exec("sysctl -w kern.ipc.somaxconn=49152");
+				setParam("kern.ipc.somaxconn", 49152);
 			} break;
 			// Если это Linux
 			case 4: {
 				// for max connections
-				exec("sysctl -w net.core.somaxconn=49152");
+				setParam("net.core.somaxconn", 49152);
 				// allow testing with buffers up to 128MB
-				exec("sysctl -w net.core.rmem_max=134217728");
-				exec("sysctl -w net.core.wmem_max=134217728");
+				setParam("net.core.rmem_max", 134217728);
+				setParam("net.core.wmem_max", 134217728);
 				// increase Linux autotuning TCP buffer limit to 64MB
-				exec("sysctl -w net.ipv4.tcp_rmem=67108864");
-				exec("sysctl -w net.ipv4.tcp_wmem=67108864");
+				setParam("net.ipv4.tcp_rmem", 67108864);
+				setParam("net.ipv4.tcp_wmem", 67108864);
 				// recommended for hosts with jumbo frames enabled
-				exec("sysctl -w net.ipv4.tcp_mtu_probing=1");
+				setParam("net.ipv4.tcp_mtu_probing", 1);
 				// recommended for CentOS7/Debian8 hosts
-				exec("sysctl -w net.core.default_qdisc=fq");
+				setParam("net.core.default_qdisc", "fq");
 				// recommended default congestion control is htcp
 				// you can check which are available using net.ipv4.tcp_available_congestion_control
 				// Get which are available algorithm
-				string algorithm = getCongestionControl(exec("sysctl net.ipv4.tcp_available_congestion_control"));
+				string algorithm = getCongestionControl(getStringParam("net.ipv4.tcp_available_congestion_control"));
 				// If algorithm exist
-				if(!algorithm.empty()) exec(string("sysctl -w net.ipv4.tcp_congestion_control=") + algorithm);
+				if(!algorithm.empty()) setParam("net.ipv4.tcp_congestion_control", algorithm);
 			} break;
 			// Если это FreeBSD
 			case 5: {
 				// set to at least 16MB for 10GE hosts
-				exec("sysctl -w kern.ipc.maxsockbuf=16777216");
+				setParam("kern.ipc.maxsockbuf", 16777216);
 				// set autotuning maximum to at least 16MB too
-				exec("sysctl -w net.inet.tcp.sendbuf_max=16777216");
-				exec("sysctl -w net.inet.tcp.recvbuf_max=16777216");
+				setParam("net.inet.tcp.sendbuf_max", 16777216);
+				setParam("net.inet.tcp.recvbuf_max", 16777216);
 				// for other customs
-				exec("sysctl -w net.inet.tcp.sendspace=1042560");
-				exec("sysctl -w net.inet.tcp.recvspace=1042560");
+				setParam("net.inet.tcp.sendspace", 1042560);
+				setParam("net.inet.tcp.recvspace", 1042560);
 				// enable send/recv autotuning
-				exec("sysctl -w net.inet.tcp.sendbuf_auto=1");
-				exec("sysctl -w net.inet.tcp.recvbuf_auto=1");
+				setParam("net.inet.tcp.sendbuf_auto", 1);
+				setParam("net.inet.tcp.recvbuf_auto", 1);
 				// increase autotuning step size
-				exec("sysctl -w net.inet.tcp.sendbuf_inc=16384");
-				exec("sysctl -w net.inet.tcp.recvbuf_inc=524288");
+				setParam("net.inet.tcp.sendbuf_inc", 16384);
+				setParam("net.inet.tcp.recvbuf_inc", 524288);
 				// set this on test/measurement hosts
-				exec("sysctl -w net.inet.tcp.hostcache.expire=1");
+				setParam("net.inet.tcp.hostcache.expire", 1);
 				// for max connections
-				exec("sysctl -w kern.ipc.somaxconn=49152");
+				setParam("kern.ipc.somaxconn", 49152);
 				// you can check which are available using net.inet.tcp.cc.available
 				// Get which are available algorithm
-				string algorithm = getCongestionControl(exec("sysctl net.inet.tcp.cc.available"));
+				string algorithm = getCongestionControl(getStringParam("net.inet.tcp.cc.available"));
 				// If algorithm exist
-				if(!algorithm.empty()) exec(string("sysctl -w net.inet.tcp.cc.algorithm=") + algorithm);
+				if(!algorithm.empty()) setParam("net.inet.tcp.cc.algorithm", algorithm);
 			} break;
 			// Если это Solaris
 			case 7: {
@@ -346,6 +410,17 @@ OsOpt::OsOpt(LogApp * log, Config * config){
 		this->log		= log;
 		this->config	= config;
 		this->enabled	= this->config->proxy.optimos;
+		// Определяем тип операционной системы
+		OsData os = getOsName();
+		// Формируем структуру данных операционной системы
+		this->config->os = {
+			// Получаем количество ядер
+			(u_int) getNumberParam("hw.logicalcpu"),
+			// Получаем название процессора
+			getStringParam("machdep.cpu.brand_string"),
+			// Получаем название операционной системы
+			os.name
+		};
 		// Если модуль активирован тогда запускаем активацию
 		if(this->enabled) run();
 		// Активируем лимиты дампов ядра

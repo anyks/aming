@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <arpa/inet.h>
+#include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/resource.h>

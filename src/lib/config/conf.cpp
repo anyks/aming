@@ -164,6 +164,8 @@ Config::Config(const string filename){
 			MAX_CONNECTS,
 			// Максимальное количество файловых дескрипторов
 			MAX_FDS,
+			// Максимальное количество воркеров
+			MAX_WORKERS,
 			// Активация режима отладки
 			PROXY_DEBUG,
 			// Запусть в виде демона
@@ -337,6 +339,8 @@ Config::Config(const string filename){
 			(u_int) ini.GetInteger("proxy", "maxcon", MAX_CONNECTS),
 			// Максимальное количество файловых дескрипторов
 			(u_int) ini.GetInteger("proxy", "maxfds", MAX_FDS),
+			// Максимальное количество воркеров
+			(u_int) ini.GetInteger("proxy", "maxworks", MAX_WORKERS),
 			// Активация режима отладки
 			ini.GetBoolean("proxy", "debug", PROXY_DEBUG),
 			// Запусть в виде демона

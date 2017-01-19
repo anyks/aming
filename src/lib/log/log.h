@@ -75,11 +75,6 @@ class LogApp {
 		 */
 		void setOwner(const char * path);
 		/**
-		 * getOsName Функция определения операционной системы
-		 * @return название операционной системы
-		 */
-		const char * getOsName();
-		/**
 		 * makePath Функция создания каталога для хранения логов
 		 * @param  path адрес для каталога
 		 * @return      результат создания каталога
