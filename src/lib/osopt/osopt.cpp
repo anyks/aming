@@ -98,7 +98,9 @@ int OsOpt::setFdLimit(){
  */
 long OsOpt::getNumberParam(string name){
 	// Параметр искомого значения
-	int param;
+	int param = 0;
+// Если это не Linux
+#ifndef __linux__
 	// Получаем размер искомого параметра
 	size_t len = sizeof(param);
 	// Запрашиваем искомые данные
@@ -106,6 +108,7 @@ long OsOpt::getNumberParam(string name){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
 	}
+#endif
 	// Выводим результат
 	return param;
 }
@@ -121,11 +124,14 @@ string OsOpt::getStringParam(string name){
 	size_t len = sizeof(buffer);
 	// Заполняем буфер нулями
 	memset(buffer, 0, len);
+// Если это не Linux
+#ifndef __linux__
 	// Запрашиваем искомые данные
 	if(sysctlbyname(name.c_str(), &buffer, &len, NULL, 0) < 0){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
 	}
+#endif
 	// Выводим результат
 	return buffer;
 }
@@ -135,11 +141,14 @@ string OsOpt::getStringParam(string name){
  * @param param данные параметра
  */
 void OsOpt::setParam(string name, int param){
+// Если это не Linux
+#ifndef __linux__
 	// Устанавливаем новые параметры настройки ядра
 	if(sysctlbyname(name.c_str(), NULL, 0, &param, sizeof(param)) < 0){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed set param: %s -> %i", name.c_str(), param);
 	}
+#endif
 }
 /**
  * setParam Метод установки значений ядра sysctl
@@ -147,6 +156,8 @@ void OsOpt::setParam(string name, int param){
  * @param param данные параметра
  */
 void OsOpt::setParam(string name, string param){
+// Если это не Linux
+#ifndef __linux__
 	// Получаем значение параметра для установки
 	const char * value = param.c_str();
 	// Устанавливаем новые параметры настройки ядра
@@ -154,6 +165,7 @@ void OsOpt::setParam(string name, string param){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed set param: %s -> %s", name.c_str(), param.c_str());
 	}
+#endif
 }
 /**
  * enableCoreDumps Функция активации создания дампа ядра
