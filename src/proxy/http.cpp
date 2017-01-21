@@ -415,14 +415,24 @@ int HttpProxy::set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle
 		// Выходим
 		return -1;
 	}
+// Если это Linux
+#ifdef __linux__
 	// Время через которое происходит проверка подключения
-	// if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int))){
+	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int))){
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, "cannot set TCP_KEEPIDLE option on socket %d", fd);
+		// Выходим
+		return -1;
+	}
+// Если это FreeBSD или MacOS X
+#elif __FreeBSD__ || __APPLE__ || __MACH__
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(int))){
 		// Выводим в лог информацию
 		log->write(LOG_ERROR, "cannot set TCP_KEEPIDLE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
+#endif
 	// Время между попытками
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(int))){
 		// Выводим в лог информацию
@@ -517,8 +527,8 @@ int HttpProxy::connect_server(void * ctx){
 					// Очищаем всю структуру для сервера
 					memset(&server4_addr, 0, sizeof(server4_addr));
 					// Устанавливаем протокол интернета
-					client4_addr.sin_family	= AF_INET;
-					server4_addr.sin_family	= AF_INET;
+					client4_addr.sin_family = AF_INET;
+					server4_addr.sin_family = AF_INET;
 					// Устанавливаем произвольный порт для локального подключения
 					client4_addr.sin_port = htons(0);
 					// Устанавливаем порт для локального подключения
@@ -555,8 +565,8 @@ int HttpProxy::connect_server(void * ctx){
 					// Очищаем всю структуру для сервера
 					memset(&server6_addr, 0, sizeof(server6_addr));
 					// Неважно, IPv4 или IPv6
-					client6_addr.sin6_family	= AF_INET6;
-					server6_addr.sin6_family	= AF_INET6;
+					client6_addr.sin6_family = AF_INET6;
+					server6_addr.sin6_family = AF_INET6;
 					// Устанавливаем произвольный порт для локального подключения
 					client6_addr.sin6_port = htons(0);
 					// Устанавливаем порт для локального подключения
@@ -1292,7 +1302,7 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 			// Если режим отладки не включен
 			if(!this->server.config->proxy.debug){
 				// Определяем максимальное количество потоков
-				int max_works = (this->server.config->proxy.maxworks ? this->server.config->proxy.maxworks : this->server.config->os.ncpu);
+				u_int max_works = (this->server.config->proxy.maxworks ? this->server.config->proxy.maxworks : this->server.config->os.ncpu);
 				// Наши ID процесса и сессии
 				pid_t * pid = new pid_t[max_works];
 				// Создаем дочерние потоки (от 1 потому что 0-й это этот же процесс)

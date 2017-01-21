@@ -327,23 +327,23 @@ void OsOpt::run(){
 			// Если это Linux
 			case 4: {
 				// for max connections
-				setParam("net.core.somaxconn", 49152);
+				exec("sysctl -w net.core.somaxconn=49152");
 				// allow testing with buffers up to 128MB
-				setParam("net.core.rmem_max", 134217728);
-				setParam("net.core.wmem_max", 134217728);
+				exec("sysctl -w net.core.rmem_max=134217728");
+				exec("sysctl -w net.core.wmem_max=134217728");
 				// increase Linux autotuning TCP buffer limit to 64MB
-				setParam("net.ipv4.tcp_rmem", 67108864);
-				setParam("net.ipv4.tcp_wmem", 67108864);
+				exec("sysctl -w net.ipv4.tcp_rmem=67108864");
+				exec("sysctl -w net.ipv4.tcp_wmem=67108864");
 				// recommended for hosts with jumbo frames enabled
-				setParam("net.ipv4.tcp_mtu_probing", 1);
+				exec("sysctl -w net.ipv4.tcp_mtu_probing=1");
 				// recommended for CentOS7/Debian8 hosts
-				setParam("net.core.default_qdisc", "fq");
+				exec("sysctl -w net.core.default_qdisc=fq");
 				// recommended default congestion control is htcp
 				// you can check which are available using net.ipv4.tcp_available_congestion_control
 				// Get which are available algorithm
-				string algorithm = getCongestionControl(getStringParam("net.ipv4.tcp_available_congestion_control"));
+				string algorithm = getCongestionControl(exec("sysctl net.ipv4.tcp_available_congestion_control"));
 				// If algorithm exist
-				if(!algorithm.empty()) setParam("net.ipv4.tcp_congestion_control", algorithm);
+				if(!algorithm.empty()) exec(string("sysctl -w net.ipv4.tcp_congestion_control=") + algorithm);
 			} break;
 			// Если это FreeBSD
 			case 5: {
