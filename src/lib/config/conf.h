@@ -37,7 +37,7 @@
 // Параметры прокси сервера (http, socks5, redirect)
 #define PROXY_TYPE "http"
 #define PROXY_USER "nobody"
-#define PROXY_GROUP "nobody"
+#define PROXY_GROUP "nogroup"
 #define PROXY_NAME "anyks"
 #define PROXY_TRANSFER false
 #define PROXY_REVERSE false
