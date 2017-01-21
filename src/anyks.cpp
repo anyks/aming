@@ -5,22 +5,21 @@
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 */
-// MacOS X
-// clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
-// Linux (requre = liblz-dev)
-// g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-// gcc -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libpthread.a
-// FreeBSD
-// clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
-// Debug:
-// ulimit -c unlimited
-// ./bin/http /Volumes/Data/Work/proxy/src/config.ini
-// gdb ./bin/http ./http.core
-// $ lldb --core "/cores/core.xxxxx"
-//   (lldb) bt all
-// Отладка в реальном режиме времени
-// lldb ./bin/http /Volumes/Data/Work/proxy/src/config.ini
-// lldb r
+/*
+*
+* MacOS X:
+* # clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+*
+* Linux (requre = liblz-dev):
+* # g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+* # gcc -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libpthread.a
+*
+* FreeBSD:
+* # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+*
+* Запуск: # ./bin/http -c ./config.ini
+*
+*/
 #include <unistd.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -198,8 +197,14 @@ int main(int argc, char * argv[]){
 	// Активируем локаль приложения
 	setlocale(LC_ALL, "");
 	// setlocale(LC_ALL, "en_US.UTF-8");
-	// Получаем адрес конфигурационного файла
-	string configfile = (argc >= 2 ? argv[1] : "");
+	// Адрес конфигурационного файла
+	string configfile;
+	// Определяем параметр запуска
+	string param = (argc >= 2 ? argv[1] : "");
+	// Если это параметр поиска конфигурационного файла
+	if((param.compare("--config") == 0) || (param.compare("-c") == 0))
+		// Ищем адрес конфигурационного файла
+		configfile = (argc >= 3 ? argv[2] : "");
 	// Создаем объект конфигурации
 	config = new Config(configfile);
 	// Создаем модуль лога

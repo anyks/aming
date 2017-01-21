@@ -405,13 +405,19 @@ HttpData::Connect HttpData::getConnection(string str){
 	// Выполняем поиск протокола
 	regex_search(str, match, ep);
 	// Если протокол найден
-	if(!match.empty() && (match.size() == 2)){
+	if(!match.empty() && (match.size() == 2))
 		// Запоминаем версию протокола
 		data.protocol = ::toCase(match[1]);
-	// Устанавливаем протокол по умолчанию
-	} else data.protocol = ::toCase(this->protocol);
 	// Устанавливаем правило для поиска
-	regex eh("\\b([\\w\\.\\-]+\\.[A-Za-z]+)(?:\\:(\\d+))?", regex::ECMAScript | regex::icase);
+	regex eh(
+		// Стандартная запись домена anyks.com
+		"\\b([\\w\\.\\-]+\\.[A-Za-z]+|"
+		// Стандартная запись IPv4 127.0.0.1
+		"\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|"
+		// Стандартная запись IPv6 [2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d]
+		"\\[[\\w\\:]+\\])(?:\\:(\\d+))?",
+		regex::ECMAScript | regex::icase
+	);
 	// Выполняем поиск домена и порта
 	regex_search(str, match, eh);
 	// Если протокол найден
@@ -420,14 +426,19 @@ HttpData::Connect HttpData::getConnection(string str){
 		data.host = ::toCase(match[1]);
 		// Если порт найден, тогда запоминаем его
 		if(match.size() == 3) data.port = match[2];
-		// Устанавливаем порт по умолчанию
-		else data.port = "80";
 	}
 	// Устанавливаем номер порта в зависимости от типа протокола
-	if(!strcmp(data.protocol.c_str(), "https")
-	|| !strcmp(this->method.c_str(), "connect")) data.port = "443";
-	// Устанавливаем версию протокола в зависимости от порта
-	if(!strcmp(data.port.c_str(), "443")) data.protocol = "https";
+	if(data.port.empty() && ((data.protocol.compare("https") == 0)
+	|| (this->method.compare("connect") == 0))) data.port = "443";
+	// Если просто порт не существует
+	else if(data.port.empty()) data.port = "80";
+	// Если протокол не существует
+	if(data.protocol.empty()){
+		// Устанавливаем версию протокола в зависимости от порта
+		if(data.port.compare("443") == 0) data.protocol = "https";
+		// Если это не защищенное подключение значит это http подключение
+		else data.protocol = "http";
+	}
 	// Выводим результат
 	return data;
 }
@@ -493,32 +504,9 @@ void HttpData::genDataConnect(){
 			Connect gcon = getConnection(this->path);
 			// Выполняем получение параметров подключения
 			Connect scon = getConnection(host);
-			// Создаем полный адрес запроса
-			string fulladdr1 = scon.protocol + string("://") + scon.host;
-			string fulladdr2 = fulladdr1 + "/";
-			string fulladdr3 = fulladdr1 + string(":") + scon.port;
-			string fulladdr4 = fulladdr3 + "/";
-			// Определяем путь
-			if(strcmp(::toCase(this->method).c_str(), "connect")
-			&& (!strcmp(::toCase(this->path).c_str(), ::toCase(host).c_str())
-			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr1).c_str())
-			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr2).c_str())
-			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr3).c_str())
-			|| !strcmp(::toCase(this->path).c_str(), ::toCase(fulladdr4).c_str()))) this->path = "/";
-			// Выполняем удаление из адреса доменного имени
-			else if(strstr(this->path.c_str(), fulladdr1.c_str()) != NULL){
-				// Запоминаем текущий путь
-				string tmp_path = this->path;
-				// Вырезаем домер из пути
-				tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
-				// Если путь существует
-				if(!tmp_path.empty()) this->path = tmp_path;
-			}
-			// Запоминаем хост
-			this->host = scon.host;
 			// Запоминаем порт
-			if(strcmp(scon.port.c_str(), gcon.port.c_str())
-			&& !strcmp(gcon.port.c_str(), "80")){
+			if((scon.port.compare(gcon.port) != 0)
+			&& (gcon.port.compare("80") == 0)){
 				// Запоминаем протокол
 				this->protocol = scon.protocol;
 				// Уделяем предпочтение 443 порту
@@ -536,6 +524,31 @@ void HttpData::genDataConnect(){
 				// Устанавливаем http порт
 				this->port = "80";
 			}
+			// Создаем полный адрес запроса
+			string fulladdr1 = scon.protocol + string("://") + scon.host;
+			string fulladdr2 = fulladdr1 + "/";
+			string fulladdr3 = fulladdr1 + string(":") + scon.port;
+			string fulladdr4 = fulladdr3 + "/";
+			// Определяем путь
+			if(((this->protocol.compare("http") == 0)
+			|| (this->protocol.compare("https") == 0))
+			&& ((::toCase(this->method).compare("connect") != 0)
+			&& ((::toCase(this->path).compare(::toCase(host)) == 0)
+			|| (::toCase(this->path).compare(::toCase(fulladdr1)) == 0)
+			|| (::toCase(this->path).compare(::toCase(fulladdr2)) == 0)
+			|| (::toCase(this->path).compare(::toCase(fulladdr3)) == 0)
+			|| (::toCase(this->path).compare(::toCase(fulladdr4)) == 0)))) this->path = "/";
+			// Выполняем удаление из адреса доменного имени
+			else if(strstr(this->path.c_str(), fulladdr1.c_str()) != NULL){
+				// Запоминаем текущий путь
+				string tmp_path = this->path;
+				// Вырезаем домер из пути
+				tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
+				// Если путь существует
+				if(!tmp_path.empty()) this->path = tmp_path;
+			}
+			// Запоминаем хост
+			this->host = scon.host;
 		}
 		// Если авторизация найдена
 		if(!auth.empty()){
@@ -548,7 +561,7 @@ void HttpData::genDataConnect(){
 				// Запоминаем тип авторизации
 				this->auth = ::toCase(match[1]);
 				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
-				if(!strcmp(this->auth.c_str(), "basic")){
+				if(this->auth.compare("basic") == 0){
 					// Выполняем декодирование логина и пароля
 					string dauth = base64_decode(match[2]);
 					// Устанавливаем правило регулярного выражения
@@ -575,7 +588,7 @@ void HttpData::genDataConnect(){
  */
 bool HttpData::isConnect(){
 	// Сообщаем является ли метод, методом connect
-	return !strcmp(this->method.c_str(), "connect");
+	return (this->method.compare("connect") == 0);
 }
 /**
  * isClose Метод проверяет должно ли быть закрыто подключение
@@ -583,7 +596,7 @@ bool HttpData::isConnect(){
  */
 bool HttpData::isClose(){
 	// Сообщаем должно ли быть закрыто подключение
-	return !strcmp(this->connection.c_str(), "close");
+	return (this->connection.compare("close") == 0);
 }
 /**
  * isHttps Метод проверяет является ли подключение защищенным
@@ -591,7 +604,7 @@ bool HttpData::isClose(){
  */
 bool HttpData::isHttps(){
 	// Сообщаем является ли продключение защищенным
-	return !strcmp(this->protocol.c_str(), "https");
+	return (this->protocol.compare("https") == 0);
 }
 /**
  * isAlive Метод определения нужно ли держать соединение для прокси
@@ -601,11 +614,11 @@ bool HttpData::isAlive(){
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
 	if(getVersion() > 1){
 		// Проверяем указан ли заголовок отключения
-		if(!strcmp(this->connection.c_str(), "close")) return false;
+		if(this->connection.compare("close") == 0) return false;
 		// Иначе сообщаем что подключение должно жить долго
 		return true;
 	// Проверяем указан ли заголовок удержания соединения
-	} else if(!strcmp(this->connection.c_str(), "keep-alive")) return true;
+	} else if(this->connection.compare("keep-alive") == 0) return true;
 	// Сообщаем что подключение жить не должно
 	return false;
 }
@@ -1012,7 +1025,7 @@ bool Http::isHttp(const string buffer){
 		// Устанавливаем завершающий символ
 		buf[3] = '\0';
 		// Переходим по всему массиву команд
-		for(int i = 0; i < 8; i++) if(!strcmp(::toCase(buf).c_str(), cmds[i])) return true;
+		for(int i = 0; i < 8; i++) if(::toCase(buf).compare(cmds[i]) == 0) return true;
 	}
 	// Сообщаем что это не http
 	return false;

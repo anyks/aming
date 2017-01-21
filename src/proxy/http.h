@@ -25,7 +25,7 @@
 #include "../lib/log/log.h"
 #include "../lib/http/http.h"
 #include "../lib/config/conf.h"
-#include "../lib/dns/dns2.h"
+#include "../lib/dns/dns.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -183,7 +183,7 @@ class BufferHttpProxy {
 		bool					auth		= false;	// Флаг авторизации
 		struct event_base		* base		= NULL;		// База событий
 		map <string, Connects>	* connects	= NULL; 	// Список подключений к прокси серверу
-		DNSResolver				dns;					// Создаем объект dns ресолвера
+		DNSResolver				* dns;					// Создаем объект dns ресолвера
 		Http					parser;					// Объект парсера
 		HttpQuery				response;				// Ответ системы
 		HttpData				httpData;				// Данные http запроса
@@ -206,6 +206,10 @@ class BufferHttpProxy {
 		 */
 		void close_server();
 		/**
+		 * close Метод закрытия подключения
+		 */
+		void close();
+		/**
 		 * set_timeout Метод установки таймаутов
 		 * @param type  тип подключения (клиент или сервер)
 		 * @param read  таймаут на чтение
@@ -214,9 +218,9 @@ class BufferHttpProxy {
 		void set_timeout(const u_short type, bool read = false, bool write = false);
 		/**
 		 * BufferHttpProxy Конструктор
-		 * @param config объект конфигурационных данных
+		 * @param proxy объект данных прокси сервера
 		 */
-		BufferHttpProxy(Config * config = NULL);
+		BufferHttpProxy(Proxy proxy);
 		/**
 		 * ~BufferHttpProxy Деструктор
 		 */
@@ -238,6 +242,11 @@ class HttpProxy {
 		 * @return сокет прокси сервера
 		 */
 		evutil_socket_t create_server();
+		/**
+		 * HttpProxy::run_server Метод запуска прокси сервера
+		 * @param socket сокет который слушает прокси сервер
+		 */
+		void run_server(evutil_socket_t socket);
 		/**
 		 * get_mac Метод определения мак адреса клиента
 		 * @param  ctx указатель на объект подключения
@@ -317,52 +326,48 @@ class HttpProxy {
 		static void * connection(void * ctx);
 		/**
 		 * do_request Функция запроса данных у сервера
-		 * @param bev  буфер события
 		 * @param ctx  передаваемый объект
 		 * @param flag флаг разрешающий новый запрос данных
 		 */
-		static void do_request(struct bufferevent * bev, void * ctx, bool flag = false);
+		static void do_request(void * ctx, bool flag = false);
 		/**
-		 * event Функция обработка входящих событий
+		 * resolve_cb Функция выполняющая ресолвинг домена
+		 * @param ip  IP адрес сервера
+		 * @param ctx передаваемый объект
+		 */
+		static void resolve_cb(const string ip, void * ctx);
+		/**
+		 * event_cb Функция обработка входящих событий
 		 * @param bev    буфер события
 		 * @param events произошедшее событие
 		 * @param ctx    объект входящих данных
 		 */
-		static void event(struct bufferevent * bev, short events, void * ctx);
+		static void event_cb(struct bufferevent * bev, short events, void * ctx);
 		/**
-		 * read_server Функция чтения данных с сокета сервера
+		 * write_client_cb Функция записи данных в сокет клиента
 		 * @param bev буфер события
 		 * @param ctx передаваемый объект
 		 */
-		static void read_server(struct bufferevent * bev, void * ctx);
+		static void write_client_cb(struct bufferevent * bev, void * ctx);
 		/**
-		 * read_client Функция чтения данных с сокета клиента
+		 * read_server_cb Функция чтения данных с сокета сервера
 		 * @param bev буфер события
 		 * @param ctx передаваемый объект
 		 */
-		static void read_client(struct bufferevent * bev, void * ctx);
+		static void read_server_cb(struct bufferevent * bev, void * ctx);
 		/**
-		 * accept_error Событие возникновения ошибки подключения
-		 * @param listener объект подключения
-		 * @param ctx      передаваемый объект
+		 * read_client_cb Функция чтения данных с сокета клиента
+		 * @param bev буфер события
+		 * @param ctx передаваемый объект
 		 */
-		static void accept_error(struct evconnlistener * listener, void * ctx);
+		static void read_client_cb(struct bufferevent * bev, void * ctx);
 		/**
-		 * accept_connect Событие подключения к серверу
-		 * @param listener объект подключения
-		 * @param fd       файловый дескриптор (сокет) клиента
-		 * @param address  адрес клиента
-		 * @param socklen  размер входящих данных
-		 * @param ctx      передаваемый объект
-		 */
-		// static void accept_connect(struct evconnlistener * listener, evutil_socket_t fd, struct sockaddr * address, int socklen, void * ctx);
-		/**
-		 * accept_connect Функция подключения к серверу
+		 * accept_cb Функция подключения к серверу
 		 * @param fd    файловый дескриптор (сокет)
 		 * @param event событие на которое сработала функция обратного вызова
 		 * @param ctx   объект передаваемый как значение
 		 */
-		static void accept_connect(evutil_socket_t fd, short event, void * ctx);
+		static void accept_cb(evutil_socket_t fd, short event, void * ctx);
 	public:
 		/**
 		 * HttpProxy Конструктор
