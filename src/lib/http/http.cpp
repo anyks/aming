@@ -414,7 +414,7 @@ HttpData::Connect HttpData::getConnection(string str){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
-	regex ep("\\b([A-Za-z]+):\\/\\/", regex::ECMAScript | regex::icase);
+	regex ep("\\b([A-Za-z]+):\\/{2}", regex::ECMAScript | regex::icase);
 	// Выполняем поиск протокола
 	regex_search(str, match, ep);
 	// Если протокол найден
