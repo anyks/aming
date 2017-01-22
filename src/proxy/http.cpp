@@ -448,16 +448,28 @@ int HttpProxy::set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle
  * @param  fd         файловый дескриптор (сокет)
  * @param  read_size  размер буфера на чтение
  * @param  write_size размер буфера на запись
+ * @param  maxcon     максимальное количество подключений
  * @param  log        указатель на объект ведения логов
  * @return            результат работы функции
  */
-int HttpProxy::set_buffer_size(evutil_socket_t fd, int read_size, int write_size, LogApp * log){
+int HttpProxy::set_buffer_size(evutil_socket_t fd, int read_size, int write_size, u_int maxcon, LogApp * log){
 	// Определяем размер массива опции
 	socklen_t read_optlen	= sizeof(read_size);
 	socklen_t write_optlen	= sizeof(write_size);
-	// Устанавливаем размер буфера для сокета клиента и сервера
-	if(read_size > 0)	setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &read_size, read_optlen);
-	if(write_size > 0)	setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &write_size, write_optlen);
+	// Устанавливаем размер буфера для сокета на чтение
+	if(read_size > 0){
+		// Выполняем перерасчет размера буфера
+		read_size = read_size / maxcon;
+		// Устанавливаем размер буфера
+		setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &read_size, read_optlen);
+	}
+	// Устанавливаем размер буфера для сокета на запись
+	if(write_size > 0){
+		// Выполняем перерасчет размера буфера
+		write_size = write_size / maxcon;
+		// Устанавливаем размер буфера
+		setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &write_size, write_optlen);
+	}
 	// Считываем установленный размер буфера
 	if((getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &read_size, &read_optlen) < 0)
 	|| (getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &write_size, &write_optlen) < 0)){
@@ -611,7 +623,13 @@ int HttpProxy::connect_server(void * ctx){
 			// Устанавливаем разрешение на повторное использование сокета
 			set_reuseaddr(http->sockets.server, http->proxy.log);
 			// Устанавливаем размеры буферов
-			set_buffer_size(http->sockets.server, http->proxy.config->buffers.read, http->proxy.config->buffers.write, http->proxy.log);
+			set_buffer_size(
+				http->sockets.server,
+				http->proxy.config->buffers.read,
+				http->proxy.config->buffers.write,
+				http->proxy.config->proxy.maxcon,
+				http->proxy.log
+			);
 			// Если подключение постоянное
 			if(http->client.alive){
 				// Отключаем алгоритм Нейгла для сервера и клиента

@@ -303,10 +303,11 @@ class HttpProxy {
 		 * @param  fd         файловый дескриптор (сокет)
 		 * @param  read_size  размер буфера на чтение
 		 * @param  write_size размер буфера на запись
+		 * @param  maxcon     максимальное количество подключений
 		 * @param  log        указатель на объект ведения логов
 		 * @return            результат работы функции
 		 */
-		static int set_buffer_size(evutil_socket_t fd, int read_size, int write_size, LogApp * log);
+		static int set_buffer_size(evutil_socket_t fd, int read_size, int write_size, u_int maxcon, LogApp * log);
 		/**
 		 * check_auth Функция проверки логина и пароля
 		 * @param ctx объект входящих данных
