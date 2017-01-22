@@ -183,8 +183,8 @@ class BufferHttpProxy {
 		bool					auth		= false;	// Флаг авторизации
 		struct event_base		* base		= NULL;		// База событий
 		map <string, Connects>	* connects	= NULL; 	// Список подключений к прокси серверу
-		DNSResolver				* dns;					// Создаем объект dns ресолвера
-		Http					parser;					// Объект парсера
+		DNSResolver				* dns		= NULL;		// Создаем объект dns ресолвера
+		Http					* parser	= NULL;		// Объект парсера
 		HttpQuery				response;				// Ответ системы
 		HttpData				httpData;				// Данные http запроса
 		Headers					headers;				// Данные http заголовков

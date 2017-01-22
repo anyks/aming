@@ -202,12 +202,17 @@ int main(int argc, char * argv[]){
 	// setlocale(LC_ALL, "en_US.UTF-8");
 	// Адрес конфигурационного файла
 	string configfile;
+	/*
 	// Определяем параметр запуска
 	string param = (argc >= 2 ? argv[1] : "");
 	// Если это параметр поиска конфигурационного файла
 	if((param.compare("--config") == 0) || (param.compare("-c") == 0))
 		// Ищем адрес конфигурационного файла
 		configfile = (argc >= 3 ? argv[2] : "");
+	*/
+
+	configfile = (argc >= 2 ? argv[1] : "");
+
 	// Создаем объект конфигурации
 	config = new Config(configfile);
 	// Создаем модуль лога

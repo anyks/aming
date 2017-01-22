@@ -249,10 +249,10 @@ BufferHttpProxy::BufferHttpProxy(Proxy proxy){
 	pthread_mutex_init(&this->mutex, 0);
 	// Запоминаем данные прокси сервера
 	this->proxy = proxy;
-	// Создаем объект для работы с http заголовками
-	this->parser = Http(this->proxy.config->proxy.name, this->proxy.config->options);
 	// Создаем новую базу событий
 	this->base = event_base_new();
+	// Создаем объект для работы с http заголовками
+	this->parser = new Http(this->proxy.config->proxy.name, this->proxy.config->options);
 	// Определяем тип подключения
 	switch(this->proxy.config->proxy.ipver){
 		// Для протокола IPv4
@@ -269,6 +269,8 @@ BufferHttpProxy::~BufferHttpProxy(){
 	close();
 	// Удаляем dns сервер
 	delete this->dns;
+	// Удаляем парсер
+	delete this->parser;
 	// Очищаем объект базы событий
 	event_base_free(this->base);
 	// Удаляем мютекс
@@ -426,9 +428,10 @@ int HttpProxy::set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle
 	}
 // Если это FreeBSD или MacOS X
 #elif __FreeBSD__ || __APPLE__ || __MACH__
+	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(int))){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_KEEPIDLE option on socket %d", fd);
+		log->write(LOG_ERROR, "cannot set TCP_KEEPALIVE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -817,7 +820,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 						// Создаем буфер для исходящих данных
 						struct evbuffer * tmp = evbuffer_new();
 						// Выполняем модификацию заголовков
-						http->parser.modify(headers);
+						http->parser->modify(headers);
 						// Добавляем в новый буфер модифицированные заголовки
 						evbuffer_add(tmp, headers.data(), headers.size());
 						// Отправляем данные клиенту
@@ -849,7 +852,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 	// Если подключение не передано
 	if(http != NULL){
 		// Получаем первый элемент из массива
-		auto httpData = http->parser.httpData.begin();
+		auto httpData = http->parser->httpData.begin();
 		// Если дарес домена найден
 		if(!ip.empty()){
 			// Определяем connect прокси разрешен
@@ -908,9 +911,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 						// Отправляем серверу сообщение
 						bufferevent_write(http->events.server, http->response.data(), http->response.size());
 						// Удаляем объект подключения
-						http->parser.httpData.erase(httpData);
+						http->parser->httpData.erase(httpData);
 						// Если данные в массиве существуют тогда продолжаем загрузку
-						if(!http->parser.httpData.empty()) do_request(http, true);
+						if(!http->parser->httpData.empty()) do_request(http, true);
 						// Очищаем объект http данных если запросов больше нет
 						else http->httpData.clear();
 						// Выходим
@@ -951,7 +954,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			// Отправляем клиенту сообщение
 			bufferevent_write(http->events.client, http->response.data(), http->response.size());
 			// Удаляем объект подключения
-			http->parser.httpData.erase(httpData);
+			http->parser->httpData.erase(httpData);
 		}
 	}
 	// Выходим
@@ -968,13 +971,13 @@ void HttpProxy::do_request(void * ctx, bool flag){
 	// Если подключение не передано
 	if(http != NULL){
 		// Если данные еще не заполнены, но они есть в массиве
-		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
+		if(!http->parser->httpData.empty() && (!http->httpData.size() || flag)){
 			// Очищаем таймеры для клиента
 			http->set_timeout(TM_CLIENT);
 			// Очищаем объект ответа
 			http->response.clear();
 			// Получаем первый элемент из массива
-			auto httpData = http->parser.httpData.begin();
+			auto httpData = http->parser->httpData.begin();
 			// Запоминаем данные объекта http запроса
 			http->httpData = * httpData;
 			// Выполняем ресолв домена
@@ -1042,7 +1045,7 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 			// Выполняем получение заголовков входящего запроса
 			http->headers.request.create(buffer);
 			// Выполняем парсинг данных
-			size_t size = http->parser.parse(buffer, len);
+			size_t size = http->parser->parse(buffer, len);
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);
 			// Удаляем буфер данных

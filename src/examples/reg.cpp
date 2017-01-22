@@ -1,4 +1,5 @@
 // clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -o ./bin/http ./reg.cpp
+// g++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -lstdc++ -Werror=vla -o ./bin/http ./reg.cpp
 // ./bin/reg http://localhost.com/path\?hue\=br\#cool
 #include <iostream>
 #include <string>
