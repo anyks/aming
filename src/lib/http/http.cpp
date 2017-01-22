@@ -81,6 +81,19 @@ bool checkPort(string str){
 	return false;
 }
 /**
+ * replace Функция замены указанных фраз в строке
+ * @param s строка в которой происходит замена
+ * @param f искомая строка
+ * @param r строка на замену
+ */
+void replace(string &s, const string f, const string r){
+	// Переходим по всем найденным элементам и заменяем в них искомые фразы
+	for(string::size_type n = 0; (n = s.find(f, n)) != string::npos; ++n){
+		// Заменяем искомую фразу указанной
+		s.replace(n, f.length(), r);
+	}
+}
+/**
  * split Функция разделения строк на составляющие
  * @param str   строка для поиска
  * @param delim разделитель
@@ -140,7 +153,7 @@ bool HttpHeaders::create(const char * buffer){
 	// Если данные найдены
 	if(!match.empty() && (match.size() == 2)){
 		// Запоминаем первые символы
-		str = match[1];
+		str = match[1].str();
 		// Массив строк
 		vector <string> strings;
 		// Выполняем разбиение строк
@@ -158,9 +171,9 @@ bool HttpHeaders::create(const char * buffer){
 				// Если заголовок найден
 				if(!match.empty() && (match.size() == 3)){
 					// Получаем ключ
-					string key = match[1];
+					string key = match[1].str();
 					// Получаем значение
-					string val = match[2];
+					string val = match[2].str();
 					// Создаем заголовок
 					Header header = {::trim(key), ::trim(val)};
 					// Запоминаем найденны параметры
@@ -407,7 +420,7 @@ HttpData::Connect HttpData::getConnection(string str){
 	// Если протокол найден
 	if(!match.empty() && (match.size() == 2))
 		// Запоминаем версию протокола
-		data.protocol = ::toCase(match[1]);
+		data.protocol = ::toCase(match[1].str());
 	// Устанавливаем правило для поиска
 	regex eh(
 		// Стандартная запись домена anyks.com
@@ -423,9 +436,9 @@ HttpData::Connect HttpData::getConnection(string str){
 	// Если протокол найден
 	if(!match.empty() && (match.size() > 1)){
 		// Запоминаем хост
-		data.host = ::toCase(match[1]);
+		data.host = ::toCase(match[1].str());
 		// Если порт найден, тогда запоминаем его
-		if(match.size() == 3) data.port = match[2];
+		if(match.size() == 3) data.port = match[2].str();
 	}
 	// Устанавливаем номер порта в зависимости от типа протокола
 	if(data.port.empty() && ((data.protocol.compare("https") == 0)
@@ -479,13 +492,13 @@ void HttpData::genDataConnect(){
 	// Если данные найдены
 	if(!match.empty() && (match.size() == 5)){
 		// Запоминаем метод запроса
-		this->method = ::toCase(match[1]);
+		this->method = ::toCase(match[1].str());
 		// Запоминаем путь запроса
-		this->path = match[2];
+		this->path = match[2].str();
 		// Запоминаем протокол запроса
-		this->protocol = ::toCase(match[3]);
+		this->protocol = ::toCase(match[3].str());
 		// Запоминаем версию протокола
-		this->version = match[4];
+		this->version = match[4].str();
 		// Извлекаем данные хоста
 		string host = this->headers.getHeader("host").value;
 		// Извлекаем данные авторизации
@@ -559,11 +572,11 @@ void HttpData::genDataConnect(){
 			// Если данные найдены
 			if(!match.empty() && (match.size() == 3)){
 				// Запоминаем тип авторизации
-				this->auth = ::toCase(match[1]);
+				this->auth = ::toCase(match[1].str());
 				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
 				if(this->auth.compare("basic") == 0){
 					// Выполняем декодирование логина и пароля
-					string dauth = base64_decode(match[2]);
+					string dauth = base64_decode(match[2].str());
 					// Устанавливаем правило регулярного выражения
 					regex e("\\b([\\s\\S]+)\\:([\\s\\S]+)", regex::ECMAScript | regex::icase);
 					// Выполняем поиск протокола
@@ -571,9 +584,9 @@ void HttpData::genDataConnect(){
 					// Если данные найдены
 					if(!match.empty() && (match.size() == 3)){
 						// Запоминаем логин
-						this->login = match[1];
+						this->login = match[1].str();
 						// Запоминаем пароль
-						this->password = match[2];
+						this->password = match[2].str();
 					}
 				}
 			}
@@ -985,11 +998,11 @@ void HttpData::init(const string str, const string name, const string version, c
 		// Если данные найдены
 		if(!match.empty() && (match.size() == 3)){
 			// Получаем строку запроса
-			this->http = match[1];
+			this->http = match[1].str();
 			// Запоминаем http запрос
 			this->http = ::trim(this->http);
 			// Запоминаем первые символы
-			this->query = match[0];
+			this->query = match[0].str();
 			// Создаем объект с заголовками
 			this->headers.create(this->query.c_str());
 			// Получаем длину массива заголовков
@@ -1056,13 +1069,13 @@ size_t Http::parse(const char * buffer, size_t size, bool flag){
 	// Если данные найдены
 	if(!match.empty() && (match.size() == 3)){
 		// Запоминаем первые символы
-		string badchars = match[1];
+		string badchars = match[1].str();
 		// Увеличиваем значение общих найденных символов
 		maxsize += badchars.length();
 		// Выполняем парсинг http запроса
 		HttpData httpData;
 		// Выполняем инициализацию объекта
-		httpData.init(match[2], name, version, options);
+		httpData.init(match[2].str(), name, version, options);
 		// Добавляем вложенные данные
 		if(httpData.setEntitybody(buffer, size)){
 			// Добавляем в массив объект подключения

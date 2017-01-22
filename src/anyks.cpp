@@ -32,6 +32,9 @@
 #include "./lib/config/conf.h"
 #include "./proxy/http.h"
 
+// Устанавливаем пространство имен
+using namespace std;
+
 // Пиды дочернего воркера
 pid_t cpid = -1;
 // Объект log модуля
