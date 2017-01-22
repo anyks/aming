@@ -133,6 +133,21 @@ void sigsegv_handler(int signum){
 	exit(3);
 }
 /**
+ * sigexit_handler Функция обработки сигналов безусловного завершения работы
+ * @param signum номер сигнала
+ */
+void sigexit_handler(int signum){
+	// Логируем сообщение о сигнале
+	signal_log(signum);
+	// Если это родительский пид, удаляем pid файл
+	if((cpid > 0) && (osopt != NULL)){
+		// Удаляем pid файл
+		osopt->rmPid(EXIT_FAILURE);
+	}
+	// Выходим
+	exit(0);
+}
+/**
  * create_proxy Функция создания прокси-сервера
  */
 void create_proxy(){
@@ -174,7 +189,12 @@ void run_worker(){
 					exit(EXIT_FAILURE);
 				}
 				// Если дочерний процесс просто вышел
-				if(WIFEXITED(status)) logfile->write(LOG_ERROR, "exited, pid = %d, status = %d", cpid, WEXITSTATUS(status));
+				if(WIFEXITED(status)){
+					// Выводим в лог сообщение
+					logfile->write(LOG_ERROR, "exited, pid = %d, status = %d", cpid, WEXITSTATUS(status));
+					// Если это безусловное завершение работы
+					if(WEXITSTATUS(status) == 23) exit(SIGSTOP);
+				}
 				// Если дочерний процесс убит
 				else if(WIFSIGNALED(status)) logfile->write(LOG_ERROR, "killed by pid = %d, signal %d", cpid, WTERMSIG(status));
 				// Если дочерний процесс остановлен
@@ -202,17 +222,16 @@ int main(int argc, char * argv[]){
 	// setlocale(LC_ALL, "en_US.UTF-8");
 	// Адрес конфигурационного файла
 	string configfile;
-	/*
 	// Определяем параметр запуска
 	string param = (argc >= 2 ? argv[1] : "");
 	// Если это параметр поиска конфигурационного файла
-	if((param.compare("--config") == 0) || (param.compare("-c") == 0))
+	if(param.compare("-c") == 0)
 		// Ищем адрес конфигурационного файла
 		configfile = (argc >= 3 ? argv[2] : "");
-	*/
-
-	configfile = (argc >= 2 ? argv[1] : "");
-
+	// Если параметр конфигурационного файла найден
+	else if(param.find("--config=") != string::npos)
+		// Удаляем параметр из адреса файла
+		configfile = param.replace(0, 9, "");
 	// Создаем объект конфигурации
 	config = new Config(configfile);
 	// Создаем модуль лога
@@ -263,6 +282,7 @@ int main(int argc, char * argv[]){
 		signal(SIGHUP, sigterm_handler);	// Закрытие терминала
 		signal(SIGTTIN, sigterm_handler);	// Попытка чтения с терминала фоновым процессом
 		signal(SIGTTOU, sigterm_handler);	// Попытка записи на терминал фоновым процессом
+		signal(SIGSTOP, sigexit_handler);	// Безусловное завершение работы программы
 		// Запускаем воркер
 		run_worker();
 	// Запускаем прокси сервер в главном потоке

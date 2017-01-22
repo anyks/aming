@@ -1353,6 +1353,7 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 				delete [] pid;
 			// Если режим отладки включен, тогда просто запускаем прокси сервер
 			} else run_server(socket);
-		}
+		// Иначе выходим окончательно
+		} else exit(23);
 	}
 }
