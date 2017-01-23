@@ -621,10 +621,6 @@ int HttpProxy::connect_server(void * ctx){
 				// Выходим
 				return 0;
 			}
-			// Разблокируем сокет
-			set_nonblock(http->sockets.server, http->proxy.log);
-			// Устанавливаем разрешение на повторное использование сокета
-			set_reuseaddr(http->sockets.server, http->proxy.log);
 			// Устанавливаем размеры буферов
 			set_buffer_size(
 				http->sockets.server,
@@ -647,6 +643,10 @@ int HttpProxy::connect_server(void * ctx){
 					http->proxy.config->keepalive.keepintvl
 				);
 			}
+			// Устанавливаем разрешение на повторное использование сокета
+			set_reuseaddr(http->sockets.server, http->proxy.log);
+			// Разблокируем сокет
+			set_nonblock(http->sockets.server, http->proxy.log);
 			// Создаем буфер событий для сервера
 			http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 			// Устанавливаем коллбеки
@@ -1082,6 +1082,10 @@ void * HttpProxy::connection(void * ctx){
 		http->begin();
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+		// Устанавливаем разрешение на повторное использование сокета
+		set_reuseaddr(http->sockets.client, http->proxy.log);
+		// Устанавливаем неблокирующий режим для сокета
+		set_nonblock(http->sockets.client, http->proxy.log);
 		// Устанавливаем таймер для клиента
 		http->set_timeout(TM_CLIENT, true);
 		// Устанавливаем водяной знак на 5 байт (чтобы считывать данные когда они действительно приходят)
@@ -1166,10 +1170,6 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 				mac = get_mac(&client);
 			} break;
 		}
-		// Устанавливаем неблокирующий режим для сокета
-		set_nonblock(socket, proxy->server.log);
-		// Устанавливаем разрешение на повторное использование сокета
-		set_reuseaddr(socket, proxy->server.log);
 		// Выводим в лог сообщение
 		proxy->server.log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), socket);
 		// Создаем новый объект подключения
@@ -1257,12 +1257,12 @@ evutil_socket_t HttpProxy::create_server(){
 		// Выходим
 		return -1;
 	}
+	// Устанавливаем разрешение на повторное использование сокета
+	set_reuseaddr(sock, this->server.log);
 	// Устанавливаем неблокирующий режим для сокета
 	set_nonblock(sock, this->server.log);
 	// Устанавливаем неблокирующий режим
 	set_tcpnodelay(sock, this->server.log);
-	// Устанавливаем разрешение на повторное использование сокета
-	set_reuseaddr(sock, this->server.log);
 	// Выполняем биндинг сокета
 	if(::bind(sock, sin, sinlen) < 0){
 		// Выводим в консоль информацию
@@ -1283,28 +1283,77 @@ evutil_socket_t HttpProxy::create_server(){
 /**
  * HttpProxy::run_server Метод запуска прокси сервера
  * @param socket сокет который слушает прокси сервер
+ * @param ctx    объект прокси сервера
  */
-void HttpProxy::run_server(evutil_socket_t socket){
-	// Выводим в консоль информацию
-	this->server.log->write(LOG_MESSAGE, "[-] start service: pid = %i, socket = %i", getpid(), socket);
-	// Создаем новую базу
-	this->base = event_base_new();
-	// Добавляем событие в базу
-	struct event * evnt = event_new(this->base, socket, EV_READ | EV_PERSIST, &HttpProxy::accept_cb, this);
-	// Активируем событие
-	event_add(evnt, NULL);
-	// Активируем перебор базы событий
-	event_base_loop(this->base, EVLOOP_NO_EXIT_ON_EMPTY);
-	// Отключаем подключение для сокета
-	shutdown(socket, SHUT_RDWR);
-	// Закрываем сокет
-	close(socket);
-	// Удаляем событие
-	event_del(evnt);
-	// Очищаем событие
-	event_free(evnt);
-	// Удаляем объект базы событий
-	event_base_free(this->base);
+void HttpProxy::run_server(evutil_socket_t socket, void * ctx){
+	// Получаем объект прокси сервера
+	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
+	// Если объект прокси сервера существует
+	if(proxy != NULL){
+		// Выводим в консоль информацию
+		proxy->server.log->write(LOG_MESSAGE, "[-] start service: pid = %i, socket = %i", getpid(), socket);
+		// Создаем новую базу
+		proxy->base = event_base_new();
+		// Добавляем событие в базу
+		struct event * evnt = event_new(proxy->base, socket, EV_READ | EV_PERSIST, &HttpProxy::accept_cb, proxy);
+		// Активируем событие
+		event_add(evnt, NULL);
+		// Активируем перебор базы событий
+		event_base_loop(proxy->base, EVLOOP_NO_EXIT_ON_EMPTY);
+		// Отключаем подключение для сокета
+		shutdown(socket, SHUT_RDWR);
+		// Закрываем сокет
+		close(socket);
+		// Удаляем событие
+		event_del(evnt);
+		// Очищаем событие
+		event_free(evnt);
+		// Удаляем объект базы событий
+		event_base_free(proxy->base);
+	}
+}
+/**
+ * run_works Метод запуска воркеров
+ * @param pid    указатель на массив пидов процессов
+ * @param socket сокет прокси сервера
+ * @param cur    текущее значение пида процесса
+ * @param max    максимальное значение пидов процессов
+ * @param ctx    объект прокси сервера
+ */
+void HttpProxy::run_works(pid_t * pid, evutil_socket_t socket, size_t cur, size_t max, void * ctx){
+	// Получаем объект прокси сервера
+	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
+	// Если массив пидов существует
+	if((pid != NULL) && (proxy != NULL) && (socket > 0) && max){
+		// Если не все форки созданы
+		if(cur < max){
+			// Выполняем форк процесса
+			switch(pid[cur] = fork()){
+				// Если поток не создан
+				case -1: {
+					// Выводим в консоль информацию
+					proxy->server.log->write(LOG_ERROR, "[-] create fork error");
+					// Выходим из потока
+					exit(1);
+				}
+				// Если это дочерний поток значит все нормально, запускаем прокси сервер
+				case 0: run_server(socket, proxy); break;
+				// Если это родительский процесс
+				default: run_works(pid, socket, cur + 1, max, proxy);
+			}
+		// Если все процессы созданы и это родительский процесс
+		} else {
+			// Статус воркера
+			int status;
+			// Ждем завершение работы потомка (от 1 потому что 0-й это этот же процесс а он не может ждать завершения самого себя)
+			for(u_int i = 0; i < max; i++){
+				// Ожидаем завершения процесса
+				waitpid(pid[i], &status, 0);
+				// Выводим в консоль информацию
+				proxy->server.log->write(LOG_ERROR, "[-] end service: pid = %i, status = %i", pid[i], WTERMSIG(status));
+			}
+		}
+	}
 }
 /**
  * HttpProxy Конструктор
@@ -1326,29 +1375,8 @@ HttpProxy::HttpProxy(LogApp * log, Config * config){
 				u_int max_works = (this->server.config->proxy.maxworks ? this->server.config->proxy.maxworks : this->server.config->os.ncpu);
 				// Наши ID процесса и сессии
 				pid_t * pid = new pid_t[max_works];
-				// Создаем дочерние потоки (от 1 потому что 0-й это этот же процесс)
-				for(u_int i = 0; i < max_works; i++){
-					// Определяем тип потока
-					switch(pid[i] = fork()){
-						// Если поток не создан
-						case -1:
-							// Выводим в консоль информацию
-							this->server.log->write(LOG_ERROR, "[-] create fork error");
-							// Выходим из потока
-							exit(1);
-						// Если это дочерний поток значит все нормально, запускаем прокси сервер
-						case 0: run_server(socket); break;
-					}
-				}
-				// Статус воркера
-				int status;
-				// Ждем завершение работы потомка (от 1 потому что 0-й это этот же процесс а он не может ждать завершения самого себя)
-				for(u_int i = 1; i < max_works; i++){
-					// Ожидаем завершения процесса
-					waitpid(pid[i], &status, 0);
-					// Выводим в консоль информацию
-					this->server.log->write(LOG_ERROR, "[-] end service: pid = %i, status = %i", pid[i], WTERMSIG(status));
-				}
+				// Запускаем создание воркеров
+				run_works(pid, socket, 0, max_works, this);
 				// Удаляем массив пидов
 				delete [] pid;
 			// Если режим отладки включен, тогда просто запускаем прокси сервер

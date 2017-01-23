@@ -243,11 +243,6 @@ class HttpProxy {
 		 */
 		evutil_socket_t create_server();
 		/**
-		 * HttpProxy::run_server Метод запуска прокси сервера
-		 * @param socket сокет который слушает прокси сервер
-		 */
-		void run_server(evutil_socket_t socket);
-		/**
 		 * get_mac Метод определения мак адреса клиента
 		 * @param  ctx указатель на объект подключения
 		 * @return     данные мак адреса
@@ -369,6 +364,20 @@ class HttpProxy {
 		 * @param ctx   объект передаваемый как значение
 		 */
 		static void accept_cb(evutil_socket_t fd, short event, void * ctx);
+		/**
+		 * HttpProxy::run_server Метод запуска прокси сервера
+		 * @param socket сокет который слушает прокси сервер
+		 */
+		static void run_server(evutil_socket_t socket, void * ctx);
+		/**
+		 * run_works Метод запуска воркеров
+		 * @param pid    указатель на массив пидов процессов
+		 * @param socket сокет прокси сервера
+		 * @param cur    текущее значение пида процесса
+		 * @param max    максимальное значение пидов процессов
+		 * @param ctx    объект прокси сервера
+		 */
+		static void run_works(pid_t * pid, evutil_socket_t socket, size_t cur, size_t max, void * ctx);
 	public:
 		/**
 		 * HttpProxy Конструктор
