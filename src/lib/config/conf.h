@@ -10,7 +10,10 @@
 
 #include <string>
 #include <vector>
+#include <regex>
 #include <iostream>
+#include <math.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include "../ini/ini.h"
 
@@ -91,8 +94,8 @@
 #define IPV6_INTERNAL "::1"
 
 // Размеры буферов клиента
-#define BUFFER_WRITE_SIZE -1
-#define BUFFER_READ_SIZE -1
+#define BUFFER_WRITE_SIZE "auto"
+#define BUFFER_READ_SIZE "auto"
 
 // Таймауты подключения
 #define TIMEOUTS_READ 75
@@ -274,10 +277,10 @@ class Config {
 		vector <string> getResolver(const string str);
 		/**
 		 * getSizeBuffer Функция получения размера буфера в байтах
-		 * @param  speed пропускная способность сети в мегабитах
-		 * @return       размер буфера в байтах
+		 * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
+		 * @return     размер буфера в байтах
 		 */
-		int getSizeBuffer(float speed = -1);
+		int getSizeBuffer(string str);
 		/**
 		 * isFileExist Функция проверки существования файла
 		 * @param  path адрес каталога

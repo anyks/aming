@@ -218,8 +218,8 @@ void run_worker(){
  */
 int main(int argc, char * argv[]){
 	// Активируем локаль приложения
-	setlocale(LC_ALL, "");
-	// setlocale(LC_ALL, "en_US.UTF-8");
+	// setlocale(LC_ALL, "");
+	setlocale(LC_ALL, "en_US.UTF-8");
 	// Адрес конфигурационного файла
 	string configfile;
 	// Определяем параметр запуска

@@ -84,10 +84,10 @@ bool Config::isFileExist(const char * path){
 }
 /**
  * getSizeBuffer Функция получения размера буфера в байтах
- * @param  speed пропускная способность сети в мегабитах
- * @return       размер буфера в байтах
+ * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
+ * @return     размер буфера в байтах
  */
-int Config::getSizeBuffer(float speed){
+int Config::getSizeBuffer(string str){
 	/*
 	* Help - http://www.securitylab.ru/analytics/243414.php
 	*
@@ -98,10 +98,39 @@ int Config::getSizeBuffer(float speed){
 	* (2 * 0.04) * ((100 * 1024000) / 8)  = 1000 байт
 	*
 	*/
-	// Размер буфера по умолчанию
-	int size = (int) speed;
-	// Если скорость установлена тогда расчитываем размер буфера
-	if(speed > -1) size = (2 * 0.04) * ((speed * 1024000) / 8);
+	// Скорость подключения
+	float speed;
+	// Размер буфера в байтах
+	int size = -1;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([\\d\\.\\,]+)(bps|kbps|Mbps|Gbps)", regex::ECMAScript);
+	// Выполняем поиск протокола
+	regex_search(str, match, e);
+	// Если данные найдены
+	if(!match.empty() && (match.size() == 3)){
+		// Запоминаем параметры
+		string param = match[2].str();
+		// Размерность скорости
+		float dimension = 1;
+		// Получаем значение скорости
+		speed = ::atof(match[1].str().c_str());
+		// Проверяем дробная это часть или нет
+		bool isbite = !fmod(speed / 8, 2);
+		// Если это байты
+		if(param.compare("bps") == 0) dimension = 1;
+		// Если это размерность в киллобитах
+		else if(param.compare("kbps") == 0) dimension = (isbite ? 1000 : 1024);
+		// Если это размерность в мегабитах
+		else if(param.compare("Mbps") == 0) dimension = (isbite ? 1000000 : 1024000);
+		// Если это размерность в гигабитах
+		else if(param.compare("Gbps") == 0) dimension = (isbite ? 1000000000 : 1024000000);
+		// Размер буфера по умолчанию
+		size = (int) speed;
+		// Если скорость установлена тогда расчитываем размер буфера
+		if(speed > -1) size = (2 * 0.04) * ((speed * dimension) / 8);
+	}
 	// Выводим результат
 	return size;
 }
@@ -459,9 +488,9 @@ Config::Config(const string filename){
 		// Заполняем структуру buffers
 		this->buffers = {
 			// Скорость входящего подключения
-			getSizeBuffer((float) ini.GetReal("speed", "input", BUFFER_READ_SIZE)),
+			getSizeBuffer(ini.Get("speed", "input", BUFFER_READ_SIZE)),
 			// Скорость исходящего подключения
-			getSizeBuffer((float) ini.GetReal("speed", "output", BUFFER_WRITE_SIZE))
+			getSizeBuffer(ini.Get("speed", "output", BUFFER_WRITE_SIZE))
 		};
 		// Заполняем структуру постоянного подключения keepalive
 		this->keepalive = {
