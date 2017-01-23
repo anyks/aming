@@ -116,7 +116,7 @@ int Config::getSizeBuffer(string str){
 		float dimension = 1;
 		// Получаем значение скорости
 		speed = ::atof(match[1].str().c_str());
-		// Проверяем дробная это часть или нет
+		// Проверяем являются ли переданные данные байтами (8, 16, 32, 64, 128, 256, 512, 1024 ...)
 		bool isbite = !fmod(speed / 8, 2);
 		// Если это байты
 		if(param.compare("bps") == 0) dimension = 1;
