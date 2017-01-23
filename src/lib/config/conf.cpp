@@ -180,8 +180,6 @@ Config::Config(const string filename){
 			PROXY_DEDLOCK,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			PROXY_OPTIMOS,
-			// Активировать кеширование часто-запрашиваемых страниц
-			PROXY_CACHE,
 			// Идентификатор группы пользователя под которым запускается прокси
 			PROXY_USER,
 			// Идентификатор пользователя под которым запускается прокси
@@ -194,6 +192,15 @@ Config::Config(const string filename){
 			CONFIG_DIR,
 			// Список dns серверов
 			PROXY_RESOLVER
+		};
+		// Заполняем структуру cache
+		this->cache = {
+			// Кеширование dns запросов
+			CACHE_DNS,
+			// Кеширование часто-запрашиваемых страниц
+			CACHE_RESPONSE,
+			// Каталог хранения кеш файлов
+			CACHE_DIR
 		};
 		// Заполняем структуру firewall
 		this->firewall = {
@@ -355,8 +362,6 @@ Config::Config(const string filename){
 			ini.GetBoolean("proxy", "deblock", PROXY_DEDLOCK),
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			ini.GetBoolean("proxy", "optimos", PROXY_OPTIMOS),
-			// Активировать кеширование часто-запрашиваемых страниц
-			ini.GetBoolean("proxy", "cache", PROXY_CACHE),
 			// Идентификатор группы пользователя под которым запускается прокси
 			ini.Get("proxy", "user", PROXY_USER),
 			// Идентификатор пользователя под которым запускается прокси
@@ -369,6 +374,15 @@ Config::Config(const string filename){
 			ini.Get("proxy", "confdir", CONFIG_DIR),
 			// Список dns серверов
 			resolver
+		};
+		// Заполняем структуру cache
+		this->cache = {
+			// Кеширование dns запросов
+			ini.GetBoolean("cache", "dns", CACHE_DNS),
+			// Кеширование часто-запрашиваемых страниц
+			ini.GetBoolean("cache", "response", CACHE_RESPONSE),
+			// Каталог хранения кеш файлов
+			ini.Get("cache", "dir", CACHE_DIR)
 		};
 		// Заполняем структуру firewall
 		this->firewall = {

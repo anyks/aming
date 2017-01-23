@@ -44,7 +44,6 @@
 #define PROXY_FORWARD true
 #define PROXY_DEDLOCK false
 #define PROXY_OPTIMOS false
-#define PROXY_CACHE false
 #define PROXY_DEBUG false
 #define PROXY_DAEMON false
 #define PROXY_IPV 4
@@ -52,6 +51,11 @@
 #define PROXY_SOCKS5_PORT 1080
 #define PROXY_REDIRECT_PORT 1180
 #define PROXY_RESOLVER {"8.8.8.8", "8.8.4.4"}
+
+// Параметры модуля кеширования
+#define CACHE_DNS true
+#define CACHE_RESPONSE false
+#define CACHE_DIR "/var/cache"
 
 // Адреса конфигурационных файлов
 #define PID_DIR "/var/run"
@@ -100,9 +104,9 @@
 #define LOGS_SIZE 1024
 
 // Модуль постоянного подключения
-#define KEEPALIVE_CNT 10
-#define KEEPALIVE_IDLE 5
-#define KEEPALIVE_INTVL 3
+#define KEEPALIVE_CNT 6
+#define KEEPALIVE_IDLE 3
+#define KEEPALIVE_INTVL 2
 
 // Модуль авторизаций
 #define AUTH_OS_USERS true
@@ -207,6 +211,14 @@ class Config {
 			string name;	// Название os
 		};
 		/**
+		 * Cache Структура настроек модуля кеширования
+		 */
+		struct Cache {
+			bool dns;		// Кеширование dns запросов
+			bool response;	// Кеширование часто-запрашиваемых страниц
+			string dir;		// Каталог хранения кеш файлов
+		};
+		/**
 		 * Proxy Параметры самого прокси-сервера
 		 */
 		struct Proxy {
@@ -224,7 +236,6 @@ class Config {
 			bool forward;				// Прямой прокси (доступ во внешнюю сеть)
 			bool deblock;				// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
 			bool optimos;				// Оптимизировать настройки операционной системы (нужен root доступ)
-			bool cache;					// Активировать кеширование часто-запрашиваемых страниц
 			string user;				// Идентификатор группы пользователя под которым запускается прокси
 			string group;				// Идентификатор пользователя под которым запускается прокси
 			string name;				// Название сервиса
@@ -279,6 +290,7 @@ class Config {
 		Ipv6 ipv6;				// Подключение по IPv6
 		Ipv4 ipv4;				// Подключение по IPv4
 		Logs logs;				// Параметры логов
+		Cache cache;			// Параметры кеширования
 		Proxy proxy;			// Параметры самого прокси-сервера
 		Header rmheader;		// Удалять указанные http заголовки из запроса или ответа
 		Header setheader;		// Установить указанные http заголовки в запрос или ответ
