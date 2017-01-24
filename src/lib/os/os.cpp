@@ -461,9 +461,9 @@ Os::Os(LogApp * log, Config * config){
 		this->config	= config;
 		// Получаем данные процессора
 		getCPU();
-		// Если модуль активирован тогда запускаем активацию
-		if(this->config->proxy.optimos) optimos();
 		// Активируем лимиты дампов ядра
 		enableCoreDumps();
+		// Если модуль активирован тогда запускаем активацию
+		if(this->config->proxy.optimos) optimos();
 	}
 }
