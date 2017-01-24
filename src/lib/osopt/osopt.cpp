@@ -251,6 +251,8 @@ void OsOpt::privBind(){
 string OsOpt::exec(string cmd){
 	// Устанавливаем размер буфера
 	const int MAX_BUFFER = 2048;
+	// Полученный результат
+	string result;
 	// Создаем буфер для чтения результата
 	char buffer[MAX_BUFFER];
 	// Зануляем весь буфер
@@ -263,14 +265,16 @@ string OsOpt::exec(string cmd){
 		while(!feof(stream)){
 			// Считываем данные из потока в буфер
 			fgets(buffer, MAX_BUFFER, stream);
+			// Добавляем полученный результат
+			result.append(buffer);
 		}
 		// Закрываем пайп
 		pclose(stream);
 		// Если данные в буфере существуют
-		if(!strlen(buffer)) this->log->write(LOG_ERROR, "filed set param: %s", buffer);
+		if(result.empty()) this->log->write(LOG_ERROR, "filed set param: %s", buffer);
 	}
 	// Выводим результат
-	return buffer;
+	return result;
 }
 /**
  * getCongestionControl Метод определения алгоритма сети

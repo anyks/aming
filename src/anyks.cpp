@@ -12,7 +12,7 @@
 *
 * Linux (requre = liblz-dev):
 * # g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -Wno-unused-result -lz -pthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-* # gcc -std=c++11 -ggdb -Wall -pedantic -pthread -O3 -Werror=vla -Wno-unused-result -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a
+* # gcc -std=c++11 -lm -ggdb -Wall -pedantic -pthread -O3 -Werror=vla -Wno-unused-result -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libm.a
 *
 * FreeBSD:
 * # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
