@@ -5,7 +5,7 @@
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#include "osopt.h"
+#include "os.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -14,7 +14,7 @@ using namespace std;
  * getOsName Функция определения операционной системы
  * @return название операционной системы
  */
-OsOpt::OsData OsOpt::getOsName(){
+Os::OsData Os::getOsName(){
 	// Результат
 	OsData result;
 	// Определяем операционную систему
@@ -46,7 +46,7 @@ OsOpt::OsData OsOpt::getOsName(){
 /**
  * mkPid Функция создания pid файла
  */
-void OsOpt::mkPid(){
+void Os::mkPid(){
 	// Если конфигурационный объект существует
 	if(config != NULL){
 		// Создаем адрес pid файла
@@ -66,7 +66,7 @@ void OsOpt::mkPid(){
  * rmPid Функция удаления pid файла
  * @param ext тип ошибки
  */
-void OsOpt::rmPid(int ext){
+void Os::rmPid(int ext){
 	// Если конфигурационный объект существует
 	if(config != NULL){
 		// Создаем адрес pid файла
@@ -81,7 +81,7 @@ void OsOpt::rmPid(int ext){
  * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
  * @return количество установленных файловых дескрипторов
  */
-int OsOpt::setFdLimit(){
+int Os::setFdLimit(){
 	// Структура для установки лимитов
 	struct rlimit lim;
 	// зададим текущий лимит на кол-во открытых дискриптеров
@@ -98,7 +98,7 @@ int OsOpt::setFdLimit(){
  * @param  name название параметра
  * @return      значение параметра
  */
-long OsOpt::getNumberParam(string name){
+long Os::getNumberParam(string name){
 	// Параметр искомого значения
 	int param = 0;
 	// Получаем размер искомого параметра
@@ -116,7 +116,7 @@ long OsOpt::getNumberParam(string name){
  * @param  name название параметра
  * @return      значение параметра
  */
-string OsOpt::getStringParam(string name){
+string Os::getStringParam(string name){
 	// Создаем буфер для чтения данных
 	char buffer[128];
 	// Получаем размер буфера
@@ -136,7 +136,7 @@ string OsOpt::getStringParam(string name){
  * @param name  название параметра
  * @param param данные параметра
  */
-void OsOpt::setParam(string name, int param){
+void Os::setParam(string name, int param){
 	// Устанавливаем новые параметры настройки ядра
 	if(sysctlbyname(name.c_str(), NULL, 0, &param, sizeof(param)) < 0){
 		// Выводим сообщение в консоль
@@ -148,7 +148,7 @@ void OsOpt::setParam(string name, int param){
  * @param name  название параметра
  * @param param данные параметра
  */
-void OsOpt::setParam(string name, string param){
+void Os::setParam(string name, string param){
 	// Получаем значение параметра для установки
 	const char * value = param.c_str();
 	// Устанавливаем новые параметры настройки ядра
@@ -162,7 +162,7 @@ void OsOpt::setParam(string name, string param){
  * enableCoreDumps Функция активации создания дампа ядра
  * @return результат установки лимитов дампов ядра
  */
-bool OsOpt::enableCoreDumps(){
+bool Os::enableCoreDumps(){
 	// Если отладка включена
 	if(config->proxy.debug){
 		// Структура лимитов дампов
@@ -182,7 +182,7 @@ bool OsOpt::enableCoreDumps(){
  * @param  str строка для проверки
  * @return     результат проверки
  */
-bool OsOpt::isNumber(const string &str){
+bool Os::isNumber(const string &str){
 	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
 		return !isdigit(c);
 	}) == str.end();
@@ -192,7 +192,7 @@ bool OsOpt::isNumber(const string &str){
  * @param  name имя пользователя
  * @return      полученный идентификатор пользователя
  */
-uid_t OsOpt::getUid(const char * name){
+uid_t Os::getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
@@ -210,7 +210,7 @@ uid_t OsOpt::getUid(const char * name){
  * @param  name название группы пользователя
  * @return      полученный идентификатор группы пользователя
  */
-gid_t OsOpt::getGid(const char * name){
+gid_t Os::getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
@@ -226,7 +226,7 @@ gid_t OsOpt::getGid(const char * name){
 /**
  * privBind Функция запускает приложение от имени указанного пользователя
  */
-void OsOpt::privBind(){
+void Os::privBind(){
 	uid_t uid;	// Идентификатор пользователя
 	gid_t gid;	// Идентификатор группы
 	// Размер строкового типа данных
@@ -248,7 +248,7 @@ void OsOpt::privBind(){
  * exec Метод запуска внешней оболочки
  * @param cmd команда запуска
  */
-string OsOpt::exec(string cmd){
+string Os::exec(string cmd){
 	// Устанавливаем размер буфера
 	const int MAX_BUFFER = 2048;
 	// Полученный результат
@@ -281,7 +281,7 @@ string OsOpt::exec(string cmd){
  * @param  str строка с выводмом доступных алгоритмов из sysctl
  * @return     строка с названием алгоритма
  */
-string OsOpt::getCongestionControl(string str){
+string Os::getCongestionControl(string str){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -296,7 +296,7 @@ string OsOpt::getCongestionControl(string str){
 /**
  * getCPU Метод получения данных процессора
  */
-void OsOpt::getCPU(){
+void Os::getCPU(){
 	// Определяем тип операционной системы
 	OsData os = getOsName();
 	// Количество ядер процессора
@@ -348,139 +348,121 @@ void OsOpt::getCPU(){
 	this->config->os = {ncpu, cpu, os.name};
 }
 /**
- * run Метод запуска оптимизации
+ * optimos Метод запуска оптимизации
  * @return результат работы
  */
-void OsOpt::run(){
-	// Если модуль активирован тогда запускаем активацию
-	if(this->enabled){
-		// Данные оптимизаций операционной системы берет от сюда: http://fasterdata.es.net/host-tuning/freebsd/
-		// Определяем тип операционной системы
-		OsData os = getOsName();
-		// Определяем os
-		switch(os.type){
-			// Если это Windows
-			case 1:
-			case 2: {
-				// Vista/7 also includes "Compound TCP (CTCP)", which is similar to cubic on Linux. To enable this, set the following:
-				exec("netsh interface tcp set global congestionprovider=ctcp");
-				// If you even need to enable autotuning, here are the commands:
-				exec("netsh interface tcp set global autotuninglevel=normal");
-			} break;
+void Os::optimos(){
+	// Данные оптимизаций операционной системы берет от сюда: http://fasterdata.es.net/host-tuning/freebsd/
+	// Определяем тип операционной системы
+	OsData os = getOsName();
+	// Определяем os
+	switch(os.type){
+		// Если это Windows
+		case 1:
+		case 2: {
+			// Vista/7 also includes "Compound TCP (CTCP)", which is similar to cubic on Linux. To enable this, set the following:
+			exec("netsh interface tcp set global congestionprovider=ctcp");
+			// If you even need to enable autotuning, here are the commands:
+			exec("netsh interface tcp set global autotuninglevel=normal");
+		} break;
 // Если это не Linux
 #ifndef __linux__
-			// Если это MacOS X
-			case 3: {
-				// OSX default of 3 is not big enough
-				setParam("net.inet.tcp.win_scale_factor", 8);
-				// increase OSX TCP autotuning maximums
-				setParam("net.inet.tcp.autorcvbufmax", 33554432);
-				setParam("net.inet.tcp.autosndbufmax", 33554432);
-				// for other customs
-				setParam("net.inet.tcp.sendspace", 1042560);
-				setParam("net.inet.tcp.recvspace", 1042560);
-				setParam("net.inet.tcp.slowstart_flightsize", 20);
-				setParam("net.inet.tcp.local_slowstart_flightsize", 20);
-				// for 10G hosts it would be nice to increase this too, but
-				// 4G seems to be the limit for some OSX installations
-				setParam("kern.ipc.maxsockbuf", 6291456);
-				// for max connections
-				setParam("kern.ipc.somaxconn", 49152);
-			} break;
+		// Если это MacOS X
+		case 3: {
+			// OSX default of 3 is not big enough
+			setParam("net.inet.tcp.win_scale_factor", 8);
+			// increase OSX TCP autotuning maximums
+			setParam("net.inet.tcp.autorcvbufmax", 33554432);
+			setParam("net.inet.tcp.autosndbufmax", 33554432);
+			// for other customs
+			setParam("net.inet.tcp.sendspace", 1042560);
+			setParam("net.inet.tcp.recvspace", 1042560);
+			setParam("net.inet.tcp.slowstart_flightsize", 20);
+			setParam("net.inet.tcp.local_slowstart_flightsize", 20);
+			// for 10G hosts it would be nice to increase this too, but
+			// 4G seems to be the limit for some OSX installations
+			setParam("kern.ipc.maxsockbuf", 6291456);
+			// for max connections
+			setParam("kern.ipc.somaxconn", 49152);
+		} break;
 #endif
-			// Если это Linux
-			case 4: {
-				// for max connections
-				exec("sysctl -w net.core.somaxconn=49152");
-				// allow testing with buffers up to 128MB
-				exec("sysctl -w net.core.rmem_max=134217728");
-				exec("sysctl -w net.core.wmem_max=134217728");
-				// increase Linux autotuning TCP buffer limit to 64MB
-				exec("sysctl -w net.ipv4.tcp_rmem=\"4096 87380 33554432\"");
-				exec("sysctl -w net.ipv4.tcp_wmem=\"4096 65536 33554432\"");
-				// recommended for hosts with jumbo frames enabled
-				exec("sysctl -w net.ipv4.tcp_mtu_probing=1");
-				// recommended for CentOS7/Debian8 hosts
-				exec("sysctl -w net.core.default_qdisc=fq");
-				// recommended default congestion control is htcp
-				// you can check which are available using net.ipv4.tcp_available_congestion_control
-				// Get which are available algorithm
-				string algorithm = getCongestionControl(exec("sysctl net.ipv4.tcp_available_congestion_control"));
-				// If algorithm exist
-				if(!algorithm.empty()) exec(string("sysctl -w net.ipv4.tcp_congestion_control=") + algorithm);
-			} break;
+		// Если это Linux
+		case 4: {
+			// for max connections
+			exec("sysctl -w net.core.somaxconn=49152");
+			// allow testing with buffers up to 128MB
+			exec("sysctl -w net.core.rmem_max=134217728");
+			exec("sysctl -w net.core.wmem_max=134217728");
+			// increase Linux autotuning TCP buffer limit to 64MB
+			exec("sysctl -w net.ipv4.tcp_rmem=\"4096 87380 33554432\"");
+			exec("sysctl -w net.ipv4.tcp_wmem=\"4096 65536 33554432\"");
+			// recommended for hosts with jumbo frames enabled
+			exec("sysctl -w net.ipv4.tcp_mtu_probing=1");
+			// recommended for CentOS7/Debian8 hosts
+			exec("sysctl -w net.core.default_qdisc=fq");
+			// recommended default congestion control is htcp
+			// you can check which are available using net.ipv4.tcp_available_congestion_control
+			// Get which are available algorithm
+			string algorithm = getCongestionControl(exec("sysctl net.ipv4.tcp_available_congestion_control"));
+			// If algorithm exist
+			if(!algorithm.empty()) exec(string("sysctl -w net.ipv4.tcp_congestion_control=") + algorithm);
+		} break;
 // Если это не Linux
 #ifndef __linux__
-			// Если это FreeBSD
-			case 5: {
-				// set to at least 16MB for 10GE hosts
-				setParam("kern.ipc.maxsockbuf", 16777216);
-				// set autotuning maximum to at least 16MB too
-				setParam("net.inet.tcp.sendbuf_max", 16777216);
-				setParam("net.inet.tcp.recvbuf_max", 16777216);
-				// for other customs
-				setParam("net.inet.tcp.sendspace", 1042560);
-				setParam("net.inet.tcp.recvspace", 1042560);
-				// enable send/recv autotuning
-				setParam("net.inet.tcp.sendbuf_auto", 1);
-				setParam("net.inet.tcp.recvbuf_auto", 1);
-				// increase autotuning step size
-				setParam("net.inet.tcp.sendbuf_inc", 16384);
-				setParam("net.inet.tcp.recvbuf_inc", 524288);
-				// set this on test/measurement hosts
-				setParam("net.inet.tcp.hostcache.expire", 1);
-				// for max connections
-				setParam("kern.ipc.somaxconn", 49152);
-				// you can check which are available using net.inet.tcp.cc.available
-				// Get which are available algorithm
-				string algorithm = getCongestionControl(getStringParam("net.inet.tcp.cc.available"));
-				// If algorithm exist
-				if(!algorithm.empty()) setParam("net.inet.tcp.cc.algorithm", algorithm);
-			} break;
+		// Если это FreeBSD
+		case 5: {
+			// set to at least 16MB for 10GE hosts
+			setParam("kern.ipc.maxsockbuf", 16777216);
+			// set autotuning maximum to at least 16MB too
+			setParam("net.inet.tcp.sendbuf_max", 16777216);
+			setParam("net.inet.tcp.recvbuf_max", 16777216);
+			// for other customs
+			setParam("net.inet.tcp.sendspace", 1042560);
+			setParam("net.inet.tcp.recvspace", 1042560);
+			// enable send/recv autotuning
+			setParam("net.inet.tcp.sendbuf_auto", 1);
+			setParam("net.inet.tcp.recvbuf_auto", 1);
+			// increase autotuning step size
+			setParam("net.inet.tcp.sendbuf_inc", 16384);
+			setParam("net.inet.tcp.recvbuf_inc", 524288);
+			// set this on test/measurement hosts
+			setParam("net.inet.tcp.hostcache.expire", 1);
+			// for max connections
+			setParam("kern.ipc.somaxconn", 49152);
+			// you can check which are available using net.inet.tcp.cc.available
+			// Get which are available algorithm
+			string algorithm = getCongestionControl(getStringParam("net.inet.tcp.cc.available"));
+			// If algorithm exist
+			if(!algorithm.empty()) setParam("net.inet.tcp.cc.algorithm", algorithm);
+		} break;
 #endif
-			// Если это Solaris
-			case 7: {
-				// increase max tcp window
-				// Rule-of-thumb: max_buf = 2 x cwnd_max (congestion window)
-				exec("ndd -set /dev/tcp tcp_max_buf 33554432");
-				exec("ndd -set /dev/tcp tcp_cwnd_max 16777216");
-				// increase DEFAULT tcp window size
-				exec("ndd -set /dev/tcp tcp_xmit_hiwat 65536");
-				exec("ndd -set /dev/tcp tcp_recv_hiwat 65536");
-			} break;
-		}
+		// Если это Solaris
+		case 7: {
+			// increase max tcp window
+			// Rule-of-thumb: max_buf = 2 x cwnd_max (congestion window)
+			exec("ndd -set /dev/tcp tcp_max_buf 33554432");
+			exec("ndd -set /dev/tcp tcp_cwnd_max 16777216");
+			// increase DEFAULT tcp window size
+			exec("ndd -set /dev/tcp tcp_xmit_hiwat 65536");
+			exec("ndd -set /dev/tcp tcp_recv_hiwat 65536");
+		} break;
 	}
 }
 /**
- * enable Метод активации модуля
- */
-void OsOpt::enable(){
-	// Запоминаем что модуль активирован
-	this->enabled = true;
-}
-/**
- * enable Метод деактивации модуля
- */
-void OsOpt::disable(){
-	// Запоминаем что модуль деактивирован
-	this->enabled = false;
-}
-/**
- * OsOpt Конструктор
+ * Os Конструктор
  * @param log     объект лога для вывода информации
  * @param config  объект конфигурационных файлов
  */
-OsOpt::OsOpt(LogApp * log, Config * config){
+Os::Os(LogApp * log, Config * config){
 	// Если конфигурационный файл передан
 	if((config != NULL) && (log != NULL)){
 		// Запоминаем настройки системы
 		this->log		= log;
 		this->config	= config;
-		this->enabled	= this->config->proxy.optimos;
 		// Получаем данные процессора
 		getCPU();
 		// Если модуль активирован тогда запускаем активацию
-		if(this->enabled) run();
+		if(this->config->proxy.optimos) optimos();
 		// Активируем лимиты дампов ядра
 		enableCoreDumps();
 	}

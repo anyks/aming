@@ -8,14 +8,14 @@
 /*
 *
 * MacOS X:
-* # clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+* # clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
 *
 * Linux (requre = liblz-dev):
-* # g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -Wno-unused-result -lz -pthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-* # gcc -std=c++11 -lm -ggdb -Wall -pedantic -pthread -O3 -Werror=vla -Wno-unused-result -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libm.a
+* # g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -Wno-unused-result -lz -pthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+* # gcc -std=c++11 -lm -ggdb -Wall -pedantic -pthread -O3 -Werror=vla -Wno-unused-result -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libm.a
 *
 * FreeBSD:
-* # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+* # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 *
 * Запуск: # ./bin/http -c ./config.ini
 *
@@ -28,7 +28,7 @@
 #include <sys/signal.h>
 #include <sys/resource.h>
 #include "./lib/log/log.h"
-#include "./lib/osopt/osopt.h"
+#include "./lib/os/os.h"
 #include "./lib/config/conf.h"
 #include "./proxy/http.h"
 
@@ -42,7 +42,7 @@ LogApp * logfile = NULL;
 // Объект конфигурационного файла
 Config * config = NULL;
 // Объект взаимодействия с ОС
-OsOpt * osopt = NULL;
+Os * os = NULL;
 /**
  * signal_log Функция вывода значения сигнала в лог
  * @param signum номер сигнала
@@ -110,7 +110,7 @@ void sigterm_handler(int signum){
 		// Удаляем дочерний воркер
 		kill(cpid, SIGTERM);
 		// Удаляем pid файл
-		if(osopt != NULL) osopt->rmPid(EXIT_FAILURE);
+		if(os != NULL) os->rmPid(EXIT_FAILURE);
 	}
 	// Выходим
 	exit(0);
@@ -123,9 +123,9 @@ void sigsegv_handler(int signum){
 	// Логируем сообщение о сигнале
 	signal_log(signum);
 	// Если это родительский пид, удаляем pid файл
-	if((cpid > 0) && (osopt != NULL)){
+	if((cpid > 0) && (os != NULL)){
 		// Удаляем pid файл
-		osopt->rmPid(EXIT_FAILURE);
+		os->rmPid(EXIT_FAILURE);
 	}
 	// перепосылка сигнала
 	signal(signum, SIG_DFL);
@@ -140,9 +140,9 @@ void sigexit_handler(int signum){
 	// Логируем сообщение о сигнале
 	signal_log(signum);
 	// Если это родительский пид, удаляем pid файл
-	if((cpid > 0) && (osopt != NULL)){
+	if((cpid > 0) && (os != NULL)){
 		// Удаляем pid файл
-		osopt->rmPid(EXIT_FAILURE);
+		os->rmPid(EXIT_FAILURE);
 	}
 	// Выходим
 	exit(0);
@@ -151,12 +151,12 @@ void sigexit_handler(int signum){
  * create_proxy Функция создания прокси-сервера
  */
 void create_proxy(){
-	// Установим максимальное кол-во дискрипторов которое можно открыть
-	osopt->setFdLimit();
 	// Выводим приглашение
 	logfile->welcome();
 	// Выполняем запуск приложения от имени пользователя
-	osopt->privBind();
+	os->privBind();
+	// Установим максимальное кол-во дискрипторов которое можно открыть
+	os->setFdLimit();
 	// Создаем объект для http прокси-сервера
 	HttpProxy http = HttpProxy(logfile, config);
 }
@@ -237,30 +237,30 @@ int main(int argc, char * argv[]){
 	// Создаем модуль лога
 	logfile = new LogApp(config, TOLOG_FILES | TOLOG_CONSOLE);
 	// Устанавливаем настройки операционной системы
-	osopt = new OsOpt(logfile, config);
+	os = new Os(logfile, config);
 	// Если запуск должен быть в виде демона
 	if(!config->proxy.debug && config->proxy.daemon){
 		// Ответвляемся от родительского процесса
 		pid_t pid = fork();
 		// Если пид не создан тогда выходим
-		if(pid < 0) osopt->rmPid(EXIT_FAILURE);
+		if(pid < 0) os->rmPid(EXIT_FAILURE);
 		// Если с PID'ом все получилось, то родительский процесс можно завершить.
-		if(pid > 0) osopt->rmPid(EXIT_SUCCESS);
+		if(pid > 0) os->rmPid(EXIT_SUCCESS);
 		// Изменяем файловую маску
 		umask(0);
 		// Здесь можно открывать любые журналы
 		// Создание нового SID для дочернего процесса
 		pid_t sid = setsid();
 		// Если идентификатор сессии дочернего процесса не существует
-		if(sid < 0) osopt->rmPid(EXIT_FAILURE);
+		if(sid < 0) os->rmPid(EXIT_FAILURE);
 		// Изменяем текущий рабочий каталог
-		if((chdir("/")) < 0) osopt->rmPid(EXIT_FAILURE);
+		if((chdir("/")) < 0) os->rmPid(EXIT_FAILURE);
 		// Закрываем стандартные файловые дескрипторы
 		close(STDIN_FILENO);
 		close(STDOUT_FILENO);
 		close(STDERR_FILENO);
 		// Создаем pid файл
-		osopt->mkPid();
+		os->mkPid();
 	}
 	// Если режим отладки не включен
 	if(!config->proxy.debug){
@@ -288,7 +288,7 @@ int main(int argc, char * argv[]){
 	// Запускаем прокси сервер в главном потоке
 	} else create_proxy();
 	// Удаляем объект взаимодействия с ОС
-	delete osopt;
+	delete os;
 	// Удаляем лог
 	delete logfile;
 	// Удаляем конфиг

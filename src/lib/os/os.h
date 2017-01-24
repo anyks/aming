@@ -25,9 +25,9 @@
 using namespace std;
 
 /**
- * OsOpt Класс оптимизации операционной системы
+ * Os Класс оптимизации операционной системы
  */
-class OsOpt {
+class Os {
 	private:
 		/**
 		 * OsData Данные операционной системы
@@ -40,8 +40,6 @@ class OsOpt {
 		LogApp * log = NULL;
 		// Объект конфигурационного файла
 		Config * config = NULL;
-		// Активация модуля
-		bool enabled = false;
 // Если это не Linux
 #ifndef __linux__
 		/**
@@ -114,18 +112,10 @@ class OsOpt {
 		void getCPU();
 	public:
 		/**
-		 * run Метод запуска оптимизации
+		 * optimos Метод запуска оптимизации
 		 * @return результат работы
 		 */
-		void run();
-		/**
-		 * enable Метод активации модуля
-		 */
-		void enable();
-		/**
-		 * enable Метод деактивации модуля
-		 */
-		void disable();
+		void optimos();
 		/**
 		 * set_fd_limit Функция установки количество разрешенных файловых дескрипторов
 		 * @return количество установленных файловых дескрипторов
@@ -145,11 +135,11 @@ class OsOpt {
 		 */
 		void privBind();
 		/**
-		 * OsOpt Конструктор
+		 * Os Конструктор
 		 * @param log     объект лога для вывода информации
 		 * @param config  объект конфигурационных файлов
 		 */
-		OsOpt(LogApp * log = NULL, Config * config = NULL);
+		Os(LogApp * log = NULL, Config * config = NULL);
 };
 
 #endif // _OS_ANYKS_
