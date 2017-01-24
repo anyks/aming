@@ -14,7 +14,9 @@
 #include <stdlib.h>
 #include <pwd.h>
 #include <grp.h>
+#ifndef __linux__
 #include <sys/sysctl.h>
+#endif
 #include <sys/resource.h>
 #include "../log/log.h"
 #include "../config/conf.h"
@@ -40,6 +42,8 @@ class OsOpt {
 		Config * config = NULL;
 		// Активация модуля
 		bool enabled = false;
+// Если это не Linux
+#ifndef __linux__
 		/**
 		 * getNumberParam Метод получения заначений ядра sysctl
 		 * @param  name название параметра
@@ -64,6 +68,7 @@ class OsOpt {
 		 * @param param данные параметра
 		 */
 		void setParam(string name, string param);
+#endif
 		/**
 		 * enableCoreDumps Функция активации создания дампа ядра
 		 * @return результат установки лимитов дампов ядра

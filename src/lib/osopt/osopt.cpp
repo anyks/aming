@@ -91,6 +91,8 @@ int OsOpt::setFdLimit(){
 	// установим указанное кол-во
 	return setrlimit(RLIMIT_NOFILE, &lim);
 }
+// Если это не Linux
+#ifndef __linux__
 /**
  * getNumberParam Метод получения заначений ядра sysctl
  * @param  name название параметра
@@ -99,8 +101,6 @@ int OsOpt::setFdLimit(){
 long OsOpt::getNumberParam(string name){
 	// Параметр искомого значения
 	int param = 0;
-// Если это не Linux
-#ifndef __linux__
 	// Получаем размер искомого параметра
 	size_t len = sizeof(param);
 	// Запрашиваем искомые данные
@@ -108,7 +108,6 @@ long OsOpt::getNumberParam(string name){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
 	}
-#endif
 	// Выводим результат
 	return param;
 }
@@ -124,14 +123,11 @@ string OsOpt::getStringParam(string name){
 	size_t len = sizeof(buffer);
 	// Заполняем буфер нулями
 	memset(buffer, 0, len);
-// Если это не Linux
-#ifndef __linux__
 	// Запрашиваем искомые данные
 	if(sysctlbyname(name.c_str(), &buffer, &len, NULL, 0) < 0){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
 	}
-#endif
 	// Выводим результат
 	return buffer;
 }
@@ -141,14 +137,11 @@ string OsOpt::getStringParam(string name){
  * @param param данные параметра
  */
 void OsOpt::setParam(string name, int param){
-// Если это не Linux
-#ifndef __linux__
 	// Устанавливаем новые параметры настройки ядра
 	if(sysctlbyname(name.c_str(), NULL, 0, &param, sizeof(param)) < 0){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed set param: %s -> %i", name.c_str(), param);
 	}
-#endif
 }
 /**
  * setParam Метод установки значений ядра sysctl
@@ -156,8 +149,6 @@ void OsOpt::setParam(string name, int param){
  * @param param данные параметра
  */
 void OsOpt::setParam(string name, string param){
-// Если это не Linux
-#ifndef __linux__
 	// Получаем значение параметра для установки
 	const char * value = param.c_str();
 	// Устанавливаем новые параметры настройки ядра
@@ -165,8 +156,8 @@ void OsOpt::setParam(string name, string param){
 		// Выводим сообщение в консоль
 		this->log->write(LOG_ERROR, "filed set param: %s -> %s", name.c_str(), param.c_str());
 	}
-#endif
 }
+#endif
 /**
  * enableCoreDumps Функция активации создания дампа ядра
  * @return результат установки лимитов дампов ядра
@@ -276,7 +267,7 @@ string OsOpt::exec(string cmd){
 		// Закрываем пайп
 		pclose(stream);
 		// Если данные в буфере существуют
-		if(strlen(buffer)) this->log->write(LOG_MESSAGE, "system set: %s", buffer);
+		if(!strlen(buffer)) this->log->write(LOG_ERROR, "filed set param: %s", buffer);
 	}
 	// Выводим результат
 	return buffer;
@@ -310,6 +301,8 @@ void OsOpt::getCPU(){
 	string cpu = "Unknown";
 	// Определяем os
 	switch(os.type){
+// Если это не Linux
+#ifndef __linux__
 		// Если это MacOS X
 		case 3: {
 			// Получаем количество ядер
@@ -317,6 +310,7 @@ void OsOpt::getCPU(){
 			// Получаем название процессора
 			cpu = getStringParam("machdep.cpu.brand_string");
 		} break;
+#endif
 		// Если это Linux
 		case 4: {
 			// Результат работы регулярного выражения
@@ -335,6 +329,8 @@ void OsOpt::getCPU(){
 				cpu = match[2].str();
 			}
 		} break;
+// Если это не Linux
+#ifndef __linux__
 		// Если это FreeBSD
 		case 5: {
 			// Получаем количество ядер
@@ -342,6 +338,7 @@ void OsOpt::getCPU(){
 			// Получаем название процессора
 			cpu = exec("grep -w CPU: /var/run/dmesg.boot");
 		} break;
+#endif
 	}
 	// Формируем структуру данных операционной системы
 	this->config->os = {ncpu, cpu, os.name};
@@ -366,6 +363,8 @@ void OsOpt::run(){
 				// If you even need to enable autotuning, here are the commands:
 				exec("netsh interface tcp set global autotuninglevel=normal");
 			} break;
+// Если это не Linux
+#ifndef __linux__
 			// Если это MacOS X
 			case 3: {
 				// OSX default of 3 is not big enough
@@ -384,6 +383,7 @@ void OsOpt::run(){
 				// for max connections
 				setParam("kern.ipc.somaxconn", 49152);
 			} break;
+#endif
 			// Если это Linux
 			case 4: {
 				// for max connections
@@ -392,8 +392,8 @@ void OsOpt::run(){
 				exec("sysctl -w net.core.rmem_max=134217728");
 				exec("sysctl -w net.core.wmem_max=134217728");
 				// increase Linux autotuning TCP buffer limit to 64MB
-				exec("sysctl -w net.ipv4.tcp_rmem=67108864");
-				exec("sysctl -w net.ipv4.tcp_wmem=67108864");
+				exec("sysctl -w net.ipv4.tcp_rmem=\"4096 87380 33554432\"");
+				exec("sysctl -w net.ipv4.tcp_wmem=\"4096 65536 33554432\"");
 				// recommended for hosts with jumbo frames enabled
 				exec("sysctl -w net.ipv4.tcp_mtu_probing=1");
 				// recommended for CentOS7/Debian8 hosts
@@ -405,6 +405,8 @@ void OsOpt::run(){
 				// If algorithm exist
 				if(!algorithm.empty()) exec(string("sysctl -w net.ipv4.tcp_congestion_control=") + algorithm);
 			} break;
+// Если это не Linux
+#ifndef __linux__
 			// Если это FreeBSD
 			case 5: {
 				// set to at least 16MB for 10GE hosts
@@ -431,6 +433,7 @@ void OsOpt::run(){
 				// If algorithm exist
 				if(!algorithm.empty()) setParam("net.inet.tcp.cc.algorithm", algorithm);
 			} break;
+#endif
 			// Если это Solaris
 			case 7: {
 				// increase max tcp window
