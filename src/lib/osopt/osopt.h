@@ -103,6 +103,10 @@ class OsOpt {
 		 * @return     строка с названием алгоритма
 		 */
 		string getCongestionControl(string str);
+		/**
+		 * getCPU Метод получения данных процессора
+		 */
+		void getCPU();
 	public:
 		/**
 		 * run Метод запуска оптимизации

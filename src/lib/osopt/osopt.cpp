@@ -299,6 +299,54 @@ string OsOpt::getCongestionControl(string str){
 	return "";
 }
 /**
+ * getCPU Метод получения данных процессора
+ */
+void OsOpt::getCPU(){
+	// Определяем тип операционной системы
+	OsData os = getOsName();
+	// Количество ядер процессора
+	u_int ncpu = 1;
+	// Название процессора
+	string cpu = "Unknown";
+	// Определяем os
+	switch(os.type){
+		// Если это MacOS X
+		case 3: {
+			// Получаем количество ядер
+			ncpu = (u_int) getNumberParam("hw.ncpu");
+			// Получаем название процессора
+			cpu = getStringParam("machdep.cpu.brand_string");
+		} break;
+		// Если это Linux
+		case 4: {
+			// Результат работы регулярного выражения
+			smatch match;
+			// Получаем данные о процессоре
+			string str = exec("lscpu");
+			// Устанавливаем правило регулярного выражения
+			regex e("CPU\\(s\\)\\:\\s+(\\d+)[\\s\\S]+Model\\s+name\\:\\s+([^\\r\\n]+)", regex::ECMAScript | regex::icase);
+			// Выполняем поиск протокола
+			regex_search(str, match, e);
+			// Если протокол найден
+			if(!match.empty() && (match.size() == 3)){
+				// Получаем количество ядер
+				ncpu = ::atoi(match[1].str().c_str());
+				// Получаем название процессора
+				cpu = match[2].str();
+			}
+		} break;
+		// Если это FreeBSD
+		case 5: {
+			// Получаем количество ядер
+			ncpu = (u_int) getNumberParam("hw.ncpu");
+			// Получаем название процессора
+			cpu = exec("grep -w CPU: /var/run/dmesg.boot");
+		} break;
+	}
+	// Формируем структуру данных операционной системы
+	this->config->os = {ncpu, cpu, os.name};
+}
+/**
  * run Метод запуска оптимизации
  * @return результат работы
  */
@@ -422,17 +470,8 @@ OsOpt::OsOpt(LogApp * log, Config * config){
 		this->log		= log;
 		this->config	= config;
 		this->enabled	= this->config->proxy.optimos;
-		// Определяем тип операционной системы
-		OsData os = getOsName();
-		// Формируем структуру данных операционной системы
-		this->config->os = {
-			// Получаем количество ядер
-			(u_int) getNumberParam("hw.logicalcpu"),
-			// Получаем название процессора
-			getStringParam("machdep.cpu.brand_string"),
-			// Получаем название операционной системы
-			os.name
-		};
+		// Получаем данные процессора
+		getCPU();
 		// Если модуль активирован тогда запускаем активацию
 		if(this->enabled) run();
 		// Активируем лимиты дампов ядра
