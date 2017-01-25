@@ -153,7 +153,7 @@ void create_proxy(){
 	// Установим максимальное кол-во дискрипторов которое можно открыть
 	sys->os->setFdLimit();
 	// Создаем объект для http прокси-сервера
-	HttpProxy http = HttpProxy(sys->log, sys->config);
+	HttpProxy http = HttpProxy(sys);
 }
 /**
  * run_worker Функция запуска воркера

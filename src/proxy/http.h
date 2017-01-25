@@ -22,9 +22,8 @@
 #include <event2/listener.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
-#include "../lib/log/log.h"
 #include "../lib/http/http.h"
-#include "../lib/config/conf.h"
+#include "../lib/system/system.h"
 #include "../lib/dns/dns.h"
 
 // Устанавливаем область видимости
@@ -39,13 +38,6 @@ using namespace std;
 #define TM_SERVER 0x01
 #define TM_CLIENT 0x02
 
-/**
- * Proxy Структура прокси сервера
- */
-struct Proxy {
-	LogApp * log;		// Объект ведения логов
-	Config * config;	// Объект конфигурационных данных
-};
 /**
  * Connects Класс подключений к прокси серверу
  */
@@ -186,6 +178,7 @@ class BufferHttpProxy {
 		map <string, Connects>	* connects	= NULL; 	// Список подключений к прокси серверу
 		DNSResolver				* dns		= NULL;		// Создаем объект dns ресолвера
 		Http					* parser	= NULL;		// Объект парсера
+		System					* proxy		= NULL;		// Параметры прокси сервера
 		HttpQuery				response;				// Ответ системы
 		HttpData				httpData;				// Данные http запроса
 		Headers					headers;				// Данные http заголовков
@@ -193,7 +186,6 @@ class BufferHttpProxy {
 		Events					events;					// Буферы событий
 		Server					server;					// Параметры удаленного сервера
 		Client					client;					// Параметры подключившегося клиента
-		Proxy					proxy;					// Параметры прокси сервера
 		/**
 		 * begin Метод активации подключения
 		 */
@@ -221,7 +213,7 @@ class BufferHttpProxy {
 		 * BufferHttpProxy Конструктор
 		 * @param proxy объект данных прокси сервера
 		 */
-		BufferHttpProxy(Proxy proxy);
+		BufferHttpProxy(System * proxy);
 		/**
 		 * ~BufferHttpProxy Деструктор
 		 */
@@ -235,7 +227,7 @@ class HttpProxy {
 		// Список подключений к прокси серверу
 		map <string, Connects> connects;
 		// Параметры прокси сервера
-		Proxy server;
+		System * server = NULL;
 		// Создаем новую базу
 		struct event_base * base = NULL;
 		/**
@@ -390,10 +382,9 @@ class HttpProxy {
 	public:
 		/**
 		 * HttpProxy Конструктор
-		 * @param log    объект ведения логов
-		 * @param config объект конфигурационных данных
+		 * @param proxy объект параметров прокси сервера
 		 */
-		HttpProxy(LogApp * log = NULL, Config * config = NULL);
+		HttpProxy(System * proxy = NULL);
 };
 
 #endif // _HTTP_PROXY_ANYKS_
