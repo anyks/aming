@@ -311,6 +311,14 @@ class HttpProxy {
 		 */
 		static bool check_auth(void * ctx);
 		/**
+		 * get_delay Функция выводит время в секундах на сколько нужно усыпить поток
+		 * @param  size размер передаваемых данных
+		 * @param  type тип передаваемого сообщения (true - чтение, false - запись)
+		 * @param  ctx  объект входящих данных
+		 * @return      время в секундах на которое следует задержать поток
+		 */
+		static int get_delay(size_t size, bool type, void * ctx);
+		/**
 		 * connect_server Функция создания сокета для подключения к удаленному серверу
 		 * @param ctx объект входящих данных
 		 * @return    результат подключения

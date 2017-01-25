@@ -508,6 +508,35 @@ bool HttpProxy::check_auth(void * ctx){
 	return false;
 }
 /**
+ * get_delay Функция выводит время в секундах на сколько нужно усыпить поток
+ * @param  size размер передаваемых данных
+ * @param  type тип передаваемого сообщения (true - чтение, false - запись)
+ * @param  ctx  объект входящих данных
+ * @return      время в секундах на которое следует задержать поток
+ */
+int HttpProxy::get_delay(size_t size, bool type, void * ctx){
+	// Расчитанное время задержки
+	int result = 0;
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
+	// Если подключение не передано
+	if(http != NULL){
+		// Получаем размер максимально-возможных передачи данных для всех подключений
+		float max = float(type ? http->proxy.config->buffers.read : http->proxy.config->buffers.write);
+		// Если буфер существует
+		if(max > 0){
+			// Высчитываем размер максимально-возможных передачи данных для одного подключения
+			max = max / float(http->myconns);
+			// Если размер больше нуля то продолжаем
+			if((max > 0) && (size > max))
+				// Получаем искомый результат
+				result = size / max;
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * connect_server Функция создания сокета для подключения к удаленному серверу
  * @param ctx объект входящих данных
  * @return    результат подключения
@@ -621,6 +650,7 @@ int HttpProxy::connect_server(void * ctx){
 				// Выходим
 				return 0;
 			}
+			/*
 			// Устанавливаем размеры буферов
 			set_buffer_size(
 				http->sockets.server,
@@ -629,6 +659,7 @@ int HttpProxy::connect_server(void * ctx){
 				http->myconns,
 				http->proxy.log
 			);
+			*/
 			// Если подключение постоянное
 			if(http->client.alive){
 				// Отключаем алгоритм Нейгла для сервера и клиента
@@ -793,52 +824,51 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
 		// Ставим таймер только на чтение и запись
 		http->set_timeout(TM_CLIENT, true, true);
+		// Получаем размер входящих данных
+		size_t len = evbuffer_get_length(input);
+		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+		sleep(get_delay(len, true, http));
 		// Если заголовки менять не надо тогда просто обмениваемся данными
 		if(http->client.connect) evbuffer_add_buffer(output, input);
 		// Иначе изменяем заголовки
-		else {
-			// Получаем размер входящих данных
-			size_t len = evbuffer_get_length(input);
-			// Если данные получены
-			if(len){
-				// Создаем буфер данных
-				char * buffer = new char[len];
-				// Копируем в буфер полученные данные
-				evbuffer_copyout(input, buffer, len);
-				// Если заголовки запроса не получены
-				if(http->headers.response.empty()){
-					// Добавляем полученный буфер в вектор
-					vector <char> headers(buffer, buffer + len);
-					// Если буферы созданы
-					if(http->headers.response.create(headers.data())){
-						// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
-						if((strstr(headers.data(), "101 Switching Protocols") != NULL)
-						&& !http->headers.response.getHeader("upgrade").value.empty()
-						&& (http->headers.response.getHeader("connection").value.find("Upgrade") != string::npos)){
-							// Устанавливаем что это соединение CONNECT,
-							// для будущего обмена данными, так как они будут приходить бинарные
-							http->client.connect = true;
-						}
-						// Создаем буфер для исходящих данных
-						struct evbuffer * tmp = evbuffer_new();
-						// Выполняем модификацию заголовков
-						http->parser->modify(headers);
-						// Добавляем в новый буфер модифицированные заголовки
-						evbuffer_add(tmp, headers.data(), headers.size());
-						// Отправляем данные клиенту
-						evbuffer_add_buffer(output, tmp);
-						// Удаляем данные из буфера
-						evbuffer_drain(input, len);
-						// Удаляем временный буфер
-						evbuffer_free(tmp);
+		else if(len){
+			// Создаем буфер данных
+			char * buffer = new char[len];
+			// Копируем в буфер полученные данные
+			evbuffer_copyout(input, buffer, len);
+			// Если заголовки запроса не получены
+			if(http->headers.response.empty()){
+				// Добавляем полученный буфер в вектор
+				vector <char> headers(buffer, buffer + len);
+				// Если буферы созданы
+				if(http->headers.response.create(headers.data())){
+					// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
+					if((strstr(headers.data(), "101 Switching Protocols") != NULL)
+					&& !http->headers.response.getHeader("upgrade").value.empty()
+					&& (http->headers.response.getHeader("connection").value.find("Upgrade") != string::npos)){
+						// Устанавливаем что это соединение CONNECT,
+						// для будущего обмена данными, так как они будут приходить бинарные
+						http->client.connect = true;
 					}
-				// Если заголовки получены, выводим так как есть
-				} else evbuffer_add_buffer(output, input);
-				// Удаляем буфер данных
-				delete [] buffer;
-			// Закрываем соединение
-			} else http->close();
-		}
+					// Создаем буфер для исходящих данных
+					struct evbuffer * tmp = evbuffer_new();
+					// Выполняем модификацию заголовков
+					http->parser->modify(headers);
+					// Добавляем в новый буфер модифицированные заголовки
+					evbuffer_add(tmp, headers.data(), headers.size());
+					// Отправляем данные клиенту
+					evbuffer_add_buffer(output, tmp);
+					// Удаляем данные из буфера
+					evbuffer_drain(input, len);
+					// Удаляем временный буфер
+					evbuffer_free(tmp);
+				}
+			// Если заголовки получены, выводим так как есть
+			} else evbuffer_add_buffer(output, input);
+			// Удаляем буфер данных
+			delete [] buffer;
+		// Закрываем соединение
+		} else http->close();
 	}
 	// Выходим
 	return;
@@ -910,6 +940,8 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							http->set_timeout(TM_SERVER, true, true);
 						// Устанавливаем таймаут только на запись
 						else http->set_timeout(TM_SERVER, false, true);
+						// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+						sleep(get_delay(http->response.size(), false, http));
 						// Отправляем серверу сообщение
 						bufferevent_write(http->events.server, http->response.data(), http->response.size());
 						// Удаляем объект подключения
@@ -951,6 +983,8 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			if(http->response.code == 200) http->set_timeout(TM_CLIENT, true, true);
 			// Если это завершение работы то устанавливаем таймер только на запись
 			else http->set_timeout(TM_CLIENT, false, true);
+			// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+			if(http->response.code == 200) sleep(get_delay(http->response.size(), false, http));
 			// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 			bufferevent_setwatermark(http->events.client, EV_WRITE, http->response.size(), 0);
 			// Отправляем клиенту сообщение
@@ -1018,16 +1052,20 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
+		// Удаляем таймер для клиента
+		http->set_timeout(TM_CLIENT | TM_SERVER);
 		// Определяем connect прокси разрешен
 		bool conn_enabled = (http->proxy.config->options & OPT_CONNECT);
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input = bufferevent_get_input(bev);
+		// Получаем размер входящих данных
+		size_t len = evbuffer_get_length(input);
+		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+		sleep(get_delay(len, true, http));
 		// Если это метод connect
 		if(http->client.connect && (conn_enabled || http->client.https)){
 			// Получаем буферы входящих данных и исходящих
 			struct evbuffer * output = bufferevent_get_output(http->events.server);
-			// Удаляем таймер для клиента
-			http->set_timeout(TM_CLIENT);
 			// Если это не постоянное подключение
 			if(!http->client.alive)
 				// Устанавливаем таймаут на чтение и запись
@@ -1038,10 +1076,6 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 			evbuffer_add_buffer(output, input);
 		// Если это обычный запрос
 		} else if(!http->client.connect) {
-			// Удаляем таймер для сервера
-			http->set_timeout(TM_SERVER);
-			// Получаем размер входящих данных
-			size_t len = evbuffer_get_length(input);
 			// Создаем буфер данных
 			char * buffer = new char[len];
 			// Копируем в буфер полученные данные
