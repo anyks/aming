@@ -8,14 +8,14 @@
 /*
 *
 * MacOS X:
-* # clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+* # clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./lib/system/system.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
 *
 * Linux (requre = liblz-dev):
-* # g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -Wno-unused-result -lz -pthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
-* # gcc -std=c++11 -lm -ggdb -Wall -pedantic -pthread -O3 -Werror=vla -Wno-unused-result -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libm.a
+* # g++ -std=c++11 -ggdb -Wall -pedantic -O3 -Werror=vla -Wno-unused-result -lz -pthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./lib/system/system.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/4.9/libstdc++.a
+* # gcc -std=c++11 -lm -ggdb -Wall -pedantic -pthread -O3 -Werror=vla -Wno-unused-result -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./lib/system/system.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libm.a
 *
 * FreeBSD:
-* # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+* # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./lib/system/system.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 *
 * Запуск: # ./bin/http -c ./config.ini
 *
@@ -27,9 +27,7 @@
 #include <sys/file.h>
 #include <sys/signal.h>
 #include <sys/resource.h>
-#include "./lib/log/log.h"
-#include "./lib/os/os.h"
-#include "./lib/config/conf.h"
+#include "./lib/system/system.h"
 #include "./proxy/http.h"
 
 // Устанавливаем пространство имен
@@ -37,12 +35,9 @@ using namespace std;
 
 // Пиды дочернего воркера
 pid_t cpid = -1;
-// Объект log модуля
-LogApp * logfile = NULL;
-// Объект конфигурационного файла
-Config * config = NULL;
-// Объект взаимодействия с ОС
-Os * os = NULL;
+// Объект управления системными настройками
+System * sys = NULL;
+
 /**
  * signal_log Функция вывода значения сигнала в лог
  * @param signum номер сигнала
@@ -50,34 +45,34 @@ Os * os = NULL;
 void signal_log(int signum){
 	// Определяем данные сигнала
 	switch(signum){
-		case SIGABRT:	logfile->write(LOG_ERROR, "Process abort signal [%d]", signum);									break;
-		case SIGALRM:	logfile->write(LOG_ERROR, "Alarm clock [%d]", signum);											break;
-		case SIGBUS:	logfile->write(LOG_ERROR, "Access to an undefined portion of a memory object [%d]", signum);	break;
-		case SIGCHLD:	logfile->write(LOG_ERROR, "Child process terminated, stopped, or continued [%d]", signum);		break;
-		case SIGCONT:	logfile->write(LOG_ERROR, "Continue executing, if stopped [%d]", signum);						break;
-		case SIGFPE:	logfile->write(LOG_ERROR, "Erroneous arithmetic operation [%d]", signum);						break;
-		case SIGHUP:	logfile->write(LOG_ERROR, "Hangup [%d]", signum);												break;
-		case SIGILL:	logfile->write(LOG_ERROR, "Illegal instruction [%d]", signum);									break;
-		case SIGINT:	logfile->write(LOG_ERROR, "Terminal interrupt signal [%d]", signum);							break;
-		case SIGKILL:	logfile->write(LOG_ERROR, "Kill (cannot be caught or ignored) [%d]", signum);					break;
-		case SIGPIPE:	logfile->write(LOG_ERROR, "Write on a pipe with no one to read it [%d]", signum);				break;
-		case SIGQUIT:	logfile->write(LOG_ERROR, "Terminal quit signal [%d]", signum);									break;
-		case SIGSEGV:	logfile->write(LOG_ERROR, "Invalid memory reference [%d]", signum);								break;
-		case SIGSTOP:	logfile->write(LOG_ERROR, "Stop executing (cannot be caught or ignored) [%d]", signum);			break;
-		case SIGTERM:	logfile->write(LOG_ERROR, "Termination signal [%d]", signum);									break;
-		case SIGTSTP:	logfile->write(LOG_ERROR, "Terminal stop signal [%d]", signum);									break;
-		case SIGTTIN:	logfile->write(LOG_ERROR, "Background process attempting read [%d]", signum);					break;
-		case SIGTTOU:	logfile->write(LOG_ERROR, "Background process attempting write [%d]", signum);					break;
-		case SIGUSR1:	logfile->write(LOG_ERROR, "User-defined signal 1 [%d]", signum);								break;
-		case SIGUSR2:	logfile->write(LOG_ERROR, "User-defined signal 2 [%d]", signum);								break;
-		// case SIGPOLL: logfile->write(LOG_ERROR, "Pollable event [%d]", signum);										break;
-		case SIGPROF:	logfile->write(LOG_ERROR, "Profiling timer expired [%d]", signum);								break;
-		case SIGSYS:	logfile->write(LOG_ERROR, "Bad system call [%d]", signum);										break;
-		case SIGTRAP:	logfile->write(LOG_ERROR, "Trace / breakpoint trap [%d]", signum);								break;
-		case SIGURG:	logfile->write(LOG_ERROR, "High bandwidth data is available at a socket [%d]", signum);			break;
-		case SIGVTALRM:	logfile->write(LOG_ERROR, "Virtual timer expired [%d]", signum);								break;
-		case SIGXCPU:	logfile->write(LOG_ERROR, "CPU time limit exceeded [%d]", signum);								break;
-		case SIGXFSZ:	logfile->write(LOG_ERROR, "File size limit exceeded [%d]", signum);								break;
+		case SIGABRT:	sys->log->write(LOG_ERROR, "Process abort signal [%d]", signum);								break;
+		case SIGALRM:	sys->log->write(LOG_ERROR, "Alarm clock [%d]", signum);											break;
+		case SIGBUS:	sys->log->write(LOG_ERROR, "Access to an undefined portion of a memory object [%d]", signum);	break;
+		case SIGCHLD:	sys->log->write(LOG_ERROR, "Child process terminated, stopped, or continued [%d]", signum);		break;
+		case SIGCONT:	sys->log->write(LOG_ERROR, "Continue executing, if stopped [%d]", signum);						break;
+		case SIGFPE:	sys->log->write(LOG_ERROR, "Erroneous arithmetic operation [%d]", signum);						break;
+		case SIGHUP:	sys->log->write(LOG_ERROR, "Hangup [%d]", signum);												break;
+		case SIGILL:	sys->log->write(LOG_ERROR, "Illegal instruction [%d]", signum);									break;
+		case SIGINT:	sys->log->write(LOG_ERROR, "Terminal interrupt signal [%d]", signum);							break;
+		case SIGKILL:	sys->log->write(LOG_ERROR, "Kill (cannot be caught or ignored) [%d]", signum);					break;
+		case SIGPIPE:	sys->log->write(LOG_ERROR, "Write on a pipe with no one to read it [%d]", signum);				break;
+		case SIGQUIT:	sys->log->write(LOG_ERROR, "Terminal quit signal [%d]", signum);								break;
+		case SIGSEGV:	sys->log->write(LOG_ERROR, "Invalid memory reference [%d]", signum);							break;
+		case SIGSTOP:	sys->log->write(LOG_ERROR, "Stop executing (cannot be caught or ignored) [%d]", signum);		break;
+		case SIGTERM:	sys->log->write(LOG_ERROR, "Termination signal [%d]", signum);									break;
+		case SIGTSTP:	sys->log->write(LOG_ERROR, "Terminal stop signal [%d]", signum);								break;
+		case SIGTTIN:	sys->log->write(LOG_ERROR, "Background process attempting read [%d]", signum);					break;
+		case SIGTTOU:	sys->log->write(LOG_ERROR, "Background process attempting write [%d]", signum);					break;
+		case SIGUSR1:	sys->log->write(LOG_ERROR, "User-defined signal 1 [%d]", signum);								break;
+		case SIGUSR2:	sys->log->write(LOG_ERROR, "User-defined signal 2 [%d]", signum);								break;
+		// case SIGPOLL: sys->log->write(LOG_ERROR, "Pollable event [%d]", signum);										break;
+		case SIGPROF:	sys->log->write(LOG_ERROR, "Profiling timer expired [%d]", signum);								break;
+		case SIGSYS:	sys->log->write(LOG_ERROR, "Bad sys call [%d]", signum);										break;
+		case SIGTRAP:	sys->log->write(LOG_ERROR, "Trace / breakpoint trap [%d]", signum);								break;
+		case SIGURG:	sys->log->write(LOG_ERROR, "High bandwidth data is available at a socket [%d]", signum);		break;
+		case SIGVTALRM:	sys->log->write(LOG_ERROR, "Virtual timer expired [%d]", signum);								break;
+		case SIGXCPU:	sys->log->write(LOG_ERROR, "CPU time limit exceeded [%d]", signum);								break;
+		case SIGXFSZ:	sys->log->write(LOG_ERROR, "File size limit exceeded [%d]", signum);							break;
 	}
 }
 /**
@@ -110,7 +105,7 @@ void sigterm_handler(int signum){
 		// Удаляем дочерний воркер
 		kill(cpid, SIGTERM);
 		// Удаляем pid файл
-		if(os != NULL) os->rmPid(EXIT_FAILURE);
+		if(sys->os != NULL) sys->os->rmPid(EXIT_FAILURE);
 	}
 	// Выходим
 	exit(0);
@@ -123,9 +118,9 @@ void sigsegv_handler(int signum){
 	// Логируем сообщение о сигнале
 	signal_log(signum);
 	// Если это родительский пид, удаляем pid файл
-	if((cpid > 0) && (os != NULL)){
+	if((cpid > 0) && (sys->os != NULL)){
 		// Удаляем pid файл
-		os->rmPid(EXIT_FAILURE);
+		sys->os->rmPid(EXIT_FAILURE);
 	}
 	// перепосылка сигнала
 	signal(signum, SIG_DFL);
@@ -140,9 +135,9 @@ void sigexit_handler(int signum){
 	// Логируем сообщение о сигнале
 	signal_log(signum);
 	// Если это родительский пид, удаляем pid файл
-	if((cpid > 0) && (os != NULL)){
+	if((cpid > 0) && (sys->os != NULL)){
 		// Удаляем pid файл
-		os->rmPid(EXIT_FAILURE);
+		sys->os->rmPid(EXIT_FAILURE);
 	}
 	// Выходим
 	exit(0);
@@ -152,13 +147,13 @@ void sigexit_handler(int signum){
  */
 void create_proxy(){
 	// Выводим приглашение
-	logfile->welcome();
+	sys->log->welcome();
 	// Выполняем запуск приложения от имени пользователя
-	os->privBind();
+	sys->os->privBind();
 	// Установим максимальное кол-во дискрипторов которое можно открыть
-	os->setFdLimit();
+	sys->os->setFdLimit();
 	// Создаем объект для http прокси-сервера
-	HttpProxy http = HttpProxy(logfile, config);
+	HttpProxy http = HttpProxy(sys->log, sys->config);
 }
 /**
  * run_worker Функция запуска воркера
@@ -191,16 +186,16 @@ void run_worker(){
 				// Если дочерний процесс просто вышел
 				if(WIFEXITED(status)){
 					// Выводим в лог сообщение
-					logfile->write(LOG_ERROR, "exited, pid = %d, status = %d", cpid, WEXITSTATUS(status));
+					sys->log->write(LOG_ERROR, "exited, pid = %d, status = %d", cpid, WEXITSTATUS(status));
 					// Если это безусловное завершение работы
 					if(WEXITSTATUS(status) == 23) exit(SIGSTOP);
 				}
 				// Если дочерний процесс убит
-				else if(WIFSIGNALED(status)) logfile->write(LOG_ERROR, "killed by pid = %d, signal %d", cpid, WTERMSIG(status));
+				else if(WIFSIGNALED(status)) sys->log->write(LOG_ERROR, "killed by pid = %d, signal %d", cpid, WTERMSIG(status));
 				// Если дочерний процесс остановлен
-				else if(WIFSTOPPED(status)) logfile->write(LOG_ERROR, "stopped by pid = %d, signal %d", cpid, WSTOPSIG(status));
+				else if(WIFSTOPPED(status)) sys->log->write(LOG_ERROR, "stopped by pid = %d, signal %d", cpid, WSTOPSIG(status));
 				// Если дочерний процесс прислал сообщение что нужно продолжить
-				else if(WIFCONTINUED(status)) logfile->write(LOG_ERROR, "continued");
+				else if(WIFCONTINUED(status)) sys->log->write(LOG_ERROR, "continued");
 			// Продолжаем до тех пор пока статус не освободится
 			} while(!WIFEXITED(status) && !WIFSIGNALED(status));
 			// Перезапускаем дочерний процесс
@@ -239,37 +234,33 @@ int main(int argc, char * argv[]){
 		configfile = param.replace(0, 9, "");
 	*/
 	// Создаем объект конфигурации
-	config = new Config(configfile);
-	// Создаем модуль лога
-	logfile = new LogApp(config, TOLOG_FILES | TOLOG_CONSOLE);
-	// Устанавливаем настройки операционной системы
-	os = new Os(logfile, config);
+	sys = new System(configfile);
 	// Если запуск должен быть в виде демона
-	if(!config->proxy.debug && config->proxy.daemon){
+	if(!sys->config->proxy.debug && sys->config->proxy.daemon){
 		// Ответвляемся от родительского процесса
 		pid_t pid = fork();
 		// Если пид не создан тогда выходим
-		if(pid < 0) os->rmPid(EXIT_FAILURE);
+		if(pid < 0) sys->os->rmPid(EXIT_FAILURE);
 		// Если с PID'ом все получилось, то родительский процесс можно завершить.
-		if(pid > 0) os->rmPid(EXIT_SUCCESS);
+		if(pid > 0) sys->os->rmPid(EXIT_SUCCESS);
 		// Изменяем файловую маску
 		umask(0);
 		// Здесь можно открывать любые журналы
 		// Создание нового SID для дочернего процесса
 		pid_t sid = setsid();
 		// Если идентификатор сессии дочернего процесса не существует
-		if(sid < 0) os->rmPid(EXIT_FAILURE);
+		if(sid < 0) sys->os->rmPid(EXIT_FAILURE);
 		// Изменяем текущий рабочий каталог
-		if((chdir("/")) < 0) os->rmPid(EXIT_FAILURE);
+		if((chdir("/")) < 0) sys->os->rmPid(EXIT_FAILURE);
 		// Закрываем стандартные файловые дескрипторы
 		close(STDIN_FILENO);
 		close(STDOUT_FILENO);
 		close(STDERR_FILENO);
 		// Создаем pid файл
-		os->mkPid();
+		sys->os->mkPid();
 	}
 	// Если режим отладки не включен
-	if(!config->proxy.debug){
+	if(!sys->config->proxy.debug){
 		// Устанавливаем сигнал установки подключения
 		signal(SIGPIPE, sigpipe_handler);	// Запись в разорванное соединение (пайп, сокет)
 		// signal(SIGCHLD, sigchld_handler);// Дочерний процесс завершен или остановлен
@@ -293,12 +284,8 @@ int main(int argc, char * argv[]){
 		run_worker();
 	// Запускаем прокси сервер в главном потоке
 	} else create_proxy();
-	// Удаляем объект взаимодействия с ОС
-	delete os;
-	// Удаляем лог
-	delete logfile;
-	// Удаляем конфиг
-	delete config;
+	// Удаляем объект системных настроек
+	delete sys;
 	// Выходим
 	return 0;
 }
