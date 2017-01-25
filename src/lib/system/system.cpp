@@ -40,9 +40,9 @@ System::System(string configfile){
 	// Создаем объект конфигурации
 	this->config = new Config(this->configfile);
 	// Создаем модуль лога
-	this->log = new LogApp(this->config, TOLOG_FILES | TOLOG_CONSOLE);
+	this->log = new LogApp(&this->config, TOLOG_FILES | TOLOG_CONSOLE);
 	// Устанавливаем настройки операционной системы
-	this->os = new Os(this->log, this->config);
+	this->os = new Os(this->log, &this->config);
 }
 /**
  * ~System Деструктор

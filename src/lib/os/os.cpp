@@ -48,9 +48,9 @@ Os::OsData Os::getOsName(){
  */
 void Os::mkPid(){
 	// Если конфигурационный объект существует
-	if(config != NULL){
+	if((* config) != NULL){
 		// Создаем адрес pid файла
-		string filename = (config->proxy.piddir + string("/") + config->proxy.name + ".pid");
+		string filename = ((* config)->proxy.piddir + string("/") + (* config)->proxy.name + ".pid");
 		// Открываем файл на запись
 		FILE * f = fopen(filename.c_str(), "w");
 		// Если файл открыт
@@ -68,9 +68,9 @@ void Os::mkPid(){
  */
 void Os::rmPid(int ext){
 	// Если конфигурационный объект существует
-	if(config != NULL){
+	if((* config) != NULL){
 		// Создаем адрес pid файла
-		string filename = (config->proxy.piddir + string("/") + config->proxy.name + ".pid");
+		string filename = ((* config)->proxy.piddir + string("/") + (* config)->proxy.name + ".pid");
 		// Удаляем файл
 		remove(filename.c_str());
 		// Выходим из приложения
@@ -85,9 +85,9 @@ int Os::setFdLimit(){
 	// Структура для установки лимитов
 	struct rlimit lim;
 	// зададим текущий лимит на кол-во открытых дискриптеров
-	lim.rlim_cur = config->proxy.maxfds;
+	lim.rlim_cur = (* config)->proxy.maxfds;
 	// зададим максимальный лимит на кол-во открытых дискриптеров
-	lim.rlim_max = config->proxy.maxfds;
+	lim.rlim_max = (* config)->proxy.maxfds;
 	// установим указанное кол-во
 	return setrlimit(RLIMIT_NOFILE, &lim);
 }
@@ -164,7 +164,7 @@ void Os::setParam(string name, string param){
  */
 bool Os::enableCoreDumps(){
 	// Если отладка включена
-	if(config->proxy.debug){
+	if((* config)->proxy.debug){
 		// Структура лимитов дампов
 		struct rlimit limit;
 		// Устанавливаем текущий лимит равный бесконечности
@@ -232,13 +232,17 @@ void Os::privBind(){
 	// Размер строкового типа данных
 	string::size_type sz;
 	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber(config->proxy.user)) uid = stoi(config->proxy.user, &sz);
+	if(isNumber((* config)->proxy.user))
+		// Получаем идентификатор пользователя
+		uid = stoi((* config)->proxy.user, &sz);
 	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid(config->proxy.user.c_str());
+	else uid = getUid((* config)->proxy.user.c_str());
 	// Если идентификатор группы пришел в виде числа
-	if(isNumber(config->proxy.group)) gid = stoi(config->proxy.group, &sz);
+	if(isNumber((* config)->proxy.group))
+		// Получаем идентификатор группы пользователя
+		gid = stoi((* config)->proxy.group, &sz);
 	// Если идентификатор группы пришел в виде названия
-	else gid = getGid(config->proxy.group.c_str());
+	else gid = getGid((* config)->proxy.group.c_str());
 	// Устанавливаем идентификатор пользователя
 	setuid(uid);
 	// Устанавливаем идентификатор группы
@@ -345,7 +349,7 @@ void Os::getCPU(){
 #endif
 	}
 	// Формируем структуру данных операционной системы
-	this->config->os = {ncpu, cpu, os.name};
+	(* config)->os = {ncpu, cpu, os.name};
 }
 /**
  * optimos Метод запуска оптимизации
@@ -453,7 +457,7 @@ void Os::optimos(){
  * @param log     объект лога для вывода информации
  * @param config  объект конфигурационных файлов
  */
-Os::Os(LogApp * log, Config * config){
+Os::Os(LogApp * log, Config ** config){
 	// Если конфигурационный файл передан
 	if((config != NULL) && (log != NULL)){
 		// Запоминаем настройки системы
@@ -464,6 +468,6 @@ Os::Os(LogApp * log, Config * config){
 		// Активируем лимиты дампов ядра
 		enableCoreDumps();
 		// Если модуль активирован тогда запускаем активацию
-		if(this->config->proxy.optimos) optimos();
+		if((* config)->proxy.optimos) optimos();
 	}
 }

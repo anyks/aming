@@ -21,7 +21,6 @@
 #include <event2/util.h>
 #include <event2/event.h>
 #include "../log/log.h"
-#include "../config/conf.h"
 
 // Устанавливаем область видимости
 using namespace std;

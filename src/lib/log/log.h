@@ -50,7 +50,7 @@ class LogApp {
 		// Размер максимального лог файла в килобайтах
 		size_t size;
 		// Конфигурационные данные
-		Config * config = NULL;
+		Config ** config = NULL;
 		/**
 		 * is_number Функция проверки является ли строка числом
 		 * @param  str строка для проверки
@@ -135,7 +135,7 @@ class LogApp {
 		 * @param config  конфигурационные данные
 		 * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль, TOLOG_DATABASE - запись в базу данных)
 		 */
-		LogApp(Config * config = NULL, u_short type = TOLOG_CONSOLE);
+		LogApp(Config ** config = NULL, u_short type = TOLOG_CONSOLE);
 };
 
 #endif // _LOG_ANYKS_

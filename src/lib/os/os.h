@@ -39,7 +39,7 @@ class Os {
 		// Объект лога
 		LogApp * log = NULL;
 		// Объект конфигурационного файла
-		Config * config = NULL;
+		Config ** config = NULL;
 // Если это не Linux
 #ifndef __linux__
 		/**
@@ -139,7 +139,7 @@ class Os {
 		 * @param log     объект лога для вывода информации
 		 * @param config  объект конфигурационных файлов
 		 */
-		Os(LogApp * log = NULL, Config * config = NULL);
+		Os(LogApp * log = NULL, Config ** config = NULL);
 };
 
 #endif // _OS_ANYKS_
