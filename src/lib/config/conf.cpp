@@ -332,7 +332,7 @@ Config::Config(const string filename){
 		// Активируем разрешающий smart прокси сервер
 		this->options = (this->options | ((ini.Get("proxy", "skill", "dumb").compare("smart") == 0) ? OPT_SMART : OPT_NULL));
 		// Активируем постоянное соединение
-		this->options = (this->options | (ini.GetBoolean("keepalive", "keepalive", true) ? OPT_KEEPALIVE : OPT_NULL));
+		this->options = (this->options | (ini.GetBoolean("keepalive", "enabled", true) ? OPT_KEEPALIVE : OPT_NULL));
 		// Активируем логирование данных
 		this->options = (this->options | (ini.GetBoolean("logs", "enabled", true) ? OPT_LOG : OPT_NULL));
 		// Тип прокси сервера

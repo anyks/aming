@@ -626,7 +626,7 @@ int HttpProxy::connect_server(void * ctx){
 				http->sockets.server,
 				http->proxy.config->buffers.read,
 				http->proxy.config->buffers.write,
-				http->proxy.config->proxy.maxcon,
+				http->myconns,
 				http->proxy.log
 			);
 			// Если подключение постоянное
@@ -649,6 +649,8 @@ int HttpProxy::connect_server(void * ctx){
 			set_nonblock(http->sockets.server, http->proxy.log);
 			// Создаем буфер событий для сервера
 			http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+			// Устанавливаем водяной знак на 1 байт (чтобы считывать данные когда они действительно приходят)
+			bufferevent_setwatermark(http->events.server, EV_READ | EV_WRITE, 1, 0);
 			// Устанавливаем коллбеки
 			bufferevent_setcb(http->events.server, &HttpProxy::read_server_cb, NULL, &HttpProxy::event_cb, http);
 			// Активируем буферы событий на чтение и запись
@@ -976,6 +978,8 @@ void HttpProxy::do_request(void * ctx, bool flag){
 			http->set_timeout(TM_CLIENT);
 			// Очищаем объект ответа
 			http->response.clear();
+			// Очищаем заголовки прошлых ответов
+			http->headers.response.clear();
 			// Получаем первый элемент из массива
 			auto httpData = http->parser->httpData.begin();
 			// Запоминаем данные объекта http запроса
@@ -1073,8 +1077,10 @@ void * HttpProxy::connection(void * ctx){
 			Connects * connect = &((*http->connects).find(http->client.ip)->second);
 			// Выполняем захват мютекса
 			connect->lock();
+			// Запоминаем количество подключений пользователя
+			http->myconns = connect->get();
 			// Если количество подключений достигло предела
-			if(connect->get() >= http->proxy.config->proxy.maxcon) connect->wait();
+			if(http->myconns >= http->proxy.config->proxy.maxcon) connect->wait();
 			// Выполняем разблокировку мютекса
 			connect->unlock();
 		}

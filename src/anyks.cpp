@@ -222,6 +222,11 @@ int main(int argc, char * argv[]){
 	setlocale(LC_ALL, "en_US.UTF-8");
 	// Адрес конфигурационного файла
 	string configfile;
+	
+
+	configfile = (argc >= 2 ? argv[1] : "");
+
+	/*
 	// Определяем параметр запуска
 	string param = (argc >= 2 ? argv[1] : "");
 	// Если это параметр поиска конфигурационного файла
@@ -232,6 +237,7 @@ int main(int argc, char * argv[]){
 	else if(param.find("--config=") != string::npos)
 		// Удаляем параметр из адреса файла
 		configfile = param.replace(0, 9, "");
+	*/
 	// Создаем объект конфигурации
 	config = new Config(configfile);
 	// Создаем модуль лога

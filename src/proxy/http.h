@@ -181,6 +181,7 @@ class BufferHttpProxy {
 		void free_event(struct bufferevent ** event);
 	public:
 		bool					auth		= false;	// Флаг авторизации
+		u_int					myconns		= 1;		// Количество моих подключений к прокси
 		struct event_base		* base		= NULL;		// База событий
 		map <string, Connects>	* connects	= NULL; 	// Список подключений к прокси серверу
 		DNSResolver				* dns		= NULL;		// Создаем объект dns ресолвера
