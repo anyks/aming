@@ -23,34 +23,34 @@ void Proxy::signal_log(int num, void * ctx){
 	if(proxy != NULL){
 		// Определяем данные сигнала
 		switch(num){
-			case SIGABRT:	proxy->sys->log->write(LOG_ERROR, "Process abort signal [%d]", num);								break;
-			case SIGALRM:	proxy->sys->log->write(LOG_ERROR, "Alarm clock [%d]", num);											break;
-			case SIGBUS:	proxy->sys->log->write(LOG_ERROR, "Access to an undefined portion of a memory object [%d]", num);	break;
-			case SIGCHLD:	proxy->sys->log->write(LOG_ERROR, "Child process terminated, stopped, or continued [%d]", num);		break;
-			case SIGCONT:	proxy->sys->log->write(LOG_ERROR, "Continue executing, if stopped [%d]", num);						break;
-			case SIGFPE:	proxy->sys->log->write(LOG_ERROR, "Erroneous arithmetic operation [%d]", num);						break;
-			case SIGHUP:	proxy->sys->log->write(LOG_ERROR, "Hangup [%d]", num);												break;
-			case SIGILL:	proxy->sys->log->write(LOG_ERROR, "Illegal instruction [%d]", num);									break;
-			case SIGINT:	proxy->sys->log->write(LOG_ERROR, "Terminal interrupt signal [%d]", num);							break;
-			case SIGKILL:	proxy->sys->log->write(LOG_ERROR, "Kill (cannot be caught or ignored) [%d]", num);					break;
-			case SIGPIPE:	proxy->sys->log->write(LOG_ERROR, "Write on a pipe with no one to read it [%d]", num);				break;
-			case SIGQUIT:	proxy->sys->log->write(LOG_ERROR, "Terminal quit signal [%d]", num);								break;
-			case SIGSEGV:	proxy->sys->log->write(LOG_ERROR, "Invalid memory reference [%d]", num);							break;
-			case SIGSTOP:	proxy->sys->log->write(LOG_ERROR, "Stop executing (cannot be caught or ignored) [%d]", num);		break;
-			case SIGTERM:	proxy->sys->log->write(LOG_ERROR, "Termination signal [%d]", num);									break;
-			case SIGTSTP:	proxy->sys->log->write(LOG_ERROR, "Terminal stop signal [%d]", num);								break;
-			case SIGTTIN:	proxy->sys->log->write(LOG_ERROR, "Background process attempting read [%d]", num);					break;
-			case SIGTTOU:	proxy->sys->log->write(LOG_ERROR, "Background process attempting write [%d]", num);					break;
-			case SIGUSR1:	proxy->sys->log->write(LOG_ERROR, "User-defined signal 1 [%d]", num);								break;
-			case SIGUSR2:	proxy->sys->log->write(LOG_ERROR, "User-defined signal 2 [%d]", num);								break;
-			// case SIGPOLL: proxy->sys->log->write(LOG_ERROR, "Pollable event [%d]", num);										break;
-			case SIGPROF:	proxy->sys->log->write(LOG_ERROR, "Profiling timer expired [%d]", num);								break;
-			case SIGSYS:	proxy->sys->log->write(LOG_ERROR, "Bad sys call [%d]", num);										break;
-			case SIGTRAP:	proxy->sys->log->write(LOG_ERROR, "Trace / breakpoint trap [%d]", num);								break;
-			case SIGURG:	proxy->sys->log->write(LOG_ERROR, "High bandwidth data is available at a socket [%d]", num);		break;
-			case SIGVTALRM:	proxy->sys->log->write(LOG_ERROR, "Virtual timer expired [%d]", num);								break;
-			case SIGXCPU:	proxy->sys->log->write(LOG_ERROR, "CPU time limit exceeded [%d]", num);								break;
-			case SIGXFSZ:	proxy->sys->log->write(LOG_ERROR, "File size limit exceeded [%d]", num);							break;
+			case SIGABRT:	proxy->sys->log->write(LOG_ERROR, "[-] Process abort signal [%d]", num);								break;
+			case SIGALRM:	proxy->sys->log->write(LOG_ERROR, "[-] Alarm clock [%d]", num);											break;
+			case SIGBUS:	proxy->sys->log->write(LOG_ERROR, "[-] Access to an undefined portion of a memory object [%d]", num);	break;
+			case SIGCHLD:	proxy->sys->log->write(LOG_ERROR, "[-] Child process terminated, stopped, or continued [%d]", num);		break;
+			case SIGCONT:	proxy->sys->log->write(LOG_ERROR, "[-] Continue executing, if stopped [%d]", num);						break;
+			case SIGFPE:	proxy->sys->log->write(LOG_ERROR, "[-] Erroneous arithmetic operation [%d]", num);						break;
+			case SIGHUP:	proxy->sys->log->write(LOG_ERROR, "[-] Hangup [%d]", num);												break;
+			case SIGILL:	proxy->sys->log->write(LOG_ERROR, "[-] Illegal instruction [%d]", num);									break;
+			case SIGINT:	proxy->sys->log->write(LOG_ERROR, "[-] Terminal interrupt signal [%d]", num);							break;
+			case SIGKILL:	proxy->sys->log->write(LOG_ERROR, "[-] Kill (cannot be caught or ignored) [%d]", num);					break;
+			case SIGPIPE:	proxy->sys->log->write(LOG_ERROR, "[-] Write on a pipe with no one to read it [%d]", num);				break;
+			case SIGQUIT:	proxy->sys->log->write(LOG_ERROR, "[-] Terminal quit signal [%d]", num);								break;
+			case SIGSEGV:	proxy->sys->log->write(LOG_ERROR, "[-] Invalid memory reference [%d]", num);							break;
+			case SIGSTOP:	proxy->sys->log->write(LOG_ERROR, "[-] Stop executing (cannot be caught or ignored) [%d]", num);		break;
+			case SIGTERM:	proxy->sys->log->write(LOG_ERROR, "[-] Termination signal [%d]", num);									break;
+			case SIGTSTP:	proxy->sys->log->write(LOG_ERROR, "[-] Terminal stop signal [%d]", num);								break;
+			case SIGTTIN:	proxy->sys->log->write(LOG_ERROR, "[-] Background process attempting read [%d]", num);					break;
+			case SIGTTOU:	proxy->sys->log->write(LOG_ERROR, "[-] Background process attempting write [%d]", num);					break;
+			case SIGUSR1:	proxy->sys->log->write(LOG_ERROR, "[-] User-defined signal 1 [%d]", num);								break;
+			case SIGUSR2:	proxy->sys->log->write(LOG_ERROR, "[-] User-defined signal 2 [%d]", num);								break;
+			// case SIGPOLL: proxy->sys->log->write(LOG_ERROR, "[-] Pollable event [%d]", num);										break;
+			case SIGPROF:	proxy->sys->log->write(LOG_ERROR, "[-] Profiling timer expired [%d]", num);								break;
+			case SIGSYS:	proxy->sys->log->write(LOG_ERROR, "[-] Bad sys call [%d]", num);										break;
+			case SIGTRAP:	proxy->sys->log->write(LOG_ERROR, "[-] Trace / breakpoint trap [%d]", num);								break;
+			case SIGURG:	proxy->sys->log->write(LOG_ERROR, "[-] High bandwidth data is available at a socket [%d]", num);		break;
+			case SIGVTALRM:	proxy->sys->log->write(LOG_ERROR, "[-] Virtual timer expired [%d]", num);								break;
+			case SIGXCPU:	proxy->sys->log->write(LOG_ERROR, "[-] CPU time limit exceeded [%d]", num);								break;
+			case SIGXFSZ:	proxy->sys->log->write(LOG_ERROR, "[-] File size limit exceeded [%d]", num);							break;
 		}
 	}
 	// Выходим

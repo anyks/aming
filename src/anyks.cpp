@@ -20,16 +20,8 @@
 * Запуск: # ./bin/http -c ./config.ini
 *
 */
-#include <unistd.h>
-#include <signal.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/file.h>
-#include <sys/signal.h>
-#include <sys/resource.h>
-#include "./lib/system/system.h"
+#include <string>
 #include "./lib/proxy/proxy.h"
-#include "./proxy/http.h"
 
 // Устанавливаем пространство имен
 using namespace std;
