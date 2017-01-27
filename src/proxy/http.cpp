@@ -1316,15 +1316,12 @@ evutil_socket_t HttpProxy::create_server(){
  * @param ctx    объект прокси сервера
  */
 void HttpProxy::run_server(evutil_socket_t socket, void * ctx){
-	
-	printf("================= Воркер ================= %d\n", getpid());
-
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если объект прокси сервера существует
 	if(proxy != NULL){
 		// Выводим в консоль информацию
-		proxy->server->log->write(LOG_MESSAGE, "[-] start service: pid = %i, socket = %i", getpid(), socket);
+		proxy->server->log->write(LOG_MESSAGE, "[+] start service: pid = %i, socket = %i", getpid(), socket);
 		// Создаем новую базу
 		proxy->base = event_base_new();
 		// Добавляем событие в базу
@@ -1408,7 +1405,7 @@ HttpProxy::HttpProxy(System * proxy){
 		// Если сокет существует
 		if(socket > -1){
 			// Если режим отладки не включен
-			//if(!this->server->config->proxy.debug){
+			if(!this->server->config->proxy.debug){
 				// Определяем максимальное количество потоков
 				u_int max_works = (
 					this->server->config->proxy.maxworks
@@ -1422,7 +1419,14 @@ HttpProxy::HttpProxy(System * proxy){
 				// Запускаем создание воркеров
 				run_works(pids, socket, 0, max_works, this);
 			// Если режим отладки включен, тогда просто запускаем прокси сервер
-			//} else run_server(socket, this);
+			} else {
+				// Добавляем свой идентификатор пида
+				pid_t pids[] = {getpid()};
+				// Отправляем идентификатор только балансера
+				this->server->sendPids(pids, 1, 10);
+				// Запускаем сервер
+				run_server(socket, this);
+			}
 		// Иначе выходим окончательно
 		} else exit(23);
 	}

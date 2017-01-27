@@ -72,10 +72,13 @@ void Proxy::clear_fantoms(int signal, void * ctx){
 		System::Pids pids = proxy->sys->readPids(10);
 		// Убиваем все дочерние процессы балансера
 		for(int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
-		// Если это родительский пид, удаляем pid файл
-		if((proxy->cpid || proxy->mpid) && (proxy->sys->os != NULL)){
-			// Удаляем pid файл
-			proxy->sys->os->rmPid(EXIT_FAILURE);
+		// Если это родительский пид
+		if(proxy->cpid || proxy->mpid){
+			// Удаляем дочерний воркер
+			if(proxy->cpid) kill(proxy->cpid, SIGTERM);
+			if(proxy->mpid) kill(proxy->mpid, SIGTERM);
+			// Если существует объект OS то удаляем пид
+			if(proxy->sys->os != NULL) proxy->sys->os->rmPid(EXIT_FAILURE);
 		}
 	}
 	// Выходим
@@ -119,33 +122,6 @@ void Proxy::sigchld_cb(evutil_socket_t fd, short event, void * ctx){
 	return;
 }
 */
-/**
- * sigterm_cb Функция обработки сигналов завершения процессов SIGTERM
- * @param fd    файловый дескриптор (сокет)
- * @param event возникшее событие
- * @param ctx   объект прокси сервера
- */
-void Proxy::sigterm_cb(evutil_socket_t fd, short event, void * ctx){
-	// Получаем объект сигнала
-	SignalBuffer * buffer = reinterpret_cast <SignalBuffer *> (ctx);
-	// Если подключение не передано
-	if(buffer != NULL){
-		// Выполняем очистку дочерних процессов
-		clear_fantoms(buffer->signal, buffer->proxy);
-		// Получаем данные прокси
-		Proxy * proxy = reinterpret_cast <Proxy *> (buffer->proxy);
-		// Если это родительский пид
-		if(proxy->cpid || proxy->mpid){
-			// Удаляем дочерний воркер
-			if(proxy->cpid) kill(proxy->cpid, SIGTERM);
-			if(proxy->mpid) kill(proxy->mpid, SIGTERM);
-		}
-		// Выходим
-		exit(0);
-	}
-	// Выходим
-	return;
-}
 /**
  * sigsegv_cb Функция обработки сигналов ошибки сегментации SIGSEGV
  * @param fd    файловый дескриптор (сокет)
@@ -216,11 +192,10 @@ void Proxy::run_worker(){
 		case 0: create_proxy(); break;
 		// Если это мастер процесс
 		default: {
-			
-			printf("================= Балансер ================= %d\n", this->cpid);
-
 			// Статус выхода процесса
 			int status;
+			// Выводим в лог сообщение
+			this->sys->log->write(LOG_MESSAGE, "[+] start balancer proccess, pid = %d", this->cpid);
 			// Зацикливаем ожидание завершения дочернего процесса
 			do {
 				// Ожидаем завершение работы дочернего процесса
@@ -304,25 +279,23 @@ Proxy::Proxy(string configfile){
 			// Запускаем воркер который следит за балансером
 			case 0: run_worker(); break;
 			default: {
-				
-				printf("================= Главный воркер ================= %d\n", getpid());
-				printf("================= Управляющий балансером ================= %d\n", this->mpid);
-
+				// Выводим в лог сообщение
+				this->sys->log->write(LOG_MESSAGE, "[+] start master proccess, pid = %d", getpid());
+				this->sys->log->write(LOG_MESSAGE, "[+] start slave proccess, pid = %d", this->mpid);
 				// Создаем базу событий
 				this->base = event_base_new();
 				// Создаем буфер сигнала
 				// Сигналы информирования
 				this->siginfo.push_back({13, this});
-				// Сигналы точного выхода из приложения
-				this->sigexit.push_back({23, this});
 				// Сигналы точного выхода из приложения с удалением пида и удалением дочерних процессов
-				this->sigterm.push_back({1, this});
-				this->sigterm.push_back({2, this});
-				this->sigterm.push_back({3, this});
-				this->sigterm.push_back({15, this});
-				this->sigterm.push_back({20, this});
-				this->sigterm.push_back({26, this});
-				this->sigterm.push_back({27, this});
+				this->sigexit.push_back({1, this});
+				this->sigexit.push_back({2, this});
+				this->sigexit.push_back({3, this});
+				this->sigexit.push_back({15, this});
+				this->sigexit.push_back({20, this});
+				this->sigexit.push_back({23, this});
+				this->sigexit.push_back({26, this});
+				this->sigexit.push_back({27, this});
 				// Сигналы точного выхода из приложения с удалением пида и созданием дампа памяти
 				this->sigsegv.push_back({4, this});
 				this->sigsegv.push_back({5, this});
@@ -349,15 +322,6 @@ Proxy::Proxy(string configfile){
 						this->sigexit[i].signal,
 						&Proxy::sigexit_cb,
 						&this->sigexit[i])
-					);
-				}
-				// Добавляем в сигналы все для принудительного выхода
-				for(u_int i = 0; i < this->sigterm.size(); i++){
-					this->signals.push_back(evsignal_new(
-						this->base,
-						this->sigterm[i].signal,
-						&Proxy::sigterm_cb,
-						&this->sigterm[i])
 					);
 				}
 				// Добавляем в сигналы все для принудительного выхода с созданием дампа ядра

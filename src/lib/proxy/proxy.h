@@ -50,7 +50,6 @@ class Proxy {
 		vector <SignalBuffer> siginfo;
 		vector <SignalBuffer> sigexit;
 		vector <SignalBuffer> sigsegv;
-		vector <SignalBuffer> sigterm;
 		// События сигналов
 		vector <struct event *> signals;
 		/**
@@ -72,13 +71,6 @@ class Proxy {
 		 * @param ctx   объект прокси сервера
 		 */
 		static void siginfo_cb(evutil_socket_t fd, short event, void * ctx);
-		/**
-		 * sigterm_cb Функция обработки сигналов завершения процессов SIGTERM
-		 * @param fd    файловый дескриптор (сокет)
-		 * @param event возникшее событие
-		 * @param ctx   объект прокси сервера
-		 */
-		static void sigterm_cb(evutil_socket_t fd, short event, void * ctx);
 		/**
 		 * sigsegv_cb Функция обработки сигналов ошибки сегментации SIGSEGV
 		 * @param fd    файловый дескриптор (сокет)
