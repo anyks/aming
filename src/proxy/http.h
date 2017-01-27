@@ -226,6 +226,8 @@ class HttpProxy {
 	private:
 		// Список подключений к прокси серверу
 		map <string, Connects> connects;
+		// Идентификаторы процессов
+		pid_t * pids = NULL;
 		// Параметры прокси сервера
 		System * server = NULL;
 		// Создаем новую базу
@@ -372,19 +374,23 @@ class HttpProxy {
 		static void run_server(evutil_socket_t socket, void * ctx);
 		/**
 		 * run_works Метод запуска воркеров
-		 * @param pid    указатель на массив пидов процессов
+		 * @param pids   указатель на массив пидов процессов
 		 * @param socket сокет прокси сервера
 		 * @param cur    текущее значение пида процесса
 		 * @param max    максимальное значение пидов процессов
 		 * @param ctx    объект прокси сервера
 		 */
-		static void run_works(pid_t * pid, evutil_socket_t socket, size_t cur, size_t max, void * ctx);
+		static void run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size_t max, void * ctx);
 	public:
 		/**
 		 * HttpProxy Конструктор
 		 * @param proxy объект параметров прокси сервера
 		 */
 		HttpProxy(System * proxy = NULL);
+		/**
+		 * ~HttpProxy Деструктор
+		 */
+		~HttpProxy();
 };
 
 #endif // _HTTP_PROXY_ANYKS_

@@ -10,6 +10,9 @@
 
 #include <string>
 #include <iostream>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
 #include "../os/os.h"
 #include "../log/log.h"
 #include "../config/conf.h"
@@ -22,15 +25,48 @@ using namespace std;
  */
 class System {
 	private:
+		/**
+		 * ParamsSendPids Структура для передачи пидов между воркерами
+		 */
+		struct ParamsSendPids {
+			long	type;
+			pid_t	pids[MMAX_WORKERS];
+			int		len;
+		};
 		// Адрес конфигурационного файла
 		string configfile;
 	public:
+		/**
+		 * Pids Структура содержащая данные полученных пидов
+		 */
+		struct Pids {
+			pid_t pids[MMAX_WORKERS];
+			int len;
+		};
 		// Объект log модуля
 		LogApp * log = NULL;
 		// Объект конфигурационного файла
 		Config * config = NULL;
 		// Объект взаимодействия с ОС
 		Os * os = NULL;
+		/**
+		 * clearMsgPids Метод очистки процесса передачи данных пидов между воркерами
+		 * @param key ключ для отправки сообщения
+		 */
+		void clearMsgPids(int key);
+		/**
+		 * readPids Метод получения идентификаторов пидов дочерних воркеров
+		 * @param  key ключ для отправки сообщения
+		 * @return     структура с данными пидов
+		 */
+		Pids readPids(int key);
+		/**
+		 * sendPids Метод отправки идентификаторов пидов родительским воркерам
+		 * @param pids указатель на массив пидов
+		 * @param len  размер массива пидов
+		 * @param key  ключ для отправки сообщения
+		 */
+		void sendPids(pid_t * pids, size_t len, int key);
 		/**
 		 * reload Метод перезагрузки конфигурационных данных
 		 */

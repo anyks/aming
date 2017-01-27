@@ -1316,6 +1316,9 @@ evutil_socket_t HttpProxy::create_server(){
  * @param ctx    объект прокси сервера
  */
 void HttpProxy::run_server(evutil_socket_t socket, void * ctx){
+	
+	printf("================= Воркер ================= %d\n", getpid());
+
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если объект прокси сервера существует
@@ -1344,44 +1347,50 @@ void HttpProxy::run_server(evutil_socket_t socket, void * ctx){
 }
 /**
  * run_works Метод запуска воркеров
- * @param pid    указатель на массив пидов процессов
+ * @param pids   указатель на массив пидов процессов
  * @param socket сокет прокси сервера
  * @param cur    текущее значение пида процесса
  * @param max    максимальное значение пидов процессов
  * @param ctx    объект прокси сервера
  */
-void HttpProxy::run_works(pid_t * pid, evutil_socket_t socket, size_t cur, size_t max, void * ctx){
+void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size_t max, void * ctx){
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если массив пидов существует
-	if((pid != NULL) && (proxy != NULL) && (socket > 0) && max){
+	if((pids != NULL) && (proxy != NULL) && (socket > 0) && max){
 		// Если не все форки созданы
 		if(cur < max){
 			// Выполняем форк процесса
-			switch(pid[cur] = fork()){
+			switch(pids[cur] = fork()){
 				// Если поток не создан
 				case -1: {
 					// Выводим в консоль информацию
 					proxy->server->log->write(LOG_ERROR, "[-] create fork error");
-					// Выходим из потока
+					// Выходим из приложения
 					exit(1);
 				}
 				// Если это дочерний поток значит все нормально, запускаем прокси сервер
 				case 0: run_server(socket, proxy); break;
 				// Если это родительский процесс
-				default: run_works(pid, socket, cur + 1, max, proxy);
+				default: run_works(pids, socket, cur + 1, max, proxy);
 			}
 		// Если все процессы созданы и это родительский процесс
 		} else {
+			// Добавляем свой идентификатор в массив тем самым id балансера всегда будет последним в списке
+			pids[max] = getpid();
+			// Отправляем идентификаторы созданных пидов управляющему балансером
+			proxy->server->sendPids(pids, max + 1, 10);
 			// Статус воркера
 			int status;
 			// Ждем завершение работы потомка (от 1 потому что 0-й это этот же процесс а он не может ждать завершения самого себя)
 			for(u_int i = 0; i < max; i++){
 				// Ожидаем завершения процесса
-				waitpid(pid[i], &status, 0);
+				waitpid(pids[i], &status, 0);
 				// Выводим в консоль информацию
-				proxy->server->log->write(LOG_ERROR, "[-] end service: pid = %i, status = %i", pid[i], WTERMSIG(status));
+				proxy->server->log->write(LOG_ERROR, "[-] end service: pid = %i, status = %i", pids[i], WTERMSIG(status));
 			}
+			// Выходим из приложения
+			exit(1);
 		}
 	}
 }
@@ -1399,22 +1408,29 @@ HttpProxy::HttpProxy(System * proxy){
 		// Если сокет существует
 		if(socket > -1){
 			// Если режим отладки не включен
-			if(!this->server->config->proxy.debug){
+			//if(!this->server->config->proxy.debug){
 				// Определяем максимальное количество потоков
 				u_int max_works = (
 					this->server->config->proxy.maxworks
 					? this->server->config->proxy.maxworks
 					: this->server->config->os.ncpu
 				);
+				// Если максимальное число пидов больше указанного то запрещаем
+				if(max_works > MMAX_WORKERS) max_works = MMAX_WORKERS;
 				// Наши ID процесса и сессии
-				pid_t * pid = new pid_t[max_works];
+				pids = new pid_t[max_works];
 				// Запускаем создание воркеров
-				run_works(pid, socket, 0, max_works, this);
-				// Удаляем массив пидов
-				delete [] pid;
+				run_works(pids, socket, 0, max_works, this);
 			// Если режим отладки включен, тогда просто запускаем прокси сервер
-			} else run_server(socket, this);
+			//} else run_server(socket, this);
 		// Иначе выходим окончательно
 		} else exit(23);
 	}
+}
+/**
+ * ~HttpProxy Деструктор
+ */
+HttpProxy::~HttpProxy(){
+	// Если массив процессов существует то удаляем его
+	if(pids != NULL) delete [] pids;
 }
