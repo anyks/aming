@@ -71,7 +71,7 @@ void Proxy::clear_fantoms(int signal, void * ctx){
 		// Получаем данные пидов созданных балансером
 		System::Pids pids = proxy->sys->readPids();
 		// Убиваем все дочерние процессы балансера
-		for(int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
+		for(u_int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
 		// Если это родительский пид
 		if(proxy->cpid || proxy->mpid){
 			// Удаляем дочерний воркер
@@ -123,7 +123,7 @@ void Proxy::siguser_cb(evutil_socket_t fd, short event, void * ctx){
 			// Отправляем идентификаторы балансеру
 			proxy->sys->sendPids(pids.pids, pids.len);
 			// Убиваем все дочерние процессы балансера
-			for(int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
+			for(u_int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
 		}
 	}
 	// Выходим
@@ -245,13 +245,13 @@ void Proxy::run_worker(){
 				// Если дочерний процесс остановлен
 				else if(WIFSTOPPED(status)) this->sys->log->write(LOG_ERROR, "stopped by pid = %d, signal %d", this->cpid, WSTOPSIG(status));
 				// Если дочерний процесс прислал сообщение что нужно продолжить
-				else if(WIFCONTINUED(status)) this->sys->log->write(LOG_ERROR, "continued");
+				// else if(WIFCONTINUED(status)) this->sys->log->write(LOG_ERROR, "continued");
 			// Продолжаем до тех пор пока статус не освободится
 			} while(!WIFEXITED(status) && !WIFSIGNALED(status));
 			// Получаем данные пидов созданных балансером
 			System::Pids pids = this->sys->readPids();
 			// Убиваем все дочерние процессы балансера
-			for(int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
+			for(u_int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
 			// Перезапускаем дочерний процесс
 			run_worker();
 			// Выходим из приложения
