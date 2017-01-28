@@ -41,8 +41,8 @@ void Proxy::signal_log(int num, void * ctx){
 			case SIGTSTP:	proxy->sys->log->write(LOG_ERROR, "[-] Terminal stop signal [%d]", num);								break;
 			case SIGTTIN:	proxy->sys->log->write(LOG_ERROR, "[-] Background process attempting read [%d]", num);					break;
 			case SIGTTOU:	proxy->sys->log->write(LOG_ERROR, "[-] Background process attempting write [%d]", num);					break;
-			case SIGUSR1:	proxy->sys->log->write(LOG_ERROR, "[-] User-defined signal 1 [%d]", num);								break;
-			case SIGUSR2:	proxy->sys->log->write(LOG_ERROR, "[-] User-defined signal 2 [%d]", num);								break;
+			case SIGUSR1:	proxy->sys->log->write(LOG_MESSAGE, "[=] User-defined signal 1 [%d]", num);								break;
+			case SIGUSR2:	proxy->sys->log->write(LOG_MESSAGE, "[=] User-defined signal 2 [%d]", num);								break;
 			// case SIGPOLL: proxy->sys->log->write(LOG_ERROR, "[-] Pollable event [%d]", num);										break;
 			case SIGPROF:	proxy->sys->log->write(LOG_ERROR, "[-] Profiling timer expired [%d]", num);								break;
 			case SIGSYS:	proxy->sys->log->write(LOG_ERROR, "[-] Bad sys call [%d]", num);										break;
@@ -69,7 +69,7 @@ void Proxy::clear_fantoms(int signal, void * ctx){
 		// Логируем сообщение о сигнале
 		signal_log(signal, proxy);
 		// Получаем данные пидов созданных балансером
-		System::Pids pids = proxy->sys->readPids(10);
+		System::Pids pids = proxy->sys->readPids();
 		// Убиваем все дочерние процессы балансера
 		for(int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
 		// Если это родительский пид
@@ -85,7 +85,7 @@ void Proxy::clear_fantoms(int signal, void * ctx){
 	return;
 }
 /**
- * siginfo_cb Функция обработки сигнала SIGPIPE
+ * siginfo_cb Функция обработки информационных сигналов
  * @param fd    файловый дескриптор (сокет)
  * @param event возникшее событие
  * @param ctx   объект прокси сервера
@@ -102,7 +102,35 @@ void Proxy::siginfo_cb(evutil_socket_t fd, short event, void * ctx){
 	return;
 }
 /**
- * sigchld_cb Функция обработки сигнала о появившемся зомби процессе SIGCHLD
+ * siguser_cb Функция обработки пользовательских сигналов
+ * @param fd    файловый дескриптор (сокет)
+ * @param event возникшее событие
+ * @param ctx   объект прокси сервера
+ */
+void Proxy::siguser_cb(evutil_socket_t fd, short event, void * ctx){
+	// Получаем объект сигнала
+	SignalBuffer * buffer = reinterpret_cast <SignalBuffer *> (ctx);
+	// Если подключение не передано
+	if(buffer != NULL){
+		// Логируем сообщение о сигнале
+		signal_log(buffer->signal, buffer->proxy);
+		// Получаем данные прокси
+		Proxy * proxy = reinterpret_cast <Proxy *> (buffer->proxy);
+		// Если подключение не передано
+		if(proxy != NULL){
+			// Получаем данные пидов созданных балансером
+			System::Pids pids = proxy->sys->readPids();
+			// Отправляем идентификаторы балансеру
+			proxy->sys->sendPids(pids.pids, pids.len);
+			// Убиваем все дочерние процессы балансера
+			for(int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
+		}
+	}
+	// Выходим
+	return;
+}
+/**
+ * sigchld_cb Функция обработки отключения дочерних процессов
  * @param fd    файловый дескриптор (сокет)
  * @param event возникшее событие
  * @param ctx   объект прокси сервера
@@ -123,7 +151,7 @@ void Proxy::sigchld_cb(evutil_socket_t fd, short event, void * ctx){
 }
 */
 /**
- * sigsegv_cb Функция обработки сигналов ошибки сегментации SIGSEGV
+ * sigsegv_cb Функция обработки сигналов с дампом памяти
  * @param fd    файловый дескриптор (сокет)
  * @param event возникшее событие
  * @param ctx   объект прокси сервера
@@ -221,7 +249,7 @@ void Proxy::run_worker(){
 			// Продолжаем до тех пор пока статус не освободится
 			} while(!WIFEXITED(status) && !WIFSIGNALED(status));
 			// Получаем данные пидов созданных балансером
-			System::Pids pids = this->sys->readPids(10);
+			System::Pids pids = this->sys->readPids();
 			// Убиваем все дочерние процессы балансера
 			for(int i = 0; i < pids.len; i++) kill(pids.pids[i], SIGTERM);
 			// Перезапускаем дочерний процесс
@@ -264,7 +292,7 @@ Proxy::Proxy(string configfile){
 		this->sys->os->mkPid();
 	}
 	// Если режим отладки не включен
-	//if(!this->sys->config->proxy.debug){
+	if(!this->sys->config->proxy.debug){
 		// Создаем воркер управляющий балансером
 		this->mpid = fork();
 		// Определяем тип созданного воркера
@@ -285,6 +313,8 @@ Proxy::Proxy(string configfile){
 				// Создаем базу событий
 				this->base = event_base_new();
 				// Создаем буфер сигнала
+				// Сигналы пользовательские
+				this->siguser.push_back({16, this});
 				// Сигналы информирования
 				this->siginfo.push_back({13, this});
 				// Сигналы точного выхода из приложения с удалением пида и удалением дочерних процессов
@@ -307,43 +337,59 @@ Proxy::Proxy(string configfile){
 				this->sigsegv.push_back({31, this});
 				// Создаем событие
 				// Добавляем в сигналы все информационные
-				for(u_int i = 0; i < this->siginfo.size(); i++){
-					this->signals.push_back(evsignal_new(
-						this->base,
-						this->siginfo[i].signal,
-						&Proxy::siginfo_cb,
-						&this->siginfo[i])
+				for(u_int i = 0; i < this->siginfo.size(); i++)
+					// Добавляем сигналы
+					this->signals.push_back(
+						evsignal_new(
+							this->base,
+							this->siguser[i].signal,
+							&Proxy::siguser_cb,
+							&this->siguser[i]
+						)
 					);
-				}
+				// Добавляем в сигналы все информационные
+				for(u_int i = 0; i < this->siginfo.size(); i++)
+					// Добавляем сигналы
+					this->signals.push_back(
+						evsignal_new(
+							this->base,
+							this->siginfo[i].signal,
+							&Proxy::siginfo_cb,
+							&this->siginfo[i]
+						)
+					);
 				// Добавляем в сигналы все для простого выхода
-				for(u_int i = 0; i < this->sigexit.size(); i++){
-					this->signals.push_back(evsignal_new(
-						this->base,
-						this->sigexit[i].signal,
-						&Proxy::sigexit_cb,
-						&this->sigexit[i])
+				for(u_int i = 0; i < this->sigexit.size(); i++)
+					// Добавляем сигналы
+					this->signals.push_back(
+						evsignal_new(
+							this->base,
+							this->sigexit[i].signal,
+							&Proxy::sigexit_cb,
+							&this->sigexit[i]
+						)
 					);
-				}
 				// Добавляем в сигналы все для принудительного выхода с созданием дампа ядра
-				for(u_int i = 0; i < this->sigsegv.size(); i++){
-					this->signals.push_back(evsignal_new(
-						this->base,
-						this->sigsegv[i].signal,
-						&Proxy::sigsegv_cb,
-						&this->sigsegv[i])
+				for(u_int i = 0; i < this->sigsegv.size(); i++)
+					// Добавляем сигналы
+					this->signals.push_back(
+						evsignal_new(
+							this->base,
+							this->sigsegv[i].signal,
+							&Proxy::sigsegv_cb,
+							&this->sigsegv[i]
+						)
 					);
-				}
 				// Активируем ловушки сигналов
-				for(u_int i = 0; i < this->signals.size(); i++){
+				for(u_int i = 0; i < this->signals.size(); i++)
 					// Активируем ловушку
 					evsignal_add(this->signals[i], NULL);
-				}
 				// Активируем перебор базы событий
 				event_base_loop(this->base, EVLOOP_NO_EXIT_ON_EMPTY);
 			}
 		}
 	// Запускаем прокси сервер в главном потоке
-	//} else create_proxy();
+	} else create_proxy();
 }
 /**
  * ~Proxy Деструктор

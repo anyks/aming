@@ -51,22 +51,19 @@ class System {
 		Os * os = NULL;
 		/**
 		 * clearMsgPids Метод очистки процесса передачи данных пидов между воркерами
-		 * @param key ключ для отправки сообщения
 		 */
-		void clearMsgPids(int key);
+		void clearMsgPids();
 		/**
 		 * readPids Метод получения идентификаторов пидов дочерних воркеров
-		 * @param  key ключ для отправки сообщения
-		 * @return     структура с данными пидов
+		 * @return структура с данными пидов
 		 */
-		Pids readPids(int key);
+		Pids readPids();
 		/**
 		 * sendPids Метод отправки идентификаторов пидов родительским воркерам
 		 * @param pids указатель на массив пидов
 		 * @param len  размер массива пидов
-		 * @param key  ключ для отправки сообщения
 		 */
-		void sendPids(pid_t * pids, size_t len, int key);
+		void sendPids(pid_t * pids, size_t len);
 		/**
 		 * reload Метод перезагрузки конфигурационных данных
 		 */

@@ -50,6 +50,7 @@ class Proxy {
 		vector <SignalBuffer> siginfo;
 		vector <SignalBuffer> sigexit;
 		vector <SignalBuffer> sigsegv;
+		vector <SignalBuffer> siguser;
 		// События сигналов
 		vector <struct event *> signals;
 		/**
@@ -65,14 +66,21 @@ class Proxy {
 		 */
 		static void clear_fantoms(int signal, void * ctx);
 		/**
-		 * siginfo_cb Функция обработки сигнала SIGPIPE
+		 * siginfo_cb Функция обработки информационных сигналов
 		 * @param fd    файловый дескриптор (сокет)
 		 * @param event возникшее событие
 		 * @param ctx   объект прокси сервера
 		 */
 		static void siginfo_cb(evutil_socket_t fd, short event, void * ctx);
 		/**
-		 * sigsegv_cb Функция обработки сигналов ошибки сегментации SIGSEGV
+		 * siguser_cb Функция обработки пользовательских сигналов
+		 * @param fd    файловый дескриптор (сокет)
+		 * @param event возникшее событие
+		 * @param ctx   объект прокси сервера
+		 */
+		static void siguser_cb(evutil_socket_t fd, short event, void * ctx);
+		/**
+		 * sigsegv_cb Функция обработки сигналов с дампом памяти
 		 * @param fd    файловый дескриптор (сокет)
 		 * @param event возникшее событие
 		 * @param ctx   объект прокси сервера

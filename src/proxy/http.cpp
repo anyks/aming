@@ -1376,7 +1376,7 @@ void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size
 			// Добавляем свой идентификатор в массив тем самым id балансера всегда будет последним в списке
 			pids[max] = getpid();
 			// Отправляем идентификаторы созданных пидов управляющему балансером
-			proxy->server->sendPids(pids, max + 1, 10);
+			proxy->server->sendPids(pids, max + 1);
 			// Статус воркера
 			int status;
 			// Ждем завершение работы потомка (от 1 потому что 0-й это этот же процесс а он не может ждать завершения самого себя)
@@ -1423,7 +1423,7 @@ HttpProxy::HttpProxy(System * proxy){
 				// Добавляем свой идентификатор пида
 				pid_t pids[] = {getpid()};
 				// Отправляем идентификатор только балансера
-				this->server->sendPids(pids, 1, 10);
+				this->server->sendPids(pids, 1);
 				// Запускаем сервер
 				run_server(socket, this);
 			}

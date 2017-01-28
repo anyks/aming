@@ -13,11 +13,10 @@ using namespace std;
 
 /**
  * clearMsgPids Метод очистки процесса передачи данных пидов между воркерами
- * @param key ключ для отправки сообщения
  */
-void System::clearMsgPids(int key){
+void System::clearMsgPids(){
 	// Ключ по которому передаются данные между процессов
-	key_t msgkey = ftok(".", key);
+	key_t msgkey = ftok(".", 222);
 	// Создаем идентификатор сообщения
 	int qid = msgget(msgkey, IPC_CREAT | 0666);
 	// Освобождаем процесс
@@ -25,10 +24,9 @@ void System::clearMsgPids(int key){
 }
 /**
  * readPids Метод получения идентификаторов пидов дочерних воркеров
- * @param  key ключ для отправки сообщения
- * @return     структура с данными пидов
+ * @return структура с данными пидов
  */
-System::Pids System::readPids(int key){
+System::Pids System::readPids(){
 	// Создаем объект с параметрами для получения пидов
 	ParamsSendPids msg;
 	// Создаем результирующий объект
@@ -36,7 +34,7 @@ System::Pids System::readPids(int key){
 	// Вычисляем размер отправляемых данных
 	size_t length = sizeof(msg) - sizeof(long);
 	// Ключ по которому передаются данные между процессов
-	key_t msgkey = ftok(".", key);
+	key_t msgkey = ftok(".", 222);
 	// Создаем идентификатор сообщения
 	int qid = msgget(msgkey, IPC_CREAT | 0666);
 	// Если сообщение не может быть отправлено выводим сообщение об ошибке
@@ -68,17 +66,16 @@ System::Pids System::readPids(int key){
  * sendPids Метод отправки идентификаторов пидов родительским воркерам
  * @param pids указатель на массив пидов
  * @param len  размер массива пидов
- * @param key  ключ для отправки сообщения
  */
-void System::sendPids(pid_t * pids, size_t len, int key){
+void System::sendPids(pid_t * pids, size_t len){
 	// Очищаем ранее созданные сессии
-	clearMsgPids(key);
+	clearMsgPids();
 	// Создаем объект с параметрами для отправки
 	ParamsSendPids msg;
 	// Вычисляем размер отправляемых данных
 	size_t length = sizeof(msg) - sizeof(long);
 	// Ключ по которому передаются данные между процессов
-	key_t msgkey = ftok(".", key);
+	key_t msgkey = ftok(".", 222);
 	// Создаем идентификатор сообщения
 	int qid = msgget(msgkey, IPC_CREAT | 0666);
 	// Если сообщение не может быть отправлено выводим сообщение об ошибке
