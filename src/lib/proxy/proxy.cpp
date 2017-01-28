@@ -166,7 +166,7 @@ void Proxy::sigsegv_cb(evutil_socket_t fd, short event, void * ctx){
 		// перепосылка сигнала
 		signal(buffer->signal, SIG_DFL);
 		// Выходим
-		exit(3);
+		exit(SIGQUIT);
 	}
 	// Выходим
 	return;
@@ -185,7 +185,7 @@ void Proxy::sigexit_cb(evutil_socket_t fd, short event, void * ctx){
 		// Выполняем очистку дочерних процессов
 		clear_fantoms(buffer->signal, buffer->proxy);
 		// Выходим
-		exit(0);
+		exit(EXIT_SUCCESS);
 	}
 	// Выходим
 	return;
@@ -214,7 +214,7 @@ void Proxy::run_worker(){
 			// Сообщаем что произошла ошибка потока
 			perror("fork");
 			// Выходим из потока
-			exit(0);
+			exit(EXIT_FAILURE);
 		} break;
 		// Если это дочерний поток значит все нормально и продолжаем работу
 		case 0: create_proxy(); break;
@@ -238,7 +238,7 @@ void Proxy::run_worker(){
 					// Выводим в лог сообщение
 					this->sys->log->write(LOG_ERROR, "exited, pid = %d, status = %d", this->cpid, WEXITSTATUS(status));
 					// Если это безусловное завершение работы
-					if(WEXITSTATUS(status) == 23) exit(SIGSTOP);
+					if(WEXITSTATUS(status) == SIGSTOP) exit(SIGSTOP);
 				}
 				// Если дочерний процесс убит
 				else if(WIFSIGNALED(status)) this->sys->log->write(LOG_ERROR, "killed by pid = %d, signal %d", this->cpid, WTERMSIG(status));
@@ -302,7 +302,7 @@ Proxy::Proxy(string configfile){
 				// Сообщаем что произошла ошибка потока
 				perror("fork");
 				// Выходим из потока
-				exit(0);
+				exit(EXIT_FAILURE);
 			} break;
 			// Запускаем воркер который следит за балансером
 			case 0: run_worker(); break;
@@ -314,27 +314,27 @@ Proxy::Proxy(string configfile){
 				this->base = event_base_new();
 				// Создаем буфер сигнала
 				// Сигналы пользовательские
-				this->siguser.push_back({16, this});
+				this->siguser.push_back({SIGUSR1, this});
 				// Сигналы информирования
-				this->siginfo.push_back({13, this});
+				this->siginfo.push_back({SIGPIPE, this});
 				// Сигналы точного выхода из приложения с удалением пида и удалением дочерних процессов
-				this->sigexit.push_back({1, this});
-				this->sigexit.push_back({2, this});
-				this->sigexit.push_back({3, this});
-				this->sigexit.push_back({15, this});
-				this->sigexit.push_back({20, this});
-				this->sigexit.push_back({23, this});
-				this->sigexit.push_back({26, this});
-				this->sigexit.push_back({27, this});
+				this->sigexit.push_back({SIGHUP, this});
+				this->sigexit.push_back({SIGINT, this});
+				this->sigexit.push_back({SIGQUIT, this});
+				this->sigexit.push_back({SIGTERM, this});
+				this->sigexit.push_back({SIGTSTP, this});
+				// this->sigexit.push_back({SIGSTOP, this});
+				this->sigexit.push_back({SIGTTIN, this});
+				this->sigexit.push_back({SIGTTOU, this});
 				// Сигналы точного выхода из приложения с удалением пида и созданием дампа памяти
-				this->sigsegv.push_back({4, this});
-				this->sigsegv.push_back({5, this});
-				this->sigsegv.push_back({8, this});
-				this->sigsegv.push_back({10, this});
-				this->sigsegv.push_back({11, this});
-				this->sigsegv.push_back({12, this});
-				this->sigsegv.push_back({30, this});
-				this->sigsegv.push_back({31, this});
+				this->sigsegv.push_back({SIGILL, this});
+				this->sigsegv.push_back({SIGTRAP, this});
+				this->sigsegv.push_back({SIGFPE, this});
+				this->sigsegv.push_back({SIGBUS, this});
+				this->sigsegv.push_back({SIGSEGV, this});
+				this->sigsegv.push_back({SIGSYS, this});
+				this->sigsegv.push_back({SIGXCPU, this});
+				this->sigsegv.push_back({SIGXFSZ, this});
 				// Создаем событие
 				// Добавляем в сигналы все информационные
 				for(u_int i = 0; i < this->siginfo.size(); i++)

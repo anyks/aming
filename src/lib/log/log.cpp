@@ -33,7 +33,7 @@ uid_t LogApp::getUid(const char * name){
 		// Выводим сообщение об ошибке
 		printf("failed to get userId from username [%s]\r\n", name);
 		// Выходим из приложения
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 	// Выводим идентификатор пользователя
 	return pwd->pw_uid;
@@ -51,7 +51,7 @@ gid_t LogApp::getGid(const char * name){
 		// Выводим сообщение об ошибке
 		printf("failed to get groupId from groupname [%s]\r\n", name);
 		// Выходим из приложения
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 	// Выводим идентификатор группы пользователя
 	return grp->gr_gid;
@@ -141,7 +141,7 @@ void LogApp::write_to_file(u_short type, const char * message){
 		// Сообщаем что каталог не может быть создан
 		perror("Unable to create directory for log files");
 		// Выходим из приложения
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 	// Стартовая строка
 	string filename;
@@ -237,7 +237,7 @@ void LogApp::write_to_console(u_short type, const char * message){
 		// Если это доступ
 		case 2: str = "\x1B[32m\x1B[1mAccess\x1B[0m "; break;
 		// Если это сообщение
-		case 3: str = "\x1B[1mMessage\x1B[0m "; break;
+		case 3: str = "\x1B[34m\x1B[1mMessage\x1B[0m "; break;
 	}
 	// Добавляем заголовок к сообщению
 	str += message;

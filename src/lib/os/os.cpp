@@ -200,7 +200,7 @@ uid_t Os::getUid(const char * name){
 		// Выводим сообщение об ошибке
 		this->log->write(LOG_ERROR, "failed to get userId from username [%s]", name);
 		// Выходим из приложения
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 	// Выводим идентификатор пользователя
 	return pwd->pw_uid;
@@ -218,7 +218,7 @@ gid_t Os::getGid(const char * name){
 		// Выводим сообщение об ошибке
 		this->log->write(LOG_ERROR, "failed to get groupId from groupname [%s]", name);
 		// Выходим из приложения
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 	// Выводим идентификатор группы пользователя
 	return grp->gr_gid;

@@ -1364,7 +1364,7 @@ void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size
 					// Выводим в консоль информацию
 					proxy->server->log->write(LOG_ERROR, "[-] create fork error");
 					// Выходим из приложения
-					exit(1);
+					exit(SIGHUP);
 				}
 				// Если это дочерний поток значит все нормально, запускаем прокси сервер
 				case 0: run_server(socket, proxy); break;
@@ -1387,7 +1387,7 @@ void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size
 				proxy->server->log->write(LOG_ERROR, "[-] end service: pid = %i, status = %i", pids[i], WTERMSIG(status));
 			}
 			// Выходим из приложения
-			exit(1);
+			exit(SIGHUP);
 		}
 	}
 }
@@ -1428,7 +1428,7 @@ HttpProxy::HttpProxy(System * proxy){
 				run_server(socket, this);
 			}
 		// Иначе выходим окончательно
-		} else exit(23);
+		} else exit(SIGSTOP);
 	}
 }
 /**
