@@ -41,39 +41,29 @@ inline void Connects::dec(){
 	if(this->connects > 0) this->connects--;
 }
 /**
- * lock Метод блокировки мютекса
- */
-inline void Connects::lock(){
-	// Лочим мютекс
-	pthread_mutex_lock(&this->mutex);
-}
-/**
- * unlock Метод разблокировки мютекса
- */
-inline void Connects::unlock(){
-	// Разлочим мютекс
-	pthread_mutex_unlock(&this->mutex);
-}
-/**
  * signal Метод отправки сигнала первому блокированному потоку
  */
 inline void Connects::signal(){
 	// Отправляем сигнал
-	pthread_cond_signal(&this->condition);
+	this->condition.notify_one();
 }
 /**
  * broadcastSignal Метод отправки сигналов всем блокированным потокам
  */
 inline void Connects::broadcastSignal(){
 	// Выполняем вещание
-	pthread_cond_broadcast(&this->condition);
+	this->condition.notify_all();
 }
 /**
  * wait Метод блокировки потока
  */
-inline void Connects::wait(){
+inline void Connects::wait(recursive_mutex &mutx){
+	// Лочим мютекс
+	unique_lock <recursive_mutex> locker(mutx);
 	// Блокируем поток
-	pthread_cond_wait(&this->condition, &this->mutex);
+	this->condition.wait(locker);
+	// Блокируем поток и избавляемся от случайных пробуждений
+	// this->condition.wait(locker, [&](){return !g_codes.empty();});
 }
 /**
  * Connects Конструктор
@@ -81,33 +71,20 @@ inline void Connects::wait(){
 Connects::Connects(){
 	// Устанавливаем первоначальное значение коннекта
 	this->connects = 1;
-	// Инициализируем мютекс
-	pthread_mutex_init(&this->mutex, 0);
-	// Инициализируем переменную состояния
-	pthread_cond_init(&this->condition, 0);
-}
-/**
- * ~Connects Деструктор
- */
-Connects::~Connects(){
-	// Удаляем мютекс
-	pthread_mutex_destroy(&this->mutex);
-	// Удаляем переменную состояния
-	pthread_cond_destroy(&this->condition);
 }
 /**
  * lock Метод блокировки мютекса
  */
 inline void BufferHttpProxy::lock(){
 	// Лочим мютекс
-	pthread_mutex_lock(&this->mutex);
+	this->lock_thread.lock();
 }
 /**
  * unlock Метод разблокировки мютекса
  */
 inline void BufferHttpProxy::unlock(){
 	// Разлочим мютекс
-	pthread_mutex_unlock(&this->mutex);
+	this->lock_thread.unlock();
 }
 /**
  * appconn Функция которая добавляет или удаляет в список склиента
@@ -117,9 +94,9 @@ void BufferHttpProxy::appconn(const bool flag){
 	// Если такое подключение найдено
 	if((*this->connects).count(this->client.ip) > 0){
 		// Получаем объект текущего коннекта
-		Connects * connect = &((*this->connects).find(this->client.ip)->second);
+		Connects * connect = (*this->connects).find(this->client.ip)->second;
 		// Выполняем захват мютекса
-		connect->lock();
+		this->lock_thread.lock();
 		// Если нужно добавить подключение
 		if(flag) connect->inc();
 		// Если нужно удалить подключение
@@ -130,15 +107,20 @@ void BufferHttpProxy::appconn(const bool flag){
 			connect->signal();
 		}
 		// Выполняем разблокировку мютекса
-		connect->unlock();
+		this->lock_thread.unlock();
 		// Проверяем есть ли еще подключения
-		if(connect->end()) (*this->connects).erase(this->client.ip);
+		if(connect->end()){
+			// Удаляем объект подключения
+			delete connect;
+			// Удаляем само подключение из списка подключений
+			(*this->connects).erase(this->client.ip);
+		}
 	// Если нужно добавить подключение
 	} else if(flag){
 		// Создаем объект подключения
-		Connects connect;
+		Connects * connect = new Connects;
 		// Добавляем в список новое подключение
-		(*this->connects).insert(pair <string, Connects> (this->client.ip, connect));
+		(*this->connects).insert(pair <string, Connects *> (this->client.ip, connect));
 	}
 }
 /**
@@ -172,9 +154,21 @@ void BufferHttpProxy::free_event(struct bufferevent ** event){
 	}
 }
 /**
- * begin Метод активации подключения
+ * blockconnect Метод блокировки лишних коннектов
  */
-void BufferHttpProxy::begin(){
+void BufferHttpProxy::blockconnect(){
+	// Если такое подключение найдено
+	if((*this->connects).count(this->client.ip) > 0){
+		// Получаем объект текущего коннекта
+		Connects * connect = (*this->connects).find(this->client.ip)->second;
+		// Запоминаем количество подключений пользователя
+		this->myconns = connect->get();
+		// Если количество подключений достигло предела
+		if(this->myconns >= this->proxy->config->proxy.maxcon){
+			// Усыпляем поток до момента пока не освободятся коннекты
+			connect->wait(this->lock_connect);
+		}
+	}
 	// Добавляем в список подключений
 	this->appconn(true);
 }
@@ -208,6 +202,8 @@ void BufferHttpProxy::close_server(){
  * close Метод закрытия подключения
  */
 void BufferHttpProxy::close(){
+	// Захватываем поток
+	this->lock();
 	// Закрываем подключение клиента
 	close_client();
 	// Закрываем подключение сервера
@@ -216,6 +212,8 @@ void BufferHttpProxy::close(){
 	appconn(false);
 	// Удаляем базу событий
 	event_base_loopexit(this->base, NULL);
+	// Отпускаем поток
+	this->unlock();
 }
 /**
  * set_timeout Метод установки таймаутов
@@ -245,8 +243,6 @@ void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
  * @param proxy объект данных прокси сервера
  */
 BufferHttpProxy::BufferHttpProxy(System * proxy){
-	// Инициализируем мютекс
-	pthread_mutex_init(&this->mutex, 0);
 	// Запоминаем данные прокси сервера
 	this->proxy = proxy;
 	// Создаем новую базу событий
@@ -273,8 +269,6 @@ BufferHttpProxy::~BufferHttpProxy(){
 	delete this->parser;
 	// Очищаем объект базы событий
 	event_base_free(this->base);
-	// Удаляем мютекс
-	pthread_mutex_destroy(&this->mutex);
 }
 /**
  * get_mac Метод определения мак адреса клиента
@@ -333,12 +327,12 @@ string HttpProxy::get_ip(int family, void * ctx){
 	return "";
 }
 /**
- * set_nonblock Функция установки неблокирующего сокета
+ * socket_nonblocking Функция установки неблокирующего сокета
  * @param  fd   файловый дескриптор (сокет)
  * @param  log  указатель на объект ведения логов
  * @return      результат работы функции
  */
-int HttpProxy::set_nonblock(evutil_socket_t fd, LogApp * log){
+int HttpProxy::socket_nonblocking(evutil_socket_t fd, LogApp * log){
 	int flags;
 	flags = fcntl(fd, F_GETFL);
 	if(flags < 0) return flags;
@@ -354,12 +348,12 @@ int HttpProxy::set_nonblock(evutil_socket_t fd, LogApp * log){
 	return 0;
 }
 /**
- * set_non_block Функция отключения алгоритма Нейгла
+ * socket_tcpnodelay Функция отключения алгоритма Нейгла
  * @param  fd   файловый дескриптор (сокет)
  * @param  log  указатель на объект ведения логов
  * @return      результат работы функции
  */
-int HttpProxy::set_tcpnodelay(evutil_socket_t fd, LogApp * log){
+int HttpProxy::socket_tcpnodelay(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем параметр
 	int tcpnodelay = 1;
 	// Устанавливаем TCP_NODELAY
@@ -373,12 +367,12 @@ int HttpProxy::set_tcpnodelay(evutil_socket_t fd, LogApp * log){
 	return 0;
 }
 /**
- * set_reuseaddr Функция разрешающая повторно использовать сокет после его удаления
+ * socket_reuseable Функция разрешающая повторно использовать сокет после его удаления
  * @param  fd   файловый дескриптор (сокет)
  * @param  log  указатель на объект ведения логов
  * @return      результат работы функции
  */
-int HttpProxy::set_reuseaddr(evutil_socket_t fd, LogApp * log){
+int HttpProxy::socket_reuseable(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем параметр
 	int reuseaddr = 1;
 	// Разрешаем повторно использовать тот же host:port после отключения
@@ -392,7 +386,7 @@ int HttpProxy::set_reuseaddr(evutil_socket_t fd, LogApp * log){
 	return 0;
 }
 /**
- * set_keepalive Функция устанавливает постоянное подключение на сокет
+ * socket_keepalive Функция устанавливает постоянное подключение на сокет
  * @param  fd      файловый дескриптор (сокет)
  * @param  log     указатель на объект ведения логов
  * @param  cnt     максимальное количество попыток
@@ -400,7 +394,7 @@ int HttpProxy::set_reuseaddr(evutil_socket_t fd, LogApp * log){
  * @param  intvl   время между попытками
  * @return         результат работы функции
  */
-int HttpProxy::set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle, int intvl){
+int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle, int intvl){
 	// Устанавливаем параметр
 	int keepalive = 1;
 	// Активация постоянного подключения
@@ -447,7 +441,7 @@ int HttpProxy::set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle
 	return 0;
 }
 /**
- * set_buffer_size Функция установки размеров буфера
+ * socket_buffersize Функция установки размеров буфера
  * @param  fd         файловый дескриптор (сокет)
  * @param  read_size  размер буфера на чтение
  * @param  write_size размер буфера на запись
@@ -455,7 +449,7 @@ int HttpProxy::set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle
  * @param  log        указатель на объект ведения логов
  * @return            результат работы функции
  */
-int HttpProxy::set_buffer_size(evutil_socket_t fd, int read_size, int write_size, u_int maxcon, LogApp * log){
+int HttpProxy::socket_buffersize(evutil_socket_t fd, int read_size, int write_size, u_int maxcon, LogApp * log){
 	// Определяем размер массива опции
 	socklen_t read_optlen	= sizeof(read_size);
 	socklen_t write_optlen	= sizeof(write_size);
@@ -643,20 +637,17 @@ int HttpProxy::connect_server(void * ctx){
 				// Выходим
 				return 0;
 			}
-			// Выполняем бинд на сокет
-			if(::bind(http->sockets.server, sin, sinlen) < 0){
-				// Выводим в лог сообщение
-				http->proxy->log->write(LOG_ERROR, "bind local network [%s] error", bindhost.c_str());
-				// Выходим
-				return 0;
-			}
+			// Разблокируем сокет
+			socket_nonblocking(http->sockets.server, http->proxy->log);
+			// Устанавливаем разрешение на повторное использование сокета
+			socket_reuseable(http->sockets.server, http->proxy->log);
 			// Если подключение постоянное
 			if(http->client.alive){
 				// Отключаем алгоритм Нейгла для сервера и клиента
-				set_tcpnodelay(http->sockets.server, http->proxy->log);
-				set_tcpnodelay(http->sockets.client, http->proxy->log);
+				socket_tcpnodelay(http->sockets.server, http->proxy->log);
+				socket_tcpnodelay(http->sockets.client, http->proxy->log);
 				// Активируем keepalive
-				set_keepalive(
+				socket_keepalive(
 					http->sockets.server,
 					http->proxy->log,
 					http->proxy->config->keepalive.keepcnt,
@@ -664,10 +655,13 @@ int HttpProxy::connect_server(void * ctx){
 					http->proxy->config->keepalive.keepintvl
 				);
 			}
-			// Устанавливаем разрешение на повторное использование сокета
-			set_reuseaddr(http->sockets.server, http->proxy->log);
-			// Разблокируем сокет
-			set_nonblock(http->sockets.server, http->proxy->log);
+			// Выполняем бинд на сокет
+			if(::bind(http->sockets.server, sin, sinlen) < 0){
+				// Выводим в лог сообщение
+				http->proxy->log->write(LOG_ERROR, "bind local network [%s] error", bindhost.c_str());
+				// Выходим
+				return 0;
+			}
 			// Создаем буфер событий для сервера
 			http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 			// Устанавливаем водяной знак на 1 байт (чтобы считывать данные когда они действительно приходят)
@@ -817,7 +811,11 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-		sleep(get_delay(len, true, http));
+		this_thread::sleep_for(chrono::seconds(get_delay(len, true, http)));
+		
+		evbuffer_add_buffer(output, input);
+
+		/*
 		// Если заголовки менять не надо тогда просто обмениваемся данными
 		if(http->client.connect) evbuffer_add_buffer(output, input);
 		// Иначе изменяем заголовки
@@ -859,6 +857,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			delete [] buffer;
 		// Закрываем соединение
 		} else http->close();
+		*/
 	}
 	// Выходим
 	return;
@@ -931,7 +930,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 						// Устанавливаем таймаут только на запись
 						else http->set_timeout(TM_SERVER, false, true);
 						// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-						sleep(get_delay(http->response.size(), false, http));
+						this_thread::sleep_for(chrono::seconds(get_delay(http->response.size(), false, http)));
 						// Отправляем серверу сообщение
 						bufferevent_write(http->events.server, http->response.data(), http->response.size());
 						// Удаляем объект подключения
@@ -974,7 +973,10 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			// Если это завершение работы то устанавливаем таймер только на запись
 			else http->set_timeout(TM_CLIENT, false, true);
 			// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-			if(http->response.code == 200) sleep(get_delay(http->response.size(), false, http));
+			if(http->response.code == 200){
+				// Усыпляем поток на указанный промежуток времени
+				this_thread::sleep_for(chrono::seconds(get_delay(http->response.size(), false, http)));
+			}
 			// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 			bufferevent_setwatermark(http->events.client, EV_WRITE, http->response.size(), 0);
 			// Отправляем клиенту сообщение
@@ -1051,7 +1053,7 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-		sleep(get_delay(len, true, http));
+		this_thread::sleep_for(chrono::seconds(get_delay(len, true, http)));
 		// Если это метод connect
 		if(http->client.connect && (conn_enabled || http->client.https)){
 			// Получаем буферы входящих данных и исходящих
@@ -1090,32 +1092,15 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
  * connection Функция обработки данных подключения в треде
  * @param ctx передаваемый объект
  */
-void * HttpProxy::connection(void * ctx){
+void HttpProxy::connection(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
-		// Если такое подключение найдено
-		if((*http->connects).count(http->client.ip) > 0){
-			// Получаем объект текущего коннекта
-			Connects * connect = &((*http->connects).find(http->client.ip)->second);
-			// Выполняем захват мютекса
-			connect->lock();
-			// Запоминаем количество подключений пользователя
-			http->myconns = connect->get();
-			// Если количество подключений достигло предела
-			if(http->myconns >= http->proxy->config->proxy.maxcon) connect->wait();
-			// Выполняем разблокировку мютекса
-			connect->unlock();
-		}
-		// Выполняем инициализацию подключения
-		http->begin();
+		// Выполняем блокировку подключения
+		http->blockconnect();
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-		// Устанавливаем разрешение на повторное использование сокета
-		set_reuseaddr(http->sockets.client, http->proxy->log);
-		// Устанавливаем неблокирующий режим для сокета
-		set_nonblock(http->sockets.client, http->proxy->log);
 		// Устанавливаем таймер для клиента
 		http->set_timeout(TM_CLIENT, true);
 		// Устанавливаем водяной знак на 5 байт (чтобы считывать данные когда они действительно приходят)
@@ -1132,25 +1117,7 @@ void * HttpProxy::connection(void * ctx){
 		delete http;
 	}
 	// Выходим
-	return 0;
-}
-/**
- * spawn_thread Функция создания треда
- * @param  thread объект треда
- * @param  ctx    передаваемый объект
- * @return        результат работы функции
- */
-bool HttpProxy::spawn_thread(pthread_t * thread, void * ctx){
-	// Создаем атрибут потока управления
-	pthread_attr_t attr;
-	// Инициализируем описатель атрибута потока управления
-	pthread_attr_init(&attr);
-	// Устанавливаем атрибут "размер стека" потока управления
-	pthread_attr_setstacksize(&attr, 64 * 1024);
-	// Устанавливаем статус освобождения ресурсов
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	// Создаем поток управления
-	return !pthread_create(thread, &attr, &HttpProxy::connection, ctx);
+	return;
 }
 /**
  * accept_cb Функция подключения к серверу
@@ -1200,6 +1167,10 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 				mac = get_mac(&client);
 			} break;
 		}
+		// Устанавливаем неблокирующий режим для сокета
+		socket_nonblocking(socket, proxy->server->log);
+		// Устанавливаем разрешение на повторное использование сокета
+		socket_reuseable(socket, proxy->server->log);
 		// Выводим в лог сообщение
 		proxy->server->log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), socket);
 		// Создаем новый объект подключения
@@ -1213,9 +1184,9 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 		// Запоминаем данные клиента
 		http->client.ip = ip;
 		// Создаем поток
-		pthread_t thread;
+		thread thr(&HttpProxy::connection, http);
 		// Выполняем активацию потока
-		spawn_thread(&thread, http);
+		thr.detach();
 	}
 }
 /**
@@ -1287,12 +1258,12 @@ evutil_socket_t HttpProxy::create_server(){
 		// Выходим
 		return -1;
 	}
-	// Устанавливаем разрешение на повторное использование сокета
-	set_reuseaddr(sock, this->server->log);
 	// Устанавливаем неблокирующий режим для сокета
-	set_nonblock(sock, this->server->log);
+	socket_nonblocking(sock, this->server->log);
+	// Устанавливаем разрешение на повторное использование сокета
+	socket_reuseable(sock, this->server->log);
 	// Устанавливаем неблокирующий режим
-	set_tcpnodelay(sock, this->server->log);
+	socket_tcpnodelay(sock, this->server->log);
 	// Выполняем биндинг сокета
 	if(::bind(sock, sin, sinlen) < 0){
 		// Выводим в консоль информацию

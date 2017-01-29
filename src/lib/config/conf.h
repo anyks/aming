@@ -100,8 +100,8 @@
 #define BUFFER_READ_SIZE "auto"
 
 // Таймауты подключения
-#define TIMEOUTS_READ 75
-#define TIMEOUTS_WRITE 60
+#define TIMEOUTS_READ 5
+#define TIMEOUTS_WRITE 15
 
 // Модуль логов
 #define LOGS_ENABLED true

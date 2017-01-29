@@ -8,10 +8,13 @@
 #ifndef _HTTP_PROXY_ANYKS_
 #define _HTTP_PROXY_ANYKS_
 
+#include <mutex>
+#include <thread>
 #include <iostream>
+#include <condition_variable>
 #include <errno.h>
 #include <stdlib.h>
-#include <pthread.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <sys/types.h>
@@ -43,9 +46,8 @@ using namespace std;
  */
 class Connects {
 	private:
-		size_t			connects;	// Количество подключений
-		pthread_mutex_t	mutex;		// Мютекс
-		pthread_cond_t	condition;	// Переменная состояния
+		size_t					connects;	// Количество подключений
+		condition_variable_any	condition;	// Переменная состояния
 	public:
 		/**
 		 * get Метод получения количества подключений
@@ -66,14 +68,6 @@ class Connects {
 		 */
 		inline void dec();
 		/**
-		 * lock Метод блокировки мютекса
-		 */
-		inline void lock();
-		/**
-		 * unlock Метод разблокировки мютекса
-		 */
-		inline void unlock();
-		/**
 		 * signal Метод отправки сигнала первому блокированному потоку
 		 */
 		inline void signal();
@@ -84,23 +78,21 @@ class Connects {
 		/**
 		 * wait Метод блокировки потока
 		 */
-		inline void wait();
+		inline void wait(recursive_mutex &mutx);
 		/**
 		 * Connects Конструктор
 		 */
 		Connects();
-		/**
-		 * ~Connects Деструктор
-		 */
-		~Connects();
 };
 /**
  * BufferHttpProxy Класс для работы с данными прокси сервера
  */
 class BufferHttpProxy {
 	private:
-		// Мютекс
-		pthread_mutex_t	mutex;
+		// Мютекс для останова потока
+		recursive_mutex lock_thread;
+		// Мютекс для блокировки подключения
+		recursive_mutex lock_connect;
 		/**
 		 * Headers Заголовки http запросов
 		 */
@@ -172,24 +164,38 @@ class BufferHttpProxy {
 		 */
 		void free_event(struct bufferevent ** event);
 	public:
-		bool					auth		= false;	// Флаг авторизации
-		u_int					myconns		= 1;		// Количество моих подключений к прокси
-		struct event_base		* base		= NULL;		// База событий
-		map <string, Connects>	* connects	= NULL; 	// Список подключений к прокси серверу
-		DNSResolver				* dns		= NULL;		// Создаем объект dns ресолвера
-		Http					* parser	= NULL;		// Объект парсера
-		System					* proxy		= NULL;		// Параметры прокси сервера
-		HttpQuery				response;				// Ответ системы
-		HttpData				httpData;				// Данные http запроса
-		Headers					headers;				// Данные http заголовков
-		Sockets					sockets;				// Сокеты подключений
-		Events					events;					// Буферы событий
-		Server					server;					// Параметры удаленного сервера
-		Client					client;					// Параметры подключившегося клиента
+		// Флаг авторизации
+		bool auth = false;
+		// Количество моих подключений к прокси
+		u_int myconns = 1;
+		// Параметры подключившегося клиента
+		Client client;
+		// Параметры удаленного сервера
+		Server server;
+		// Буферы событий
+		Events events;
+		// Сокеты подключений
+		Sockets sockets;
+		// Данные http заголовков
+		Headers headers;
+		// Данные http запроса
+		HttpData httpData;
+		// Ответ системы
+		HttpQuery response;
+		// Объект парсера
+		Http * parser = NULL;
+		// Параметры прокси сервера
+		System * proxy = NULL;
+		// Создаем объект dns ресолвера
+		DNSResolver * dns = NULL;
+		// База событий
+		struct event_base * base = NULL;
+		// Список подключений к прокси серверу
+		map <string, Connects *> * connects = NULL;
 		/**
-		 * begin Метод активации подключения
+		 * blockconnect Метод блокировки лишних коннектов
 		 */
-		void begin();
+		void blockconnect();
 		/**
 		 * close_client Метод закрытия соединения клиента
 		 */
@@ -225,7 +231,7 @@ class BufferHttpProxy {
 class HttpProxy {
 	private:
 		// Список подключений к прокси серверу
-		map <string, Connects> connects;
+		map <string, Connects *> connects;
 		// Идентификаторы процессов
 		pid_t * pids = NULL;
 		// Параметры прокси сервера
@@ -251,35 +257,28 @@ class HttpProxy {
 		 */
 		static string get_ip(int family, void * ctx);
 		/**
-		 * spawn_thread Функция создания треда
-		 * @param  thread объект треда
-		 * @param  ctx    передаваемый объект
-		 * @return        результат работы функции
-		 */
-		static bool spawn_thread(pthread_t * thread, void * ctx);
-		/**
-		 * set_nonblock Функция установки неблокирующего сокета
+		 * socket_nonblocking Функция установки неблокирующего сокета
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int set_nonblock(evutil_socket_t fd, LogApp * log);
+		static int socket_nonblocking(evutil_socket_t fd, LogApp * log);
 		/**
-		 * set_non_block Функция отключения алгоритма Нейгла
+		 * socket_tcpnodelay Функция отключения алгоритма Нейгла
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int set_tcpnodelay(evutil_socket_t fd, LogApp * log);
+		static int socket_tcpnodelay(evutil_socket_t fd, LogApp * log);
 		/**
-		 * set_reuseaddr Функция разрешающая повторно использовать сокет после его удаления
+		 * socket_reuseable Функция разрешающая повторно использовать сокет после его удаления
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int set_reuseaddr(evutil_socket_t fd, LogApp * log);
+		static int socket_reuseable(evutil_socket_t fd, LogApp * log);
 		/**
-		 * set_keepalive Функция устанавливает постоянное подключение на сокет
+		 * socket_keepalive Функция устанавливает постоянное подключение на сокет
 		 * @param  fd      файловый дескриптор (сокет)
 		 * @param  log     указатель на объект ведения логов
 		 * @param  cnt     максимальное количество попыток
@@ -287,9 +286,9 @@ class HttpProxy {
 		 * @param  intvl   время между попытками
 		 * @return         результат работы функции
 		 */
-		static int set_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle, int intvl);
+		static int socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle, int intvl);
 		/**
-		 * set_buffer_size Функция установки размеров буфера
+		 * socket_buffersize Функция установки размеров буфера
 		 * @param  fd         файловый дескриптор (сокет)
 		 * @param  read_size  размер буфера на чтение
 		 * @param  write_size размер буфера на запись
@@ -297,7 +296,7 @@ class HttpProxy {
 		 * @param  log        указатель на объект ведения логов
 		 * @return            результат работы функции
 		 */
-		static int set_buffer_size(evutil_socket_t fd, int read_size, int write_size, u_int maxcon, LogApp * log);
+		static int socket_buffersize(evutil_socket_t fd, int read_size, int write_size, u_int maxcon, LogApp * log);
 		/**
 		 * check_auth Функция проверки логина и пароля
 		 * @param ctx объект входящих данных
@@ -322,7 +321,7 @@ class HttpProxy {
 		 * connection Функция обработки данных подключения в треде
 		 * @param ctx передаваемый объект
 		 */
-		static void * connection(void * ctx);
+		static void connection(void * ctx);
 		/**
 		 * do_request Функция запроса данных у сервера
 		 * @param ctx  передаваемый объект
