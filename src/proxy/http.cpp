@@ -239,6 +239,27 @@ void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
 		bufferevent_set_timeouts(this->events.client, (read ? &_read : NULL), (write ? &_write : NULL));
 }
 /**
+ * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
+ * @param  size размер передаваемых данных
+ * @param  type тип передаваемого сообщения (true - чтение, false - запись)
+ * @return      время в секундах на которое следует задержать поток
+ */
+void BufferHttpProxy::sleep(size_t size, bool type){
+	// Расчитанное время задержки
+	int seconds = 0;
+	// Получаем размер максимально-возможных передачи данных для всех подключений
+	float max = float(type ? this->proxy->config->buffers.read : this->proxy->config->buffers.write);
+	// Если буфер существует
+	if(max > 0){
+		// Высчитываем размер максимально-возможных передачи данных для одного подключения
+		max = (max / float(this->myconns));
+		// Если размер больше нуля то продолжаем
+		if((max > 0) && (size > max)) seconds = (size / max);
+	}
+	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+	this_thread::sleep_for(chrono::seconds(seconds));
+}
+/**
  * BufferHttpProxy Конструктор
  * @param proxy объект данных прокси сервера
  */
@@ -500,35 +521,6 @@ bool HttpProxy::check_auth(void * ctx){
 	}
 	// Сообщаем что проверка не прошла
 	return false;
-}
-/**
- * get_delay Функция выводит время в секундах на сколько нужно усыпить поток
- * @param  size размер передаваемых данных
- * @param  type тип передаваемого сообщения (true - чтение, false - запись)
- * @param  ctx  объект входящих данных
- * @return      время в секундах на которое следует задержать поток
- */
-int HttpProxy::get_delay(size_t size, bool type, void * ctx){
-	// Расчитанное время задержки
-	int result = 0;
-	// Получаем объект подключения
-	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
-	// Если подключение не передано
-	if(http != NULL){
-		// Получаем размер максимально-возможных передачи данных для всех подключений
-		float max = float(type ? http->proxy->config->buffers.read : http->proxy->config->buffers.write);
-		// Если буфер существует
-		if(max > 0){
-			// Высчитываем размер максимально-возможных передачи данных для одного подключения
-			max = max / float(http->myconns);
-			// Если размер больше нуля то продолжаем
-			if((max > 0) && (size > max))
-				// Получаем искомый результат
-				result = size / max;
-		}
-	}
-	// Выводим результат
-	return result;
 }
 /**
  * connect_server Функция создания сокета для подключения к удаленному серверу
@@ -811,7 +803,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-		this_thread::sleep_for(chrono::seconds(get_delay(len, true, http)));
+		http->sleep(len, true);
 		
 		evbuffer_add_buffer(output, input);
 
@@ -930,7 +922,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 						// Устанавливаем таймаут только на запись
 						else http->set_timeout(TM_SERVER, false, true);
 						// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-						this_thread::sleep_for(chrono::seconds(get_delay(http->response.size(), false, http)));
+						http->sleep(http->response.size(), false);
 						// Отправляем серверу сообщение
 						bufferevent_write(http->events.server, http->response.data(), http->response.size());
 						// Удаляем объект подключения
@@ -973,10 +965,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			// Если это завершение работы то устанавливаем таймер только на запись
 			else http->set_timeout(TM_CLIENT, false, true);
 			// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-			if(http->response.code == 200){
-				// Усыпляем поток на указанный промежуток времени
-				this_thread::sleep_for(chrono::seconds(get_delay(http->response.size(), false, http)));
-			}
+			if(http->response.code == 200) http->sleep(http->response.size(), false);
 			// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 			bufferevent_setwatermark(http->events.client, EV_WRITE, http->response.size(), 0);
 			// Отправляем клиенту сообщение
@@ -1053,7 +1042,7 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-		this_thread::sleep_for(chrono::seconds(get_delay(len, true, http)));
+		http->sleep(len, true);
 		// Если это метод connect
 		if(http->client.connect && (conn_enabled || http->client.https)){
 			// Получаем буферы входящих данных и исходящих
