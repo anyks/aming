@@ -112,7 +112,7 @@ void HttpHeaders::split(const string &str, const string delim, vector <string> &
 	}
 }
 /**
- * getHeader Функция извлекает данные заголовка по его ключу
+ * getHeader Метод извлекает данные заголовка по его ключу
  * @param  key ключ заголовка
  * @return     строка с данными заголовка
  */
@@ -128,6 +128,17 @@ HttpHeaders::Header HttpHeaders::getHeader(string key){
 void HttpHeaders::clear(){
 	// Очищаем данные http заголовков
 	this->headers.clear();
+}
+/**
+ * append Метод добавления заголовка
+ * @param key ключ
+ * @param val значение
+ */
+void HttpHeaders::append(string key, string val){
+	// Создаем заголовок
+	Header header = {::trim(key), ::trim(val)};
+	// Запоминаем найденны параметры
+	this->headers.insert(pair <string, Header>(::toCase(header.head), header));
 }
 /**
  * create Метод создания объекта http заголовков
@@ -170,14 +181,8 @@ bool HttpHeaders::create(const char * buffer){
 				regex_search(strings[i], match, e);
 				// Если заголовок найден
 				if(!match.empty() && (match.size() == 3)){
-					// Получаем ключ
-					string key = match[1].str();
-					// Получаем значение
-					string val = match[2].str();
-					// Создаем заголовок
-					Header header = {::trim(key), ::trim(val)};
-					// Запоминаем найденны параметры
-					this->headers.insert(pair <string, Header>(::toCase(header.head), header));
+					// Добавляем данные заголовка
+					this->append(match[1].str(), match[2].str());
 				}
 			}
 			// Если данные получены
@@ -740,6 +745,25 @@ string HttpData::getQuery(){
 	return this->query;
 }
 /**
+ * getResponseHeaders Метод получения заголовков http ответа
+ * @return сформированные заголовки ответа
+ */
+string HttpData::getResponseHeaders(){
+	// Получаем сформированный ответ
+	vector <char> data = this->getHttpRequest();
+	// Получаем данные запроса
+	return this->responseHeaders.assign(data.begin(), data.end());
+}
+/**
+ * getHeader Метод извлекает данные заголовка по его ключу
+ * @param  key ключ заголовка
+ * @return     строка с данными заголовка
+ */
+string HttpData::getHeader(string key){
+	// Выводим данные заголовков
+	return this->headers.getHeader(key).value;
+}
+/**
  * setEntitybody Метод добавления данных вложения
  * @param buffer буфер с данными вложения
  * @param size   размер буфера
@@ -788,6 +812,16 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
 	}
 	// Сообщаем что ничего не найдено
 	return false;
+}
+/**
+ * setOptions Метод установки настроек прокси сервера
+ * @param options данные для установки
+ */
+void HttpData::setOptions(u_short options){
+	// Запоминаем данные
+	this->options = options;
+	// Выполняем генерацию результирующего запроса
+	createHead();
 }
 /**
  * setMethod Метод установки метода запроса
@@ -879,6 +913,47 @@ void HttpData::setClose(){
 	this->connection = "close";
 	// Выполняем генерацию результирующего запроса
 	createHead();
+}
+/**
+ * addHeader Метод добавления нового заголовка
+ * @param str строка с данными заголовков
+ */
+void HttpData::addHeader(const char * str){
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+)|"
+		"(?:[A-Za-z]+\\/[\\d\\.]+\\s+\\d+\\s+[A-Za-z\\s\\-]+))|"
+		"(?:([\\w\\-]+)\\s*\\:\\s*([^\r\n]+))",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск протокола
+	regex_search(string(str), match, e);
+	// Если данные найдены
+	if(!match.empty() && (match.size() == 4)){
+		// Если найдены заголовки
+		if(match[1].str().empty()){
+			// Получаем данные заголовков
+			string key = match[2].str();
+			string val = match[3].str();
+			// Добавляем новый заголовок
+			this->headers.append(key, val);
+			// Запоминаем первые символы
+			this->query.append(key + string(": ") + val + "\r\n");
+		// Запоминаем результат запроса или ответа
+		} else {
+			// Очищаем все заголовки
+			clear();
+			// Запоминаем http запрос
+			this->http = match[1].str();
+			// Запоминаем первые символы
+			this->query = (this->http + "\r\n");
+		}
+		// Получаем длину массива заголовков
+		this->length = this->query.length();
+	}
 }
 /**
  * createRequest Функция создания ответа сервера
@@ -1013,6 +1088,21 @@ void HttpData::init(const string str, const string name, const string version, c
 	}
 }
 /**
+ * HttpData Конструктор
+ * @param name    название приложения
+ * @param options опции http парсера
+ */
+HttpData::HttpData(const string name, const u_short options){
+	// Очищаем полученные данные
+	clear();
+	// Запоминаем название приложения
+	this->appName = name;
+	// Запоминаем параметры http парсера
+	this->options = options;
+	// Запоминаем версию приложения
+	this->appVersion = APP_VERSION;
+}
+/**
  * ~HttpData Деструктор
  */
 HttpData::~HttpData(){
@@ -1075,7 +1165,7 @@ size_t Http::parse(const char * buffer, size_t size, bool flag){
 		// Выполняем парсинг http запроса
 		HttpData httpData;
 		// Выполняем инициализацию объекта
-		httpData.init(match[2].str(), name, version, options);
+		httpData.init(match[2].str(), this->name, this->version, this->options);
 		// Добавляем вложенные данные
 		if(httpData.setEntitybody(buffer, size)){
 			// Добавляем в массив объект подключения

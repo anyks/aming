@@ -45,7 +45,7 @@ class HttpHeaders {
 		void split(const string &str, const string delim, vector <string> &v);
 	public:
 		/**
-		 * getHeader Функция извлекает данные заголовка по его ключу
+		 * getHeader Метод извлекает данные заголовка по его ключу
 		 * @param  key ключ заголовка
 		 * @return     строка с данными заголовка
 		 */
@@ -54,6 +54,12 @@ class HttpHeaders {
 		 * clear Метод очистки данных
 		 */
 		void clear();
+		/**
+		 * append Метод добавления заголовка
+		 * @param key ключ
+		 * @param val значение
+		 */
+		void append(string key, string val);
 		/**
 		 * create Метод создания объекта http заголовков
 		 * @param buffer буфер с текстовыми данными
@@ -141,26 +147,27 @@ class HttpData {
 			string protocol;	// Протокол
 		};
 		// Основные переменные класса
-		u_short			options;	// Параметры прокси сервера
-		string			appName;	// Название приложения
-		string			appVersion;	// Версия приложения
-		string			query;		// Данные запроса
-		string			http;		// http запрос
-		string			auth;		// Тип авторизации
-		string			method;		// Метод запроса
-		string			path;		// Путь запроса
-		string			protocol;	// Протокол запроса
-		string			version;	// Версия протокола
-		string			host;		// Хост запроса
-		string			port;		// Порт запроса
-		string			login;		// Логин
-		string			password;	// Пароль
-		string			useragent;	// UserAgent браузера
-		string			connection;	// Заголовок connection
-		string			request;	// Результирующий заголовок для запроса
-		size_t			length = 0;	// Количество заголовков
-		vector <char>	entitybody;	// Данные http вложений
-		HttpHeaders		headers;	// Заголовки http запроса
+		u_short			options;			// Параметры прокси сервера
+		string			appName;			// Название приложения
+		string			appVersion;			// Версия приложения
+		string			query;				// Данные запроса
+		string			http;				// http запрос
+		string			auth;				// Тип авторизации
+		string			method;				// Метод запроса
+		string			path;				// Путь запроса
+		string			protocol;			// Протокол запроса
+		string			version;			// Версия протокола
+		string			host;				// Хост запроса
+		string			port;				// Порт запроса
+		string			login;				// Логин
+		string			password;			// Пароль
+		string			useragent;			// UserAgent браузера
+		string			connection;			// Заголовок connection
+		string			responseHeaders;	// Результирующие данные ответа
+		string			request;			// Результирующий данные запроса
+		size_t			length = 0;			// Количество заголовков
+		vector <char>	entitybody;			// Данные http вложений
+		HttpHeaders		headers;			// Заголовки http запроса
 		// Шаблоны ответов
 		string html[12] = {
 			// Подключение разрешено [0]
@@ -357,11 +364,27 @@ class HttpData {
 		 */
 		string getQuery();
 		/**
+		 * getResponseHeaders Метод получения заголовков http ответа
+		 * @return сформированные заголовки ответа
+		 */
+		string getResponseHeaders();
+		/**
+		 * getHeader Метод извлекает данные заголовка по его ключу
+		 * @param  key ключ заголовка
+		 * @return     строка с данными заголовка
+		 */
+		string getHeader(string key);
+		/**
 		 * setEntitybody Метод добавления данных вложения
 		 * @param buffer буфер с данными вложения
 		 * @param size   размер буфера
 		 */
 		bool setEntitybody(const char * buffer, size_t size);
+		/**
+		 * setOptions Метод установки настроек прокси сервера
+		 * @param options данные для установки
+		 */
+		void setOptions(u_short options);
 		/**
 		 * setMethod Метод установки метода запроса
 		 * @param str строка с данными для установки
@@ -406,6 +429,11 @@ class HttpData {
 		 * setClose Метод установки принудительного отключения после запроса
 		 */
 		void setClose();
+		/**
+		 * addHeader Метод добавления нового заголовка
+		 * @param str строка с данными заголовков
+		 */
+		void addHeader(const char * str);
 		/**
 		 * createRequest Функция создания ответа сервера
 		 * @param  index   индекс в массиве ответа
@@ -462,6 +490,12 @@ class HttpData {
 		 * @return         данные http запроса
 		 */
 		void init(const string str, const string name, const string version, const u_short options);
+		/**
+		 * HttpData Конструктор
+		 * @param name    название приложения
+		 * @param options опции http парсера
+		 */
+		HttpData(string name = APP_NAME, u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
 		/**
 		 * ~HttpData Деструктор
 		 */

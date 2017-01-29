@@ -97,8 +97,8 @@ class BufferHttpProxy {
 		 * Headers Заголовки http запросов
 		 */
 		struct Headers {
-			HttpHeaders	request;	// Заголовки http запроса
-			HttpHeaders	response;	// Заголовки http ответа
+			bool		end;	// Заголовки получены полностью
+			HttpData	data;	// Данные заголовков
 		};
 		/**
 		 * Events Буферы событий
