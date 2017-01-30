@@ -439,9 +439,9 @@ class HttpData {
 		void setFullHeaders();
 		/**
 		 * addHeader Метод добавления нового заголовка
-		 * @param str строка с данными заголовков
+		 * @param buffer буфер с данными заголовка
 		 */
-		void addHeader(const char * str);
+		void addHeader(const char * buffer);
 		/**
 		 * createRequest Функция создания ответа сервера
 		 * @param  index   индекс в массиве ответа

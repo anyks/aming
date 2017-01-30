@@ -941,9 +941,9 @@ void HttpData::setFullHeaders(){
 }
 /**
  * addHeader Метод добавления нового заголовка
- * @param str строка с данными заголовков
+ * @param buffer буфер с данными заголовка
  */
-void HttpData::addHeader(const char * str){
+void HttpData::addHeader(const char * buffer){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -954,8 +954,10 @@ void HttpData::addHeader(const char * str){
 		"(?:([\\w\\-]+)\\s*\\:\\s*([^\r\n]+))",
 		regex::ECMAScript | regex::icase
 	);
+	// Запоминаем входящую строку
+	string str = buffer;
 	// Выполняем поиск протокола
-	regex_search(string(str), match, e);
+	regex_search(str, match, e);
 	// Если данные найдены
 	if(!match.empty() && (match.size() == 4)){
 		// Если найдены заголовки
