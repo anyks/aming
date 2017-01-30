@@ -403,6 +403,12 @@ void Os::optimos(){
 #endif
 		// Если это Linux
 		case 4: {
+			// Если режим отладки включен
+			if((* this->config)->proxy.debug){
+				// for debug, create dump core
+				exec("sysctl -w kernel.core_uses_pid=1");
+				exec("sysctl -w kernel.core_pattern=/tmp/core-%e-%p");
+			}
 			// for max connections
 			exec("sysctl -w net.core.somaxconn=49152");
 			// allow testing with buffers up to 128MB
