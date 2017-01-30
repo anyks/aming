@@ -805,33 +805,33 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 		http->sleep(len, true);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
-		if(http->client.connect || http->headers.end) evbuffer_add_buffer(output, input);
+		if(http->client.connect || http->headers.getFullHeaders()) evbuffer_add_buffer(output, input);
 		// Иначе изменяем заголовки
 		else if(len){
 			// Если блок заголовков ответа не существует
-			if(!http->headers.data.size()){
+			if(!http->headers.size()){
 				// Создаем объект данных заголовков
 				HttpData httpData(http->proxy->config->proxy.name, http->proxy->config->options);
 				// Копируем объект http заголовков
-				http->headers.data = httpData;
+				http->headers = httpData;
 			}
 			// Считываем данные из буфера до тех пор пока можешь считать
 			while(true){
 				// Считываем строки из буфера
-				const char * line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF);
+				const char * line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF_STRICT);
 				// Проверяем дошли ли мы до конца
-				if((line != NULL) && !strlen(line)) http->headers.end = true;
+				if((line != NULL) && !strlen(line)) http->headers.setFullHeaders();
 				// Если данные не найдены тогда выходим
 				if((line == NULL) || !strlen(line)) break;
 				// Добавляем заголовки в запрос
-				http->headers.data.addHeader(line);
+				http->headers.addHeader(line);
 			}
 			// Если все данные получены
-			if(http->headers.end){
+			if(http->headers.getFullHeaders()){
 				// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
-				if((http->headers.data.getHttp().find("101 Switching Protocols") != string::npos)
-				&& !http->headers.data.getHeader("upgrade").empty()
-				&& (http->headers.data.getHeader("connection").find("Upgrade") != string::npos)){
+				if((http->headers.getHttp().find("101 Switching Protocols") != string::npos)
+				&& !http->headers.getHeader("upgrade").empty()
+				&& (http->headers.getHeader("connection").find("Upgrade") != string::npos)){
 					// Устанавливаем что это соединение CONNECT,
 					// для будущего обмена данными, так как они будут приходить бинарные
 					http->client.connect = true;
@@ -839,80 +839,28 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Создаем буфер для исходящих данных
 				struct evbuffer * tmp = evbuffer_new();
 				// Получаем данные заголовков
-				string headers = http->headers.data.getResponseHeaders();
-
-				cout << "================1 " << headers << endl;
-
+				string headers = http->headers.getResponseHeaders();
 				// Добавляем в новый буфер модифицированные заголовки
-				evbuffer_add(tmp, headers.data(), headers.size());
-
-				int len0 = evbuffer_get_length(input);
-
-				// Добавляем в буфер оставшиеся данные
-				evbuffer_add(tmp, input, len0);
-
-				int len1 = evbuffer_get_length(tmp);
+				evbuffer_add(tmp, headers.data(), headers.length());
+				// Получаем оставшиеся размеры данных
+				len = evbuffer_get_length(input);
 				// Создаем буфер данных
-				char * buffer = new char[len1];
+				char * buffer = new char[len];
 				// Копируем в буфер полученные данные
-				evbuffer_copyout(tmp, buffer, len1);
-
-				cout << "================2 " << buffer << " ------ " << len0 << endl;
-
+				evbuffer_copyout(input, buffer, len);
+				// Добавляем в буфер оставшиеся данные
+				evbuffer_add(tmp, buffer, len);
 				// Удаляем буфер данных
 				delete [] buffer;
-
 				// Отправляем данные клиенту
 				evbuffer_add_buffer(output, tmp);
+				// Удаляем данные из буфера
+				evbuffer_drain(input, len);
 				// Удаляем временный буфер
 				evbuffer_free(tmp);
 			}
 		// Закрываем соединение
 		} else http->close();
-
-		/*
-		// Если заголовки менять не надо тогда просто обмениваемся данными
-		if(http->client.connect) evbuffer_add_buffer(output, input);
-		// Иначе изменяем заголовки
-		else if(len){
-			// Создаем буфер данных
-			char * buffer = new char[len];
-			// Копируем в буфер полученные данные
-			evbuffer_copyout(input, buffer, len);
-			// Если заголовки запроса не получены
-			if(http->headers.response.empty()){
-				// Добавляем полученный буфер в вектор
-				vector <char> headers(buffer, buffer + len);
-				// Если буферы созданы
-				if(http->headers.response.create(headers.data())){
-					// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
-					if((strstr(headers.data(), "101 Switching Protocols") != NULL)
-					&& !http->headers.response.getHeader("upgrade").value.empty()
-					&& (http->headers.response.getHeader("connection").value.find("Upgrade") != string::npos)){
-						// Устанавливаем что это соединение CONNECT,
-						// для будущего обмена данными, так как они будут приходить бинарные
-						http->client.connect = true;
-					}
-					// Создаем буфер для исходящих данных
-					struct evbuffer * tmp = evbuffer_new();
-					// Выполняем модификацию заголовков
-					http->parser->modify(headers);
-					// Добавляем в новый буфер модифицированные заголовки
-					evbuffer_add(tmp, headers.data(), headers.size());
-					// Отправляем данные клиенту
-					evbuffer_add_buffer(output, tmp);
-					// Удаляем данные из буфера
-					evbuffer_drain(input, len);
-					// Удаляем временный буфер
-					evbuffer_free(tmp);
-				}
-			// Если заголовки получены, выводим так как есть
-			} else evbuffer_add_buffer(output, input);
-			// Удаляем буфер данных
-			delete [] buffer;
-		// Закрываем соединение
-		} else http->close();
-		*/
 	}
 	// Выходим
 	return;
@@ -1057,10 +1005,7 @@ void HttpProxy::do_request(void * ctx, bool flag){
 			// Очищаем объект ответа
 			http->response.clear();
 			// Очищаем заголовки прошлых ответов
-			http->headers.data.clear();
-
-			http->headers.end = false;
-
+			// http->headers.clear();
 			// Получаем первый элемент из массива
 			auto httpData = http->parser->httpData.begin();
 			// Запоминаем данные объекта http запроса

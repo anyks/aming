@@ -94,13 +94,6 @@ class BufferHttpProxy {
 		// Мютекс для блокировки подключения
 		recursive_mutex lock_connect;
 		/**
-		 * Headers Заголовки http запросов
-		 */
-		struct Headers {
-			bool		end;	// Заголовки получены полностью
-			HttpData	data;	// Данные заголовков
-		};
-		/**
 		 * Events Буферы событий
 		 */
 		struct Events {
@@ -177,7 +170,7 @@ class BufferHttpProxy {
 		// Сокеты подключений
 		Sockets sockets;
 		// Данные http заголовков
-		Headers headers;
+		HttpData headers;
 		// Данные http запроса
 		HttpData httpData;
 		// Ответ системы

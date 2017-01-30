@@ -466,6 +466,8 @@ HttpData::Connect HttpData::getConnection(string str){
 void HttpData::clear(){
 	// Обнуляем размер
 	this->length = 0;
+	// Устанавливаем что заголовки не заполнены
+	this->fullheaders = false;
 	// Очищаем строки
 	this->query.clear();
 	this->http.clear();
@@ -639,6 +641,13 @@ bool HttpData::isAlive(){
 	} else if(this->connection.compare("keep-alive") == 0) return true;
 	// Сообщаем что подключение жить не должно
 	return false;
+}
+/**
+ * getFullHeaders Метод получения данных о заполненности заголовков
+ */
+bool HttpData::getFullHeaders(){
+	// Выводим данные о заполненности заголовков
+	return this->fullheaders;
 }
 /**
  * size Метод получения размера запроса
@@ -915,6 +924,17 @@ void HttpData::setClose(){
 	createHead();
 }
 /**
+ * setFullHeaders Метод установки конца ввода данных заголовков
+ */
+void HttpData::setFullHeaders(){
+	// Устанавливаем завершающие символы запроса
+	this->query += "\r\n";
+	// Получаем длину массива заголовков
+	this->length = this->query.length();
+	// Запоминаем что заголовки заполены полностью
+	this->fullheaders = true;
+}
+/**
  * addHeader Метод добавления нового заголовка
  * @param str строка с данными заголовков
  */
@@ -1082,6 +1102,8 @@ void HttpData::init(const string str, const string name, const string version, c
 			this->headers.create(this->query.c_str());
 			// Получаем длину массива заголовков
 			this->length = this->query.length();
+			// Запоминаем что заголовки заполнены полностью
+			this->fullheaders = true;
 		}
 		// Генерируем данные подключения
 		genDataConnect();

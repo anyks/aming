@@ -147,6 +147,7 @@ class HttpData {
 			string protocol;	// Протокол
 		};
 		// Основные переменные класса
+		bool			fullheaders;		// Заголовки заполнены
 		u_short			options;			// Параметры прокси сервера
 		string			appName;			// Название приложения
 		string			appVersion;			// Версия приложения
@@ -299,6 +300,10 @@ class HttpData {
 		 */
 		bool isAlive();
 		/**
+		 * getFullHeaders Метод получения данных о заполненности заголовков
+		 */
+		bool getFullHeaders();
+		/**
 		 * size Метод получения размера запроса
 		 * @return размер запроса
 		 */
@@ -429,6 +434,10 @@ class HttpData {
 		 * setClose Метод установки принудительного отключения после запроса
 		 */
 		void setClose();
+		/**
+		 * setFullHeaders Метод установки конца ввода данных заголовков
+		 */
+		void setFullHeaders();
 		/**
 		 * addHeader Метод добавления нового заголовка
 		 * @param str строка с данными заголовков
