@@ -433,7 +433,7 @@ int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int i
 		return -1;
 	}
 // Если это Linux
-#ifdef __linux__
+#ifdef __linux__ || __FreeBSD__
 	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int))){
 		// Выводим в лог информацию
@@ -442,7 +442,7 @@ int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int i
 		return -1;
 	}
 // Если это FreeBSD или MacOS X
-#elif __FreeBSD__ || __APPLE__ || __MACH__
+#elif __APPLE__ || __MACH__
 	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(int))){
 		// Выводим в лог информацию
@@ -1180,7 +1180,7 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 		// Запоминаем данные клиента
 		http->client.ip = ip;
 		// Создаем поток
-		thread thr(&HttpProxy::connection, http);
+		std::thread thr(&HttpProxy::connection, http);
 		// Выполняем активацию потока
 		thr.detach();
 	}

@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <sys/types.h>

@@ -92,9 +92,10 @@ class Os {
 		gid_t getGid(const char * name);
 		/**
 		 * exec Метод запуска внешней оболочки
-		 * @param cmd команда запуска
+		 * @param cmd       команда запуска
+		 * @param multiline данные должны вернутся многострочные
 		 */
-		string exec(string cmd);
+		string exec(string cmd, bool multiline = false);
 		/**
 		 * getOsName Функция определения операционной системы
 		 * @return название операционной системы

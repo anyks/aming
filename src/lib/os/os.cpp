@@ -250,9 +250,10 @@ void Os::privBind(){
 }
 /**
  * exec Метод запуска внешней оболочки
- * @param cmd команда запуска
+ * @param cmd       команда запуска
+ * @param multiline данные должны вернутся многострочные
  */
-string Os::exec(string cmd){
+string Os::exec(string cmd, bool multiline){
 	// Устанавливаем размер буфера
 	const int MAX_BUFFER = 2048;
 	// Полученный результат
@@ -271,6 +272,8 @@ string Os::exec(string cmd){
 			fgets(buffer, MAX_BUFFER, stream);
 			// Добавляем полученный результат
 			result.append(buffer);
+			// Если это не мультилайн то выходим
+			if(!multiline) break;
 		}
 		// Закрываем пайп
 		pclose(stream);
@@ -324,7 +327,7 @@ void Os::getCPU(){
 			// Результат работы регулярного выражения
 			smatch match;
 			// Получаем данные о процессоре
-			string str = exec("lscpu");
+			string str = exec("lscpu", true);
 			// Устанавливаем правило регулярного выражения
 			regex e("CPU\\(s\\)\\:\\s+(\\d+)[\\s\\S]+Model\\s+name\\:\\s+([^\\r\\n]+)", regex::ECMAScript | regex::icase);
 			// Выполняем поиск протокола
@@ -345,6 +348,14 @@ void Os::getCPU(){
 			ncpu = (u_int) getNumberParam("hw.ncpu");
 			// Получаем название процессора
 			cpu = exec("grep -w CPU: /var/run/dmesg.boot");
+			// Результат работы регулярного выражения
+			smatch match;
+			// Устанавливаем правило регулярного выражения
+			regex e("CPU\\:\\s+([^\\r\\n]+)", regex::ECMAScript | regex::icase);
+			// Выполняем поиск протокола
+			regex_search(cpu, match, e);
+			// Если протокол найден
+			if(!match.empty() && (match.size() == 2)) cpu = match[1].str();
 		} break;
 #endif
 	}
@@ -416,23 +427,23 @@ void Os::optimos(){
 		// Если это FreeBSD
 		case 5: {
 			// set to at least 16MB for 10GE hosts
-			setParam("kern.ipc.maxsockbuf", 16777216);
+			exec("sysctl -w kern.ipc.maxsockbuf=16777216");
 			// set autotuning maximum to at least 16MB too
-			setParam("net.inet.tcp.sendbuf_max", 16777216);
-			setParam("net.inet.tcp.recvbuf_max", 16777216);
+			exec("sysctl -w net.inet.tcp.sendbuf_max=16777216");
+			exec("sysctl -w net.inet.tcp.recvbuf_max=16777216");
 			// for other customs
-			setParam("net.inet.tcp.sendspace", 1042560);
-			setParam("net.inet.tcp.recvspace", 1042560);
+			exec("sysctl -w net.inet.tcp.sendspace=1042560");
+			exec("sysctl -w net.inet.tcp.recvspace=1042560");
 			// enable send/recv autotuning
-			setParam("net.inet.tcp.sendbuf_auto", 1);
-			setParam("net.inet.tcp.recvbuf_auto", 1);
+			exec("sysctl -w net.inet.tcp.sendbuf_auto=1");
+			exec("sysctl -w net.inet.tcp.recvbuf_auto=1");
 			// increase autotuning step size
-			setParam("net.inet.tcp.sendbuf_inc", 16384);
-			setParam("net.inet.tcp.recvbuf_inc", 524288);
+			exec("sysctl -w net.inet.tcp.sendbuf_inc=16384");
+			exec("sysctl -w net.inet.tcp.recvbuf_inc=524288");
 			// set this on test/measurement hosts
-			setParam("net.inet.tcp.hostcache.expire", 1);
+			exec("sysctl -w net.inet.tcp.hostcache.expire=1");
 			// for max connections
-			setParam("kern.ipc.somaxconn", 49152);
+			exec("sysctl -w kern.ipc.somaxconn=49152");
 			// you can check which are available using net.inet.tcp.cc.available
 			// Get which are available algorithm
 			string algorithm = getCongestionControl(getStringParam("net.inet.tcp.cc.available"));
