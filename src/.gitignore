@@ -1,5 +1,6 @@
-./anyks
-./anyks/*
 *~
 .DS_Store
-./bin
+anyks
+anyks/*
+bin
+bin/*
