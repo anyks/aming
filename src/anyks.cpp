@@ -15,7 +15,7 @@
 * # clang++ -std=c++11 -lm -ggdb -Wall -pedantic -O3 -Werror=vla -Wno-unused-result -pthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./lib/system/system.cpp ./lib/proxy/proxy.cpp ./anyks.cpp /usr/lib/x86_64-linux-gnu/libevent.a /usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a /usr/lib/x86_64-linux-gnu/libz.a /usr/lib/x86_64-linux-gnu/libm.a
 *
 * FreeBSD:
-* # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./lib/system/system.cpp ./lib/proxy/proxy.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
+* # clang++ -std=c++11 -D_BSD_SOURCE -ggdb -Wall -pedantic -O3 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/os/os.cpp ./lib/ini/ini.cpp ./lib/config/conf.cpp ./lib/dns/dns.cpp ./lib/system/system.cpp ./lib/proxy/proxy.cpp ./anyks.cpp -I/usr/local/include /usr/local/lib/libevent.a
 *
 * Запуск: # ./bin/http -c ./config.ini
 *
