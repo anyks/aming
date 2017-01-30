@@ -8,7 +8,6 @@
 #ifndef _HTTP_PARSER_ANYKS_
 #define _HTTP_PARSER_ANYKS_
 
-#include <map>
 #include <regex>
 #include <string>
 #include <cstring>
@@ -35,7 +34,7 @@ class HttpHeaders {
 			string value;	// значение заголовка
 		};
 		// Заголовки http запроса
-		map <string, Header> headers;
+		vector <Header> headers;
 		/**
 		 * split Функция разделения строк на составляющие
 		 * @param str   строка для поиска
@@ -79,12 +78,12 @@ class HttpHeaders {
 		 * cbegin Метод получения начального итератора
 		 * @return начальный итератор
 		 */
-		map <string, Header>::const_iterator cbegin() const noexcept;
+		vector <Header>::const_iterator cbegin() const noexcept;
 		/**
 		 * cend Метод получения конечного итератора
 		 * @return конечный итератор
 		 */
-		map <string, Header>::const_iterator cend() const noexcept;
+		vector <Header>::const_iterator cend() const noexcept;
 		/**
 		 * ~HttpHeaders Деструктор
 		 */

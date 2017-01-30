@@ -1004,8 +1004,6 @@ void HttpProxy::do_request(void * ctx, bool flag){
 			http->set_timeout(TM_CLIENT);
 			// Очищаем объект ответа
 			http->response.clear();
-			// Очищаем заголовки прошлых ответов
-			// http->headers.clear();
 			// Получаем первый элемент из массива
 			auto httpData = http->parser->httpData.begin();
 			// Запоминаем данные объекта http запроса

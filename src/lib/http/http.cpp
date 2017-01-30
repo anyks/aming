@@ -117,8 +117,15 @@ void HttpHeaders::split(const string &str, const string delim, vector <string> &
  * @return     строка с данными заголовка
  */
 HttpHeaders::Header HttpHeaders::getHeader(string key){
-	// Проверяем существует ли такой заголовок
-	if(this->headers.count(key) > 0) return this->headers.find(key)->second;
+	// Переходим по всему массиву и ищем там нужный нам заголовок
+	for(u_int i = 0; i < this->headers.size(); i++){
+		// Если заголовок найден
+		if(::toCase(this->headers[i].head)
+		.compare(::toCase(key)) == 0){
+			// Выводим результат
+			return this->headers[i];
+		}
+	}
 	// Сообщаем что ничего не найдено
 	return {"", ""};
 }
@@ -135,10 +142,8 @@ void HttpHeaders::clear(){
  * @param val значение
  */
 void HttpHeaders::append(string key, string val){
-	// Создаем заголовок
-	Header header = {::trim(key), ::trim(val)};
 	// Запоминаем найденны параметры
-	this->headers.insert(pair <string, Header>(::toCase(header.head), header));
+	this->headers.push_back({::trim(key), ::trim(val)});
 }
 /**
  * create Метод создания объекта http заголовков
@@ -212,7 +217,7 @@ size_t HttpHeaders::size(){
  * cbegin Метод получения начального итератора
  * @return начальный итератор
  */
-map <string, HttpHeaders::Header>::const_iterator HttpHeaders::cbegin() const noexcept {
+vector <HttpHeaders::Header>::const_iterator HttpHeaders::cbegin() const noexcept {
 	// Выводим начальный итератор
 	return this->headers.cbegin();
 }
@@ -220,7 +225,7 @@ map <string, HttpHeaders::Header>::const_iterator HttpHeaders::cbegin() const no
  * cend Метод получения конечного итератора
  * @return конечный итератор
  */
-map <string, HttpHeaders::Header>::const_iterator HttpHeaders::cend() const noexcept {
+vector <HttpHeaders::Header>::const_iterator HttpHeaders::cend() const noexcept {
 	// Выводим конечный итератор
 	return this->headers.cend();
 }
@@ -229,7 +234,7 @@ map <string, HttpHeaders::Header>::const_iterator HttpHeaders::cend() const noex
  */
 HttpHeaders::~HttpHeaders(){
 	// Удаляем данные http заголовков
-	map <string, Header> ().swap(this->headers);
+	vector <Header> ().swap(this->headers);
 }
 /**
  * clear Метод очистки данных
@@ -313,11 +318,11 @@ vector <char> HttpData::getHttpRequest(){
 	// Добавляем остальные заголовки
 	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
 		// Фильтруем заголовки
-		if((it->first != "connection")
-		&& (it->first != "proxy-authorization")
-		&& (!smart || (smart && (it->first != "proxy-connection")))){
+		if((::toCase(it->head).compare("connection") != 0)
+		&& (::toCase(it->head).compare("proxy-authorization") != 0)
+		&& (!smart || (smart && (::toCase(it->head).compare("proxy-connection") != 0)))){
 			// Добавляем оставшиеся заголовки
-			request.append(it->second.head + string(": ") + it->second.value + string("\r\n"));
+			request.append(it->head + string(": ") + it->value + string("\r\n"));
 		}
 	}
 	// Устанавливаем название прокси
@@ -379,14 +384,14 @@ void HttpData::createHead(){
 	// Добавляем остальные заголовки
 	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
 		// Фильтруем заголовки
-		if((it->first != "host")
-		&& (it->first != "user-agent")
-		&& (it->first != "connection")
-		&& (it->first != "proxy-authorization")
-		&& (gzip || (!gzip && (it->first != "accept-encoding")))
-		&& (!smart || (smart && (it->first != "proxy-connection")))){
+		if((::toCase(it->head).compare("host") != 0)
+		&& (::toCase(it->head).compare("user-agent") != 0)
+		&& (::toCase(it->head).compare("connection") != 0)
+		&& (::toCase(it->head).compare("proxy-authorization") != 0)
+		&& (gzip || (!gzip && (::toCase(it->head).compare("accept-encoding") != 0)))
+		&& (!smart || (smart && (::toCase(it->head).compare("proxy-connection") != 0)))){
 			// Добавляем оставшиеся заголовки
-			this->request.append(it->second.head + string(": ") + it->second.value + string("\r\n"));
+			this->request.append(it->head + string(": ") + it->value + string("\r\n"));
 		}
 	}
 	// Устанавливаем название прокси
