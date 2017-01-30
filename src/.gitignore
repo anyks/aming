@@ -1,0 +1,5 @@
+./anyks
+./anyks/*
+*~
+.DS_Store
+./bin

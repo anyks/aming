@@ -4,7 +4,7 @@
 // Go to the project home page for more info:
 //
 // https://github.com/benhoyt/inih
-#include "ini.h"
+#include "ini/ini.h"
 
 using namespace std;
 

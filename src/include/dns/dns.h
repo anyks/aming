@@ -20,7 +20,7 @@
 #include <event2/dns.h>
 #include <event2/util.h>
 #include <event2/event.h>
-#include "../log/log.h"
+#include "log/log.h"
 
 // Устанавливаем область видимости
 using namespace std;

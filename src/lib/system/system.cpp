@@ -6,7 +6,7 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
 
-#include "system.h"
+#include "system/system.h"
 
 // Устанавливаем область видимости
 using namespace std;

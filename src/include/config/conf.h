@@ -15,7 +15,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include "../ini/ini.h"
+#include "ini/ini.h"
 
 // Данные приложения
 #define APP_NAME "ANYKS"

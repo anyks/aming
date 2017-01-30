@@ -13,9 +13,9 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
-#include "../os/os.h"
-#include "../log/log.h"
-#include "../config/conf.h"
+#include "os/os.h"
+#include "log/log.h"
+#include "config/conf.h"
 
 // Устанавливаем область видимости
 using namespace std;

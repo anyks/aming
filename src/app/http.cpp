@@ -432,21 +432,21 @@ int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int i
 		// Выходим
 		return -1;
 	}
-// Если это Linux
-#ifdef __linux__ || __FreeBSD__
-	// Время через которое происходит проверка подключения
-	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int))){
-		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_KEEPIDLE option on socket %d", fd);
-		// Выходим
-		return -1;
-	}
-// Если это FreeBSD или MacOS X
-#elif __APPLE__ || __MACH__
+// Если это MacOS X
+#ifdef __APPLE__
 	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(int))){
 		// Выводим в лог информацию
 		log->write(LOG_ERROR, "cannot set TCP_KEEPALIVE option on socket %d", fd);
+		// Выходим
+		return -1;
+	}
+// Если это FreeBSD или Linux
+#elif __linux__ || __FreeBSD__
+	// Время через которое происходит проверка подключения
+	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int))){
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, "cannot set TCP_KEEPIDLE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}

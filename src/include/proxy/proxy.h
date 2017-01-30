@@ -19,8 +19,8 @@
 #include <sys/signal.h>
 #include <sys/resource.h>
 #include <event2/event.h>
-#include "../system/system.h"
-#include "../../proxy/http.h"
+#include "system/system.h"
+#include "http.h"
 
 // Устанавливаем область видимости
 using namespace std;

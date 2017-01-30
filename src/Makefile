@@ -1,19 +1,70 @@
-# Define compiler
-CXX=clang++
+# ПРАВИЛО СБОРКИ ПРОКСИ СЕРВЕРА ANYKS
+#
+#	автор:				Юрий Николаевич Лобарев
+#	skype:				efrantick
+#	телефон:			+7(920)672-33-22
+#	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
+#
 
-# Compiler flags
-CXXFLAGS=-Wall -Werror=vla -O3 -pedantic -ggdb -g -std=c++11 -lz -lpthread /usr/local/opt/libevent/lib/libevent.a
+# Определяем тип операционной системы
+OS := $(shell uname -s)
 
-# Build target executable
-INCLUDES=/usr/local/include
-TARGET=./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./anyks.cpp
+# Если это MacOS X
+ifeq ($(OS), Darwin)
+	# Сторонние модули
+	LIBS =	-lz \
+			-lpthread \
+			/usr/local/opt/libevent/lib/libevent.a
+endif
 
-all: $(TARGET)
+# Если это FreeBSD
+ifeq ($(OS), FreeBSD)
+	# Сторонние модули
+	LIBS =	-lz \
+			-lpthread \
+			/usr/local/lib/libevent.a
+endif
 
-$(TARGET): $(CXX) $(CXXFLAGS) -I$(INCLUDES) -o $(TARGET)
+# Если это Linux
+ifeq ($(OS), Linux)
+	# Сторонние модули
+	LIBS =	-lm \
+			-pthread \
+			/usr/lib/x86_64-linux-gnu/libevent.a \
+			/usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a \
+			/usr/lib/x86_64-linux-gnu/libz.a \
+			/usr/lib/x86_64-linux-gnu/libm.a
+endif
 
-clean: $(RM) $(TARGET)
+# Компилятор
+CC = g++
 
+# Конфигурация сборки
+# -Wextra (Варнинги по мелочи)
+CONFIG = -Wall -Wpedantic -Werror=vla -Wno-unused-result -O3 -ggdb -g -std=c++11
 
-#g++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./lib/ini/INIReader.cpp ./lib/ini/ini.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
-#clang++ -Wall -O3 -pedantic -ggdb -g -std=c++11 -Werror=vla -lz -lpthread -o ./bin/http ./proxy/http.cpp ./lib/http/http.cpp ./lib/base64/base64.cpp ./lib/log/log.cpp ./lib/osopt/osopt.cpp ./anyks.cpp -I/usr/local/include /usr/local/opt/libevent/lib/libevent.a
+# Заголовочные файлы
+INCLUDE =	-I/usr/include \
+			-I/usr/local/include \
+			-I./include \
+			-I./app
+
+# Код для сборки
+SOURCES =	./anyks.cpp \
+			$(shell find ./app/*.cpp) \
+			$(shell find ./lib/*/*.cpp)
+
+# Бинарный файл
+BIN = ./bin/http
+
+# Правило сборки
+all:
+	mkdir -p ./bin && $(CC) $(CONFIG) $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+
+# Правило запуска
+start:
+	./bin/http -c ./config.ini
+
+# Правило очистки
+clean:
+	rm -rf ./bin

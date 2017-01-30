@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
-#include "../config/conf.h"
+#include "config/conf.h"
 
 // Устанавливаем область видимости
 using namespace std;

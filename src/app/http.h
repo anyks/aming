@@ -26,9 +26,9 @@
 #include <event2/listener.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
-#include "../lib/http/http.h"
-#include "../lib/system/system.h"
-#include "../lib/dns/dns.h"
+#include "http/http.h"
+#include "system/system.h"
+#include "dns/dns.h"
 
 // Устанавливаем область видимости
 using namespace std;

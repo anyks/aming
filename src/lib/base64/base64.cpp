@@ -1,4 +1,4 @@
-/* 
+/*
    base64.cpp and base64.h
 
    Copyright (C) 2004-2008 René Nyffenegger
@@ -24,9 +24,8 @@
    René Nyffenegger rene.nyffenegger@adp-gmbh.ch
 
 */
-
-#include "base64.h"
 #include <iostream>
+#include "base64/base64.h"
 
 static const std::string base64_chars = 
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
