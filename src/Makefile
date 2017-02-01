@@ -9,16 +9,22 @@
 # Определяем тип операционной системы
 OS := $(shell uname -s)
 
-# Если это MacOS X
+# Если это MacOS X (Сборка через make)
 ifeq ($(OS), Darwin)
+	# Компилятор
+	CC = clang++
+
 	# Сторонние модули
 	LIBS =	-lz \
 			-lpthread \
 			/usr/local/opt/libevent/lib/libevent.a
 endif
 
-# Если это FreeBSD
+# Если это FreeBSD (Сборка через gmake)
 ifeq ($(OS), FreeBSD)
+	# Компилятор
+	CC = clang++
+
 	# Сторонние модули
 	LIBS =	-lz \
 			-lpthread \
@@ -27,6 +33,9 @@ endif
 
 # Если это Linux
 ifeq ($(OS), Linux)
+	# Компилятор
+	CC = gcc
+
 	# Сторонние модули
 	LIBS =	-lm \
 			-pthread \
@@ -35,9 +44,6 @@ ifeq ($(OS), Linux)
 			/usr/lib/x86_64-linux-gnu/libz.a \
 			/usr/lib/x86_64-linux-gnu/libm.a
 endif
-
-# Компилятор
-CC = g++
 
 # Конфигурация сборки
 # -Wextra (Варнинги по мелочи)
