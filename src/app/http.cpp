@@ -24,7 +24,7 @@ inline size_t Connects::get(){
  */
 inline bool Connects::end(){
 	// Если количество подключений меньше 1 то сообщаем об этом
-	return !(this->connects > 0);
+	return (this->connects < 1);
 }
 /**
  * inc Метод инкреминации количества подключений
@@ -91,12 +91,12 @@ inline void BufferHttpProxy::unlock(){
  * @param flag флаг подключения или отключения клиента
  */
 void BufferHttpProxy::appconn(const bool flag){
+	// Выполняем захват мютекса
+	this->lock();
 	// Если такое подключение найдено
 	if((*this->connects).count(this->client.ip) > 0){
 		// Получаем объект текущего коннекта
-		Connects * connect = (*this->connects).find(this->client.ip)->second;
-		// Выполняем захват мютекса
-		this->lock_thread.lock();
+		Connects * connect = ((*this->connects).find(this->client.ip)->second).get();
 		// Если нужно добавить подключение
 		if(flag) connect->inc();
 		// Если нужно удалить подключение
@@ -106,22 +106,17 @@ void BufferHttpProxy::appconn(const bool flag){
 			// Отправляем сигнал
 			connect->signal();
 		}
-		// Выполняем разблокировку мютекса
-		this->lock_thread.unlock();
 		// Проверяем есть ли еще подключения
-		if(connect->end()){
-			// Удаляем объект подключения
-			delete connect;
-			// Удаляем само подключение из списка подключений
-			(*this->connects).erase(this->client.ip);
-		}
+		if(connect->end()) (*this->connects).erase(this->client.ip);
 	// Если нужно добавить подключение
 	} else if(flag){
 		// Создаем объект подключения
-		Connects * connect = new Connects;
+		unique_ptr <Connects> connect(new Connects);
 		// Добавляем в список новое подключение
-		(*this->connects).insert(pair <string, Connects *> (this->client.ip, connect));
+		(*this->connects).insert(pair <string, unique_ptr <Connects>> (this->client.ip, move(connect)));
 	}
+	// Выполняем разблокировку мютекса
+	this->unlock();
 }
 /**
  * free_socket Метод отключения сокета
@@ -160,7 +155,7 @@ void BufferHttpProxy::blockconnect(){
 	// Если такое подключение найдено
 	if((*this->connects).count(this->client.ip) > 0){
 		// Получаем объект текущего коннекта
-		Connects * connect = (*this->connects).find(this->client.ip)->second;
+		Connects * connect = ((*this->connects).find(this->client.ip)->second).get();
 		// Запоминаем количество подключений пользователя
 		this->myconns = connect->get();
 		// Если количество подключений достигло предела
@@ -269,7 +264,9 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	// Создаем новую базу событий
 	this->base = event_base_new();
 	// Создаем объект для работы с http заголовками
-	this->parser = new Http(this->proxy->config->proxy.name, this->proxy->config->options);
+	Http parser(this->proxy->config->proxy.name, this->proxy->config->options);
+	// Запоминаем данные http парсера
+	this->parser = parser;
 	// Определяем тип подключения
 	switch(this->proxy->config->proxy.ipver){
 		// Для протокола IPv4
@@ -286,8 +283,6 @@ BufferHttpProxy::~BufferHttpProxy(){
 	close();
 	// Удаляем dns сервер
 	delete this->dns;
-	// Удаляем парсер
-	delete this->parser;
 	// Очищаем объект базы событий
 	event_base_free(this->base);
 }
@@ -876,7 +871,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 	// Если подключение не передано
 	if(http != NULL){
 		// Получаем первый элемент из массива
-		auto httpData = http->parser->httpData.begin();
+		auto httpData = http->parser.httpData.begin();
 		// Если дарес домена найден
 		if(!ip.empty()){
 			// Определяем connect прокси разрешен
@@ -937,9 +932,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 						// Отправляем серверу сообщение
 						bufferevent_write(http->events.server, http->response.data(), http->response.size());
 						// Удаляем объект подключения
-						http->parser->httpData.erase(httpData);
+						http->parser.httpData.erase(httpData);
 						// Если данные в массиве существуют тогда продолжаем загрузку
-						if(!http->parser->httpData.empty()) do_request(http, true);
+						if(!http->parser.httpData.empty()) do_request(http, true);
 						// Очищаем объект http данных если запросов больше нет
 						else http->httpData.clear();
 						// Выходим
@@ -982,7 +977,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			// Отправляем клиенту сообщение
 			bufferevent_write(http->events.client, http->response.data(), http->response.size());
 			// Удаляем объект подключения
-			http->parser->httpData.erase(httpData);
+			http->parser.httpData.erase(httpData);
 		}
 	}
 	// Выходим
@@ -999,13 +994,13 @@ void HttpProxy::do_request(void * ctx, bool flag){
 	// Если подключение не передано
 	if(http != NULL){
 		// Если данные еще не заполнены, но они есть в массиве
-		if(!http->parser->httpData.empty() && (!http->httpData.size() || flag)){
+		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
 			// Очищаем таймеры для клиента
 			http->set_timeout(TM_CLIENT);
 			// Очищаем объект ответа
 			http->response.clear();
 			// Получаем первый элемент из массива
-			auto httpData = http->parser->httpData.begin();
+			auto httpData = http->parser.httpData.begin();
 			// Запоминаем данные объекта http запроса
 			http->httpData = * httpData;
 			// Выполняем ресолв домена
@@ -1071,7 +1066,7 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
 			// Выполняем парсинг данных
-			size_t size = http->parser->parse(buffer, len);
+			size_t size = http->parser.parse(buffer, len);
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);
 			// Удаляем буфер данных

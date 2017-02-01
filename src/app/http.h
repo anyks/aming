@@ -162,6 +162,8 @@ class BufferHttpProxy {
 		bool auth = false;
 		// Количество моих подключений к прокси
 		u_int myconns = 1;
+		// Объект парсера
+		Http parser;
 		// Параметры подключившегося клиента
 		Client client;
 		// Параметры удаленного сервера
@@ -176,8 +178,6 @@ class BufferHttpProxy {
 		HttpData httpData;
 		// Ответ системы
 		HttpQuery response;
-		// Объект парсера
-		Http * parser = NULL;
 		// Параметры прокси сервера
 		System * proxy = NULL;
 		// Создаем объект dns ресолвера
@@ -185,7 +185,7 @@ class BufferHttpProxy {
 		// База событий
 		struct event_base * base = NULL;
 		// Список подключений к прокси серверу
-		map <string, Connects *> * connects = NULL;
+		map <string, unique_ptr <Connects>> * connects = NULL;
 		/**
 		 * blockconnect Метод блокировки лишних коннектов
 		 */
@@ -232,7 +232,7 @@ class BufferHttpProxy {
 class HttpProxy {
 	private:
 		// Список подключений к прокси серверу
-		map <string, Connects *> connects;
+		map <string, unique_ptr <Connects>> connects;
 		// Идентификаторы процессов
 		pid_t * pids = NULL;
 		// Параметры прокси сервера
