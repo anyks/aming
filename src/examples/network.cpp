@@ -60,6 +60,15 @@ class IPdata {
 		}
 };
 /**
+ * NLdata Структура содержащая параметры локальных и запрещенных сетей
+ */
+struct NLdata {
+	string ip;		// ip адрес сети
+	string network;	// Адрес сети
+	u_int mask;		// Маска сети
+	bool allow;		// Разрешен (true - разрешен, false - запрещен)
+};
+/**
  * NKdata Структура содержащая данные подключения
  */
 struct NKdata {
@@ -85,6 +94,33 @@ struct NTdata {
 	u_long maxnwk;		// Число возможных адресов сетей
 	u_long maxhst;		// Число возможных адресов хостов
 	bool notEmpty;		// Структура заполнена или нет
+};
+// Набор локальных сетей
+vector <NLdata> locals = {
+	{"0.0.0.0", "0.0.0.0", 8, false},
+	{"0.0.0.0", "0.0.0.0", 32, false},
+	{"100.64.0.0", "100.64.0.0", 10, false},
+	{"169.254.0.0", "169.254.0.0", 16, false},
+	{"224.0.0.0", "224.0.0.0", 4, false},
+	{"224.0.0.0", "224.0.0.0", 24, false},
+	{"224.0.1.0", "224.0.0.0", 8, false},
+	{"239.0.0.0", "239.0.0.0", 8, false},
+	{"240.0.0.0", "240.0.0.0", 4, false},
+	{"255.255.255.255", "255.255.255.255", 32, false},
+	{"10.0.0.0", "10.0.0.0", 8, true},
+	{"127.0.0.0", "127.0.0.0", 8, true},
+	{"172.16.0.0", "172.16.0.0", 12, true},
+	{"192.0.0.0", "192.0.0.0", 24, true},
+	{"192.0.0.0", "192.0.0.0", 29, true},
+	{"192.0.0.170", "192.0.0.170", 32, true},
+	{"192.0.0.171", "192.0.0.171", 32, true},
+	{"192.0.2.0", "192.0.2.0", 24, true},
+	{"192.88.99.0", "192.88.99.0", 24, true},
+	{"192.88.99.1", "192.88.99.1", 32, true},
+	{"192.168.0.0", "192.168.0.0", 16, true},
+	{"198.51.100.0", "198.51.100.0", 24, true},
+	{"198.18.0.0", "198.18.0.0", 15, true},
+	{"203.0.113.0", "203.0.113.0", 24, true}
 };
 // Набор масок подсетей
 vector <NTdata> masks = {
@@ -240,7 +276,7 @@ bool checkMask(IPdata ip, IPdata mask){
 		// Определяем значение маски сети
 		u_int msk = mask.get()[i];
 		// Проверяем соответствует ли ip адрес маске
-		if(msk && (ip.get()[i] >= msk)) return false;
+		if(msk && (ip.get()[i] > msk)) return false;
 	}
 	// Сообщаем что все удачно
 	return true;
@@ -289,7 +325,7 @@ IPdata imposeMask(IPdata ip, IPdata mask){
 		// Получаемд анные ip адреса
 		ptr[i] = ip.get()[i];
 		// Накладываем маску
-		if(ptr[i] >= mask.get()[i]) ptr[i] = 0;
+		if(ptr[i] > mask.get()[i]) ptr[i] = 0;
 	}
 	// Добавляем данные в объект
 	network.set(ptr[0], ptr[1], ptr[2], ptr[3]);
@@ -342,17 +378,64 @@ NKdata getNetwork(string str){
 	// Выводим результат
 	return result;
 }
+/**
+ * isLocal Метод проверки на то является ли ip адрес локальным
+ * @param  ip адрес подключения ip
+ * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
+ */
+int isLocal(const string ip){
+	// Получаем данные ip адреса
+	IPdata ipdata = getDataIp(ip);
+	// Переходим по всему массиву адресов
+	for(u_int i = 0; i < locals.size(); i++){
+		// Если ip адрес соответствует маске
+		if(checkMaskByNumber(ip, locals[i].mask)){
+			// Получаем маску каждой сети
+			string mask = getMaskByNumber(locals[i].mask).mask;
+			// Оцифровываем данные маски
+			IPdata maskdata = getDataIp(mask);
+			// Накладываем маску на ip адрес
+			IPdata networkdata = imposeMask(ipdata, maskdata);
+			// Накладываем маску на ip адрес из списка
+			if(networkdata.getStr()
+			.compare(locals[i].network) == 0){
+				// Проверяем является ли адрес запрещенным
+				if(locals[i].allow) return 0;
+				// Сообщаем что адрес запрещен
+				else return -1;
+			}
+		}
+	}
+	// Сообщаем что адрес глобальный
+	return 1;
+}
 
 int main(int len, char * buff[]){
-	
+	/*
 	NKdata data = getNetwork("46.39.231.203/255.255.225.0");
 
 	for(u_int i = 0; i < data.network.size(); i++){
-		cout << " +++++++++++ " << data.network.get()[i] << endl;
+		cout << " +++++++++++0 " << data.network.get()[i] << endl;
 	}
 
 	cout << " =========1 " << (int) checkMaskByString("46.39.231.203", "255.255.252.0") << endl;
 	cout << " =========2 " << (int) checkMaskByNumber("192.168.1.200", 25) << endl;
+	*/
+	/*
+	// Получаем данные ip адреса
+	IPdata ipdata = getDataIp("192.88.99.1");
+	// Получаем маску каждой сети
+	string mask = getMaskByNumber(32).mask;
+	// Оцифровываем данные маски
+	IPdata maskdata = getDataIp(mask);
+	// Накладываем маску на ip адрес
+	IPdata networkdata = imposeMask(ipdata, maskdata);
+
+	cout << " +++++++++++++++++++++ " << networkdata.getStr() << endl;
+	*/
+	
+	cout << " +++++++++++1 " << isLocal("194.186.207.116") << endl;
+	
 
 	/*
 	// Маска 1

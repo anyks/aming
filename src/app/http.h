@@ -258,6 +258,13 @@ class HttpProxy {
 		 */
 		static string get_ip(int family, void * ctx);
 		/**
+		 * socket_nosigpipe Функция установки отключения сигнала записи в оборванное подключение
+		 * @param  fd   файловый дескриптор (сокет)
+		 * @param  log  указатель на объект ведения логов
+		 * @return      результат работы функции
+		 */
+		static int socket_nosigpipe(evutil_socket_t fd, LogApp * log);
+		/**
 		 * socket_nonblocking Функция установки неблокирующего сокета
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов

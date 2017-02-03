@@ -343,6 +343,25 @@ string HttpProxy::get_ip(int family, void * ctx){
 	return "";
 }
 /**
+ * socket_nosigpipe Функция установки отключения сигнала записи в оборванное подключение
+ * @param  fd   файловый дескриптор (сокет)
+ * @param  log  указатель на объект ведения логов
+ * @return      результат работы функции
+ */
+int HttpProxy::socket_nosigpipe(evutil_socket_t fd, LogApp * log){
+	// Устанавливаем параметр
+	int nosigpipe = 1;
+	// Устанавливаем SO_NOSIGPIPE
+	if(setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe)) < 0){
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, "cannot set SO_NOSIGPIPE option on socket %d", fd);
+		// Выходим
+		return -1;
+	}
+	// Все удачно
+	return 0;
+}
+/**
  * socket_nonblocking Функция установки неблокирующего сокета
  * @param  fd   файловый дескриптор (сокет)
  * @param  log  указатель на объект ведения логов
@@ -628,6 +647,8 @@ int HttpProxy::connect_server(void * ctx){
 			socket_nonblocking(http->sockets.server, http->proxy->log);
 			// Устанавливаем разрешение на повторное использование сокета
 			socket_reuseable(http->sockets.server, http->proxy->log);
+			// Отключаем сигнал записи в оборванное подключение
+			socket_nosigpipe(http->sockets.server, http->proxy->log);
 			// Если подключение постоянное
 			if(http->client.alive){
 				// Отключаем алгоритм Нейгла для сервера и клиента
@@ -1162,6 +1183,8 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 		socket_nonblocking(socket, proxy->server->log);
 		// Устанавливаем разрешение на повторное использование сокета
 		socket_reuseable(socket, proxy->server->log);
+		// Отключаем сигнал записи в оборванное подключение
+		socket_nosigpipe(socket, proxy->server->log);
 		// Выводим в лог сообщение
 		proxy->server->log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), socket);
 		// Создаем новый объект подключения
@@ -1255,6 +1278,8 @@ evutil_socket_t HttpProxy::create_server(){
 	socket_reuseable(sock, this->server->log);
 	// Устанавливаем неблокирующий режим
 	socket_tcpnodelay(sock, this->server->log);
+	// Отключаем сигнал записи в оборванное подключение
+	socket_nosigpipe(sock, this->server->log);
 	// Выполняем биндинг сокета
 	if(::bind(sock, sin, sinlen) < 0){
 		// Выводим в консоль информацию
