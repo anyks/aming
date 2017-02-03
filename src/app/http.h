@@ -26,9 +26,10 @@
 #include <event2/listener.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
+#include "dns/dns.h"
+#include "nwk/nwk.h"
 #include "http/http.h"
 #include "system/system.h"
-#include "dns/dns.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -311,6 +312,13 @@ class HttpProxy {
 		 * @return    результат проверки подлинности
 		 */
 		static bool check_auth(void * ctx);
+		/**
+		 * isallow_remote_connect Функция проверяет разрешено ли подключение к удаленному серверу
+		 * @param  ip  ip адрес удаленного сервера
+		 * @param  ctx объект с данными подключения
+		 * @return     результат проверки
+		 */
+		static bool isallow_remote_connect(const string ip, void * ctx);
 		/**
 		 * connect_server Функция создания сокета для подключения к удаленному серверу
 		 * @param ctx объект входящих данных

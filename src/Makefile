@@ -47,7 +47,7 @@ endif
 
 # Конфигурация сборки
 # -Wextra (Варнинги по мелочи)
-CONFIG = -Wall -Wpedantic -Werror=vla -Wno-unused-result -O2 -ggdb -g -std=c++11
+CONFIG = -Wall -Wpedantic -Werror=vla -Wno-unused-result -O3 -ggdb -g -std=c++11
 
 # Заголовочные файлы
 INCLUDE =	-I/usr/include \

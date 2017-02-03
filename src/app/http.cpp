@@ -537,6 +537,32 @@ bool HttpProxy::check_auth(void * ctx){
 	return false;
 }
 /**
+ * isallow_remote_connect Функция проверяет разрешено ли подключение к удаленному серверу
+ * @param  ip  ip адрес удаленного сервера
+ * @param  ctx объект с данными подключения
+ * @return     результат проверки
+ */
+bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
+	// Если подключение не передано
+	if(http != NULL){
+		// Создаем объект сети
+		Network nwk;
+		// Проверяем ip адрес
+		switch(nwk.isLocal(ip)){
+			// Если это запрещенный ip адрес
+			case -1: return false;
+			// Если это локальный адрес
+			case 0: return http->proxy->config->proxy.reverse;
+			// Если это доступ во внешнюю сеть
+			case 1: return http->proxy->config->proxy.forward;
+		}
+	}
+	// Запрещаем подключение
+	return false;
+}
+/**
  * connect_server Функция создания сокета для подключения к удаленному серверу
  * @param ctx объект входящих данных
  * @return    результат подключения
@@ -895,82 +921,86 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 		auto httpData = http->parser.httpData.begin();
 		// Если дарес домена найден
 		if(!ip.empty()){
-			// Определяем connect прокси разрешен
-			bool conn_enabled = (http->proxy->config->options & OPT_CONNECT);
-			// Если авторизация не прошла
-			if(!http->auth) http->auth = check_auth(http);
-			// Если нужно запросить пароль
-			if(!http->auth && (http->httpData.getLogin().empty()
-			|| http->httpData.getPassword().empty())){
-				// Формируем ответ клиенту
-				http->response = http->httpData.requiredAuth();
-			// Сообщаем что авторизация не удачная
-			} else if(!http->auth) {
-				// Формируем ответ клиенту
-				http->response = http->httpData.faultAuth();
-			// Если авторизация прошла
-			} else {
-				// Получаем порт сервера
-				u_int port = http->httpData.getPort();
-				// Если хост и порт сервера не совпадают тогда очищаем данные
-				if((http->events.server != NULL)
-				&& ((http->server.host.compare(ip) != 0)
-				|| (http->server.port != port))) http->close_server();
-				// Запоминаем хост и порт сервера
-				http->server.host = ip;
-				http->server.port = port;
-				// Выполняем подключение к удаленному серверу
-				int connect = connect_server(http);
-				// Если сокет существует
-				if(connect > 0){
-					// Заполняем структуру клиента
-					http->client.alive		= http->httpData.isAlive();
-					http->client.https		= http->httpData.isHttps();
-					http->client.connect	= http->httpData.isConnect();
-					http->client.useragent	= http->httpData.getUseragent();
-					// Определяем порт, если это метод connect
-					if(http->client.connect && (conn_enabled || http->client.https))
-						// Формируем ответ клиенту
-						http->response = http->httpData.authSuccess();
-					// Если connect разрешен только для https подключений
-					else if(!conn_enabled && http->client.connect)
-						// Сообращем что подключение запрещено
-						http->response = http->httpData.faultConnect();
-					// Иначе делаем запрос на получение данных
+			// Если подключение к указанному серверу разрешено
+			if(isallow_remote_connect(ip, http)){
+				// Определяем connect прокси разрешен
+				bool conn_enabled = (http->proxy->config->options & OPT_CONNECT);
+				// Если авторизация не прошла
+				if(!http->auth) http->auth = check_auth(http);
+				// Если нужно запросить пароль
+				if(!http->auth && (http->httpData.getLogin().empty()
+				|| http->httpData.getPassword().empty())){
+					// Формируем ответ клиенту
+					http->response = http->httpData.requiredAuth();
+				// Сообщаем что авторизация не удачная
+				} else if(!http->auth) {
+					// Формируем ответ клиенту
+					http->response = http->httpData.faultAuth();
+				// Если авторизация прошла
+				} else {
+					// Получаем порт сервера
+					u_int port = http->httpData.getPort();
+					// Если хост и порт сервера не совпадают тогда очищаем данные
+					if((http->events.server != NULL)
+					&& ((http->server.host.compare(ip) != 0)
+					|| (http->server.port != port))) http->close_server();
+					// Запоминаем хост и порт сервера
+					http->server.host = ip;
+					http->server.port = port;
+					// Выполняем подключение к удаленному серверу
+					int connect = connect_server(http);
+					// Если сокет существует
+					if(connect > 0){
+						// Заполняем структуру клиента
+						http->client.alive		= http->httpData.isAlive();
+						http->client.https		= http->httpData.isHttps();
+						http->client.connect	= http->httpData.isConnect();
+						http->client.useragent	= http->httpData.getUseragent();
+						// Определяем порт, если это метод connect
+						if(http->client.connect && (conn_enabled || http->client.https))
+							// Формируем ответ клиенту
+							http->response = http->httpData.authSuccess();
+						// Если connect разрешен только для https подключений
+						else if(!conn_enabled && http->client.connect)
+							// Сообращем что подключение запрещено
+							http->response = http->httpData.faultConnect();
+						// Иначе делаем запрос на получение данных
+						else {
+							// Указываем что нужно отключится сразу после отправки запроса
+							if(!http->client.alive) http->httpData.setClose();
+							// Формируем запрос на сервер
+							http->response = http->httpData.getRequest();
+							// Если это не постоянное подключение
+							if(!http->client.alive)
+								// Устанавливаем таймаут на чтение и запись
+								http->set_timeout(TM_SERVER, true, true);
+							// Устанавливаем таймаут только на запись
+							else http->set_timeout(TM_SERVER, false, true);
+							// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+							http->sleep(http->response.size(), false);
+							// Отправляем серверу сообщение
+							bufferevent_write(http->events.server, http->response.data(), http->response.size());
+							// Удаляем объект подключения
+							http->parser.httpData.erase(httpData);
+							// Если данные в массиве существуют тогда продолжаем загрузку
+							if(!http->parser.httpData.empty()) do_request(http, true);
+							// Очищаем объект http данных если запросов больше нет
+							else http->httpData.clear();
+							// Выходим
+							return;
+						}
+					// Если подключение не удачное то сообщаем об этом
+					} else if(connect == 0) http->response = http->httpData.faultConnect();
+					// Если подключение удалено, выходим
 					else {
-						// Указываем что нужно отключится сразу после отправки запроса
-						if(!http->client.alive) http->httpData.setClose();
-						// Формируем запрос на сервер
-						http->response = http->httpData.getRequest();
-						// Если это не постоянное подключение
-						if(!http->client.alive)
-							// Устанавливаем таймаут на чтение и запись
-							http->set_timeout(TM_SERVER, true, true);
-						// Устанавливаем таймаут только на запись
-						else http->set_timeout(TM_SERVER, false, true);
-						// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-						http->sleep(http->response.size(), false);
-						// Отправляем серверу сообщение
-						bufferevent_write(http->events.server, http->response.data(), http->response.size());
-						// Удаляем объект подключения
-						http->parser.httpData.erase(httpData);
-						// Если данные в массиве существуют тогда продолжаем загрузку
-						if(!http->parser.httpData.empty()) do_request(http, true);
-						// Очищаем объект http данных если запросов больше нет
-						else http->httpData.clear();
+						// Закрываем подключение
+						http->close();
 						// Выходим
 						return;
 					}
-				// Если подключение не удачное то сообщаем об этом
-				} else if(connect == 0) http->response = http->httpData.faultConnect();
-				// Если подключение удалено, выходим
-				else {
-					// Закрываем подключение
-					http->close();
-					// Выходим
-					return;
 				}
-			}
+			// Если подключение к указанному серверу запрещено
+			} else http->response = http->httpData.faultAuth();
 		// Если домен не найден
 		} else {
 			// Выводим в лог сообщение
