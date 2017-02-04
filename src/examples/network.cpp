@@ -544,6 +544,150 @@ string getLowIp6(const string ip){
 	// Выполняем преобразование второго порядка
 	return getLow2Ip6(str);
 }
+/**
+ * setLow2Ip6 Функция восстановления IPv6 адреса второго порядка
+ * @param  ip адрес интернет протокола версии 6
+ * @return    восстановленный вид ip адреса второго порядка
+ */
+string setLow2Ip6(const string ip){
+	// Результирующий ip адрес
+	string ipv6;
+	// Копируем ip адрес
+	string str = ip;
+	// Ищем строку еще раз
+	size_t pos = str.find("::");
+	// Если позиция найдена
+	if(pos != string::npos){
+		// Массив найденных элементов
+		vector <string> fstr;
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("([ABCDEFabcdef\\d]{1,4})", regex::ECMAScript | regex::icase);
+		// Выполняем удаление из ip адреса хексетов
+		while(true){
+			// Выполняем поиск ip адреса
+			regex_search(str, match, e);
+			// Если данные найдены
+			if(!match.empty()){
+				// Копируем полученные данные
+				string delim = match[1].str();
+				// Ищем строку еще раз
+				size_t pos = str.find(delim);
+				// Если позиция найдена
+				if(pos != string::npos){
+					// Удаляем из строки найденный символ
+					str.replace(pos, delim.length(), "");
+				}
+				// Добавляем в массив найденные данные
+				fstr.push_back(delim);
+			// Если хексет не найден то выходим
+			} else break;
+		}
+		// Определяем количество хексетов
+		u_int lhex = fstr.size();
+		// Если количество хексетов меньше 8 то определяем сколько не хватает
+		if(lhex < 8){
+			// Маска
+			string mask = ":";
+			// Составляем маску
+			for(u_int i = 0; i < (8 - lhex); i++) mask.append("0:");
+			// Копируем полученные данные
+			ipv6 = ip;
+			// Удаляем из строки найденный символ
+			ipv6.replace(pos, 2, mask);
+			// Устанавливаем правило регулярного выражения
+			regex e("(?:^\\[?\\:|\\:\\]?$)");
+			// Заменяем найденные не верные элементы
+			ipv6 = regex_replace(ipv6, e, "");
+		}
+	}
+	// Выводим результат
+	return ipv6;
+}
+/**
+ * setLow1Ip6 Функция восстановления IPv6 адреса первого порядка
+ * @param  ip адрес интернет протокола версии 6
+ * @return    восстановленный вид ip адреса первого порядка
+ */
+string setLow1Ip6(const string ip){
+	// Результирующий ip адрес
+	string ipv6;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"^\\[?([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
+		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
+		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
+		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})\\]?$",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск ip адреса
+	regex_search(ip, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Копируем ip адрес
+		string str = ip;
+		// Массив найденных элементов
+		vector <string> fstr;
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("([ABCDEFabcdef\\d]{1,4})", regex::ECMAScript | regex::icase);
+		// Выполняем удаление из ip адреса хексетов
+		while(true){
+			// Выполняем поиск ip адреса
+			regex_search(str, match, e);
+			// Если данные найдены
+			if(!match.empty()){
+				// Копируем полученные данные
+				string delim = match[1].str();
+				// Ищем строку еще раз
+				size_t pos = str.find(delim);
+				// Если позиция найдена
+				if(pos != string::npos){
+					// Удаляем из строки найденный символ
+					str.replace(pos, delim.length(), "");
+				}
+				// Добавляем в массив найденные данные
+				fstr.push_back(delim);
+			// Если хексет не найден то выходим
+			} else break;
+		}
+		// Размер массива хексетов
+		u_int len = fstr.size();
+		// Переходим по всему массиву
+		for(u_int i = 0; i < len; i++){
+			// Определяем длину хексета
+			u_int size = fstr[i].length();
+			// Если размер хексета меньше 4 то дописываем нули
+			if(size < 4){
+				// Дописываем столько нулей, сколько необходимо
+				for(u_int j = 0; j < (4 - size); j++) fstr[i] = (string("0") + fstr[i]);
+			}
+			// Формируем результат
+			ipv6.append(fstr[i]);
+			// Проверяем нужно ли добавить точку
+			if(i < (len - 1)) ipv6.append(":");
+		}
+	}
+	// Выводим результат
+	return ipv6;
+}
+/**
+ * setLowIp6 Функция восстановления IPv6 адреса
+ * @param  ip адрес интернет протокола версии 6
+ * @return    восстановленный вид ip адреса
+ */
+string setLowIp6(const string ip){
+	// Выполняем преобразование первого порядка
+	string str = setLow2Ip6(ip);
+	// Если строка не существует то присваиваем исходную
+	if(str.empty()) str = ip;
+	// Выполняем преобразование второго порядка
+	return setLow1Ip6(str);
+}
 
 
 int main(int len, char * buff[]){
@@ -572,7 +716,7 @@ int main(int len, char * buff[]){
 	
 	// cout << " +++++++++++1 " << getLow1Ip6("[FF80:0000:0000:0000:0123:1234:ABCD:EF12]") << endl;
 	
-	cout << " ============1 " << getLowIp6("2001:0DB8:AA10:0001:0000:0000:0000:00FB") << endl;
+	cout << " ============1 " << setLowIp6("[2001:DB0:0:123A::30]") << endl;
 
 	/*
 	// Маска 1
