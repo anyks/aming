@@ -92,19 +92,27 @@ inline void BufferHttpProxy::unlock(){
  * @return       данные подключения клиента
  */
 Connects * ClientConnects::get(const string client){
+	// Указатель на объект подключения
+	Connects * connect = NULL;
+	// Лочим мютекс
+	this->mtx.lock();
 	// Если такое подключение найдено
 	if(this->connects.count(client) > 0){
 		// Получаем объект текущего коннекта
-		return (this->connects.find(client)->second).get();
+		connect = (this->connects.find(client)->second).get();
 	}
+	// Разлочим мютекс
+	this->mtx.unlock();
 	// Сообщаем что ничего не найдено
-	return NULL;
+	return connect;
 }
 /**
  * add Метод добавления данных подключения клиента
  * @param client идентификатор клиента
  */
 void ClientConnects::add(const string client){
+	// Лочим мютекс
+	this->mtx.lock();
 	// Если такое подключение не найдено
 	if(this->connects.count(client) < 1){
 		// Создаем объект подключения
@@ -112,17 +120,25 @@ void ClientConnects::add(const string client){
 		// Добавляем в список новое подключение
 		this->connects.insert(pair <string, unique_ptr <Connects>> (client, move(connect)));
 	}
+	// Разлочим мютекс
+	this->mtx.unlock();
 }
 /**
  * rm Метод удаления данных подключения клиента
  * @param client идентификатор клиента
  */
 void ClientConnects::rm(const string client){
+	// Лочим мютекс
+	this->mtx.lock();
 	// Если такое подключение найдено
 	if(this->connects.count(client) > 0){
+		// Получаем итератор
+		auto it = this->connects.find(client);
 		// Если подключение найдено то удаляем его
-		this->connects.erase(client);
+		this->connects.erase(it);
 	}
+	// Разлочим мютекс
+	this->mtx.unlock();
 }
 /**
  * appconn Функция которая добавляет или удаляет в список склиента
@@ -877,6 +893,21 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		http->set_timeout(TM_CLIENT, true, true);
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
+
+
+
+		// Создаем буфер данных
+		char * buffer = new char[len];
+		// Копируем в буфер полученные данные
+		evbuffer_copyout(input, buffer, len);
+		
+		cout << " =================== " << buffer << endl;
+
+		// Удаляем буфер данных
+		delete [] buffer;
+
+
+
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 		http->sleep(len, true);
 		// Если заголовки менять не надо тогда просто обмениваемся данными

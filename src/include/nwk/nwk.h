@@ -45,6 +45,10 @@ class IPdata {
 		 * @return размер массива
 		 */
 		u_int size();
+		/**
+		 * IPdata Конструктор
+		 */
+		IPdata();
 };
 /**
  * NTdata Структура данных типов сетей

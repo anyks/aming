@@ -91,6 +91,8 @@ class Connects {
  */
 class ClientConnects {
 	private:
+		// Мютекс для блокировки потока
+		mutex mtx;
 		// Список подключений к прокси серверу
 		map <string, unique_ptr <Connects>> connects;
 	public:

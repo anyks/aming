@@ -56,6 +56,13 @@ u_int IPdata::size(){
 	return sizeof(this->ptr) / sizeof(u_int);
 }
 /**
+ * IPdata Конструктор
+ */
+IPdata::IPdata(){
+	// Запоминаем не существующий ip адрес
+	for(u_int i = 0; i < 4; i++) this->ptr[i] = 256;
+}
+/**
  * getMaskByNumber Функция получения маски из цифровых обозначений
  * @param  value цифровое обозначение маски
  * @return       объект с данными маски
@@ -281,28 +288,42 @@ NKdata Network::getNetwork(string str){
  * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
  */
 int Network::isLocal(const string ip){
-	// Получаем данные ip адреса
-	IPdata ipdata = getDataIp(ip);
-	// Переходим по всему массиву адресов
-	for(u_int i = 0; i < locals.size(); i++){
-		// Если ip адрес соответствует маске
-		if(checkMaskByNumber(ip, locals[i].mask)){
-			// Получаем маску каждой сети
-			string mask = getMaskByNumber(locals[i].mask).mask;
-			// Оцифровываем данные маски
-			IPdata maskdata = getDataIp(mask);
-			// Накладываем маску на ip адрес
-			IPdata networkdata = imposeMask(ipdata, maskdata);
-			// Накладываем маску на ip адрес из списка
-			if(networkdata.getStr()
-			.compare(locals[i].network) == 0){
-				// Проверяем является ли адрес запрещенным
-				if(locals[i].allow) return 0;
-				// Сообщаем что адрес запрещен
-				else return -1;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск ip адреса
+	regex_search(ip, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Получаем данные ip адреса
+		IPdata ipdata = getDataIp(ip);
+		// Переходим по всему массиву адресов
+		for(u_int i = 0; i < locals.size(); i++){
+			// Если ip адрес соответствует маске
+			if(checkMaskByNumber(ip, locals[i].mask)){
+				// Получаем маску каждой сети
+				string mask = getMaskByNumber(locals[i].mask).mask;
+				// Оцифровываем данные маски
+				IPdata maskdata = getDataIp(mask);
+				// Накладываем маску на ip адрес
+				IPdata networkdata = imposeMask(ipdata, maskdata);
+				// Накладываем маску на ip адрес из списка
+				if(networkdata.getStr()
+				.compare(locals[i].network) == 0){
+					// Проверяем является ли адрес запрещенным
+					if(locals[i].allow) return 0;
+					// Сообщаем что адрес запрещен
+					else return -1;
+				}
 			}
 		}
+		// Сообщаем что адрес глобальный
+		return 1;
 	}
-	// Сообщаем что адрес глобальный
-	return 1;
+	// Если это не ip адрес то запрещаем работу
+	return -1;
 }

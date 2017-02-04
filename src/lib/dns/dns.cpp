@@ -94,7 +94,7 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 		// Результат работы регулярного выражения
 		smatch match;
 		// Устанавливаем правило регулярного выражения
-		regex e("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", regex::ECMAScript | regex::icase);
+		regex e("^(?:\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\[[\\w\\:]+\\])$", regex::ECMAScript | regex::icase);
 		// Выполняем поиск протокола
 		regex_search(domain, match, e);
 		// Если данные найдены
