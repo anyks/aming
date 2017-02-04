@@ -87,6 +87,31 @@ class Connects {
 		Connects();
 };
 /**
+ * ClientConnects Класс содержащий данные подключения одного клиента
+ */
+class ClientConnects {
+	private:
+		// Список подключений к прокси серверу
+		map <string, unique_ptr <Connects>> connects;
+	public:
+		/**
+		 * get Метод получения данных подключения клиента
+		 * @param client идентификатор клиента
+		 * @return       данные подключения клиента
+		 */
+		Connects * get(const string client);
+		/**
+		 * add Метод добавления данных подключения клиента
+		 * @param client идентификатор клиента
+		 */
+		void add(const string client);
+		/**
+		 * rm Метод удаления данных подключения клиента
+		 * @param client идентификатор клиента
+		 */
+		void rm(const string client);
+};
+/**
  * BufferHttpProxy Класс для работы с данными прокси сервера
  */
 class BufferHttpProxy {
@@ -186,7 +211,7 @@ class BufferHttpProxy {
 		// База событий
 		struct event_base * base = NULL;
 		// Список подключений к прокси серверу
-		map <string, unique_ptr <Connects>> * connects = NULL;
+		ClientConnects * connects = NULL;
 		/**
 		 * blockconnect Метод блокировки лишних коннектов
 		 */
@@ -233,7 +258,7 @@ class BufferHttpProxy {
 class HttpProxy {
 	private:
 		// Список подключений к прокси серверу
-		map <string, unique_ptr <Connects>> connects;
+		ClientConnects connects;
 		// Идентификаторы процессов
 		pid_t * pids = NULL;
 		// Параметры прокси сервера

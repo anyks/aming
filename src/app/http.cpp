@@ -87,16 +87,54 @@ inline void BufferHttpProxy::unlock(){
 	this->lock_thread.unlock();
 }
 /**
+ * get Метод получения данных подключения клиента
+ * @param client идентификатор клиента
+ * @return       данные подключения клиента
+ */
+Connects * ClientConnects::get(const string client){
+	// Если такое подключение найдено
+	if(this->connects.count(client) > 0){
+		// Получаем объект текущего коннекта
+		return (this->connects.find(client)->second).get();
+	}
+	// Сообщаем что ничего не найдено
+	return NULL;
+}
+/**
+ * add Метод добавления данных подключения клиента
+ * @param client идентификатор клиента
+ */
+void ClientConnects::add(const string client){
+	// Если такое подключение не найдено
+	if(this->connects.count(client) < 1){
+		// Создаем объект подключения
+		unique_ptr <Connects> connect(new Connects);
+		// Добавляем в список новое подключение
+		this->connects.insert(pair <string, unique_ptr <Connects>> (client, move(connect)));
+	}
+}
+/**
+ * rm Метод удаления данных подключения клиента
+ * @param client идентификатор клиента
+ */
+void ClientConnects::rm(const string client){
+	// Если такое подключение найдено
+	if(this->connects.count(client) > 0){
+		// Если подключение найдено то удаляем его
+		this->connects.erase(client);
+	}
+}
+/**
  * appconn Функция которая добавляет или удаляет в список склиента
  * @param flag флаг подключения или отключения клиента
  */
 void BufferHttpProxy::appconn(const bool flag){
 	// Выполняем захват мютекса
 	this->lock();
+	// Получаем объект текущего коннекта
+	Connects * connect = (* this->connects).get(this->client.ip);
 	// Если такое подключение найдено
-	if((*this->connects).count(this->client.ip) > 0){
-		// Получаем объект текущего коннекта
-		Connects * connect = ((*this->connects).find(this->client.ip)->second).get();
+	if(connect != NULL){
 		// Если нужно добавить подключение
 		if(flag) connect->inc();
 		// Если нужно удалить подключение
@@ -107,14 +145,9 @@ void BufferHttpProxy::appconn(const bool flag){
 			connect->signal();
 		}
 		// Проверяем есть ли еще подключения
-		if(connect->end()) (*this->connects).erase(this->client.ip);
+		if(connect->end()) (* this->connects).rm(this->client.ip);
 	// Если нужно добавить подключение
-	} else if(flag){
-		// Создаем объект подключения
-		unique_ptr <Connects> connect(new Connects);
-		// Добавляем в список новое подключение
-		(*this->connects).insert(pair <string, unique_ptr <Connects>> (this->client.ip, move(connect)));
-	}
+	} else if(flag) (* this->connects).add(this->client.ip);
 	// Выполняем разблокировку мютекса
 	this->unlock();
 }
@@ -152,10 +185,10 @@ void BufferHttpProxy::free_event(struct bufferevent ** event){
  * blockconnect Метод блокировки лишних коннектов
  */
 void BufferHttpProxy::blockconnect(){
+	// Получаем объект текущего коннекта
+	Connects * connect = (* this->connects).get(this->client.ip);
 	// Если такое подключение найдено
-	if((*this->connects).count(this->client.ip) > 0){
-		// Получаем объект текущего коннекта
-		Connects * connect = ((*this->connects).find(this->client.ip)->second).get();
+	if(connect != NULL){
 		// Запоминаем количество подключений пользователя
 		this->myconns = connect->get();
 		// Если количество подключений достигло предела
