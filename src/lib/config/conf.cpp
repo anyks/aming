@@ -360,7 +360,9 @@ Config::Config(const string filename){
 		// Массив dns серверов
 		vector <string> resolver = getResolver(ini.Get("proxy", "resolver", ""));
 		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
-		if(resolver.empty()) resolver = PROXY_RESOLVER;
+		if(resolver.empty() && (proxy_ipv == 6)) resolver = PROXY_RESOLVER6;
+		// Если ресолвер пустой и протокол версии 4
+		else if(resolver.empty()) resolver = PROXY_RESOLVER;
 		// Заполняем структуру proxy
 		this->proxy = {
 			// Общее количество одновременных подключений к прокси серверу

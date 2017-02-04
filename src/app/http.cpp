@@ -895,7 +895,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		size_t len = evbuffer_get_length(input);
 
 
-
+		/*
 		// Создаем буфер данных
 		char * buffer = new char[len];
 		// Копируем в буфер полученные данные
@@ -905,7 +905,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 
 		// Удаляем буфер данных
 		delete [] buffer;
-
+		*/
 
 
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости

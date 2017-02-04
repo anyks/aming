@@ -54,6 +54,7 @@
 #define PROXY_SOCKS5_PORT 1080
 #define PROXY_REDIRECT_PORT 1180
 #define PROXY_RESOLVER {"8.8.8.8", "8.8.4.4"}
+#define PROXY_RESOLVER6 {"2001:4860:4860::8888", "2001:4860:4860::8844"}
 
 // Параметры модуля кеширования
 #define CACHE_DNS true

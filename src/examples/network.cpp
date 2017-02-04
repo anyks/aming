@@ -1,3 +1,6 @@
+// $ g++ -std=c++11 ./examples/network.cpp -o ./bin/network
+// $ ./bin/network
+
 #include <regex>
 #include <string>
 #include <vector>
@@ -410,6 +413,139 @@ int isLocal(const string ip){
 	return 1;
 }
 
+/**
+ * getLow1Ip6 Функция упрощения IPv6 адреса первого порядка
+ * @param  ip адрес интернет протокола версии 6
+ * @return    упрощенный вид ip адреса первого порядка
+ */
+string getLow1Ip6(const string ip){
+	// Результирующий ip адрес
+	string ipv6;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"^\\[?([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})"
+		"\\:([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})"
+		"\\:([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})"
+		"\\:([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})\\]?$",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск ip адреса
+	regex_search(ip, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Строка для поиска
+		string str;
+		// Определяем количество элементов в массиве
+		u_int len = match.size();
+		// Регулярное выражение для поиска старших нулей
+		regex e("^(0+)([ABCDEFabcdef\\d]+)$");
+		// Переходим по всему массиву и заменяем 0000 на 0 и убираем старшие нули
+		for(u_int i = 1; i < len; i++){
+			// Получаем группу байт адреса для обработки
+			str = match[i].str();
+			// Если это вся группа нулей
+			if(str.compare("0000") == 0) str = "0";
+			// Заменяем старшие нули
+			else str = regex_replace(str, e, "$2");
+			// Формируем исходный адрес
+			ipv6.append(str);
+			// Проверяем нужно ли добавить точку
+			if(i < (len - 1)) ipv6.append(":");
+		}
+	}
+	// Выводим результат
+	return ipv6;
+}
+/**
+ * getLow2Ip6 Функция упрощения IPv6 адреса второго порядка
+ * @param  ip адрес интернет протокола версии 6
+ * @return    упрощенный вид ip адреса второго порядка
+ */
+string getLow2Ip6(const string ip){
+	// Результирующий ip адрес
+	string ipv6;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"^\\[?([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
+		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
+		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
+		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})\\]?$",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск ip адреса
+	regex_search(ip, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Копируем ip адрес
+		string str = ip;
+		// Массив найденных элементов
+		vector <string> fstr;
+		// Регулярное выражение для поиска старших нулей
+		regex e("(?:^|\\:)([0\\:]+)(?:\\:|$)");
+		// Выполняем удаление из ip адреса нулей до тех пор пока все не удалим
+		while(true){
+			// Выполняем поиск ip адреса
+			regex_search(str, match, e);
+			// Если данные найдены
+			if(!match.empty()){
+				// Копируем найденные данные
+				string delim = match[0].str();
+				// Ищем строку еще раз
+				size_t pos = str.find(delim);
+				// Если позиция найдена
+				if(pos != string::npos){
+					// Удаляем из строки найденный символ
+					str.replace(pos, delim.length(), "");
+				}
+				// Добавляем в массив найденные данные
+				fstr.push_back(delim);
+			// Иначе выходим
+			} else break;
+		}
+		// Если массив существует
+		if(!fstr.empty()){
+			// Индекс вектора с максимальным значением
+			u_int max = 0, index = -1;
+			// Ищем максимальное значение в массиве
+			for(u_int i = 0; i < fstr.size(); i++){
+				// Получаем длину строки
+				size_t len = fstr[i].length();
+				// Если размер строки еще больше то запоминаем его
+				if(len > max){
+					// Запоминаем текущий размер строки
+					max = len;
+					// Запоминаем индекс в массиве
+					index = i;
+				}
+			}
+			// Создаем регулярное выражение для поиска
+			regex e(fstr[index]);
+			// Заменяем найденный элемент на ::
+			ipv6 = regex_replace(ip, e, "::");
+		}
+	}
+	// Выводим результат
+	return ipv6;
+}
+/**
+ * getLowIp6 Функция упрощения IPv6 адреса
+ * @param  ip адрес интернет протокола версии 6
+ * @return    упрощенный вид ip адреса
+ */
+string getLowIp6(const string ip){
+	// Выполняем преобразование первого порядка
+	string str = getLow1Ip6(ip);
+	// Если строка не существует то присваиваем исходную
+	if(str.empty()) str = ip;
+	// Выполняем преобразование второго порядка
+	return getLow2Ip6(str);
+}
+
+
 int main(int len, char * buff[]){
 	/*
 	NKdata data = getNetwork("46.39.231.203/255.255.225.0");
@@ -434,8 +570,9 @@ int main(int len, char * buff[]){
 	cout << " +++++++++++++++++++++ " << networkdata.getStr() << endl;
 	*/
 	
-	cout << " +++++++++++1 " << isLocal("194.186.207.116") << endl;
+	// cout << " +++++++++++1 " << getLow1Ip6("[FF80:0000:0000:0000:0123:1234:ABCD:EF12]") << endl;
 	
+	cout << " ============1 " << getLowIp6("2001:0DB8:AA10:0001:0000:0000:0000:00FB") << endl;
 
 	/*
 	// Маска 1
