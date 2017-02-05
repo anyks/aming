@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <math.h>
 #include <sys/types.h>
 
 using namespace std;
@@ -72,6 +73,14 @@ struct NLdata {
 	bool allow;		// Разрешен (true - разрешен, false - запрещен)
 };
 /**
+ * NLdata6 Структура содержащая параметры локальных и запрещенных сетей IPv6
+ */
+struct NLdata6 {
+	string ip;		// ip адрес сети
+	u_int prefix;	// Префикс сети
+	bool allow;		// Разрешен (true - разрешен, false - запрещен)
+};
+/**
  * NKdata Структура содержащая данные подключения
  */
 struct NKdata {
@@ -97,6 +106,18 @@ struct NTdata {
 	u_long maxnwk;		// Число возможных адресов сетей
 	u_long maxhst;		// Число возможных адресов хостов
 	bool notEmpty;		// Структура заполнена или нет
+};
+// Набор локальных сетей IPv6
+vector <NLdata6> locals6 = {
+	{"::1", 128, true},
+	{"2001::", 32, false},
+	{"2001:db8::", 32, true},
+	{"64:ff9b::", 96, false},
+	{"2002::", 16, false},
+	{"fe80::", 10, true},
+	{"fec0::", 10, true},
+	{"fc00::", 7, true},
+	{"ff00::", 8, false}
 };
 // Набор локальных сетей
 vector <NLdata> locals = {
@@ -161,6 +182,18 @@ vector <NTdata> masks = {
 	{"255.255.255.254\0", "255.255.255.0\0", "192.0.0.0\0", "223.255.255.255\0", "0.0.0.1\0", "С.С.С.Х\0", "C\0", 0.0078125, 31, 110, 2, 2097152, 1},		// 31
 	{"255.255.255.255\0", "255.255.255.0\0", "192.0.0.0\0", "223.255.255.255\0", "0.0.0.0\0", "С.С.С.Х\0", "C\0", 0.00390625, 32, 110, 1, 2097152, 	0}		// 32
 };
+/**
+ * toCase Функция перевода в указанный регистр
+ * @param  str  строка для перевода в указанных регистр
+ * @param  flag флаг указания типа регистра
+ * @return      результирующая строка
+ */
+string toCase(string str, bool flag = false){
+	// Переводим в указанный регистр
+	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
+	// Выводим результат
+	return str;
+}
 /**
  * getMaskByNumber Функция получения маски из цифровых обозначений
  * @param  value цифровое обозначение маски
@@ -688,7 +721,121 @@ string setLowIp6(const string ip){
 	// Выполняем преобразование второго порядка
 	return setLow1Ip6(str);
 }
-
+/**
+ * imposePrefix6 Метод наложения префикса
+ * @param  ip6    адрес интернет протокола версии 6
+ * @param  prefix префикс сети
+ * @return        результат наложения префикса
+ */
+const string imposePrefix6(const string ip6, u_int prefix){
+	// Получаем строку с ip адресом
+	string str;
+	// Если префикс передан
+	if(prefix){
+		// Преобразуем ip адрес
+		str = setLowIp6(ip6);
+		// Если строка существует то продолжаем
+		if(!str.empty()){
+			// Если префикс меньше 128
+			if(prefix < 128){
+				// Копируем ip адрес
+				string ip = str;
+				// Массив найденных элементов
+				vector <string> fstr;
+				// Результат работы регулярного выражения
+				smatch match;
+				// Устанавливаем правило регулярного выражения
+				regex e("([ABCDEFabcdef\\d]{4})", regex::ECMAScript | regex::icase);
+				// Выполняем удаление из ip адреса хексетов
+				while(true){
+					// Выполняем поиск ip адреса
+					regex_search(ip, match, e);
+					// Если данные найдены
+					if(!match.empty()){
+						// Копируем полученные данные
+						string delim = match[1].str();
+						// Ищем строку еще раз
+						size_t pos = ip.find(delim);
+						// Если позиция найдена
+						if(pos != string::npos){
+							// Удаляем из строки найденный символ
+							ip.replace(pos, delim.length(), "");
+						}
+						// Добавляем в массив найденные данные
+						fstr.push_back(delim);
+					// Если хексет не найден то выходим
+					} else break;
+				}
+				// Искомое число префикса
+				u_int fprefix = prefix;
+				// Ищем ближайшее число префикса
+				while(fmod(fprefix, 4)) fprefix++;
+				// Получаем длину адреса
+				int len = (fprefix / 16);
+				// Компенсируем диапазон
+				if(!len) len = 1;
+				// Очищаем строку
+				str.clear();
+				// Переходим по всему полученному массиву
+				for(u_int i = 0; i < len; i++){
+					// Формируем ip адрес
+					str.append(fstr[i]);
+					// Добавляем разделитель
+					str.append(":");
+				}
+				// Добавляем оставшиеся нули
+				for(u_int i = len; i < 8; i++){
+					// Формируем ip адрес
+					str.append("0000");
+					// Добавляем разделитель
+					if(i < 7) str.append(":");
+				}
+			}
+		}
+		// Выполняем упрощение ip адреса
+		str = getLowIp6(str);
+	}
+	// Выводим полученную строку
+	return str;
+}
+/**
+ * isLocal6 Метод проверки на то является ли ip адрес локальным
+ * @param  ip адрес подключения IPv6
+ * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
+ */
+int isLocal6(const string ip){
+	// Искомый результат
+	int result = 1;
+	// Результат сравнения
+	bool compare = false;
+	// Переходим по всему массиву адресов
+	for(u_int i = 0; i < locals6.size(); i++){
+		// Преобразуем сеть в полный вид
+		string network = toCase(setLowIp6(locals6[i].ip));
+		// Накладываем на ip адрес префикс сети
+		string ipv6 = imposePrefix6(ip, locals6[i].prefix);
+		// Преобразуем ip адрес в полный вид
+		ipv6 = toCase(setLowIp6(ipv6));
+		// Формируем векторы данных
+		vector <char> ip(ipv6.begin(), ipv6.end());
+		vector <char> nwk(network.begin(), network.end());
+		// Начинаем проверять совпадения
+		for(u_int j = 0; j < ip.size(); j++){
+			// Если значение в маске совпадает тогда продолжаем проверку
+			if((ip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
+			else {
+				// Запоминаем что сравнение не удалось
+				compare = false;
+				// Выходим
+				break;
+			}
+		}
+		// Формируем результат
+		if(compare) result = (!locals6[i].allow && compare ? -1 : (compare ? 0 : 1));
+	}
+	// Если локальный адрес найден
+	return result;
+}
 
 int main(int len, char * buff[]){
 	/*
@@ -716,7 +863,9 @@ int main(int len, char * buff[]){
 	
 	// cout << " +++++++++++1 " << getLow1Ip6("[FF80:0000:0000:0000:0123:1234:ABCD:EF12]") << endl;
 	
-	cout << " ============1 " << setLowIp6("[2001:DB0:0:123A::30]") << endl;
+	// cout << " ============1 " << imposePrefix6("[FE80:0001:000F:000A:0123:1234:ABCD:EF12]", 48) << endl;
+
+	cout << " ============1 " << isLocal6("[fc12:db8::3]") << endl;
 
 	/*
 	// Маска 1

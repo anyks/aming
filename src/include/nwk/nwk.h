@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <math.h>
 #include <sys/types.h>
 
 // Устанавливаем область видимости
@@ -79,6 +80,14 @@ struct NLdata {
 	bool allow;		// Разрешен (true - разрешен, false - запрещен)
 };
 /**
+ * NLdata6 Структура содержащая параметры локальных и запрещенных сетей IPv6
+ */
+struct NLdata6 {
+	string ip;		// ip адрес сети
+	u_int prefix;	// Префикс сети
+	bool allow;		// Разрешен (true - разрешен, false - запрещен)
+};
+/**
  * NKdata Структура содержащая данные подключения
  */
 struct NKdata {
@@ -91,6 +100,18 @@ struct NKdata {
  */
 class Network {
 	private:
+		// Набор локальных сетей IPv6
+		vector <NLdata6> locals6 = {
+			{"::1", 128, true},
+			{"2001::", 32, false},
+			{"2001:db8::", 32, true},
+			{"64:ff9b::", 96, false},
+			{"2002::", 16, false},
+			{"fe80::", 10, true},
+			{"fec0::", 10, true},
+			{"fc00::", 7, true},
+			{"ff00::", 8, false}
+		};
 		// Набор локальных сетей
 		vector <NLdata> locals = {
 			{"0.0.0.0", "0.0.0.0", 8, false},
@@ -166,6 +187,37 @@ class Network {
 		 * @return      результат проверки
 		 */
 		bool checkMask(IPdata ip, IPdata mask);
+		/**
+		 * toCase Функция перевода в указанный регистр
+		 * @param  str  строка для перевода в указанных регистр
+		 * @param  flag флаг указания типа регистра
+		 * @return      результирующая строка
+		 */
+		const string toCase(string str, bool flag = false);
+		/**
+		 * getLow1Ip6 Функция упрощения IPv6 адреса первого порядка
+		 * @param  ip адрес интернет протокола версии 6
+		 * @return    упрощенный вид ip адреса первого порядка
+		 */
+		const string getLow1Ip6(const string ip);
+		/**
+		 * getLow2Ip6 Функция упрощения IPv6 адреса второго порядка
+		 * @param  ip адрес интернет протокола версии 6
+		 * @return    упрощенный вид ip адреса второго порядка
+		 */
+		const string getLow2Ip6(const string ip);
+		/**
+		 * setLow1Ip6 Функция восстановления IPv6 адреса первого порядка
+		 * @param  ip адрес интернет протокола версии 6
+		 * @return    восстановленный вид ip адреса первого порядка
+		 */
+		const string setLow1Ip6(const string ip);
+		/**
+		 * setLow2Ip6 Функция восстановления IPv6 адреса второго порядка
+		 * @param  ip адрес интернет протокола версии 6
+		 * @return    восстановленный вид ip адреса второго порядка
+		 */
+		const string setLow2Ip6(const string ip);
 	public:
 		/**
 		 * getMaskByNumber Функция получения маски из цифровых обозначений
@@ -213,11 +265,36 @@ class Network {
 		 */
 		NKdata getNetwork(string str);
 		/**
+		 * imposePrefix6 Метод наложения префикса
+		 * @param  ip6    адрес интернет протокола версии 6
+		 * @param  prefix префикс сети
+		 * @return        результат наложения префикса
+		 */
+		const string imposePrefix6(const string ip6, u_int prefix);
+		/**
+		 * getLowIp6 Функция упрощения IPv6 адреса
+		 * @param  ip адрес интернет протокола версии 6
+		 * @return    упрощенный вид ip адреса
+		 */
+		const string getLowIp6(const string ip);
+		/**
+		 * setLowIp6 Функция восстановления IPv6 адреса
+		 * @param  ip адрес интернет протокола версии 6
+		 * @return    восстановленный вид ip адреса
+		 */
+		const string setLowIp6(const string ip);
+		/**
 		 * isLocal Метод проверки на то является ли ip адрес локальным
 		 * @param  ip адрес подключения ip
 		 * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
 		 */
 		int isLocal(const string ip);
+		/**
+		 * isLocal6 Метод проверки на то является ли ip адрес локальным
+		 * @param  ip адрес подключения IPv6
+		 * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
+		 */
+		int isLocal6(const string ip);
 };
 
 #endif // _NETWORK_ANYKS_

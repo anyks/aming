@@ -598,8 +598,17 @@ bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
 	if(http != NULL){
 		// Создаем объект сети
 		Network nwk;
+		// Результат проверки
+		int check = -1;
+		// Определяем тип подключения
+		switch(http->proxy->config->proxy.ipver){
+			// Для протокола IPv4
+			case 4: check = nwk.isLocal(ip);	break;
+			// Для протокола IPv6
+			case 6: check = nwk.isLocal6(ip);	break;
+		}
 		// Проверяем ip адрес
-		switch(nwk.isLocal(ip)){
+		switch(check){
 			// Если это запрещенный ip адрес
 			case -1: return false;
 			// Если это локальный адрес
