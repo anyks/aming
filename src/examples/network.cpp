@@ -559,7 +559,8 @@ string getLow2Ip6(const string ip){
 			regex e(fstr[index]);
 			// Заменяем найденный элемент на ::
 			ipv6 = regex_replace(ip, e, "::");
-		}
+		// Запоминаем адрес так как он есть
+		} else ipv6 = str;
 	}
 	// Выводим результат
 	return ipv6;
@@ -836,6 +837,68 @@ int isLocal6(const string ip){
 	// Если локальный адрес найден
 	return result;
 }
+/**
+ * checkIPByNetwork6 Метод проверки, принадлежит ли ip адресу указанной сети
+ * @param  ip  данные ip адреса интернет протокола версии 6
+ * @param  nwk адрес сети (2001:db8::/32)
+ * @return     результат проверки
+ */
+bool checkIPByNetwork6(const string ip, const string nwk){
+	// Результат сравнения
+	bool compare = false;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("^([\\s\\S]+)\\/(\\d+)$", regex::ECMAScript | regex::icase);
+	// Выполняем поиск ip адреса и префикса сети
+	regex_search(nwk, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Преобразуем сеть в полный вид
+		string network = toCase(setLowIp6(match[1].str()));
+		// Накладываем на ip адрес префикс сети
+		string ipv6 = imposePrefix6(ip, ::atoi(match[2].str().c_str()));
+		// Преобразуем ip адрес в полный вид
+		ipv6 = toCase(setLowIp6(ipv6));
+		// Формируем векторы данных
+		vector <char> ip(ipv6.begin(), ipv6.end());
+		vector <char> nwk(network.begin(), network.end());
+		// Начинаем проверять совпадения
+		for(u_int j = 0; j < ip.size(); j++){
+			// Если значение в маске совпадает тогда продолжаем проверку
+			if((ip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
+			else {
+				// Запоминаем что сравнение не удалось
+				compare = false;
+				// Выходим
+				break;
+			}
+		}
+	}
+	// Выводим результат сравнения
+	return compare;
+}
+
+/**
+ * checkIPByNetwork Метод проверки, принадлежит ли ip адресу указанной сети
+ * @param  ip  данные ip адреса интернет протокола версии 4
+ * @param  nwk адрес сети (192.168.0.0/16)
+ * @return     результат проверки
+ */
+bool checkIPByNetwork(const string ip, const string nwk){
+	// Получаем данные ip адреса
+	IPdata ipdata = getDataIp(ip);
+	// Получаем данные сети
+	NKdata nwkdata = getNetwork(nwk);
+	// Накладываем маску на ip адрес
+	IPdata networkdata = imposeMask(ipdata, nwkdata.mask);
+	// Накладываем маску на ip адрес из списка
+	if(networkdata.getStr()
+	.compare(nwkdata.network.getStr()) == 0) return true;
+	// Сообщачем что ничего не найдено
+	return false;
+}
+
 
 int main(int len, char * buff[]){
 	/*
@@ -865,7 +928,9 @@ int main(int len, char * buff[]){
 	
 	// cout << " ============1 " << imposePrefix6("[FE80:0001:000F:000A:0123:1234:ABCD:EF12]", 48) << endl;
 
-	cout << " ============1 " << isLocal6("[fc12:db8::3]") << endl;
+	// cout << " ============1 " << checkIPByNetwork6("[2001:db8:11a3:09d7:1f34:8a2e:07a0:765d]", "2001:db8::/32") << endl;
+
+	cout << " ============1 " << checkIPByNetwork("43.15.55.21", "43.15.0.0/16") << endl;
 
 	/*
 	// Маска 1

@@ -252,6 +252,20 @@ class Network {
 		 */
 		bool checkMaskByNumber(string ip, u_int mask);
 		/**
+		 * checkIPByNetwork Метод проверки, принадлежит ли ip адресу указанной сети
+		 * @param  ip  данные ip адреса интернет протокола версии 4
+		 * @param  nwk адрес сети (192.168.0.0/16)
+		 * @return     результат проверки
+		 */
+		bool checkIPByNetwork(const string ip, const string nwk);
+		/**
+		 * checkIPByNetwork6 Метод проверки, принадлежит ли ip адресу указанной сети
+		 * @param  ip  данные ip адреса интернет протокола версии 6
+		 * @param  nwk адрес сети (2001:db8::/32)
+		 * @return     результат проверки
+		 */
+		bool checkIPByNetwork6(const string ip, const string nwk);
+		/**
 		 * imposeMask Метод наложения маски
 		 * @param  ip   блок с данными ip адреса
 		 * @param  mask блок с данными маски сети
