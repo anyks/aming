@@ -863,6 +863,8 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
+		// Блокируем поток
+		http->lock();
 		// Получаем текущий сокет
 		evutil_socket_t current_fd = bufferevent_getfd(bev);
 		// Определяем для кого вызвано событие
@@ -917,6 +919,8 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 			// Закрываем подключение
 			http->close();
 		}
+		// Разблокируем поток
+		http->unlock();
 	}
 	// Выходим
 	return;

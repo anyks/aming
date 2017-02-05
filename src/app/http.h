@@ -163,14 +163,6 @@ class BufferHttpProxy {
 			string	useragent	= "";		// userAgent клиента
 		};
 		/**
-		 * lock Метод блокировки мютекса
-		 */
-		inline void lock();
-		/**
-		 * unlock Метод разблокировки мютекса
-		 */
-		inline void unlock();
-		/**
 		 * appconn Функция которая добавляет или удаляет в список склиента
 		 * @param flag флаг подключения или отключения клиента
 		 */
@@ -214,6 +206,14 @@ class BufferHttpProxy {
 		struct event_base * base = NULL;
 		// Список подключений к прокси серверу
 		ClientConnects * connects = NULL;
+		/**
+		 * lock Метод блокировки мютекса
+		 */
+		inline void lock();
+		/**
+		 * unlock Метод разблокировки мютекса
+		 */
+		inline void unlock();
 		/**
 		 * blockconnect Метод блокировки лишних коннектов
 		 */
