@@ -1056,15 +1056,15 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					// Запоминаем хост и порт сервера
 					http->server.host = ip;
 					http->server.port = port;
+					// Заполняем структуру клиента
+					http->client.alive		= http->httpData.isAlive();
+					http->client.https		= http->httpData.isHttps();
+					http->client.connect	= http->httpData.isConnect();
+					http->client.useragent	= http->httpData.getUseragent();
 					// Выполняем подключение к удаленному серверу
 					int connect = connect_server(http);
 					// Если сокет существует
 					if(connect > 0){
-						// Заполняем структуру клиента
-						http->client.alive		= http->httpData.isAlive();
-						http->client.https		= http->httpData.isHttps();
-						http->client.connect	= http->httpData.isConnect();
-						http->client.useragent	= http->httpData.getUseragent();
 						// Определяем порт, если это метод connect
 						if(http->client.connect && (conn_enabled || http->client.https))
 							// Формируем ответ клиенту
