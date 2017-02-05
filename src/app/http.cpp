@@ -451,6 +451,37 @@ int HttpProxy::socket_tcpnodelay(evutil_socket_t fd, LogApp * log){
 	return 0;
 }
 /**
+ * socket_tcpcork Функция активации tcp_cork
+ * @param  fd   файловый дескриптор (сокет)
+ * @param  log  указатель на объект ведения логов
+ * @return      результат работы функции
+ */
+int HttpProxy::socket_tcpcork(evutil_socket_t fd, LogApp * log){
+	// Устанавливаем параметр
+	int tcpcork = 1;
+// Если это Linux
+#ifdef __linux__
+	// Устанавливаем TCP_CORK
+	if(setsockopt(fd, IPPROTO_TCP, TCP_CORK, &tcpcork, sizeof(tcpcork)) < 0){
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, "cannot set TCP_CORK option on socket %d", fd);
+		// Выходим
+		return -1;
+	}
+// Если это FreeBSD или MacOS X
+#elif __APPLE__ || __FreeBSD__
+	// Устанавливаем TCP_NOPUSH
+	if(setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &tcpcork, sizeof(tcpcork)) < 0){
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, "cannot set TCP_NOPUSH option on socket %d", fd);
+		// Выходим
+		return -1;
+	}
+#endif
+	// Все удачно
+	return 0;
+}
+/**
  * socket_reuseable Функция разрешающая повторно использовать сокет после его удаления
  * @param  fd   файловый дескриптор (сокет)
  * @param  log  указатель на объект ведения логов
@@ -746,6 +777,11 @@ int HttpProxy::connect_server(void * ctx){
 					http->proxy->config->keepalive.keepidle,
 					http->proxy->config->keepalive.keepintvl
 				);
+			// Если это не постоянное подключение
+			} else {
+				// Активируем отдачу буферов целиком одним разом
+				socket_tcpcork(http->sockets.server, http->proxy->log);
+				socket_tcpcork(http->sockets.client, http->proxy->log);
 			}
 			// Выполняем бинд на сокет
 			if(::bind(http->sockets.server, sin, sinlen) < 0){
