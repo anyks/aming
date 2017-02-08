@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sstream>
 #include <math.h>
 #include <sys/types.h>
 
@@ -900,7 +901,67 @@ bool checkIPByNetwork(const string ip, const string nwk){
 }
 
 
+class A {
+	private:
+		int d = 153;
+	public:
+		//int (const * ff) (const int) const;
+		//void * ff;
+		void (*function)(char*,void*);
+};
+
+class B {
+	public:
+		int m = 13;
+	private:
+		int d = 153;
+		B * t = NULL;
+	public:
+		/*
+		int run(const int k) const {
+			cout << (k + d) << endl;
+			return 0;
+		}
+		*/
+		void f1(){
+			cout << (m + d) << endl;
+		};
+};
+
+
+int f1 (int a) {
+    cout << "f1: " << a << endl;
+    return a*2;
+}
+
+void f2 (int (* ff) (int), int a) {
+    int i = ff (a);
+    cout << "f2: " << i << endl;
+
+}
+
+
 int main(int len, char * buff[]){
+	
+	A m;
+	B d;
+
+	d.m = 15;
+
+	d.f1();
+
+	//m.function=d.f1;
+
+	//m.function(NULL, NULL);
+
+	//m.pf = d.f;
+
+	//m.ff(13);
+	
+
+	f2(f1, 5);
+
+
 	/*
 	NKdata data = getNetwork("46.39.231.203/255.255.225.0");
 
@@ -930,7 +991,23 @@ int main(int len, char * buff[]){
 
 	// cout << " ============1 " << checkIPByNetwork6("[2001:db8:11a3:09d7:1f34:8a2e:07a0:765d]", "2001:db8::/32") << endl;
 
-	cout << " ============1 " << checkIPByNetwork("43.15.55.21", "43.15.0.0/16") << endl;
+	// cout << " ============1 " << checkIPByNetwork("43.15.55.21", "43.15.0.0/16") << endl;
+
+	std::stringstream stream;
+	stream << std::hex << 154;
+	std::string result( stream.str() );
+
+	std::stringstream ss;
+	ss << "your id is " << std::hex << 0x0daffa0;
+	const std::string s = ss.str();
+
+	std::stringstream str;
+	string s1 = "9a";
+	str << s1;
+	int value;
+	str >> std::hex >> value;
+
+	cout << " ========== " << result << " == " << s << " == " << value << endl;
 
 	/*
 	// Маска 1
