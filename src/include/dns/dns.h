@@ -8,6 +8,7 @@
 #ifndef _DNS_RESOLVER_ANYKS_
 #define _DNS_RESOLVER_ANYKS_
 
+#include <mutex>
 #include <regex>
 #include <string>
 #include <vector>
@@ -42,6 +43,8 @@ class DNSResolver {
 			string domain;	// название искомого домена
 			LogApp * log;	// Объект ведения логов
 		};
+		// Мютекс для захвата потока
+		recursive_mutex mtx;
 		// Тип протокола интернета AF_INET или AF_INET6
 		int family;
 		// Объект ведения логов
