@@ -144,8 +144,6 @@ void BufferHttpProxy::free_socket(evutil_socket_t * fd){
 void BufferHttpProxy::free_event(struct bufferevent ** event){
 	// Удаляем событие
 	if(*event != NULL){
-		// Очищаем таймауты
-		bufferevent_set_timeouts(*event, NULL, NULL);
 		// Удаляем буфер события
 		bufferevent_free(*event);
 		// Устанавливаем что событие удалено
@@ -280,16 +278,6 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
  * ~BufferHttpProxy Деструктор
  */
 BufferHttpProxy::~BufferHttpProxy(){
-	// Закрываем подключение
-	close();
-	// Захватываем поток
-	this->mtx.lock();
-	// Удаляем dns сервер
-	delete this->dns;
-	// Очищаем объект базы событий
-	event_base_free(this->base);
-	// Освобождаем поток
-	this->mtx.unlock();
 	// Удаляем себя из списока подключений
 	this->remove();
 }
@@ -1252,6 +1240,10 @@ void HttpProxy::connection(void * ctx){
 		bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
 		// Активируем перебор базы событий
 		event_base_dispatch(http->base);
+		// Удаляем dns сервер
+		delete http->dns;
+		// Очищаем объект базы событий
+		event_base_free(http->base);
 		// Удаляем объект подключения
 		delete http;
 	}
