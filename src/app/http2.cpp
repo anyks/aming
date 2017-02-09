@@ -25,21 +25,27 @@ bool ConnectClients::Client::isfull(){
  * @param client родительский объект клиента
  * @param ctx    передаваемый указатель на объект
  */
-void ConnectClients::Client::add(ConnectClients * client, void * ctx){
+void ConnectClients::Client::add(void * ctx){
 	// Захватываем поток
 	this->mtx.lock();
 	// Получаем данные подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение существует
 	if(http != NULL){
-		// Запоминаем объект подключения
-		http->connect = this;
 		// Запоминаем кондишин переменную
 		http->cond = &this->cond;
 		// Запоминаем индекс текущего подключения
 		http->index = this->connects.size();
-		// Копируем указатель на родителький объект
-		this->client = client;
+		// Устанавливаем функцию удаления клиента
+		http->remove = [this](size_t index){
+			// Выполняем удаление текущего подключения
+			rm(index);
+		};
+		// Устанавливаем функцию проверки доступных коннектов
+		http->isfull = [this](){
+			// Выводим результат проверки
+			return isfull();
+		}
 		// Запоминаем ip адрес клиента
 		this->id = http->client.ip;
 		// Запоминаем максимально-возможное количество подключений
@@ -75,8 +81,8 @@ void ConnectClients::Client::rm(size_t index){
 	else if(!this->active){
 		// Освобождаем поток
 		this->mtx.unlock();
-		// Выполняем удаление
-		this->client->rm(this->id);
+		// Выполняем удаление всего клиента
+		this->remove(this->id);
 		// Выходим
 		return;
 	}
@@ -103,8 +109,13 @@ void ConnectClients::add(void * ctx){
 		}
 		// Получаем данные клиента
 		Client * client = (this->clients.find(http->client.ip)).get();
+		// Устанавливаем функцию удаления клиента
+		client->remove = [this](const string id){
+			// Выполняем удаление клиента
+			rm(id);
+		};
 		// Передаем клиенту данные объекта
-		client.add(this, http);
+		client->add(http);
 	}
 	// Освобождаем поток
 	this->mtx.unlock();
@@ -156,29 +167,22 @@ BufferHttpProxy::~BufferHttpProxy(){
 	delete this->dns;
 	// Очищаем объект базы событий
 	event_base_free(this->base);
-	// Получаем данные подключения
-	ConnectClients::Client * connect = reinterpret_cast <ConnectClients::Client *> (this->connect);
 	// Освобождаем поток
 	this->mtx.unlock();
 	// Удаляем себя из списока подключений
-	if(connect != NULL) connect->rm(this->index);
+	this->remove(this->index);
 }
 
 /**
  * freeze Метод заморозки потока
  */
 void BufferHttpProxy::freeze(){
-	// Получаем данные подключения
-	ConnectClients::Client * connect = reinterpret_cast <ConnectClients::Client *> (this->connect);
-	// Если подключение найдено
-	if(connect != NULL){
-		// Если все коннекты исчерпаны
-		if(connect->isfull()){
-			// Лочим мютекс
-			unique_lock <mutex> locker(this->mutx);
-			// Блокируем поток
-			(* this->cond).wait(locker);
-		}
+	// Если все коннекты исчерпаны
+	if(this->isfull()){
+		// Лочим мютекс
+		unique_lock <mutex> locker(this->mutx);
+		// Блокируем поток
+		(* this->cond).wait(locker);
 	}
 }
 

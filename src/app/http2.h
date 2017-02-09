@@ -47,7 +47,7 @@ using namespace std;
  * ConnectClients Класс всех подключенных пользователей
  */
 class ConnectClients {
-	public:
+	private:
 		/**
 		 * Client Класс всех подключений пользователя
 		 */
@@ -61,46 +61,45 @@ class ConnectClients {
 				u_int max;
 				// Количество активных клиентов
 				u_int active;
-				// Указатель на родительский объект
-				ConnectClients * client;
+				// Коллбек для удаления текущего клиента
+				function <void (const string)> remove;
 				// Переменная состояния
 				condition_variable cond;
 				// Массив подключенных клиентов
 				vector <std::thread> connects;
-			public:
 				/**
 				 * isfull Метод проверки заполненности максимального количества коннектов
 				 * @return результат проверки
 				 */
 				bool isfull();
 				/**
-				 * add Метод добавления нового подключения в объект клиента
-				 * @param client родительский объект клиента
-				 * @param ctx    передаваемый указатель на объект
-				 */
-				void add(ConnectClients * client, void * ctx);
-				/**
 				 * rm Метод удаления подключения из объекта клиента
 				 * @param index индекс подключения
 				 */
 				void rm(size_t index);
+			public:
+				/**
+				 * add Метод добавления нового подключения в объект клиента
+				 * @param client родительский объект клиента
+				 * @param ctx    передаваемый указатель на объект
+				 */
+				void add(void * ctx);
 		};
-	private:
 		// Мютекс для блокировки сервера
 		mutex mtx;
 		// Массив всех активных клиентов
 		map <string, unique_ptr <Client>> clients;
+		/**
+		 * rm Метод удаления объекта подключившихся клиентов
+		 * @param id идентификатор клиента
+		 */
+		void rm(const string id);
 	public:
 		/**
 		 * add Метод добавления нового подключения в объект пользователя
 		 * @param ctx передаваемый указатель на объект
 		 */
 		void add(void * ctx);
-		/**
-		 * rm Метод удаления объекта подключившихся клиентов
-		 * @param id идентификатор клиента
-		 */
-		void rm(const string id);
 };
 
 

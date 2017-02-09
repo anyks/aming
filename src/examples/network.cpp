@@ -900,14 +900,21 @@ bool checkIPByNetwork(const string ip, const string nwk){
 	return false;
 }
 
-
+class B;
 class A {
 	private:
 		int d = 153;
 	public:
 		//int (const * ff) (const int) const;
 		//void * ff;
-		void (*function)(char*,void*);
+		// void (* function)(int x);
+
+		function <void (int)> remove;
+
+		void m(){
+			//sleep(5);
+			this->remove(10);
+		}
 };
 
 class B {
@@ -915,17 +922,25 @@ class B {
 		int m = 13;
 	private:
 		int d = 153;
-		B * t = NULL;
 	public:
-		/*
-		int run(const int k) const {
-			cout << (k + d) << endl;
-			return 0;
+		
+		void f2(int x){
+			cout << x << endl;
 		}
-		*/
+
 		void f1(){
-			cout << (m + d) << endl;
+			A * t = new A;
+
+			t->remove = [this](int x){
+				// cout << (d + m + x) << endl;
+				f2(x);
+			};
+
+			t->m();
+
+			delete t;
 		};
+		
 };
 
 
@@ -943,12 +958,18 @@ void f2 (int (* ff) (int), int a) {
 
 int main(int len, char * buff[]){
 	
+	B d;
+
+	d.f1();
+
+	/*
 	A m;
 	B d;
 
 	d.m = 15;
 
 	d.f1();
+	*/
 
 	//m.function=d.f1;
 
