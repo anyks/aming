@@ -167,12 +167,14 @@ BufferHttpProxy::~BufferHttpProxy(){
  * freeze Метод заморозки потока
  */
 void BufferHttpProxy::freeze(){
+	// Получаем http объект
+	BufferHttpProxy * http = this;
 	// Если все коннекты исчерпаны
-	if(this->isfull()){
+	if(http->isfull()){
 		// Лочим мютекс
-		unique_lock <mutex> locker(this->mutx);
+		unique_lock <mutex> locker(http->mutx);
 		// Блокируем поток
-		(* this->cond).wait(locker);
+		(* http->cond).wait(locker, [&](){return !http->isfull();});
 	}
 }
 
