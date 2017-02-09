@@ -29,9 +29,14 @@ void ConnectClients::Client::add(void * ctx){
 			rm();
 		};
 		// Устанавливаем функцию проверки доступных коннектов
-		http->isfull = [this](){
+		http->isFull = [this](){
 			// Выводим результат проверки
 			return (this->connects >= this->max);
+		};
+		// Устанавливаем функцию проверяющую активные подключения
+		http->activeConnects = [this](){
+			// Определяем количество подключений
+			return (this->connects < this->max ? this->connects : this->max);
 		};
 		// Запоминаем ключ клиента
 		this->key = (http->proxy->config->connects.key ? http->client.mac : http->client.ip);
@@ -193,7 +198,7 @@ void BufferHttpProxy::close(){
  */
 void BufferHttpProxy::freeze(){
 	// Если все коннекты исчерпаны
-	if(this->isfull()){
+	if(this->isFull()){
 		// Получаем блокиратор потока
 		ConnectClients::Freeze * frze = reinterpret_cast <ConnectClients::Freeze *> (this->frze);
 		// Лочим мютекс
@@ -216,7 +221,7 @@ void BufferHttpProxy::sleep(size_t size, bool type){
 	// Если буфер существует
 	if(max > 0){
 		// Высчитываем размер максимально-возможных передачи данных для одного подключения
-		max = (max / float(this->myconns));
+		max = (max / float(this->activeConnects()));
 		// Если размер больше нуля то продолжаем
 		if((max > 0) && (size > max)) seconds = (size / max);
 	}

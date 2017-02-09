@@ -164,8 +164,6 @@ class BufferHttpProxy {
 		void * frze = NULL;
 		// Флаг авторизации
 		bool auth = false;
-		// Количество моих подключений к прокси
-		u_int myconns = 1;
 		// Объект парсера
 		Http parser;
 		// Параметры подключившегося клиента
@@ -191,7 +189,9 @@ class BufferHttpProxy {
 		// Коллбек для удаления текущего подключения
 		function <void (void)> remove;
 		// Коллбек для проверки на доступность подключений
-		function <bool (void)> isfull;
+		function <bool (void)> isFull;
+		// Коллбек для определения количества активных подключений
+		function <u_int (void)> activeConnects;
 		/**
 		 * close_client Метод закрытия соединения клиента
 		 */

@@ -160,7 +160,7 @@ bool HttpHeaders::create(const char * buffer){
 	regex e(
 		"^((?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
 		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
-		"\\/[\\d\\.]+\\s+\\d+\\s+[^\\r\\n]+\\r\\n))(?:[\\w\\-]+\\s*\\:"
+		"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
 		"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
 		regex::ECMAScript | regex::icase
 	);
@@ -950,8 +950,8 @@ void HttpData::addHeader(const char * buffer){
 	regex e(
 		"((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
 		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+)|"
-		"(?:[A-Za-z]+\\/[\\d\\.]+\\s+\\d+\\s+[A-Za-z\\s\\-]+))|"
-		"(?:([\\w\\-]+)\\s*\\:\\s*([^\r\n]+))",
+		"(?:[A-Za-z]+\\/[\\d\\.]+\\s+\\d+(?:\\s+[A-Za-z\\s\\-]+)?))|"
+		"(?:([\\w\\-]+)\\s*\\:\\s*([^\\r\\n]+))",
 		regex::ECMAScript | regex::icase
 	);
 	// Запоминаем входящую строку
@@ -1091,7 +1091,7 @@ void HttpData::init(const string str, const string name, const string version, c
 		regex e(
 			"^((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
 			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
-			"\\/[\\d\\.]+\\s+\\d+\\s+[^\\r\\n]+\\r\\n))((?:[\\w\\-]+\\s*\\:"
+			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
 			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
 			regex::ECMAScript | regex::icase
 		);
@@ -1179,7 +1179,7 @@ size_t Http::parse(const char * buffer, size_t size, bool flag){
 	regex e(
 		"^([^\\r\\n\\s]*)((?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
 		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
-		"\\/[\\d\\.]+\\s+\\d+\\s+[^\\r\\n]+\\r\\n))(?:[\\w\\-]+\\s*\\:"
+		"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
 		"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
 		regex::ECMAScript | regex::icase
 	);
