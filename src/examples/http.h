@@ -44,71 +44,84 @@ using namespace std;
 #define TM_CLIENT 0x02
 
 /**
- * ConnectClients Класс всех подключенных пользователей
+ * Connects Класс подключений к прокси серверу
  */
-class ConnectClients {
-	public:
-		/**
-		 * Locker Структура для блокировки потока
-		 */
-		struct Freeze {
-			// Мютекс для захвата потока
-			mutex mtx;
-			// Переменная состояния
-			condition_variable cond;
-		};
+class Connects {
 	private:
-		/**
-		 * Client Класс всех подключений пользователя
-		 */
-		class Client {
-			private:
-				// Мютекс для захвата потока
-				mutex mtx;
-				// Ключ клиента
-				string key;
-				// Блокировщик лишних потоков
-				Freeze freeze;
-				// Максимально возможное количество подключений
-				u_int max = 0;
-				// Количество активных клиентов
-				u_int connects = 0;
-				/**
-				 * rm Метод удаления подключения из объекта клиента
-				 */
-				void rm();
-			public:
-				// Коллбек для удаления текущего клиента
-				function <void (const string)> remove;
-				/**
-				 * add Метод добавления нового подключения в объект клиента
-				 * @param ctx передаваемый указатель на объект
-				 */
-				void add(void * ctx);
-		};
-		// Мютекс для захвата потока
-		mutex mtx;
-		// Массив всех активных клиентов
-		map <string, unique_ptr <Client>> clients;
-		/**
-		 * rm Метод удаления объекта подключившихся клиентов
-		 * @param key ключ клиента
-		 */
-		void rm(const string key);
+		size_t					connects;	// Количество подключений
+		condition_variable_any	condition;	// Переменная состояния
 	public:
 		/**
-		 * add Метод добавления нового подключения в объект пользователя
-		 * @param ctx передаваемый указатель на объект
+		 * get Метод получения количества подключений
+		 * @return количество активных подключений
 		 */
-		void add(void * ctx);
+		inline size_t get();
+		/**
+		 * end Метод проверки на конец всех подключений
+		 * @return проверка на достижения нуля
+		 */
+		inline bool end();
+		/**
+		 * inc Метод инкреминации количества подключений
+		 */
+		inline void inc();
+		/**
+		 * dec Метод декрементации количества подключений
+		 */
+		inline void dec();
+		/**
+		 * signal Метод отправки сигнала первому блокированному потоку
+		 */
+		inline void signal();
+		/**
+		 * broadcastSignal Метод отправки сигналов всем блокированным потокам
+		 */
+		inline void broadcastSignal();
+		/**
+		 * wait Метод блокировки потока
+		 */
+		inline void wait(recursive_mutex &mutx);
+		/**
+		 * Connects Конструктор
+		 */
+		Connects();
+};
+/**
+ * ClientConnects Класс содержащий данные подключения одного клиента
+ */
+class ClientConnects {
+	private:
+		// Мютекс для блокировки потока
+		mutex mtx;
+		// Список подключений к прокси серверу
+		map <string, unique_ptr <Connects>> connects;
+	public:
+		/**
+		 * get Метод получения данных подключения клиента
+		 * @param client идентификатор клиента
+		 * @return       данные подключения клиента
+		 */
+		Connects * get(const string client);
+		/**
+		 * add Метод добавления данных подключения клиента
+		 * @param client идентификатор клиента
+		 */
+		void add(const string client);
+		/**
+		 * rm Метод удаления данных подключения клиента
+		 * @param client идентификатор клиента
+		 */
+		void rm(const string client);
 };
 /**
  * BufferHttpProxy Класс для работы с данными прокси сервера
  */
 class BufferHttpProxy {
 	private:
-		// Мютекс для захвата потока
-		mutex mtx;
+		// Мютекс для останова потока
+		recursive_mutex lock_thread;
+		// Мютекс для блокировки подключения
+		recursive_mutex lock_connect;
 		/**
 		 * Events Буферы событий
 		 */
@@ -150,6 +163,11 @@ class BufferHttpProxy {
 			string	useragent	= "";		// userAgent клиента
 		};
 		/**
+		 * appconn Функция которая добавляет или удаляет в список склиента
+		 * @param flag флаг подключения или отключения клиента
+		 */
+		void appconn(const bool flag);
+		/**
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)
 		 */
@@ -160,8 +178,6 @@ class BufferHttpProxy {
 		 */
 		void free_event(struct bufferevent ** event);
 	public:
-		// Блокиратор лишнего потока
-		void * frze = NULL;
 		// Флаг авторизации
 		bool auth = false;
 		// Количество моих подключений к прокси
@@ -188,10 +204,20 @@ class BufferHttpProxy {
 		DNSResolver * dns = NULL;
 		// База событий
 		struct event_base * base = NULL;
-		// Коллбек для удаления текущего подключения
-		function <void (void)> remove;
-		// Коллбек для проверки на доступность подключений
-		function <bool (void)> isfull;
+		// Список подключений к прокси серверу
+		ClientConnects * connects = NULL;
+		/**
+		 * lock Метод блокировки мютекса
+		 */
+		inline void lock();
+		/**
+		 * unlock Метод разблокировки мютекса
+		 */
+		inline void unlock();
+		/**
+		 * blockconnect Метод блокировки лишних коннектов
+		 */
+		void blockconnect();
 		/**
 		 * close_client Метод закрытия соединения клиента
 		 */
@@ -204,10 +230,6 @@ class BufferHttpProxy {
 		 * close Метод закрытия подключения
 		 */
 		void close();
-		/**
-		 * freeze Метод заморозки потока
-		 */
-		void freeze();
 		/**
 		 * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
 		 * @param  size размер передаваемых данных
@@ -237,23 +259,14 @@ class BufferHttpProxy {
  */
 class HttpProxy {
 	private:
-		// Мютекс для захвата потока
-		mutex mtx;
-		// Список подключенных клиентов к прокси серверу
-		ConnectClients clients;
+		// Список подключений к прокси серверу
+		ClientConnects connects;
 		// Идентификаторы процессов
 		pid_t * pids = NULL;
 		// Параметры прокси сервера
 		System * server = NULL;
 		// Создаем новую базу
 		struct event_base * base = NULL;
-		/**
-		 * create_client Метод создания нового клиента
-		 * @param ip  адрес интернет протокола клиента
-		 * @param mac аппаратный адрес сетевого интерфейса клиента
-		 * @param fd  файловый дескриптор (сокет) подключившегося клиента
-		 */
-		void create_client(const string ip, const string mac, evutil_socket_t fd);
 		/**
 		 * create_server Функция создания прокси сервера
 		 * @return сокет прокси сервера
@@ -347,6 +360,11 @@ class HttpProxy {
 		 */
 		static int connect_server(void * ctx);
 		/**
+		 * connection Функция обработки данных подключения в треде
+		 * @param ctx передаваемый объект
+		 */
+		static void connection(void * ctx);
+		/**
 		 * do_request Функция запроса данных у сервера
 		 * @param ctx  передаваемый объект
 		 * @param flag флаг разрешающий новый запрос данных
@@ -405,11 +423,6 @@ class HttpProxy {
 		 */
 		static void run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size_t max, void * ctx);
 	public:
-		/**
-		 * connection Функция обработки данных подключения в треде
-		 * @param ctx передаваемый объект
-		 */
-		static void connection(void * ctx);
 		/**
 		 * HttpProxy Конструктор
 		 * @param proxy объект параметров прокси сервера

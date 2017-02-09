@@ -11,6 +11,18 @@
 using namespace std;
 
 /**
+ * toCase Функция перевода в указанный регистр
+ * @param  str  строка для перевода в указанных регистр
+ * @param  flag флаг указания типа регистра
+ * @return      результирующая строка
+ */
+string Config::toCase(string str, bool flag){
+	// Переводим в указанный регистр
+	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
+	// Выводим результат
+	return str;
+}
+/**
  * rtrim Функция усечения указанных символов с правой стороны строки
  * @param  str строка для усечения
  * @param  t   список символов для усечения
@@ -163,6 +175,8 @@ Config::Config(const string filename){
 		this->options = (OPT_CONNECT | OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG | OPT_PGZIP);
 		// Получаем тип прокси сервера
 		string type = PROXY_TYPE;
+		// Тип ключа определения коннектов к прокси
+		u_int connect_key = (string(CONNECTS_KEY).compare("mac") == 0 ? 1 : 0);
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port;
 		// Если прокси сервер это http
@@ -181,18 +195,12 @@ Config::Config(const string filename){
 		}
 		// Заполняем структуру proxy
 		this->proxy = {
-			// Общее количество одновременных подключений к прокси серверу
-			ALL_CONNECTS,
 			// Версия протокола интернета (4, 6)
 			PROXY_IPV,
 			// Тип прокси сервера (http, socks5, redirect)
 			proxy_type,
 			// Устанавливаем порт прокси сервера
 			proxy_port,
-			// Максимальное количество подключений (одного клиента к прокси серверу)
-			MAX_CONNECTS,
-			// Максимальное количество файловых дескрипторов
-			MAX_FDS,
 			// Максимальное количество воркеров
 			MAX_WORKERS,
 			// Активация режима отладки
@@ -282,6 +290,17 @@ Config::Config(const string filename){
 			// Установить заголовки в ответ
 			SET_HEADERS_RESPONSE
 		};
+		// Контроль подключений клиента к серверу
+		this->connects = {
+			// Ключ по которому определяются подключения (ip = 0, mac = 1)
+			connect_key,
+			// Максимальное количество подключений (одного клиента к прокси серверу)
+			CONNECTS_MAX,
+			// Максимальное количество файловых дескрипторов
+			CONNECTS_FDS,
+			// Общее количество одновременных подключений к прокси серверу
+			CONNECTS_ALL
+		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
 			// Внешний интерфейс, через который будут уходить запросы от сервера
@@ -335,6 +354,8 @@ Config::Config(const string filename){
 		this->options = (this->options | (ini.GetBoolean("keepalive", "enabled", true) ? OPT_KEEPALIVE : OPT_NULL));
 		// Активируем логирование данных
 		this->options = (this->options | (ini.GetBoolean("logs", "enabled", true) ? OPT_LOG : OPT_NULL));
+		// Тип ключа определения коннектов к прокси
+		u_int connect_key = (toCase(ini.Get("connects", "key", CONNECTS_KEY)).compare("mac") == 0 ? 1 : 0);
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port, proxy_ipv;
 		// Получаем версию протокола интернета
@@ -365,20 +386,14 @@ Config::Config(const string filename){
 		else if(resolver.empty()) resolver = PROXY_RESOLVER;
 		// Заполняем структуру proxy
 		this->proxy = {
-			// Общее количество одновременных подключений к прокси серверу
-			(int) ini.GetInteger("proxy", "allcon", ALL_CONNECTS),
 			// Версия протокола интернета (4, 6)
 			proxy_ipv,
 			// Тип прокси сервера (http, socks5, redirect)
 			proxy_type,
 			// Устанавливаем порт прокси сервера
 			(u_int) ini.GetInteger("proxy", "port", proxy_port),
-			// Максимальное количество подключений (одного клиента к прокси серверу)
-			(u_int) ini.GetInteger("proxy", "maxcon", MAX_CONNECTS),
-			// Максимальное количество файловых дескрипторов
-			(u_int) ini.GetInteger("proxy", "maxfds", MAX_FDS),
 			// Максимальное количество воркеров
-			(u_int) ini.GetInteger("proxy", "maxworks", MAX_WORKERS),
+			(u_int) ini.GetInteger("proxy", "workers", MAX_WORKERS),
 			// Активация режима отладки
 			ini.GetBoolean("proxy", "debug", PROXY_DEBUG),
 			// Запусть в виде демона
@@ -465,6 +480,17 @@ Config::Config(const string filename){
 			ini.GetBoolean("setheader", "request", SET_HEADERS_REQUEST),
 			// Установить заголовки в ответ
 			ini.GetBoolean("setheader", "response", SET_HEADERS_RESPONSE)
+		};
+		// Контроль подключений клиента к серверу
+		this->connects = {
+			// Ключ по которому определяются подключения (ip = 0, mac = 1)
+			connect_key,
+			// Максимальное количество подключений (одного клиента к прокси серверу)
+			(u_int) ini.GetInteger("connects", "max", CONNECTS_MAX),
+			// Максимальное количество файловых дескрипторов
+			(u_int) ini.GetInteger("connects", "fds", CONNECTS_FDS),
+			// Общее количество одновременных подключений к прокси серверу
+			(int) ini.GetInteger("connects", "all", CONNECTS_ALL)
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {

@@ -11,111 +11,161 @@
 using namespace std;
 
 /**
- * add Метод добавления нового подключения в объект клиента
- * @param ctx передаваемый указатель на объект
+ * get Метод получения количества подключений
+ * @return количество активных подключений
  */
-void ConnectClients::Client::add(void * ctx){
-	// Захватываем поток
+inline size_t Connects::get(){
+	// Выводим количество подключений
+	return this->connects;
+}
+/**
+ * end Метод проверки на конец всех подключений
+ * @return проверка на достижения нуля
+ */
+inline bool Connects::end(){
+	// Если количество подключений меньше 1 то сообщаем об этом
+	return (this->connects < 1);
+}
+/**
+ * inc Метод инкреминации количества подключений
+ */
+inline void Connects::inc(){
+	// Выполняем инкремент
+	this->connects++;
+}
+/**
+ * dec Метод декрементации количества подключений
+ */
+inline void Connects::dec(){
+	// Выполняем декрементацию
+	if(this->connects > 0) this->connects--;
+}
+/**
+ * signal Метод отправки сигнала первому блокированному потоку
+ */
+inline void Connects::signal(){
+	// Отправляем сигнал
+	this->condition.notify_one();
+}
+/**
+ * broadcastSignal Метод отправки сигналов всем блокированным потокам
+ */
+inline void Connects::broadcastSignal(){
+	// Выполняем вещание
+	this->condition.notify_all();
+}
+/**
+ * wait Метод блокировки потока
+ */
+inline void Connects::wait(recursive_mutex &mutx){
+	// Лочим мютекс
+	unique_lock <recursive_mutex> locker(mutx);
+	// Блокируем поток
+	this->condition.wait(locker);
+	// Блокируем поток и избавляемся от случайных пробуждений
+	// this->condition.wait(locker, [&](){return !g_codes.empty();});
+}
+/**
+ * Connects Конструктор
+ */
+Connects::Connects(){
+	// Устанавливаем первоначальное значение коннекта
+	this->connects = 1;
+}
+/**
+ * lock Метод блокировки мютекса
+ */
+inline void BufferHttpProxy::lock(){
+	// Лочим мютекс
+	this->lock_thread.lock();
+}
+/**
+ * unlock Метод разблокировки мютекса
+ */
+inline void BufferHttpProxy::unlock(){
+	// Разлочим мютекс
+	this->lock_thread.unlock();
+}
+/**
+ * get Метод получения данных подключения клиента
+ * @param client идентификатор клиента
+ * @return       данные подключения клиента
+ */
+Connects * ClientConnects::get(const string client){
+	// Указатель на объект подключения
+	Connects * connect = NULL;
+	// Лочим мютекс
 	this->mtx.lock();
-	// Получаем данные подключения
-	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
-	// Если подключение существует
-	if(http != NULL){
-		// Запоминаем блокиратор лишнего потока
-		http->frze = &this->freeze;
-		// Устанавливаем функцию удаления клиента
-		http->remove = [this](){
-			// Выполняем удаление текущего подключения
-			rm();
-		};
-		// Устанавливаем функцию проверки доступных коннектов
-		http->isfull = [this](){
-			// Выводим результат проверки
-			return (this->connects >= this->max);
-		};
-		// Запоминаем ключ клиента
-		this->key = (http->proxy->config->connects.key ? http->client.mac : http->client.ip);
-		// Запоминаем максимально-возможное количество подключений
-		this->max = http->proxy->config->connects.max;
-		// Создаем поток
-		std::thread thr(&HttpProxy::connection, http);
-		// Выполняем активацию потока
-		thr.detach();
-		// Если количество подключений еще не достигло максимума
-		this->connects++;
+	// Если такое подключение найдено
+	if(this->connects.count(client) > 0){
+		// Получаем объект текущего коннекта
+		connect = (this->connects.find(client)->second).get();
 	}
-	// Освобождаем поток
+	// Разлочим мютекс
 	this->mtx.unlock();
+	// Сообщаем что ничего не найдено
+	return connect;
 }
 /**
- * rm Метод удаления подключения из объекта клиента
+ * add Метод добавления данных подключения клиента
+ * @param client идентификатор клиента
  */
-void ConnectClients::Client::rm(){
-	// Захватываем поток
+void ClientConnects::add(const string client){
+	// Лочим мютекс
 	this->mtx.lock();
-	// Уменьшаем количество подключений
-	this->connects--;
-
-	cout << " =============================== " << this->connects << endl;
-
-	// Освобождаем поток
-	this->mtx.unlock();
-	// Если подключения еще есть то отправляем сигнал
-	if(this->connects && (this->connects < this->max))
-		// Сообщаем что подключения еще есть
-		this->freeze.cond.notify_one();
-	// Если это было последнее подключение то удаляем объект клиента
-	else if(!this->connects) this->remove(this->key);
-}
-/**
- * add Метод добавления нового подключения в объект пользователя
- * @param ctx передаваемый указатель на объект
- */
-void ConnectClients::add(void * ctx){
-	// Захватываем поток
-	this->mtx.lock();
-	// Получаем данные подключения
-	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
-	// Если подключение существует
-	if(http != NULL){
-		// Определяем тип ключа который будет использован для определения клиента
-		string key = (http->proxy->config->connects.key ? http->client.mac : http->client.ip);
-		// Если клиент не найден
-		if(this->clients.count(key) < 1){
-			// Создаем новый объект клиента
-			unique_ptr <Client> client(new Client);
-			// Добавляем в список нового клиента
-			this->clients.insert(pair <string, unique_ptr <Client>> (key, move(client)));
-		}
-		// Получаем данные клиента
-		Client * client = (this->clients.find(key)->second).get();
-		// Устанавливаем функцию удаления клиента
-		client->remove = [this](const string key){
-			// Выполняем удаление клиента
-			rm(key);
-		};
-		// Передаем клиенту данные объекта
-		client->add(http);
+	// Если такое подключение не найдено
+	if(this->connects.count(client) < 1){
+		// Создаем объект подключения
+		unique_ptr <Connects> connect(new Connects);
+		// Добавляем в список новое подключение
+		this->connects.insert(pair <string, unique_ptr <Connects>> (client, move(connect)));
 	}
-	// Освобождаем поток
+	// Разлочим мютекс
 	this->mtx.unlock();
 }
 /**
- * rm Метод удаления объекта подключившихся клиентов
- * @param key ключ клиента
+ * rm Метод удаления данных подключения клиента
+ * @param client идентификатор клиента
  */
-void ConnectClients::rm(const string key){
-	// Захватываем поток
+void ClientConnects::rm(const string client){
+	// Лочим мютекс
 	this->mtx.lock();
-	// Если такой клиент найден
-	if(this->clients.count(key) > 0){
+	// Если такое подключение найдено
+	if(this->connects.count(client) > 0){
 		// Получаем итератор
-		auto it = this->clients.find(key);
-		// Если клиент найден то удаляем его
-		this->clients.erase(it);
+		auto it = this->connects.find(client);
+		// Если подключение найдено то удаляем его
+		this->connects.erase(it);
 	}
-	// Освобождаем поток
+	// Разлочим мютекс
 	this->mtx.unlock();
+}
+/**
+ * appconn Функция которая добавляет или удаляет в список склиента
+ * @param flag флаг подключения или отключения клиента
+ */
+void BufferHttpProxy::appconn(const bool flag){
+	// Выполняем захват мютекса
+	this->lock();
+	// Получаем объект текущего коннекта
+	Connects * connect = (* this->connects).get(this->client.ip);
+	// Если такое подключение найдено
+	if(connect != NULL){
+		// Если нужно добавить подключение
+		if(flag) connect->inc();
+		// Если нужно удалить подключение
+		else {
+			// Уменьшаем количество подключений
+			connect->dec();
+			// Отправляем сигнал
+			connect->signal();
+		}
+		// Проверяем есть ли еще подключения
+		if(connect->end()) (* this->connects).rm(this->client.ip);
+	// Если нужно добавить подключение
+	} else if(flag) (* this->connects).add(this->client.ip);
+	// Выполняем разблокировку мютекса
+	this->unlock();
 }
 /**
  * free_socket Метод отключения сокета
@@ -148,80 +198,66 @@ void BufferHttpProxy::free_event(struct bufferevent ** event){
 	}
 }
 /**
+ * blockconnect Метод блокировки лишних коннектов
+ */
+void BufferHttpProxy::blockconnect(){
+	// Получаем объект текущего коннекта
+	Connects * connect = (* this->connects).get(this->client.ip);
+	// Если такое подключение найдено
+	if(connect != NULL){
+		// Запоминаем количество подключений пользователя
+		this->myconns = connect->get();
+		// Если количество подключений достигло предела
+		if(this->myconns >= this->proxy->config->connects.max){
+			// Усыпляем поток до момента пока не освободятся коннекты
+			connect->wait(this->lock_connect);
+		}
+	}
+	// Добавляем в список подключений
+	this->appconn(true);
+}
+/**
  * close_client Метод закрытия соединения клиента
  */
 void BufferHttpProxy::close_client(){
 	// Захватываем поток
-	this->mtx.lock();
+	this->lock();
 	// Закрываем сокет
 	free_socket(&this->sockets.client);
 	// Закрываем буфер события
 	free_event(&this->events.client);
-	// Освобождаем поток
-	this->mtx.unlock();
+	// Отпускаем поток
+	this->unlock();
 }
 /**
  * close_server Метод закрытия соединения сервера
  */
 void BufferHttpProxy::close_server(){
 	// Захватываем поток
-	this->mtx.lock();
+	this->lock();
 	// Закрываем сокет
 	free_socket(&this->sockets.server);
 	// Закрываем буфер события
 	free_event(&this->events.server);
-	// Освобождаем поток
-	this->mtx.unlock();
+	// Отпускаем поток
+	this->unlock();
 }
 /**
  * close Метод закрытия подключения
  */
 void BufferHttpProxy::close(){
+	// Захватываем поток
+	this->lock();
 	// Закрываем подключение клиента
 	close_client();
 	// Закрываем подключение сервера
 	close_server();
-	// Захватываем поток
-	this->mtx.lock();
+	// Удаляем из списока подключений
+	appconn(false);
 	// Удаляем базу событий
 	event_base_loopexit(this->base, NULL);
-	// Освобождаем поток
-	this->mtx.unlock();
-}
-/**
- * freeze Метод заморозки потока
- */
-void BufferHttpProxy::freeze(){
-	// Если все коннекты исчерпаны
-	if(this->isfull()){
-		// Получаем блокиратор потока
-		ConnectClients::Freeze * frze = reinterpret_cast <ConnectClients::Freeze *> (this->frze);
-		// Лочим мютекс
-		unique_lock <mutex> locker(frze->mtx);
-		// Блокируем поток
-		frze->cond.wait(locker);
-	}
-}
-/**
- * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
- * @param  size размер передаваемых данных
- * @param  type тип передаваемого сообщения (true - чтение, false - запись)
- * @return      время в секундах на которое следует задержать поток
- */
-void BufferHttpProxy::sleep(size_t size, bool type){
-	// Расчитанное время задержки
-	int seconds = 0;
-	// Получаем размер максимально-возможных передачи данных для всех подключений
-	float max = float(type ? this->proxy->config->buffers.read : this->proxy->config->buffers.write);
-	// Если буфер существует
-	if(max > 0){
-		// Высчитываем размер максимально-возможных передачи данных для одного подключения
-		max = (max / float(this->myconns));
-		// Если размер больше нуля то продолжаем
-		if((max > 0) && (size > max)) seconds = (size / max);
-	}
-	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-	this_thread::sleep_for(chrono::seconds(seconds));
+	// Отпускаем поток
+	this->unlock();
 }
 /**
  * set_timeout Метод установки таймаутов
@@ -247,12 +283,31 @@ void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
 		bufferevent_set_timeouts(this->events.client, (read ? &_read : NULL), (write ? &_write : NULL));
 }
 /**
+ * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
+ * @param  size размер передаваемых данных
+ * @param  type тип передаваемого сообщения (true - чтение, false - запись)
+ * @return      время в секундах на которое следует задержать поток
+ */
+void BufferHttpProxy::sleep(size_t size, bool type){
+	// Расчитанное время задержки
+	int seconds = 0;
+	// Получаем размер максимально-возможных передачи данных для всех подключений
+	float max = float(type ? this->proxy->config->buffers.read : this->proxy->config->buffers.write);
+	// Если буфер существует
+	if(max > 0){
+		// Высчитываем размер максимально-возможных передачи данных для одного подключения
+		max = (max / float(this->myconns));
+		// Если размер больше нуля то продолжаем
+		if((max > 0) && (size > max)) seconds = (size / max);
+	}
+	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+	this_thread::sleep_for(chrono::seconds(seconds));
+}
+/**
  * BufferHttpProxy Конструктор
  * @param proxy объект данных прокси сервера
  */
 BufferHttpProxy::BufferHttpProxy(System * proxy){
-	// Захватываем поток
-	this->mtx.lock();
 	// Запоминаем данные прокси сервера
 	this->proxy = proxy;
 	// Создаем новую базу событий
@@ -268,8 +323,6 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 		// Для протокола IPv6
 		case 6: this->dns = new DNSResolver(this->proxy->log, this->base, AF_INET6, this->proxy->config->proxy.resolver);	break;
 	}
-	// Освобождаем поток
-	this->mtx.unlock();
 }
 /**
  * ~BufferHttpProxy Деструктор
@@ -277,46 +330,10 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 BufferHttpProxy::~BufferHttpProxy(){
 	// Закрываем подключение
 	close();
-	// Захватываем поток
-	this->mtx.lock();
 	// Удаляем dns сервер
 	delete this->dns;
 	// Очищаем объект базы событий
 	event_base_free(this->base);
-	// Освобождаем поток
-	this->mtx.unlock();
-	// Удаляем себя из списока подключений
-	this->remove();
-}
-/**
- * create_client Метод создания нового клиента
- * @param ip  адрес интернет протокола клиента
- * @param mac аппаратный адрес сетевого интерфейса клиента
- * @param fd  файловый дескриптор (сокет) подключившегося клиента
- */
-void HttpProxy::create_client(const string ip, const string mac, evutil_socket_t fd){
-	// Захватываем поток
-	this->mtx.lock();
-	// Устанавливаем неблокирующий режим для сокета
-	socket_nonblocking(fd, this->server->log);
-	// Устанавливаем разрешение на повторное использование сокета
-	socket_reuseable(fd, this->server->log);
-	// Отключаем сигнал записи в оборванное подключение
-	socket_nosigpipe(fd, this->server->log);
-	// Выводим в лог сообщение
-	this->server->log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), fd);
-	// Создаем новый объект подключения
-	BufferHttpProxy * http = new BufferHttpProxy(this->server);
-	// Запоминаем файловый дескриптор текущего подключения
-	http->sockets.client = fd;
-	// Запоминаем данные мак адреса
-	http->client.mac = mac;
-	// Запоминаем данные клиента
-	http->client.ip = ip;
-	// Добавляем в список клиентов объект подключения
-	this->clients.add(http);
-	// Освобождаем поток
-	this->mtx.unlock();
 }
 /**
  * get_mac Метод определения мак адреса клиента
@@ -846,6 +863,8 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
+		// Блокируем поток
+		http->lock();
 		// Получаем текущий сокет
 		evutil_socket_t current_fd = bufferevent_getfd(bev);
 		// Определяем для кого вызвано событие
@@ -900,6 +919,8 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 			// Закрываем подключение
 			http->close();
 		}
+		// Разблокируем поток
+		http->unlock();
 	}
 	// Выходим
 	return;
@@ -1231,8 +1252,8 @@ void HttpProxy::connection(void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
-		// Выполняем заморозку потока
-		http->freeze();
+		// Выполняем блокировку подключения
+		http->blockconnect();
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 		// Устанавливаем таймер для клиента
@@ -1301,8 +1322,28 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 				mac = get_mac(&client);
 			} break;
 		}
-		// Создаем новое подключение
-		proxy->create_client(ip, mac, socket);
+		// Устанавливаем неблокирующий режим для сокета
+		socket_nonblocking(socket, proxy->server->log);
+		// Устанавливаем разрешение на повторное использование сокета
+		socket_reuseable(socket, proxy->server->log);
+		// Отключаем сигнал записи в оборванное подключение
+		socket_nosigpipe(socket, proxy->server->log);
+		// Выводим в лог сообщение
+		proxy->server->log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), socket);
+		// Создаем новый объект подключения
+		BufferHttpProxy * http = new BufferHttpProxy(proxy->server);
+		// Запоминаем список подключений
+		http->connects = &proxy->connects;
+		// Запоминаем файловый дескриптор текущего подключения
+		http->sockets.client = socket;
+		// Запоминаем данные мак адреса
+		http->client.mac = mac;
+		// Запоминаем данные клиента
+		http->client.ip = ip;
+		// Создаем поток
+		std::thread thr(&HttpProxy::connection, http);
+		// Выполняем активацию потока
+		thr.detach();
 	}
 }
 /**

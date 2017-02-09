@@ -329,7 +329,7 @@ void LogApp::welcome(){
 		const char * _optimos = ((* config)->proxy.optimos ? "yes" : "no");
 		const char * _bandlimin = ((* config)->firewall.bandlimin ? "yes" : "no");
 		const char * _cache = ((* config)->cache.response ? "yes" : "no");
-		const char * _allcon = ((* config)->proxy.allcon > 0 ? to_string((* config)->proxy.allcon).c_str() : "auto");
+		const char * _allcon = ((* config)->connects.all > 0 ? to_string((* config)->connects.all).c_str() : "auto");
 		// Данные прокси сервера
 		string proxyname = APP_NAME, proxyver = APP_VERSION, proxytype, proxyskill;
 		// Внешний и внутренний адрес сервера
@@ -420,8 +420,8 @@ void LogApp::welcome(){
 			(* config)->proxy.user.c_str(),
 			(* config)->proxy.group.c_str(),
 			_daemon, _debug, _gzipt, _gzipr,
-			_allcon, (* config)->proxy.maxcon,
-			(* config)->proxy.maxfds, _cache,
+			_allcon, (* config)->connects.max,
+			(* config)->connects.fds, _cache,
 			_headname, _bandlimin, _deblock,
 			_optimos, _keepalive, _reverse,
 			_forward, _transfer, _connect,

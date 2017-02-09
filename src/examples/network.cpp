@@ -900,7 +900,6 @@ bool checkIPByNetwork(const string ip, const string nwk){
 	return false;
 }
 
-class B;
 class A {
 	private:
 		int d = 153;

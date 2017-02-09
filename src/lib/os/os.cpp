@@ -85,9 +85,9 @@ int Os::setFdLimit(){
 	// Структура для установки лимитов
 	struct rlimit lim;
 	// зададим текущий лимит на кол-во открытых дискриптеров
-	lim.rlim_cur = (* config)->proxy.maxfds;
+	lim.rlim_cur = (* config)->connects.fds;
 	// зададим максимальный лимит на кол-во открытых дискриптеров
-	lim.rlim_max = (* config)->proxy.maxfds;
+	lim.rlim_max = (* config)->connects.fds;
 	// установим указанное кол-во
 	return setrlimit(RLIMIT_NOFILE, &lim);
 }
