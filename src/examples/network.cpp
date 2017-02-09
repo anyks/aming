@@ -929,16 +929,14 @@ class B {
 		}
 
 		void f1(){
-			A * t = new A;
+			A t;
 
-			t->remove = [this](int x){
+			t.remove = [this](int x){
 				// cout << (d + m + x) << endl;
 				f2(x);
 			};
 
-			t->m();
-
-			delete t;
+			t.m();
 		};
 		
 };

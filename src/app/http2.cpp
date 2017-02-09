@@ -11,16 +11,6 @@
 using namespace std;
 
 /**
- * isfull Метод проверки заполненности максимального количества коннектов
- * @return результат проверки
- */
-bool ConnectClients::Client::isfull(){
-	// Если количество подключений не достигло предела
-	if(this->active < this->max) return false;
-	// Сообщаем что подключений больше нет
-	return true;
-}
-/**
  * add Метод добавления нового подключения в объект клиента
  * @param client родительский объект клиента
  * @param ctx    передаваемый указатель на объект
@@ -44,7 +34,7 @@ void ConnectClients::Client::add(void * ctx){
 		// Устанавливаем функцию проверки доступных коннектов
 		http->isfull = [this](){
 			// Выводим результат проверки
-			return isfull();
+			return (this->active >= this->max);
 		}
 		// Запоминаем ip адрес клиента
 		this->id = http->client.ip;
@@ -55,7 +45,7 @@ void ConnectClients::Client::add(void * ctx){
 		// Добавляем в массив созданный нами поток
 		this->connects.push_back(thr);
 		// Если количество подключений еще не достигло максимума
-		if(!isfull()) this->active++;
+		if(this->active < this->max) this->active++;
 		// Выполняем активацию потока
 		(* this->connects.end()).detach();
 	}
