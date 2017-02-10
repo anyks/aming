@@ -162,55 +162,59 @@ void LogApp::write_to_file(u_short type, const char * message){
 		setOwner(filename.c_str());
 		// Открываем файл на чтение в бинарном виде
 		file = fopen(filename.c_str(), "rb");
-		// Перемещаемся в конец файла
-		fseek(file, 0, SEEK_END);
-		// Определяем размер файла
-		size_t size = ftell(file);
-		// Закрываем файл
-		fclose(file);
-		// Если размер файла больше максимального
-		if(size >= this->size){
-			// Создаем буфер для хранения даты
-			char datefile[80];
-			// Определяем количество секунд
-			time_t seconds = time(NULL);
-			// Получаем структуру локального времени
-			struct tm * timeinfo = localtime(&seconds);
-			// Создаем формат полученного времени
-			string dateformat = "_%m-%d-%Y_%H-%M-%S";
-			// Копируем в буфер полученную дату и время
-			int datelen = strftime(datefile, sizeof(datefile), dateformat.c_str(), timeinfo);
-			// Устанавливаем конец строки
-			datefile[datelen] = '\0';
-			// Строка чтения из файла
-			string filedata;
-			// Открываем файл на чтение
-			ifstream logfile(filename.c_str());
-			// Если файл открыт
-			if(logfile.is_open()){
-				// Создаем адрес сжатого файла
-				string gzlogfile = filename;
-				// Заменяем название файла
-				gzlogfile.replace(gzlogfile.length() - 4, 4, string(datefile) + ".log.gz");
-				// Открываем файл на сжатие
-				gzFile gz = gzopen(gzlogfile.c_str(), "w6h");
-				// Считываем до тех пор пока все удачно
-				while(logfile.good()){
-					// Считываем строку из файла
-					getline(logfile, filedata);
-					// Добавляем конец строки
-					filedata += "\r\n";
-					// Выполняем сжатие файла
-					gzwrite(gz, filedata.c_str(), filedata.size());
+		// Если файл открыт
+		if(file){
+			// Перемещаемся в конец файла
+			fseek(file, 0, SEEK_END);
+			// Определяем размер файла
+			size_t size = ftell(file);
+			// Закрываем файл
+			fclose(file);
+			// Если размер файла больше максимального
+			if(size >= this->size){
+				// Создаем буфер для хранения даты
+				char datefile[80];
+				// Определяем количество секунд
+				time_t seconds = time(NULL);
+				// Получаем структуру локального времени
+				struct tm * timeinfo = localtime(&seconds);
+				// Создаем формат полученного времени
+				string dateformat = "_%m-%d-%Y_%H-%M-%S";
+				// Копируем в буфер полученную дату и время
+				int datelen = strftime(datefile, sizeof(datefile), dateformat.c_str(), timeinfo);
+				// Устанавливаем конец строки
+				datefile[datelen] = '\0';
+				// Строка чтения из файла
+				string filedata;
+				// Открываем файл на чтение
+				ifstream logfile(filename.c_str());
+				// Если файл открыт
+				if(logfile.is_open()){
+					// Создаем адрес сжатого файла
+					string gzlogfile = filename;
+					// Заменяем название файла
+					gzlogfile.replace(gzlogfile.length() - 4, 4, string(datefile) + ".log.gz");
+					// Открываем файл на сжатие
+					gzFile gz = gzopen(gzlogfile.c_str(), "w6h");
+					// Считываем до тех пор пока все удачно
+					while(logfile.good()){
+						// Считываем строку из файла
+						getline(logfile, filedata);
+						// Добавляем конец строки
+						filedata += "\r\n";
+						// Выполняем сжатие файла
+						gzwrite(gz, filedata.c_str(), filedata.size());
+					}
+					// Закрываем сжатый файл
+					gzclose(gz);
+					// Закрываем файл
+					logfile.close();
 				}
-				// Закрываем сжатый файл
-				gzclose(gz);
-				// Закрываем файл
-				logfile.close();
+				// Удаляем файл
+				remove(filename.c_str());
 			}
-			// Удаляем файл
-			remove(filename.c_str());
-		}
+		// Выводим в консоль что файл не может быть прочитан
+		} else write_to_console(LOG_ERROR, (string("cannot read log file, ") + filename).c_str());
 	}
 	// Открываем файл на запись
 	file = fopen(filename.c_str(), "a");
