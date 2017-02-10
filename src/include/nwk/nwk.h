@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sstream>
 #include <math.h>
 #include <sys/types.h>
 
@@ -84,6 +85,7 @@ struct NLdata {
  */
 struct NLdata6 {
 	string ip;		// ip адрес сети
+	string eip;		// Конечный ip адрес
 	u_int prefix;	// Префикс сети
 	bool allow;		// Разрешен (true - разрешен, false - запрещен)
 };
@@ -102,15 +104,15 @@ class Network {
 	private:
 		// Набор локальных сетей IPv6
 		vector <NLdata6> locals6 = {
-			{"::1", 128, true},
-			{"2001::", 32, false},
-			{"2001:db8::", 32, true},
-			{"64:ff9b::", 96, false},
-			{"2002::", 16, false},
-			{"fe80::", 10, true},
-			{"fec0::", 10, true},
-			{"fc00::", 7, true},
-			{"ff00::", 8, false}
+			{"::1", "", 128, true},
+			{"2001::", "", 32, false},
+			{"2001:db8::", "", 32, true},
+			{"64:ff9b::", "", 96, false},
+			{"2002::", "", 16, false},
+			{"fe80::", "febf::", 10, true},
+			{"fec0::", "feff::", 10, true},
+			{"fc00::", "", 7, true},
+			{"ff00::", "", 8, false}
 		};
 		// Набор локальных сетей
 		vector <NLdata> locals = {
@@ -238,6 +240,14 @@ class Network {
 		 */
 		IPdata getDataIp(string ip);
 		/**
+		 * checkRange Метод проверки входит ли ip адрес в указанный диапазон
+		 * @param  ip  ip данные ip адреса интернет протокола версии 6
+		 * @param  bip начальный диапазон ip адресов
+		 * @param  eip конечный диапазон ip адресов
+		 * @return     результат проверки
+		 */
+		bool checkRange6(const string ip, const string bip, const string eip);
+		/**
 		 * checkMaskByString Метод проверки на соответствие маски по строке маски
 		 * @param  ip   данные ip адреса
 		 * @param  mask номер маски
@@ -297,6 +307,12 @@ class Network {
 		 * @return    восстановленный вид ip адреса
 		 */
 		const string setLowIp6(const string ip);
+		/**
+		 * strIp6ToHex64 Функция преобразования строки ip адреса в 16-й вид
+		 * @param  ip данные ip адреса интернет протокола версии 6
+		 * @return    результат в 16-м виде
+		 */
+		__uint64_t strIp6ToHex64(const string ip);
 		/**
 		 * isLocal Метод проверки на то является ли ip адрес локальным
 		 * @param  ip адрес подключения ip

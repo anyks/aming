@@ -11,6 +11,9 @@
 
 using namespace std;
 
+typedef int int128_t __attribute__((mode(TI)));
+typedef unsigned int uint128_t __attribute__((mode(TI)));
+
 /**
  * IPdata Класс содержащий данные ip адреса
  */
@@ -78,6 +81,7 @@ struct NLdata {
  */
 struct NLdata6 {
 	string ip;		// ip адрес сети
+	string eip;		// Конечный ip адрес
 	u_int prefix;	// Префикс сети
 	bool allow;		// Разрешен (true - разрешен, false - запрещен)
 };
@@ -110,15 +114,15 @@ struct NTdata {
 };
 // Набор локальных сетей IPv6
 vector <NLdata6> locals6 = {
-	{"::1", 128, true},
-	{"2001::", 32, false},
-	{"2001:db8::", 32, true},
-	{"64:ff9b::", 96, false},
-	{"2002::", 16, false},
-	{"fe80::", 10, true},
-	{"fec0::", 10, true},
-	{"fc00::", 7, true},
-	{"ff00::", 8, false}
+	{"::1", "", 128, true},
+	{"2001::", "", 32, false},
+	{"2001:db8::", "", 32, true},
+	{"64:ff9b::", "", 96, false},
+	{"2002::", "", 16, false},
+	{"fe80::", "febf::", 10, true},
+	{"fec0::", "feff::", 10, true},
+	{"fc00::", "", 7, true},
+	{"ff00::", "", 8, false}
 };
 // Набор локальных сетей
 vector <NLdata> locals = {
@@ -801,6 +805,51 @@ const string imposePrefix6(const string ip6, u_int prefix){
 	return str;
 }
 /**
+ * strIp6ToHex64 Функция преобразования строки ip адреса в 16-й вид
+ * @param  ip данные ip адреса интернет протокола версии 6
+ * @return    результат в 16-м виде
+ */
+__uint64_t strIp6ToHex64(const string ip){
+	// Результат работы функции
+	__uint64_t result = 0;
+	// Создаем поток
+	stringstream strm;
+	// Устанавливаем правило регулярного выражения
+	regex e("[^ABCDEFabcdef\\d]", regex::ECMAScript | regex::icase);
+	// Убираем лишние символы из 16-го выражения
+	string str = regex_replace(ip, e, "");
+	// Если число слишком длинное
+	if(str.length() > 16) str = str.erase(15, str.length());
+	// Записываем полученную строку в поток
+	strm << str;
+	// Выполняем преобразование в 16-й вид
+	strm >> std::hex >> result;
+	// Выводим результат
+	return result;
+}
+/**
+ * checkRange Метод проверки входит ли ip адрес в указанный диапазон
+ * @param  ip  ip данные ip адреса интернет протокола версии 6
+ * @param  bip начальный диапазон ip адресов
+ * @param  eip конечный диапазон ip адресов
+ * @return     результат проверки
+ */
+bool checkRange6(const string ip, const string bip, const string eip){
+	// Результат проверки
+	bool result = false;
+	// Если все данные переданы
+	if(!ip.empty() && !bip.empty() && !eip.empty()){
+		// Переводим в целочисленный вид
+		__uint64_t nip	= strIp6ToHex64(setLowIp6(ip));
+		__uint64_t nbip	= strIp6ToHex64(setLowIp6(bip));
+		__uint64_t neip	= strIp6ToHex64(setLowIp6(eip));
+		// Выполняем сравнение
+		result = ((nip >= nbip) && (nip <= neip));
+	}
+	// Сообщаем что проверка не удалась
+	return result;
+}
+/**
  * isLocal6 Метод проверки на то является ли ip адрес локальным
  * @param  ip адрес подключения IPv6
  * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
@@ -812,24 +861,30 @@ int isLocal6(const string ip){
 	bool compare = false;
 	// Переходим по всему массиву адресов
 	for(u_int i = 0; i < locals6.size(); i++){
-		// Преобразуем сеть в полный вид
-		string network = toCase(setLowIp6(locals6[i].ip));
-		// Накладываем на ip адрес префикс сети
-		string ipv6 = imposePrefix6(ip, locals6[i].prefix);
-		// Преобразуем ip адрес в полный вид
-		ipv6 = toCase(setLowIp6(ipv6));
-		// Формируем векторы данных
-		vector <char> ip(ipv6.begin(), ipv6.end());
-		vector <char> nwk(network.begin(), network.end());
-		// Начинаем проверять совпадения
-		for(u_int j = 0; j < ip.size(); j++){
-			// Если значение в маске совпадает тогда продолжаем проверку
-			if((ip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
-			else {
-				// Запоминаем что сравнение не удалось
-				compare = false;
-				// Выходим
-				break;
+		// Если сравнение пройдено и есть еще конечная сеть
+		if(!locals6[i].eip.empty())
+			// Выполняем дополнительную проверку на диапазон сетей
+			compare = checkRange6(ip, locals6[i].ip, locals6[i].eip);
+		else {
+			// Преобразуем сеть в полный вид
+			string network = toCase(setLowIp6(locals6[i].ip));
+			// Накладываем на ip адрес префикс сети
+			string ipv6 = imposePrefix6(ip, locals6[i].prefix);
+			// Преобразуем ip адрес в полный вид
+			ipv6 = toCase(setLowIp6(ipv6));
+			// Формируем векторы данных
+			vector <char> mip(ipv6.begin(), ipv6.end());
+			vector <char> nwk(network.begin(), network.end());
+			// Начинаем проверять совпадения
+			for(u_int j = 0; j < mip.size(); j++){
+				// Если значение в маске совпадает тогда продолжаем проверку
+				if((mip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
+				else {
+					// Запоминаем что сравнение не удалось
+					compare = false;
+					// Выходим
+					break;
+				}
 			}
 		}
 		// Формируем результат
@@ -862,12 +917,12 @@ bool checkIPByNetwork6(const string ip, const string nwk){
 		// Преобразуем ip адрес в полный вид
 		ipv6 = toCase(setLowIp6(ipv6));
 		// Формируем векторы данных
-		vector <char> ip(ipv6.begin(), ipv6.end());
+		vector <char> mip(ipv6.begin(), ipv6.end());
 		vector <char> nwk(network.begin(), network.end());
 		// Начинаем проверять совпадения
-		for(u_int j = 0; j < ip.size(); j++){
+		for(u_int j = 0; j < mip.size(); j++){
 			// Если значение в маске совпадает тогда продолжаем проверку
-			if((ip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
+			if((mip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
 			else {
 				// Запоминаем что сравнение не удалось
 				compare = false;
@@ -1010,6 +1065,18 @@ int main(int len, char * buff[]){
 	// cout << " ============1 " << checkIPByNetwork6("[2001:db8:11a3:09d7:1f34:8a2e:07a0:765d]", "2001:db8::/32") << endl;
 
 	// cout << " ============1 " << checkIPByNetwork("43.15.55.21", "43.15.0.0/16") << endl;
+
+	// cout << " ------------ " << strToHex6("[2001:db8:11a3:09d7:1f34:8a2e:07a0:765d]") << endl;
+
+	
+
+	/*
+	__uint64_t u64 = strIp6ToHex64("[2001:db8:11a3:09d7:1f34:8a2e:07a0:765d]");
+  	printf("%llx\n", (unsigned long long)(u64 & 0xFFFFFFFFFFFFFFFF));
+  	*/
+  	
+  	cout << " ************** " << isLocal6("[feff::]") << endl; //fe80
+
 
 	std::stringstream stream;
 	stream << std::hex << 154;

@@ -181,6 +181,28 @@ IPdata Network::getDataIp(string ip){
 	return ipdata;
 }
 /**
+ * checkRange Метод проверки входит ли ip адрес в указанный диапазон
+ * @param  ip  ip данные ip адреса интернет протокола версии 6
+ * @param  bip начальный диапазон ip адресов
+ * @param  eip конечный диапазон ip адресов
+ * @return     результат проверки
+ */
+bool Network::checkRange6(const string ip, const string bip, const string eip){
+	// Результат проверки
+	bool result = false;
+	// Если все данные переданы
+	if(!ip.empty() && !bip.empty() && !eip.empty()){
+		// Переводим в целочисленный вид
+		__uint64_t nip	= strIp6ToHex64(setLowIp6(ip));
+		__uint64_t nbip	= strIp6ToHex64(setLowIp6(bip));
+		__uint64_t neip	= strIp6ToHex64(setLowIp6(eip));
+		// Выполняем сравнение
+		result = ((nip >= nbip) && (nip <= neip));
+	}
+	// Сообщаем что проверка не удалась
+	return result;
+}
+/**
  * checkMask Метод проверки на соответствии маски
  * @param  ip   блок с данными ip адреса
  * @param  mask блок с данными маски сети
@@ -268,12 +290,12 @@ bool Network::checkIPByNetwork6(const string ip, const string nwk){
 		// Преобразуем ip адрес в полный вид
 		ipv6 = toCase(setLowIp6(ipv6));
 		// Формируем векторы данных
-		vector <char> ip(ipv6.begin(), ipv6.end());
+		vector <char> mip(ipv6.begin(), ipv6.end());
 		vector <char> nwk(network.begin(), network.end());
 		// Начинаем проверять совпадения
-		for(u_int j = 0; j < ip.size(); j++){
+		for(u_int j = 0; j < mip.size(); j++){
 			// Если значение в маске совпадает тогда продолжаем проверку
-			if((ip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
+			if((mip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
 			else {
 				// Запоминаем что сравнение не удалось
 				compare = false;
@@ -708,6 +730,29 @@ const string Network::setLowIp6(const string ip){
 	return setLow1Ip6(str);
 }
 /**
+ * strIp6ToHex64 Функция преобразования строки ip адреса в 16-й вид
+ * @param  ip данные ip адреса интернет протокола версии 6
+ * @return    результат в 16-м виде
+ */
+__uint64_t Network::strIp6ToHex64(const string ip){
+	// Результат работы функции
+	__uint64_t result = 0;
+	// Создаем поток
+	stringstream strm;
+	// Устанавливаем правило регулярного выражения
+	regex e("[^ABCDEFabcdef\\d]", regex::ECMAScript | regex::icase);
+	// Убираем лишние символы из 16-го выражения
+	string str = regex_replace(ip, e, "");
+	// Если число слишком длинное
+	if(str.length() > 16) str = str.erase(15, str.length());
+	// Записываем полученную строку в поток
+	strm << str;
+	// Выполняем преобразование в 16-й вид
+	strm >> std::hex >> result;
+	// Выводим результат
+	return result;
+}
+/**
  * isLocal Метод проверки на то является ли ip адрес локальным
  * @param  ip адрес подключения ip
  * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
@@ -763,25 +808,31 @@ int Network::isLocal6(const string ip){
 	// Результат сравнения
 	bool compare = false;
 	// Переходим по всему массиву адресов
-	for(u_int i = 0; i < locals6.size(); i++){
-		// Преобразуем сеть в полный вид
-		string network = toCase(setLowIp6(this->locals6[i].ip));
-		// Накладываем на ip адрес префикс сети
-		string ipv6 = imposePrefix6(ip, this->locals6[i].prefix);
-		// Преобразуем ip адрес в полный вид
-		ipv6 = toCase(setLowIp6(ipv6));
-		// Формируем векторы данных
-		vector <char> ip(ipv6.begin(), ipv6.end());
-		vector <char> nwk(network.begin(), network.end());
-		// Начинаем проверять совпадения
-		for(u_int j = 0; j < ip.size(); j++){
-			// Если значение в маске совпадает тогда продолжаем проверку
-			if((ip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
-			else {
-				// Запоминаем что сравнение не удалось
-				compare = false;
-				// Выходим
-				break;
+	for(u_int i = 0; i < this->locals6.size(); i++){
+		// Если сравнение пройдено и есть еще конечная сеть
+		if(!this->locals6[i].eip.empty())
+			// Выполняем дополнительную проверку на диапазон сетей
+			compare = checkRange6(ip, this->locals6[i].ip, this->locals6[i].eip);
+		else {
+			// Преобразуем сеть в полный вид
+			string network = toCase(setLowIp6(this->locals6[i].ip));
+			// Накладываем на ip адрес префикс сети
+			string ipv6 = imposePrefix6(ip, this->locals6[i].prefix);
+			// Преобразуем ip адрес в полный вид
+			ipv6 = toCase(setLowIp6(ipv6));
+			// Формируем векторы данных
+			vector <char> mip(ipv6.begin(), ipv6.end());
+			vector <char> nwk(network.begin(), network.end());
+			// Начинаем проверять совпадения
+			for(u_int j = 0; j < mip.size(); j++){
+				// Если значение в маске совпадает тогда продолжаем проверку
+				if((mip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
+				else {
+					// Запоминаем что сравнение не удалось
+					compare = false;
+					// Выходим
+					break;
+				}
 			}
 		}
 		// Формируем результат

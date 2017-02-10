@@ -639,6 +639,10 @@ int HttpProxy::connect_server(void * ctx){
 	if(http != NULL){
 		// Если сервер еще не подключен
 		if(http->events.server == NULL){
+			// Мютекс для захвата потока
+			mutex mtx;
+			// Захватываем мютекс
+			mtx.lock();
 			// Адрес сервера для биндинга
 			string bindhost;
 			// Размер структуры подключения
@@ -721,6 +725,8 @@ int HttpProxy::connect_server(void * ctx){
 			}
 			// Получаем данные мак адреса клиента
 			http->server.mac = get_mac(sot);
+			// Освобождаем мютекс
+			mtx.unlock();
 			// Если сокет не создан то выходим
 			if(http->sockets.server < 0){
 				// Выводим в лог сообщение
@@ -734,6 +740,8 @@ int HttpProxy::connect_server(void * ctx){
 				// Выходим
 				return 0;
 			}
+			// Захватываем мютекс
+			mtx.lock();
 			// Разблокируем сокет
 			socket_nonblocking(http->sockets.server, http->proxy->log);
 			// Устанавливаем разрешение на повторное использование сокета
@@ -759,6 +767,8 @@ int HttpProxy::connect_server(void * ctx){
 				socket_tcpcork(http->sockets.server, http->proxy->log);
 				socket_tcpcork(http->sockets.client, http->proxy->log);
 			}
+			// Освобождаем мютекс
+			mtx.unlock();
 			// Выполняем бинд на сокет
 			if(::bind(http->sockets.server, sin, sinlen) < 0){
 				// Выводим в лог сообщение
@@ -766,6 +776,8 @@ int HttpProxy::connect_server(void * ctx){
 				// Выходим
 				return 0;
 			}
+			// Захватываем мютекс
+			mtx.lock();
 			// Создаем буфер событий для сервера
 			http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 			// Устанавливаем водяной знак на 1 байт (чтобы считывать данные когда они действительно приходят)
@@ -776,6 +788,8 @@ int HttpProxy::connect_server(void * ctx){
 			bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
 			// Очищаем буферы событий при завершении работы
 			bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
+			// Освобождаем мютекс
+			mtx.unlock();
 			// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
 			if(bufferevent_socket_connect(http->events.server, sot, sotlen) < 0){
 				// Выводим в лог сообщение
@@ -1224,8 +1238,13 @@ void HttpProxy::connection(void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http != NULL){
+		// Мютекс для захвата потока
+		mutex mtx;
 		// Выполняем заморозку потока
 		http->freeze();
+		// Формируем поведение клиента
+		// Захватываем мютекс
+		mtx.lock();
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 		// Устанавливаем таймер для клиента
@@ -1238,14 +1257,20 @@ void HttpProxy::connection(void * ctx){
 		bufferevent_enable(http->events.client, EV_READ | EV_WRITE);
 		// Очищаем буферы событий при завершении работы
 		bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
+		// Освобождаем мютекс
+		mtx.unlock();
 		// Активируем перебор базы событий
 		event_base_dispatch(http->base);
+		// Захватываем мютекс
+		mtx.lock();
 		// Удаляем dns сервер
 		delete http->dns;
 		// Очищаем объект базы событий
 		event_base_free(http->base);
 		// Удаляем объект подключения
 		delete http;
+		// Освобождаем мютекс
+		mtx.unlock();
 	}
 	// Выходим
 	return;
