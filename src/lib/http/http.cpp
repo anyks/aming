@@ -564,7 +564,7 @@ void HttpData::genDataConnect(){
 			|| (::toCase(this->path).compare(::toCase(fulladdr3)) == 0)
 			|| (::toCase(this->path).compare(::toCase(fulladdr4)) == 0)))) this->path = "/";
 			// Выполняем удаление из адреса доменного имени
-			else if(strstr(this->path.c_str(), fulladdr1.c_str()) != NULL){
+			else if(strstr(this->path.c_str(), fulladdr1.c_str())){
 				// Запоминаем текущий путь
 				string tmp_path = this->path;
 				// Вырезаем домер из пути
@@ -802,14 +802,14 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
 				const char * pch = strstr(buffer + this->length, "0\r\n\r\n");
 				// Если конец передачи данных мы нашли
 				// Определяем размер вложений
-				if(pch != NULL) body_size = ((pch - buffer) - this->length + 5);
+				if(pch) body_size = ((pch - buffer) - this->length + 5);
 				// Если конец не найден
 				else {
 					// Ищем дальше
 					pch = strstr(buffer + this->length, "0\r\n");
 					// Если конец передачи данных мы нашли
 					// Определяем размер вложений
-					if(pch != NULL) body_size = ((pch - buffer) - this->length + 3);
+					if(pch) body_size = ((pch - buffer) - this->length + 3);
 				}
 			// Сообщаем что мы закончили
 			} else return true;

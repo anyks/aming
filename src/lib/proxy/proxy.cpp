@@ -20,7 +20,7 @@ void Proxy::signal_log(int num, void * ctx){
 	// Получаем объект прокси сервера
 	Proxy * proxy = reinterpret_cast <Proxy *> (ctx);
 	// Если подключение не передано
-	if(proxy != NULL){
+	if(proxy){
 		// Определяем данные сигнала
 		switch(num){
 			case SIGABRT:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Process abort signal [%d]", num);									break;
@@ -65,7 +65,7 @@ void Proxy::clear_fantoms(int signal, void * ctx){
 	// Получаем данные прокси
 	Proxy * proxy = reinterpret_cast <Proxy *> (ctx);
 	// Если подключение не передано
-	if(proxy != NULL){
+	if(proxy){
 		// Логируем сообщение о сигнале
 		signal_log(signal, proxy);
 		// Получаем данные пидов созданных балансером
@@ -78,7 +78,7 @@ void Proxy::clear_fantoms(int signal, void * ctx){
 			if(proxy->cpid) kill(proxy->cpid, SIGTERM);
 			if(proxy->mpid) kill(proxy->mpid, SIGTERM);
 			// Если существует объект OS то удаляем пид
-			if(proxy->sys->os != NULL) proxy->sys->os->rmPid(EXIT_FAILURE);
+			if(proxy->sys->os) proxy->sys->os->rmPid(EXIT_FAILURE);
 		}
 	}
 	// Выходим
@@ -94,10 +94,7 @@ void Proxy::siginfo_cb(evutil_socket_t fd, short event, void * ctx){
 	// Получаем объект сигнала
 	SignalBuffer * buffer = reinterpret_cast <SignalBuffer *> (ctx);
 	// Если подключение не передано
-	if(buffer != NULL){
-		// Логируем сообщение о сигнале
-		signal_log(buffer->signal, buffer->proxy);
-	}
+	if(buffer) signal_log(buffer->signal, buffer->proxy);
 	// Выходим
 	return;
 }
@@ -111,13 +108,13 @@ void Proxy::siguser_cb(evutil_socket_t fd, short event, void * ctx){
 	// Получаем объект сигнала
 	SignalBuffer * buffer = reinterpret_cast <SignalBuffer *> (ctx);
 	// Если подключение не передано
-	if(buffer != NULL){
+	if(buffer){
 		// Логируем сообщение о сигнале
 		signal_log(buffer->signal, buffer->proxy);
 		// Получаем данные прокси
 		Proxy * proxy = reinterpret_cast <Proxy *> (buffer->proxy);
 		// Если подключение не передано
-		if(proxy != NULL){
+		if(proxy){
 			// Получаем данные пидов созданных балансером
 			System::Pids pids = proxy->sys->readPids();
 			// Отправляем идентификаторы балансеру
@@ -140,7 +137,7 @@ void Proxy::sigchld_cb(evutil_socket_t fd, short event, void * ctx){
 	// Получаем объект сигнала
 	SignalBuffer * buffer = reinterpret_cast <SignalBuffer *> (ctx);
 	// Если подключение не передано
-	if(buffer != NULL){
+	if(buffer){
 		// Логируем сообщение о сигнале
 		signal_log(buffer->signal, buffer->proxy);
 		// Избавляемся от зависших процессов
@@ -160,7 +157,7 @@ void Proxy::sigsegv_cb(evutil_socket_t fd, short event, void * ctx){
 	// Получаем объект сигнала
 	SignalBuffer * buffer = reinterpret_cast <SignalBuffer *> (ctx);
 	// Если подключение не передано
-	if(buffer != NULL){
+	if(buffer){
 		// Выполняем очистку дочерних процессов
 		clear_fantoms(buffer->signal, buffer->proxy);
 		// перепосылка сигнала
@@ -181,7 +178,7 @@ void Proxy::sigexit_cb(evutil_socket_t fd, short event, void * ctx){
 	// Получаем объект сигнала
 	SignalBuffer * buffer = reinterpret_cast <SignalBuffer *> (ctx);
 	// Если подключение не передано
-	if(buffer != NULL){
+	if(buffer){
 		// Выполняем очистку дочерних процессов
 		clear_fantoms(buffer->signal, buffer->proxy);
 		// Выходим
@@ -398,10 +395,10 @@ Proxy::~Proxy(){
 	// Очищаем событие сигнала
 	for(u_int i = 0; i < this->signals.size(); i++){
 		// Очищаем ловушку
-		if(this->signals[i] != NULL) event_free(this->signals[i]);
+		if(this->signals[i]) event_free(this->signals[i]);
 	}
 	// Очищаем базу данных событий
-	if(this->base != NULL) event_base_free(this->base);
+	if(this->base) event_base_free(this->base);
 	// Удаляем объект системных настроек
 	delete this->sys;
 }

@@ -150,7 +150,7 @@ void BufferHttpProxy::appconn(const bool flag){
 	// Получаем объект текущего коннекта
 	Connects * connect = (* this->connects).get(this->client.ip);
 	// Если такое подключение найдено
-	if(connect != NULL){
+	if(connect){
 		// Если нужно добавить подключение
 		if(flag) connect->inc();
 		// Если нужно удалить подключение
@@ -188,7 +188,7 @@ void BufferHttpProxy::free_socket(evutil_socket_t * fd){
  */
 void BufferHttpProxy::free_event(struct bufferevent ** event){
 	// Удаляем событие
-	if(*event != NULL){
+	if(*event){
 		// Очищаем таймауты
 		bufferevent_set_timeouts(*event, NULL, NULL);
 		// Удаляем буфер события
@@ -204,7 +204,7 @@ void BufferHttpProxy::blockconnect(){
 	// Получаем объект текущего коннекта
 	Connects * connect = (* this->connects).get(this->client.ip);
 	// Если такое подключение найдено
-	if(connect != NULL){
+	if(connect){
 		// Запоминаем количество подключений пользователя
 		this->myconns = connect->get();
 		// Если количество подключений достигло предела
@@ -274,11 +274,11 @@ void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
 	if(this->proxy->config->timeouts.read < 1)	read	= false;
 	if(this->proxy->config->timeouts.write < 1)	write	= false;
 	// Устанавливаем таймауты для сервера
-	if((type & TM_SERVER) && (this->events.server != NULL))
+	if((type & TM_SERVER) && this->events.server)
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.server, (read ? &_read : NULL), (write ? &_write : NULL));
 	// Устанавливаем таймауты для клиента
-	if((type & TM_CLIENT) && (this->events.client != NULL))
+	if((type & TM_CLIENT) && this->events.client)
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.client, (read ? &_read : NULL), (write ? &_write : NULL));
 }
@@ -602,7 +602,7 @@ bool HttpProxy::check_auth(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Логин
 		const char * username = "zdD786KeuS";
 		// Проль
@@ -626,7 +626,7 @@ bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Создаем объект сети
 		Network nwk;
 		// Результат проверки
@@ -660,9 +660,9 @@ int HttpProxy::connect_server(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Если сервер еще не подключен
-		if(http->events.server == NULL){
+		if(!http->events.server){
 			// Адрес сервера для биндинга
 			string bindhost;
 			// Размер структуры подключения
@@ -862,7 +862,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Блокируем поток
 		http->lock();
 		// Получаем текущий сокет
@@ -934,7 +934,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
@@ -975,9 +975,9 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Считываем строки из буфера
 				const char * line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF_STRICT);
 				// Проверяем дошли ли мы до конца
-				if((line != NULL) && !strlen(line)) http->headers.setFullHeaders();
+				if(line && !strlen(line)) http->headers.setFullHeaders();
 				// Если данные не найдены тогда выходим
-				if((line == NULL) || !strlen(line)) break;
+				if(!line || !strlen(line)) break;
 				// Добавляем заголовки в запрос
 				http->headers.addHeader(line);
 			}
@@ -1029,7 +1029,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Получаем первый элемент из массива
 		auto httpData = http->parser.httpData.begin();
 		// Если дарес домена найден
@@ -1054,7 +1054,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					// Получаем порт сервера
 					u_int port = http->httpData.getPort();
 					// Если хост и порт сервера не совпадают тогда очищаем данные
-					if((http->events.server != NULL)
+					if(http->events.server
 					&& ((http->server.host.compare(ip) != 0)
 					|| (http->server.port != port))) http->close_server();
 					// Запоминаем хост и порт сервера
@@ -1156,7 +1156,7 @@ void HttpProxy::do_request(void * ctx, bool flag){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Если данные еще не заполнены, но они есть в массиве
 		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
 			// Очищаем таймеры для клиента
@@ -1183,7 +1183,7 @@ void HttpProxy::write_client_cb(struct bufferevent * bev, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Это закрывающее соединение
 		if(!http->response.empty()
 		&& (http->response.code != 200)) http->close();
@@ -1200,7 +1200,7 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Удаляем таймер для клиента
 		http->set_timeout(TM_CLIENT | TM_SERVER);
 		// Определяем connect прокси разрешен
@@ -1251,7 +1251,7 @@ void HttpProxy::connection(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Выполняем блокировку подключения
 		http->blockconnect();
 		// Создаем буфер событий
@@ -1284,7 +1284,7 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если прокси существует
-	if(proxy != NULL){
+	if(proxy){
 		// IP и MAC адрес подключения
 		string ip, mac;
 		// Сокет подключившегося клиента
@@ -1449,7 +1449,7 @@ void HttpProxy::run_server(evutil_socket_t socket, void * ctx){
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если объект прокси сервера существует
-	if(proxy != NULL){
+	if(proxy){
 		// Выводим в консоль информацию
 		proxy->server->log->write(LOG_MESSAGE, 0, "[+] start service: pid = %i, socket = %i", getpid(), socket);
 		// Создаем новую базу
@@ -1484,7 +1484,7 @@ void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если массив пидов существует
-	if((pids != NULL) && (proxy != NULL) && (socket > 0) && max){
+	if(pids && proxy && (socket > 0) && max){
 		// Если не все форки созданы
 		if(cur < max){
 			// Выполняем форк процесса
@@ -1527,7 +1527,7 @@ void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size
  */
 HttpProxy::HttpProxy(System * proxy){
 	// Если лог существует
-	if(proxy != NULL){
+	if(proxy){
 		// Запоминаем параметры прокси сервера
 		this->server = proxy;
 		// Создаем прокси сервер
@@ -1566,5 +1566,5 @@ HttpProxy::HttpProxy(System * proxy){
  */
 HttpProxy::~HttpProxy(){
 	// Если массив процессов существует то удаляем его
-	if(pids != NULL) delete [] pids;
+	if(pids) delete [] pids;
 }

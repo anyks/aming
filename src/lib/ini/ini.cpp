@@ -132,7 +132,7 @@ int INI::iniParseStream(ini_reader reader, void * stream, ini_handler handler, v
 #endif
 
 	/* Scan through stream line by line */
-	while(reader(line, INI_MAX_LINE, stream) != NULL){
+	while(reader(line, INI_MAX_LINE, stream)){
 		lineno++;
 		start = line;
 #if INI_ALLOW_BOM

@@ -21,7 +21,7 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 	// Получаем объект доменного имени
 	DomainData * domainData = reinterpret_cast <DomainData *> (ctx);
 	// Если данные получены
-	if(domainData != NULL){
+	if(domainData){
 		// Полученный ip адрес
 		string ip;
 		// Полученные ip адреса
@@ -29,7 +29,7 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 		// Если возникла ошибка
 		if(errcode){
 			// Выводим в лог сообщение
-			if(domainData->log != NULL) domainData->log->write(LOG_ERROR, 0, "%s %s", domainData->domain.c_str(), evutil_gai_strerror(errcode));
+			if(domainData->log) domainData->log->write(LOG_ERROR, 0, "%s %s", domainData->domain.c_str(), evutil_gai_strerror(errcode));
 		} else {
 			// Создаем структуру данных, доменного имени
 			struct evutil_addrinfo * ai;
@@ -126,7 +126,7 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 			// Выполняем dns запрос
 			struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
 			// Выводим в лог сообщение
-			if((req == NULL) && (this->log != NULL)) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
+			if(!req && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
 		// Если передан домен то возвращаем его
 		} else fn(domain, ctx);
 	}
@@ -140,13 +140,13 @@ void DNSResolver::createDNSBase(){
 	// Захватываем поток
 	this->mtx.lock();
 	// Если база событий существует
-	if(this->base != NULL){
+	if(this->base){
 		// Очищаем базу данных dns
-		if(this->dnsbase != NULL) evdns_base_free(this->dnsbase, 0);
+		if(this->dnsbase) evdns_base_free(this->dnsbase, 0);
 		// Создаем базу данных dns
 		this->dnsbase = evdns_base_new(this->base, 0);
 		// Если база dns не создана
-		if(!this->dnsbase && (this->log != NULL)){
+		if(!this->dnsbase && this->log){
 			// Выводим в лог сообщение
 			this->log->write(LOG_ERROR, 0, "dns base does not created!");
 		}
@@ -176,7 +176,7 @@ void DNSResolver::setLog(LogApp * log){
 	// Захватываем поток
 	this->mtx.lock();
 	// Если интернет протокол передан
-	if(log != NULL) this->log = log;
+	if(log) this->log = log;
 	// Освобождаем поток
 	this->mtx.unlock();
 }
@@ -202,11 +202,11 @@ void DNSResolver::setNameServer(const string server){
 	// Захватываем поток
 	this->mtx.lock();
 	// Если dns сервер передан
-	if(!server.empty() && (this->dnsbase != NULL)){
+	if(!server.empty() && this->dnsbase){
 		// Добавляем dns сервер в базу dns
 		if(evdns_base_nameserver_ip_add(this->dnsbase, server.c_str()) != 0){
 			// Выводим в лог сообщение
-			if(this->log != NULL) this->log->write(LOG_ERROR, 0, "name server [%s] does not add!", server.c_str());
+			if(this->log) this->log->write(LOG_ERROR, 0, "name server [%s] does not add!", server.c_str());
 		}
 	}
 	// Освобождаем поток
@@ -262,7 +262,7 @@ DNSResolver::~DNSResolver(){
 	// Захватываем поток
 	this->mtx.lock();
 	// Удаляем базу данных dns
-	if(this->dnsbase != NULL){
+	if(this->dnsbase){
 		// Очищаем базу данных dns
 		evdns_base_free(this->dnsbase, 0);
 		// Обнуляем указатель

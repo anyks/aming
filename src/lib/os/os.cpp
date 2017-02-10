@@ -48,9 +48,9 @@ Os::OsData Os::getOsName(){
  */
 void Os::mkPid(){
 	// Если конфигурационный объект существует
-	if((* config) != NULL){
+	if(* this->config){
 		// Создаем адрес pid файла
-		string filename = ((* config)->proxy.piddir + string("/") + (* config)->proxy.name + ".pid");
+		string filename = ((* this->config)->proxy.piddir + string("/") + (* this->config)->proxy.name + ".pid");
 		// Открываем файл на запись
 		FILE * f = fopen(filename.c_str(), "w");
 		// Если файл открыт
@@ -68,9 +68,9 @@ void Os::mkPid(){
  */
 void Os::rmPid(int ext){
 	// Если конфигурационный объект существует
-	if((* config) != NULL){
+	if(* this->config){
 		// Создаем адрес pid файла
-		string filename = ((* config)->proxy.piddir + string("/") + (* config)->proxy.name + ".pid");
+		string filename = ((* this->config)->proxy.piddir + string("/") + (* this->config)->proxy.name + ".pid");
 		// Удаляем файл
 		remove(filename.c_str());
 		// Выходим из приложения
@@ -196,7 +196,7 @@ uid_t Os::getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
-	if(pwd == NULL){
+	if(!pwd){
 		// Выводим сообщение об ошибке
 		this->log->write(LOG_ERROR, 0, "failed to get userId from username [%s]", name);
 		// Выходим из приложения
@@ -214,7 +214,7 @@ gid_t Os::getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
-	if(grp == NULL){
+	if(!grp){
 		// Выводим сообщение об ошибке
 		this->log->write(LOG_ERROR, 0, "failed to get groupId from groupname [%s]", name);
 		// Выходим из приложения
@@ -476,7 +476,7 @@ void Os::optimos(){
  */
 Os::Os(LogApp * log, Config ** config){
 	// Если конфигурационный файл передан
-	if((config != NULL) && (log != NULL)){
+	if(config && log){
 		// Запоминаем настройки системы
 		this->log		= log;
 		this->config	= config;

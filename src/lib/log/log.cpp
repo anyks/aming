@@ -29,7 +29,7 @@ uid_t LogApp::getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
-	if(pwd == NULL){
+	if(!pwd){
 		// Выводим сообщение об ошибке
 		printf("failed to get userId from username [%s]\r\n", name);
 		// Выходим из приложения
@@ -47,7 +47,7 @@ gid_t LogApp::getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
-	if(grp == NULL){
+	if(!grp){
 		// Выводим сообщение об ошибке
 		printf("failed to get groupId from groupname [%s]\r\n", name);
 		// Выходим из приложения
@@ -138,7 +138,7 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 	// Получаем объект сигнала
 	LogApp * log = reinterpret_cast <LogApp *> (ctx);
 	// Если объект передан
-	if(log != NULL){
+	if(log){
 		// Адрес каталога для хранения логов
 		string path = ((* log->config)->logs.dir + string("/") + (* log->config)->proxy.name);
 		// Проверяем существует ли нужный нам каталог
@@ -450,7 +450,7 @@ void LogApp::welcome(){
  */
 LogApp::LogApp(Config ** config, u_short type){
 	// Если конфигурационные данные существуют
-	if(*config != NULL){
+	if(* config){
 		// Запоминаем конфигурационные данные
 		this->config = config;
 		// Запоминаем тип модуля
