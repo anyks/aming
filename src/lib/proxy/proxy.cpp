@@ -23,34 +23,34 @@ void Proxy::signal_log(int num, void * ctx){
 	if(proxy != NULL){
 		// Определяем данные сигнала
 		switch(num){
-			case SIGABRT:	proxy->sys->log->write(LOG_ERROR, "[-] Process abort signal [%d]", num);								break;
-			case SIGALRM:	proxy->sys->log->write(LOG_ERROR, "[-] Alarm clock [%d]", num);											break;
-			case SIGBUS:	proxy->sys->log->write(LOG_ERROR, "[-] Access to an undefined portion of a memory object [%d]", num);	break;
-			case SIGCHLD:	proxy->sys->log->write(LOG_ERROR, "[-] Child process terminated, stopped, or continued [%d]", num);		break;
-			case SIGCONT:	proxy->sys->log->write(LOG_ERROR, "[-] Continue executing, if stopped [%d]", num);						break;
-			case SIGFPE:	proxy->sys->log->write(LOG_ERROR, "[-] Erroneous arithmetic operation [%d]", num);						break;
-			case SIGHUP:	proxy->sys->log->write(LOG_ERROR, "[-] Hangup [%d]", num);												break;
-			case SIGILL:	proxy->sys->log->write(LOG_ERROR, "[-] Illegal instruction [%d]", num);									break;
-			case SIGINT:	proxy->sys->log->write(LOG_ERROR, "[-] Terminal interrupt signal [%d]", num);							break;
-			case SIGKILL:	proxy->sys->log->write(LOG_ERROR, "[-] Kill (cannot be caught or ignored) [%d]", num);					break;
-			case SIGPIPE:	proxy->sys->log->write(LOG_ERROR, "[-] Write on a pipe with no one to read it [%d]", num);				break;
-			case SIGQUIT:	proxy->sys->log->write(LOG_ERROR, "[-] Terminal quit signal [%d]", num);								break;
-			case SIGSEGV:	proxy->sys->log->write(LOG_ERROR, "[-] Invalid memory reference [%d]", num);							break;
-			case SIGSTOP:	proxy->sys->log->write(LOG_ERROR, "[-] Stop executing (cannot be caught or ignored) [%d]", num);		break;
-			case SIGTERM:	proxy->sys->log->write(LOG_ERROR, "[-] Termination signal [%d]", num);									break;
-			case SIGTSTP:	proxy->sys->log->write(LOG_ERROR, "[-] Terminal stop signal [%d]", num);								break;
-			case SIGTTIN:	proxy->sys->log->write(LOG_ERROR, "[-] Background process attempting read [%d]", num);					break;
-			case SIGTTOU:	proxy->sys->log->write(LOG_ERROR, "[-] Background process attempting write [%d]", num);					break;
-			case SIGUSR1:	proxy->sys->log->write(LOG_MESSAGE, "[=] User-defined signal 1 [%d]", num);								break;
-			case SIGUSR2:	proxy->sys->log->write(LOG_MESSAGE, "[=] User-defined signal 2 [%d]", num);								break;
-			// case SIGPOLL: proxy->sys->log->write(LOG_ERROR, "[-] Pollable event [%d]", num);										break;
-			case SIGPROF:	proxy->sys->log->write(LOG_ERROR, "[-] Profiling timer expired [%d]", num);								break;
-			case SIGSYS:	proxy->sys->log->write(LOG_ERROR, "[-] Bad sys call [%d]", num);										break;
-			case SIGTRAP:	proxy->sys->log->write(LOG_ERROR, "[-] Trace / breakpoint trap [%d]", num);								break;
-			case SIGURG:	proxy->sys->log->write(LOG_ERROR, "[-] High bandwidth data is available at a socket [%d]", num);		break;
-			case SIGVTALRM:	proxy->sys->log->write(LOG_ERROR, "[-] Virtual timer expired [%d]", num);								break;
-			case SIGXCPU:	proxy->sys->log->write(LOG_ERROR, "[-] CPU time limit exceeded [%d]", num);								break;
-			case SIGXFSZ:	proxy->sys->log->write(LOG_ERROR, "[-] File size limit exceeded [%d]", num);							break;
+			case SIGABRT:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Process abort signal [%d]", num);									break;
+			case SIGALRM:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Alarm clock [%d]", num);											break;
+			case SIGBUS:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Access to an undefined portion of a memory object [%d]", num);	break;
+			case SIGCHLD:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Child process terminated, stopped, or continued [%d]", num);		break;
+			case SIGCONT:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Continue executing, if stopped [%d]", num);						break;
+			case SIGFPE:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Erroneous arithmetic operation [%d]", num);						break;
+			case SIGHUP:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Hangup [%d]", num);												break;
+			case SIGILL:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Illegal instruction [%d]", num);									break;
+			case SIGINT:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Terminal interrupt signal [%d]", num);							break;
+			case SIGKILL:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Kill (cannot be caught or ignored) [%d]", num);					break;
+			case SIGPIPE:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Write on a pipe with no one to read it [%d]", num);				break;
+			case SIGQUIT:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Terminal quit signal [%d]", num);									break;
+			case SIGSEGV:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Invalid memory reference [%d]", num);								break;
+			case SIGSTOP:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Stop executing (cannot be caught or ignored) [%d]", num);			break;
+			case SIGTERM:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Termination signal [%d]", num);									break;
+			case SIGTSTP:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Terminal stop signal [%d]", num);									break;
+			case SIGTTIN:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Background process attempting read [%d]", num);					break;
+			case SIGTTOU:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Background process attempting write [%d]", num);					break;
+			case SIGUSR1:	proxy->sys->log->write(LOG_MESSAGE, 0, "[=] User-defined signal 1 [%d]", num);								break;
+			case SIGUSR2:	proxy->sys->log->write(LOG_MESSAGE, 0, "[=] User-defined signal 2 [%d]", num);								break;
+			// case SIGPOLL: proxy->sys->log->write(LOG_ERROR, 0, "[-] Pollable event [%d]", num);										break;
+			case SIGPROF:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Profiling timer expired [%d]", num);								break;
+			case SIGSYS:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Bad sys call [%d]", num);											break;
+			case SIGTRAP:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Trace / breakpoint trap [%d]", num);								break;
+			case SIGURG:	proxy->sys->log->write(LOG_ERROR, 0, "[-] High bandwidth data is available at a socket [%d]", num);			break;
+			case SIGVTALRM:	proxy->sys->log->write(LOG_ERROR, 0, "[-] Virtual timer expired [%d]", num);								break;
+			case SIGXCPU:	proxy->sys->log->write(LOG_ERROR, 0, "[-] CPU time limit exceeded [%d]", num);								break;
+			case SIGXFSZ:	proxy->sys->log->write(LOG_ERROR, 0, "[-] File size limit exceeded [%d]", num);								break;
 		}
 	}
 	// Выходим
@@ -223,7 +223,7 @@ void Proxy::run_worker(){
 			// Статус выхода процесса
 			int status;
 			// Выводим в лог сообщение
-			this->sys->log->write(LOG_MESSAGE, "[+] start balancer proccess, pid = %d", this->cpid);
+			this->sys->log->write(LOG_MESSAGE, 900, "[+] start balancer proccess, pid = %d", this->cpid);
 			// Зацикливаем ожидание завершения дочернего процесса
 			do {
 				// Ожидаем завершение работы дочернего процесса
@@ -236,16 +236,16 @@ void Proxy::run_worker(){
 				// Если дочерний процесс просто вышел
 				if(WIFEXITED(status)){
 					// Выводим в лог сообщение
-					this->sys->log->write(LOG_ERROR, "exited, pid = %d, status = %d", this->cpid, WEXITSTATUS(status));
+					this->sys->log->write(LOG_ERROR, 0, "exited, pid = %d, status = %d", this->cpid, WEXITSTATUS(status));
 					// Если это безусловное завершение работы
 					if(WEXITSTATUS(status) == SIGSTOP) exit(SIGSTOP);
 				}
 				// Если дочерний процесс убит
-				else if(WIFSIGNALED(status)) this->sys->log->write(LOG_ERROR, "killed by pid = %d, signal %d", this->cpid, WTERMSIG(status));
+				else if(WIFSIGNALED(status)) this->sys->log->write(LOG_ERROR, 0, "killed by pid = %d, signal %d", this->cpid, WTERMSIG(status));
 				// Если дочерний процесс остановлен
-				else if(WIFSTOPPED(status)) this->sys->log->write(LOG_ERROR, "stopped by pid = %d, signal %d", this->cpid, WSTOPSIG(status));
+				else if(WIFSTOPPED(status)) this->sys->log->write(LOG_ERROR, 0, "stopped by pid = %d, signal %d", this->cpid, WSTOPSIG(status));
 				// Если дочерний процесс прислал сообщение что нужно продолжить
-				// else if(WIFCONTINUED(status)) this->sys->log->write(LOG_ERROR, "continued");
+				// else if(WIFCONTINUED(status)) this->sys->log->write(LOG_ERROR, 0, "continued");
 			// Продолжаем до тех пор пока статус не освободится
 			} while(!WIFEXITED(status) && !WIFSIGNALED(status));
 			// Получаем данные пидов созданных балансером
@@ -308,8 +308,8 @@ Proxy::Proxy(string configfile){
 			case 0: run_worker(); break;
 			default: {
 				// Выводим в лог сообщение
-				this->sys->log->write(LOG_MESSAGE, "[+] start master proccess, pid = %d", getpid());
-				this->sys->log->write(LOG_MESSAGE, "[+] start slave proccess, pid = %d", this->mpid);
+				this->sys->log->write(LOG_MESSAGE, 500, "[+] start master proccess, pid = %d", getpid());
+				this->sys->log->write(LOG_MESSAGE, 700, "[+] start slave proccess, pid = %d", this->mpid);
 				// Создаем базу событий
 				this->base = event_base_new();
 				// Создаем буфер сигнала

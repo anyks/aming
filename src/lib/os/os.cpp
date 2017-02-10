@@ -106,7 +106,7 @@ long Os::getNumberParam(string name){
 	// Запрашиваем искомые данные
 	if(sysctlbyname(name.c_str(), &param, &len, NULL, 0) < 0){
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
+		this->log->write(LOG_ERROR, 0, "filed get param: %s", name.c_str());
 	}
 	// Выводим результат
 	return param;
@@ -126,7 +126,7 @@ string Os::getStringParam(string name){
 	// Запрашиваем искомые данные
 	if(sysctlbyname(name.c_str(), &buffer, &len, NULL, 0) < 0){
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "filed get param: %s", name.c_str());
+		this->log->write(LOG_ERROR, 0, "filed get param: %s", name.c_str());
 	}
 	// Выводим результат
 	return buffer;
@@ -140,7 +140,7 @@ void Os::setParam(string name, int param){
 	// Устанавливаем новые параметры настройки ядра
 	if(sysctlbyname(name.c_str(), NULL, 0, &param, sizeof(param)) < 0){
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "filed set param: %s -> %i", name.c_str(), param);
+		this->log->write(LOG_ERROR, 0, "filed set param: %s -> %i", name.c_str(), param);
 	}
 }
 /**
@@ -154,7 +154,7 @@ void Os::setParam(string name, string param){
 	// Устанавливаем новые параметры настройки ядра
 	if(sysctlbyname(name.c_str(), NULL, 0, (void *) value, param.size()) < 0){
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "filed set param: %s -> %s", name.c_str(), param.c_str());
+		this->log->write(LOG_ERROR, 0, "filed set param: %s -> %s", name.c_str(), param.c_str());
 	}
 }
 #endif
@@ -198,7 +198,7 @@ uid_t Os::getUid(const char * name){
 	// Если идентификатор пользователя не найден
 	if(pwd == NULL){
 		// Выводим сообщение об ошибке
-		this->log->write(LOG_ERROR, "failed to get userId from username [%s]", name);
+		this->log->write(LOG_ERROR, 0, "failed to get userId from username [%s]", name);
 		// Выходим из приложения
 		exit(EXIT_FAILURE);
 	}
@@ -216,7 +216,7 @@ gid_t Os::getGid(const char * name){
 	// Если идентификатор группы не найден
 	if(grp == NULL){
 		// Выводим сообщение об ошибке
-		this->log->write(LOG_ERROR, "failed to get groupId from groupname [%s]", name);
+		this->log->write(LOG_ERROR, 0, "failed to get groupId from groupname [%s]", name);
 		// Выходим из приложения
 		exit(EXIT_FAILURE);
 	}
@@ -278,7 +278,7 @@ string Os::exec(string cmd, bool multiline){
 		// Закрываем пайп
 		pclose(stream);
 		// Если данные в буфере существуют
-		if(result.empty()) this->log->write(LOG_ERROR, "filed set param: %s", buffer);
+		if(result.empty()) this->log->write(LOG_ERROR, 0, "filed set param: %s", buffer);
 	}
 	// Выводим результат
 	return result;

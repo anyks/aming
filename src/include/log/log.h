@@ -11,6 +11,8 @@
 #include <iostream>
 #include <cstdio>
 #include <string>
+#include <thread>
+#include <future>
 #include <fstream>
 #include <algorithm>
 #include <unistd.h>
@@ -34,7 +36,6 @@ using namespace std;
 // Типы хранилищь для логов
 #define TOLOG_CONSOLE 0x01
 #define TOLOG_FILES 0x02
-#define TOLOG_DATABASE 0x04
 
 /**
  * LogApp Класс для работы с логами
@@ -96,28 +97,26 @@ class LogApp {
 		 * write_to_file Функция записи лога в файл
 		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
 		 * @param message сообщение для записи
+		 * @param ctx     указатель на объект модуля логов
 		 */
-		void write_to_file(u_short type, const char * message);
+		static void write_to_file(u_short type, const char * message, void * ctx = NULL);
 		/**
 		 * write_to_console Функция записи лога в консоль
 		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
 		 * @param message сообщение для записи
+		 * @param ctx     указатель на объект модуля логов
+		 * @param sec     количество секунд через которое нужно вывести сообщение
 		 */
-		void write_to_console(u_short type, const char * message);
-		/**
-		 * write_to_db Функция записи лога в базу данных
-		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
-		 * @param message сообщение для записи
-		 */
-		void write_to_db(u_short type, const char * message);
+		static void write_to_console(u_short type, const char * message, void * ctx, u_int sec = 0);
 	public:
 		/**
 		 * write Метод записи данных в лог
 		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
+		 * @param sec     количество секунд через которое нужно вывести сообщение
 		 * @param message текст сообщения
 		 * @param ...     дополнительные параметры
 		 */
-		void write(u_short type, const char * message, ...);
+		void write(u_short type, u_int sec, const char * message, ...);
 		/**
 		 * enable Метод активации модуля
 		 */
@@ -133,7 +132,7 @@ class LogApp {
 		/**
 		 * LogApp Конструктор log класса
 		 * @param config  конфигурационные данные
-		 * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль, TOLOG_DATABASE - запись в базу данных)
+		 * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль)
 		 */
 		LogApp(Config ** config = NULL, u_short type = TOLOG_CONSOLE);
 };

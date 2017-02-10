@@ -29,7 +29,7 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 		// Если возникла ошибка
 		if(errcode){
 			// Выводим в лог сообщение
-			if(domainData->log != NULL) domainData->log->write(LOG_ERROR, "%s %s", domainData->domain.c_str(), evutil_gai_strerror(errcode));
+			if(domainData->log != NULL) domainData->log->write(LOG_ERROR, 0, "%s %s", domainData->domain.c_str(), evutil_gai_strerror(errcode));
 		} else {
 			// Создаем структуру данных, доменного имени
 			struct evutil_addrinfo * ai;
@@ -126,7 +126,7 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 			// Выполняем dns запрос
 			struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
 			// Выводим в лог сообщение
-			if((req == NULL) && (this->log != NULL)) this->log->write(LOG_ERROR, "request for %s returned immediately", domain.c_str());
+			if((req == NULL) && (this->log != NULL)) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
 		// Если передан домен то возвращаем его
 		} else fn(domain, ctx);
 	}
@@ -148,7 +148,7 @@ void DNSResolver::createDNSBase(){
 		// Если база dns не создана
 		if(!this->dnsbase && (this->log != NULL)){
 			// Выводим в лог сообщение
-			this->log->write(LOG_ERROR, "dns base does not created!");
+			this->log->write(LOG_ERROR, 0, "dns base does not created!");
 		}
 	}
 	// Освобождаем поток
@@ -206,7 +206,7 @@ void DNSResolver::setNameServer(const string server){
 		// Добавляем dns сервер в базу dns
 		if(evdns_base_nameserver_ip_add(this->dnsbase, server.c_str()) != 0){
 			// Выводим в лог сообщение
-			if(this->log != NULL) this->log->write(LOG_ERROR, "name server [%s] does not add!", server.c_str());
+			if(this->log != NULL) this->log->write(LOG_ERROR, 0, "name server [%s] does not add!", server.c_str());
 		}
 	}
 	// Освобождаем поток

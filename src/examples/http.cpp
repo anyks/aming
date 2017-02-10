@@ -403,7 +403,7 @@ int HttpProxy::socket_nosigpipe(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем SO_NOSIGPIPE
 	if(setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe)) < 0){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set SO_NOSIGPIPE option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set SO_NOSIGPIPE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -424,7 +424,7 @@ int HttpProxy::socket_nonblocking(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем неблокирующий режим
 	if(fcntl(fd, F_SETFL, flags) < 0){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set NON_BLOCK option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set NON_BLOCK option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -443,7 +443,7 @@ int HttpProxy::socket_tcpnodelay(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем TCP_NODELAY
 	if(setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &tcpnodelay, sizeof(tcpnodelay)) < 0){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_NODELAY option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set TCP_NODELAY option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -464,7 +464,7 @@ int HttpProxy::socket_tcpcork(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем TCP_CORK
 	if(setsockopt(fd, IPPROTO_TCP, TCP_CORK, &tcpcork, sizeof(tcpcork)) < 0){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_CORK option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set TCP_CORK option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -473,7 +473,7 @@ int HttpProxy::socket_tcpcork(evutil_socket_t fd, LogApp * log){
 	// Устанавливаем TCP_NOPUSH
 	if(setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &tcpcork, sizeof(tcpcork)) < 0){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_NOPUSH option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set TCP_NOPUSH option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -493,7 +493,7 @@ int HttpProxy::socket_reuseable(evutil_socket_t fd, LogApp * log){
 	// Разрешаем повторно использовать тот же host:port после отключения
 	if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr)) < 0){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set SO_REUSEADDR option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set SO_REUSEADDR option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -515,14 +515,14 @@ int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int i
 	// Активация постоянного подключения
 	if(setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(int))){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set SO_KEEPALIVE option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set SO_KEEPALIVE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
 	// Максимальное количество попыток
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(int))){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_KEEPCNT option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set TCP_KEEPCNT option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -531,7 +531,7 @@ int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int i
 	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(int))){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_KEEPALIVE option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set TCP_KEEPALIVE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -540,7 +540,7 @@ int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int i
 	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int))){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_KEEPIDLE option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set TCP_KEEPIDLE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -548,7 +548,7 @@ int HttpProxy::socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int i
 	// Время между попытками
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(int))){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "cannot set TCP_KEEPINTVL option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set TCP_KEEPINTVL option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -586,7 +586,7 @@ int HttpProxy::socket_buffersize(evutil_socket_t fd, int read_size, int write_si
 	if((getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &read_size, &read_optlen) < 0)
 	|| (getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &write_size, &write_optlen) < 0)){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, "get buffer wrong on socket %d", fd);
+		log->write(LOG_ERROR, 0, "get buffer wrong on socket %d", fd);
 		// Выходим
 		return -1;
 	}
@@ -611,7 +611,7 @@ bool HttpProxy::check_auth(void * ctx){
 		if(!strcmp(http->httpData.getLogin().c_str(), username)
 		&& !strcmp(http->httpData.getPassword().c_str(), password)) return true;
 		// Выводим в лог информацию о неудачном подключении
-		http->proxy->log->write(LOG_MESSAGE, "auth client [%s] to proxy wrong!", http->client.ip.c_str());
+		http->proxy->log->write(LOG_MESSAGE, 0, "auth client [%s] to proxy wrong!", http->client.ip.c_str());
 	}
 	// Сообщаем что проверка не прошла
 	return false;
@@ -749,7 +749,7 @@ int HttpProxy::connect_server(void * ctx){
 			if(http->sockets.server < 0){
 				// Выводим в лог сообщение
 				http->proxy->log->write(
-					LOG_ERROR,
+					LOG_ERROR, 0,
 					"creating socket to server = %s, port = %d, client = %s",
 					http->server.host.c_str(),
 					http->server.port,
@@ -786,7 +786,7 @@ int HttpProxy::connect_server(void * ctx){
 			// Выполняем бинд на сокет
 			if(::bind(http->sockets.server, sin, sinlen) < 0){
 				// Выводим в лог сообщение
-				http->proxy->log->write(LOG_ERROR, "bind local network [%s] error", bindhost.c_str());
+				http->proxy->log->write(LOG_ERROR, 0, "bind local network [%s] error", bindhost.c_str());
 				// Выходим
 				return 0;
 			}
@@ -804,7 +804,7 @@ int HttpProxy::connect_server(void * ctx){
 			if(bufferevent_socket_connect(http->events.server, sot, sotlen) < 0){
 				// Выводим в лог сообщение
 				http->proxy->log->write(
-					LOG_ERROR,
+					LOG_ERROR, 0,
 					"connecting to server = %s, port = %d, client = %s",
 					http->server.host.c_str(),
 					http->server.port,
@@ -815,7 +815,7 @@ int HttpProxy::connect_server(void * ctx){
 			}
 			// Выводим в лог сообщение о новом коннекте
 			http->proxy->log->write(
-				LOG_MESSAGE,
+				LOG_MESSAGE, 0,
 				"connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 				http->client.ip.c_str(),
 				http->httpData.getHost().c_str(),
@@ -833,7 +833,7 @@ int HttpProxy::connect_server(void * ctx){
 		} else {
 			// Выводим в лог сообщение о новом коннекте
 			http->proxy->log->write(
-				LOG_MESSAGE,
+				LOG_MESSAGE, 0,
 				"last connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 				http->client.ip.c_str(),
 				http->httpData.getHost().c_str(),
@@ -875,7 +875,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 			if(subject.compare("server") == 0){
 				// Выводим в лог сообщение
 				http->proxy->log->write(
-					LOG_ACCESS,
+					LOG_ACCESS, 0,
 					"connect client [%s], useragent = %s, socket = %d to server [%s:%d]",
 					http->client.ip.c_str(),
 					http->client.useragent.c_str(),
@@ -891,13 +891,13 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 				// Получаем данные ошибки
 				int err = bufferevent_socket_get_dns_error(bev);
 				// Если ошибка существует, выводим сообщение в консоль
-				if(err) http->proxy->log->write(LOG_ERROR, "DNS error: %s", evutil_gai_strerror(err));
+				if(err) http->proxy->log->write(LOG_ERROR, 0, "DNS error: %s", evutil_gai_strerror(err));
 			}
 			// Если отключился клиент
 			if(subject.compare("client") == 0){
 				// Выводим в лог сообщение
 				http->proxy->log->write(
-					LOG_ACCESS,
+					LOG_ACCESS, 0,
 					"closing client [%s] from server [%s:%d], socket = %d",
 					http->client.ip.c_str(),
 					http->server.host.c_str(),
@@ -908,7 +908,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 			} else {
 				// Выводим в лог сообщение
 				http->proxy->log->write(
-					LOG_ACCESS,
+					LOG_ACCESS, 0,
 					"closing server [%s:%d] from client [%s], socket = %d",
 					http->server.host.c_str(),
 					http->server.port,
@@ -1118,7 +1118,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 		} else {
 			// Выводим в лог сообщение
 			http->proxy->log->write(
-				LOG_ERROR,
+				LOG_ERROR, 0,
 				"host server = %s not found, port = %d, client = %s, socket = %d",
 				http->httpData.getHost().c_str(),
 				http->httpData.getPort(),
@@ -1329,7 +1329,7 @@ void HttpProxy::accept_cb(evutil_socket_t fd, short event, void * ctx){
 		// Отключаем сигнал записи в оборванное подключение
 		socket_nosigpipe(socket, proxy->server->log);
 		// Выводим в лог сообщение
-		proxy->server->log->write(LOG_ACCESS, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), socket);
+		proxy->server->log->write(LOG_ACCESS, 0, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), socket);
 		// Создаем новый объект подключения
 		BufferHttpProxy * http = new BufferHttpProxy(proxy->server);
 		// Запоминаем список подключений
@@ -1411,7 +1411,7 @@ evutil_socket_t HttpProxy::create_server(){
 	// Создаем сокет
 	if(sock < 0){
 		// Выводим в консоль информацию
-		this->server->log->write(LOG_ERROR, "[-] could not create socket");
+		this->server->log->write(LOG_ERROR, 0, "[-] could not create socket");
 		// Выходим
 		return -1;
 	}
@@ -1426,14 +1426,14 @@ evutil_socket_t HttpProxy::create_server(){
 	// Выполняем биндинг сокета
 	if(::bind(sock, sin, sinlen) < 0){
 		// Выводим в консоль информацию
-		this->server->log->write(LOG_ERROR, "[-] bind error");
+		this->server->log->write(LOG_ERROR, 0, "[-] bind error");
 		// Выходим
 		return -1;
 	}
 	// Выполняем чтение сокета
 	if(listen(sock, this->server->config->connects.all) < 0){
 		// Выводим в консоль информацию
-		this->server->log->write(LOG_ERROR, "[-] listen error");
+		this->server->log->write(LOG_ERROR, 0, "[-] listen error");
 		// Выходим
 		return -1;
 	}
@@ -1451,7 +1451,7 @@ void HttpProxy::run_server(evutil_socket_t socket, void * ctx){
 	// Если объект прокси сервера существует
 	if(proxy != NULL){
 		// Выводим в консоль информацию
-		proxy->server->log->write(LOG_MESSAGE, "[+] start service: pid = %i, socket = %i", getpid(), socket);
+		proxy->server->log->write(LOG_MESSAGE, 0, "[+] start service: pid = %i, socket = %i", getpid(), socket);
 		// Создаем новую базу
 		proxy->base = event_base_new();
 		// Добавляем событие в базу
@@ -1492,7 +1492,7 @@ void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size
 				// Если поток не создан
 				case -1: {
 					// Выводим в консоль информацию
-					proxy->server->log->write(LOG_ERROR, "[-] create fork error");
+					proxy->server->log->write(LOG_ERROR, 0, "[-] create fork error");
 					// Выходим из приложения
 					exit(SIGHUP);
 				}
@@ -1514,7 +1514,7 @@ void HttpProxy::run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size
 				// Ожидаем завершения процесса
 				waitpid(pids[i], &status, 0);
 				// Выводим в консоль информацию
-				proxy->server->log->write(LOG_ERROR, "[-] end service: pid = %i, status = %i", pids[i], WTERMSIG(status));
+				proxy->server->log->write(LOG_ERROR, 0, "[-] end service: pid = %i, status = %i", pids[i], WTERMSIG(status));
 			}
 			// Выходим из приложения
 			exit(SIGHUP);

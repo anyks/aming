@@ -132,106 +132,114 @@ bool LogApp::isFileExist(const char * path){
  * write_to_file Функция записи лога в файл
  * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
  * @param message сообщение для записи
+ * @param ctx     указатель на объект модуля логов
  */
-void LogApp::write_to_file(u_short type, const char * message){
-	// Адрес каталога для хранения логов
-	string path = ((* config)->logs.dir + string("/") + (* config)->proxy.name);
-	// Проверяем существует ли нужный нам каталог
-	if(!makePath(path.c_str())){
-		// Сообщаем что каталог не может быть создан
-		perror("Unable to create directory for log files");
-		// Выходим из приложения
-		exit(EXIT_FAILURE);
-	}
-	// Стартовая строка
-	string filename;
-	// Определяем тип сообщения
-	switch(type){
-		// Если это ошибка
-		case 1: filename = (path + string("/") + "error.log"); break;
-		// Если это доступ
-		case 2: filename = (path + string("/") + "access.log"); break;
-		// Если это сообщение
-		case 3: filename = (path + string("/") + "message.log"); break;
-	}
-	// Файловый дескриптор
-	FILE * file = NULL;
-	// Проверяем существует ли файл лога
-	if(isFileExist(filename.c_str())){
-		// Устанавливаем права на файл лога
-		setOwner(filename.c_str());
-		// Открываем файл на чтение в бинарном виде
-		file = fopen(filename.c_str(), "rb");
+void LogApp::write_to_file(u_short type, const char * message, void * ctx){
+	// Получаем объект сигнала
+	LogApp * log = reinterpret_cast <LogApp *> (ctx);
+	// Если объект передан
+	if(log != NULL){
+		// Адрес каталога для хранения логов
+		string path = ((* log->config)->logs.dir + string("/") + (* log->config)->proxy.name);
+		// Проверяем существует ли нужный нам каталог
+		if(!log->makePath(path.c_str())){
+			// Сообщаем что каталог не может быть создан
+			perror("Unable to create directory for log files");
+			// Выходим из приложения
+			exit(EXIT_FAILURE);
+		}
+		// Стартовая строка
+		string filename;
+		// Определяем тип сообщения
+		switch(type){
+			// Если это ошибка
+			case 1: filename = (path + string("/") + "error.log"); break;
+			// Если это доступ
+			case 2: filename = (path + string("/") + "access.log"); break;
+			// Если это сообщение
+			case 3: filename = (path + string("/") + "message.log"); break;
+		}
+		// Файловый дескриптор
+		FILE * file = NULL;
+		// Проверяем существует ли файл лога
+		if(log->isFileExist(filename.c_str())){
+			// Устанавливаем права на файл лога
+			log->setOwner(filename.c_str());
+			// Открываем файл на чтение в бинарном виде
+			file = fopen(filename.c_str(), "rb");
+			// Если файл открыт
+			if(file){
+				// Перемещаемся в конец файла
+				fseek(file, 0, SEEK_END);
+				// Определяем размер файла
+				size_t size = ftell(file);
+				// Закрываем файл
+				fclose(file);
+				// Если размер файла больше максимального
+				if(size >= log->size){
+					// Создаем буфер для хранения даты
+					char datefile[80];
+					// Определяем количество секунд
+					time_t seconds = time(NULL);
+					// Получаем структуру локального времени
+					struct tm * timeinfo = localtime(&seconds);
+					// Создаем формат полученного времени
+					string dateformat = "_%m-%d-%Y_%H-%M-%S";
+					// Копируем в буфер полученную дату и время
+					int datelen = strftime(datefile, sizeof(datefile), dateformat.c_str(), timeinfo);
+					// Устанавливаем конец строки
+					datefile[datelen] = '\0';
+					// Строка чтения из файла
+					string filedata;
+					// Открываем файл на чтение
+					ifstream logfile(filename.c_str());
+					// Если файл открыт
+					if(logfile.is_open()){
+						// Создаем адрес сжатого файла
+						string gzlogfile = filename;
+						// Заменяем название файла
+						gzlogfile.replace(gzlogfile.length() - 4, 4, string(datefile) + ".log.gz");
+						// Открываем файл на сжатие
+						gzFile gz = gzopen(gzlogfile.c_str(), "w6h");
+						// Считываем до тех пор пока все удачно
+						while(logfile.good()){
+							// Считываем строку из файла
+							getline(logfile, filedata);
+							// Добавляем конец строки
+							filedata += "\r\n";
+							// Выполняем сжатие файла
+							gzwrite(gz, filedata.c_str(), filedata.size());
+						}
+						// Закрываем сжатый файл
+						gzclose(gz);
+						// Закрываем файл
+						logfile.close();
+					}
+					// Удаляем файл
+					remove(filename.c_str());
+				}
+			// Выводим в консоль что файл не может быть прочитан
+			} else write_to_console(LOG_ERROR, (string("cannot read log file, ") + filename).c_str(), log);
+		}
+		// Открываем файл на запись
+		file = fopen(filename.c_str(), "a");
 		// Если файл открыт
 		if(file){
-			// Перемещаемся в конец файла
-			fseek(file, 0, SEEK_END);
-			// Определяем размер файла
-			size_t size = ftell(file);
+			// Записываем в файл pid процесса
+			fprintf(file, "%s\n", message);
 			// Закрываем файл
 			fclose(file);
-			// Если размер файла больше максимального
-			if(size >= this->size){
-				// Создаем буфер для хранения даты
-				char datefile[80];
-				// Определяем количество секунд
-				time_t seconds = time(NULL);
-				// Получаем структуру локального времени
-				struct tm * timeinfo = localtime(&seconds);
-				// Создаем формат полученного времени
-				string dateformat = "_%m-%d-%Y_%H-%M-%S";
-				// Копируем в буфер полученную дату и время
-				int datelen = strftime(datefile, sizeof(datefile), dateformat.c_str(), timeinfo);
-				// Устанавливаем конец строки
-				datefile[datelen] = '\0';
-				// Строка чтения из файла
-				string filedata;
-				// Открываем файл на чтение
-				ifstream logfile(filename.c_str());
-				// Если файл открыт
-				if(logfile.is_open()){
-					// Создаем адрес сжатого файла
-					string gzlogfile = filename;
-					// Заменяем название файла
-					gzlogfile.replace(gzlogfile.length() - 4, 4, string(datefile) + ".log.gz");
-					// Открываем файл на сжатие
-					gzFile gz = gzopen(gzlogfile.c_str(), "w6h");
-					// Считываем до тех пор пока все удачно
-					while(logfile.good()){
-						// Считываем строку из файла
-						getline(logfile, filedata);
-						// Добавляем конец строки
-						filedata += "\r\n";
-						// Выполняем сжатие файла
-						gzwrite(gz, filedata.c_str(), filedata.size());
-					}
-					// Закрываем сжатый файл
-					gzclose(gz);
-					// Закрываем файл
-					logfile.close();
-				}
-				// Удаляем файл
-				remove(filename.c_str());
-			}
-		// Выводим в консоль что файл не может быть прочитан
-		} else write_to_console(LOG_ERROR, (string("cannot read log file, ") + filename).c_str());
-	}
-	// Открываем файл на запись
-	file = fopen(filename.c_str(), "a");
-	// Если файл открыт
-	if(file){
-		// Записываем в файл pid процесса
-		fprintf(file, "%s\n", message);
-		// Закрываем файл
-		fclose(file);
+		}
 	}
 }
 /**
  * write_to_console Функция записи лога в консоль
  * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
  * @param message сообщение для записи
+ * @param ctx     указатель на объект модуля логов
+ * @param sec     количество милисекунд через которое нужно вывести сообщение
  */
-void LogApp::write_to_console(u_short type, const char * message){
+void LogApp::write_to_console(u_short type, const char * message, void * ctx, u_int sec){
 	// Стартовая строка
 	string str;
 	// Определяем тип сообщения
@@ -245,16 +253,10 @@ void LogApp::write_to_console(u_short type, const char * message){
 	}
 	// Добавляем заголовок к сообщению
 	str += message;
+	// Успыляем поток на указанное количество милисекунд
+	if(sec) this_thread::sleep_for(chrono::milliseconds(sec));
 	// Выводим сообщение лога
 	printf("\r\n%s\r\n\r\n%s\r\n\r\n%s\r\n", "*************** START ***************", str.c_str(), "---------------- END ----------------");
-}
-/**
- * write_to_db Функция записи лога в базу данных
- * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
- * @param message сообщение для записи
- */
-void LogApp::write_to_db(u_short type, const char * message){
-	cout << " DATABASE = " << message << endl;
 }
 /**
  * enable Метод активации модуля
@@ -273,10 +275,11 @@ void LogApp::disable(){
 /**
  * write Метод записи данных в лог
  * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
+ * @param sec     количество милисекунд через которое нужно вывести сообщение
  * @param message текст сообщения
  * @param ...     дополнительные параметры
  */
-void LogApp::write(u_short type, const char * message, ...){
+void LogApp::write(u_short type, u_int sec, const char * message, ...){
 	// Если модуль активирован
 	if(this->enabled){
 		// Создаем буфер
@@ -302,11 +305,9 @@ void LogApp::write(u_short type, const char * message, ...){
 			// Устанавливаем конец строки
 			buffer[strlen(buffer)] = '\0';
 			// Выполняем запись в файл
-			if(this->type & TOLOG_FILES) write_to_file(type, buffer);
+			if(this->type & TOLOG_FILES) async(launch::async, &LogApp::write_to_file, type, buffer, this);
 			// Выполняем запись в консоль
-			if(this->type & TOLOG_CONSOLE) write_to_console(type, buffer);
-			// Выполняем запись в базу данных
-			if(this->type & TOLOG_DATABASE) write_to_db(type, buffer);
+			if(this->type & TOLOG_CONSOLE) async(launch::async, &LogApp::write_to_console, type, buffer, this, sec);
 		}
 		// Завершаем список аргументов
 		va_end(args);
@@ -437,15 +438,15 @@ void LogApp::welcome(){
 			site.c_str(), email.c_str(), support.c_str(), author.c_str()
 		);
 		// Выводим в консоль сообщение
-		cout << buffer << endl;
+		printf("%s\n", buffer);
 		// Записываем сообщение в лог
-		write_to_file(3, buffer);
+		write_to_file(LOG_MESSAGE, buffer, this);
 	}
 }
 /**
  * LogApp Конструктор log класса
  * @param config  конфигурационные данные
- * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль, TOLOG_DATABASE - запись в базу данных)
+ * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль)
  */
 LogApp::LogApp(Config ** config, u_short type){
 	// Если конфигурационные данные существуют

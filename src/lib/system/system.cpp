@@ -40,14 +40,14 @@ System::Pids System::readPids(){
 	// Если сообщение не может быть отправлено выводим сообщение об ошибке
 	if(qid < 0){
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "[-] cannot create message id for read fork pids");
+		this->log->write(LOG_ERROR, 0, "[-] cannot create message id for read fork pids");
 		// Выходим из приложения
 		exit(23);
 	}
 	// Выполняем чтение сообщения
 	if(msgrcv(qid, &msg, length, 1, 0) < 0) {
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "[-] cannot read message children fork pids");
+		this->log->write(LOG_ERROR, 0, "[-] cannot read message children fork pids");
 		// Освобождаем процесс
 		msgctl(qid, IPC_RMID, 0);
 		// Выходим из приложения
@@ -81,7 +81,7 @@ void System::sendPids(pid_t * pids, size_t len){
 	// Если сообщение не может быть отправлено выводим сообщение об ошибке
 	if(qid < 0){
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "[-] cannot create message id for send in worker %d to %d", getpid(), getppid());
+		this->log->write(LOG_ERROR, 0, "[-] cannot create message id for send in worker %d to %d", getpid(), getppid());
 		// Выходим из приложения
 		exit(23);
 	}
@@ -94,7 +94,7 @@ void System::sendPids(pid_t * pids, size_t len){
 	// Выполняем отправку сообщения
 	if(msgsnd(qid, &msg, length, IPC_NOWAIT) < 0){
 		// Выводим сообщение в консоль
-		this->log->write(LOG_ERROR, "[-] cannot send message in worker %d to %d", getpid(), getppid());
+		this->log->write(LOG_ERROR, 0, "[-] cannot send message in worker %d to %d", getpid(), getppid());
 		// Выходим из приложения
 		exit(23);
 	}
