@@ -234,11 +234,11 @@ void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
 	if(this->proxy->config->timeouts.read < 1)	read	= false;
 	if(this->proxy->config->timeouts.write < 1)	write	= false;
 	// Устанавливаем таймауты для сервера
-	if((type & TM_SERVER) && (this->events.server != NULL))
+	if((type & TM_SERVER) && this->events.server)
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.server, (read ? &_read : NULL), (write ? &_write : NULL));
 	// Устанавливаем таймауты для клиента
-	if((type & TM_CLIENT) && (this->events.client != NULL))
+	if((type & TM_CLIENT) && this->events.client)
 		// Устанавливаем таймауты
 		bufferevent_set_timeouts(this->events.client, (read ? &_read : NULL), (write ? &_write : NULL));
 }
@@ -938,7 +938,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Считываем строки из буфера
 				const char * line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF_STRICT);
 				// Проверяем дошли ли мы до конца
-				if((line != NULL) && !strlen(line)) http->headers.setFullHeaders();
+				if(line && !strlen(line)) http->headers.setFullHeaders();
 				// Если данные не найдены тогда выходим
 				if((line == NULL) || !strlen(line)) break;
 				// Добавляем заголовки в запрос
@@ -1017,7 +1017,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					// Получаем порт сервера
 					u_int port = http->httpData.getPort();
 					// Если хост и порт сервера не совпадают тогда очищаем данные
-					if((http->events.server != NULL)
+					if(http->events.server
 					&& ((http->server.host.compare(ip) != 0)
 					|| (http->server.port != port))) http->close_server();
 					// Запоминаем хост и порт сервера

@@ -126,7 +126,7 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 			// Выполняем dns запрос
 			struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
 			// Выводим в лог сообщение
-			if((req == NULL) && (this->log != NULL)) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
+			if((req == NULL) && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
 		// Если передан домен то возвращаем его
 		} else fn(domain, ctx);
 	}
@@ -144,7 +144,7 @@ void DNSResolver::createDNSBase(){
 		// Создаем базу данных dns
 		this->dnsbase = evdns_base_new(this->base, 0);
 		// Если база dns не создана
-		if(!this->dnsbase && (this->log != NULL)){
+		if(!this->dnsbase && this->log){
 			// Выводим в лог сообщение
 			this->log->write(LOG_ERROR, 0, "dns base does not created!");
 		}
@@ -234,7 +234,7 @@ DNSResolver::~DNSResolver(){
 	// Захватываем поток
 	this->mtx.lock();
 	// Удаляем базу данных dns
-	if(this->dnsbase != NULL){
+	if(this->dnsbase){
 		// Очищаем базу данных dns
 		evdns_base_free(this->dnsbase, 0);
 		// Обнуляем указатель
