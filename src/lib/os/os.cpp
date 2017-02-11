@@ -48,9 +48,9 @@ Os::OsData Os::getOsName(){
  */
 void Os::mkPid(){
 	// Если конфигурационный объект существует
-	if(* this->config){
+	if(* config){
 		// Создаем адрес pid файла
-		string filename = ((* this->config)->proxy.piddir + string("/") + (* this->config)->proxy.name + ".pid");
+		string filename = ((* config)->proxy.piddir + string("/") + (* config)->proxy.name + ".pid");
 		// Открываем файл на запись
 		FILE * f = fopen(filename.c_str(), "w");
 		// Если файл открыт
@@ -68,9 +68,9 @@ void Os::mkPid(){
  */
 void Os::rmPid(int ext){
 	// Если конфигурационный объект существует
-	if(* this->config){
+	if(* config){
 		// Создаем адрес pid файла
-		string filename = ((* this->config)->proxy.piddir + string("/") + (* this->config)->proxy.name + ".pid");
+		string filename = ((* config)->proxy.piddir + string("/") + (* config)->proxy.name + ".pid");
 		// Удаляем файл
 		remove(filename.c_str());
 		// Выходим из приложения
@@ -85,9 +85,9 @@ int Os::setFdLimit(){
 	// Структура для установки лимитов
 	struct rlimit lim;
 	// зададим текущий лимит на кол-во открытых дискриптеров
-	lim.rlim_cur = (* config)->connects.fds;
+	lim.rlim_cur = (* this->config)->connects.fds;
 	// зададим максимальный лимит на кол-во открытых дискриптеров
-	lim.rlim_max = (* config)->connects.fds;
+	lim.rlim_max = (* this->config)->connects.fds;
 	// установим указанное кол-во
 	return setrlimit(RLIMIT_NOFILE, &lim);
 }
@@ -164,7 +164,7 @@ void Os::setParam(string name, string param){
  */
 bool Os::enableCoreDumps(){
 	// Если отладка включена
-	if((* config)->proxy.debug){
+	if((* this->config)->proxy.debug){
 		// Структура лимитов дампов
 		struct rlimit limit;
 		// Устанавливаем текущий лимит равный бесконечности
@@ -196,7 +196,7 @@ uid_t Os::getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
-	if(!pwd){
+	if(pwd == NULL){
 		// Выводим сообщение об ошибке
 		this->log->write(LOG_ERROR, 0, "failed to get userId from username [%s]", name);
 		// Выходим из приложения
@@ -214,7 +214,7 @@ gid_t Os::getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
-	if(!grp){
+	if(grp == NULL){
 		// Выводим сообщение об ошибке
 		this->log->write(LOG_ERROR, 0, "failed to get groupId from groupname [%s]", name);
 		// Выходим из приложения

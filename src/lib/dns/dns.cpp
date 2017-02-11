@@ -126,7 +126,7 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 			// Выполняем dns запрос
 			struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
 			// Выводим в лог сообщение
-			if(!req && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
+			if((req == NULL) && (this->log != NULL)) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
 		// Если передан домен то возвращаем его
 		} else fn(domain, ctx);
 	}
@@ -137,8 +137,6 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
  * createDNSBase Метод создания dns базы
  */
 void DNSResolver::createDNSBase(){
-	// Захватываем поток
-	this->mtx.lock();
 	// Если база событий существует
 	if(this->base){
 		// Очищаем базу данных dns
@@ -146,13 +144,11 @@ void DNSResolver::createDNSBase(){
 		// Создаем базу данных dns
 		this->dnsbase = evdns_base_new(this->base, 0);
 		// Если база dns не создана
-		if(!this->dnsbase && this->log){
+		if(!this->dnsbase && (this->log != NULL)){
 			// Выводим в лог сообщение
 			this->log->write(LOG_ERROR, 0, "dns base does not created!");
 		}
 	}
-	// Освобождаем поток
-	this->mtx.unlock();
 	// Если нейм сервера переданы
 	setNameServers(this->servers);
 }
@@ -161,36 +157,24 @@ void DNSResolver::createDNSBase(){
  * @param family интернет протокол
  */
 void DNSResolver::setFamily(const int family){
-	// Захватываем поток
-	this->mtx.lock();
 	// Если интернет протокол передан
 	if(family) this->family = family;
-	// Освобождаем поток
-	this->mtx.unlock();
 }
 /**
  * setLog Метод установки объекта лога
  * @param log объект лога
  */
 void DNSResolver::setLog(LogApp * log){
-	// Захватываем поток
-	this->mtx.lock();
 	// Если интернет протокол передан
 	if(log) this->log = log;
-	// Освобождаем поток
-	this->mtx.unlock();
 }
 /**
  * setBase Установка базы данных событий
  * @param base указатель на объект базы данных событий
  */
 void DNSResolver::setBase(struct event_base * base){
-	// Захватываем поток
-	this->mtx.lock();
 	// Создаем базу данных событий
 	this->base = base;
-	// Освобождаем поток
-	this->mtx.unlock();
 	// Создаем dns базу
 	createDNSBase();
 }
@@ -199,8 +183,6 @@ void DNSResolver::setBase(struct event_base * base){
  * @param server ip адрес dns сервера
  */
 void DNSResolver::setNameServer(const string server){
-	// Захватываем поток
-	this->mtx.lock();
 	// Если dns сервер передан
 	if(!server.empty() && this->dnsbase){
 		// Добавляем dns сервер в базу dns
@@ -209,16 +191,12 @@ void DNSResolver::setNameServer(const string server){
 			if(this->log) this->log->write(LOG_ERROR, 0, "name server [%s] does not add!", server.c_str());
 		}
 	}
-	// Освобождаем поток
-	this->mtx.unlock();
 }
 /**
  * setNameServers Метод добавления серверов dns
  * @param server ip адреса dns серверов
  */
 void DNSResolver::setNameServers(vector <string> servers){
-	// Захватываем поток
-	this->mtx.lock();
 	// Если нейм сервера переданы
 	if(!servers.empty()){
 		// Запоминаем dns сервера
@@ -229,8 +207,6 @@ void DNSResolver::setNameServers(vector <string> servers){
 			setNameServer(this->servers[i]);
 		}
 	}
-	// Освобождаем поток
-	this->mtx.unlock();
 }
 /**
  * DNSResolver Конструктор
@@ -240,8 +216,6 @@ void DNSResolver::setNameServers(vector <string> servers){
  * @param servers массив dns серверов
  */
 DNSResolver::DNSResolver(LogApp * log, struct event_base * base, int family, vector <string> servers){
-	// Захватываем поток
-	this->mtx.lock();
 	// Запоминаем объект лога
 	this->log = log;
 	// Создаем базу данных событий
@@ -250,8 +224,6 @@ DNSResolver::DNSResolver(LogApp * log, struct event_base * base, int family, vec
 	this->family = family;
 	// Запоминаем dns сервера
 	this->servers = servers;
-	// Освобождаем поток
-	this->mtx.unlock();
 	// Создаем dns базу
 	createDNSBase();
 }
@@ -262,7 +234,7 @@ DNSResolver::~DNSResolver(){
 	// Захватываем поток
 	this->mtx.lock();
 	// Удаляем базу данных dns
-	if(this->dnsbase){
+	if(this->dnsbase != NULL){
 		// Очищаем базу данных dns
 		evdns_base_free(this->dnsbase, 0);
 		// Обнуляем указатель

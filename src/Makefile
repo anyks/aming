@@ -5,6 +5,7 @@
 #	телефон:			+7(920)672-33-22
 #	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016
 #
+#   help: https://wiki.gentoo.org/wiki/GCC_optimization/ru
 
 # Определяем тип операционной системы
 OS := $(shell uname -s)
@@ -45,10 +46,6 @@ ifeq ($(OS), Linux)
 			/usr/lib/x86_64-linux-gnu/libm.a
 endif
 
-# Конфигурация сборки
-# -Wextra (Варнинги по мелочи)
-CONFIG = -Wall -Wpedantic -Werror=vla -Wno-unused-result -O3 -ggdb -g -std=c++11
-
 # Заголовочные файлы
 INCLUDE =	-I/usr/include \
 			-I/usr/local/include \
@@ -63,9 +60,23 @@ SOURCES =	./anyks.cpp \
 # Бинарный файл
 BIN = ./bin/http
 
+# Конфиг для стандартной сборки
+CONFIG = -Wall -Wpedantic -Werror=vla -Wno-unused-result -g -std=c++11
+
 # Правило сборки
 all:
-	mkdir -p ./bin && $(CC) $(CONFIG) $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+	# Выполняем сборку проекта
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -msse3 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+
+# Правила сборки под Dev
+dev:
+	# Выполняем сборку проекта
+	mkdir -p ./bin && $(CC) $(CONFIG) -O1 -ggdb $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+
+# Правила сборки под Prod
+prod:
+	# Выполняем сборку проекта
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -msse3 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
 
 # Правило запуска
 start:

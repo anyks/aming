@@ -44,7 +44,7 @@ class DNSResolver {
 			LogApp * log;	// Объект ведения логов
 		};
 		// Мютекс для захвата потока
-		recursive_mutex mtx;
+		mutex mtx;
 		// Тип протокола интернета AF_INET или AF_INET6
 		int family;
 		// Объект ведения логов

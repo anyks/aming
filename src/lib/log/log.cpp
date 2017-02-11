@@ -29,7 +29,7 @@ uid_t LogApp::getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
-	if(!pwd){
+	if(pwd == NULL){
 		// Выводим сообщение об ошибке
 		printf("failed to get userId from username [%s]\r\n", name);
 		// Выходим из приложения
@@ -47,7 +47,7 @@ gid_t LogApp::getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
-	if(!grp){
+	if(grp == NULL){
 		// Выводим сообщение об ошибке
 		printf("failed to get groupId from groupname [%s]\r\n", name);
 		// Выходим из приложения
@@ -66,17 +66,17 @@ void LogApp::setOwner(const char * path){
 	// Размер строкового типа данных
 	string::size_type sz;
 	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber((* config)->proxy.user))
+	if(isNumber((* this->config)->proxy.user))
 		// Получаем идентификатор пользователя
-		uid = stoi((* config)->proxy.user, &sz);
+		uid = stoi((* this->config)->proxy.user, &sz);
 	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid((* config)->proxy.user.c_str());
+	else uid = getUid((* this->config)->proxy.user.c_str());
 	// Если идентификатор группы пришел в виде числа
-	if(isNumber((* config)->proxy.group))
+	if(isNumber((* this->config)->proxy.group))
 		// Получаем идентификатор группы пользователя
-		gid = stoi((* config)->proxy.group, &sz);
+		gid = stoi((* this->config)->proxy.group, &sz);
 	// Если идентификатор группы пришел в виде названия
-	else gid = getGid((* config)->proxy.group.c_str());
+	else gid = getGid((* this->config)->proxy.group.c_str());
 	// Устанавливаем права на каталог
 	chown(path, uid, gid);
 }
@@ -293,7 +293,7 @@ void LogApp::write(u_short type, u_int sec, const char * message, ...){
 		// Перемещаем конец строки и убираем ненужный нам перенос на новую строку
 		*(uk + 24) = 0;
 		// Добавляем название системы
-		string str = ((* config)->proxy.name + string(" [") + string(uk) + string("]: "));
+		string str = ((* this->config)->proxy.name + string(" [") + string(uk) + string("]: "));
 		// Записываем сообщение в буфер
 		int len = sprintf(buffer, "%s", str.c_str());
 		// Создаем список аргументов
@@ -304,10 +304,9 @@ void LogApp::write(u_short type, u_int sec, const char * message, ...){
 		if((len = vsnprintf(buffer + len, sizeof(buffer), message, args)) > 0){
 			// Устанавливаем конец строки
 			buffer[strlen(buffer)] = '\0';
-			// Выполняем запись в файл
-			if(this->type & TOLOG_FILES) async(launch::async, &LogApp::write_to_file, type, buffer, this);
-			// Выполняем запись в консоль
-			if(this->type & TOLOG_CONSOLE) async(launch::async, &LogApp::write_to_console, type, buffer, this, sec);
+			// Выполняем вывод сообщений
+			if(this->type & TOLOG_FILES)	async(launch::async, &LogApp::write_to_file, type, buffer, this);
+			if(this->type & TOLOG_CONSOLE)	async(launch::async, &LogApp::write_to_console, type, buffer, this, sec);
 		}
 		// Завершаем список аргументов
 		va_end(args);
@@ -320,21 +319,21 @@ void LogApp::welcome(){
 	// Если модуль активирован
 	if(this->enabled){
 		// Заполняем текстовые данные
-		const char * _gzipt = (OPT_GZIP & (* config)->options ? "yes" : "no");
-		const char * _gzipr = (OPT_PGZIP & (* config)->options ? "yes" : "no");
-		const char * _keepalive = (OPT_KEEPALIVE & (* config)->options ? "yes" : "no");
-		const char * _connect = (OPT_CONNECT & (* config)->options ? "yes" : "no");
-		const char * _headname = (OPT_AGENT & (* config)->options ? "yes" : "no");
-		const char * _debug = ((* config)->proxy.debug ? "yes" : "no");
-		const char * _daemon = ((* config)->proxy.daemon ? "yes" : "no");
-		const char * _reverse = ((* config)->proxy.reverse ? "yes" : "no");
-		const char * _forward = ((* config)->proxy.forward ? "yes" : "no");
-		const char * _transfer = ((* config)->proxy.transfer ? "yes" : "no");
-		const char * _deblock = ((* config)->proxy.deblock ? "yes" : "no");
-		const char * _optimos = ((* config)->proxy.optimos ? "yes" : "no");
-		const char * _bandlimin = ((* config)->firewall.bandlimin ? "yes" : "no");
-		const char * _cache = ((* config)->cache.response ? "yes" : "no");
-		const char * _allcon = ((* config)->connects.all > 0 ? to_string((* config)->connects.all).c_str() : "auto");
+		const char * _gzipt = (OPT_GZIP & (* this->config)->options ? "yes" : "no");
+		const char * _gzipr = (OPT_PGZIP & (* this->config)->options ? "yes" : "no");
+		const char * _keepalive = (OPT_KEEPALIVE & (* this->config)->options ? "yes" : "no");
+		const char * _connect = (OPT_CONNECT & (* this->config)->options ? "yes" : "no");
+		const char * _headname = (OPT_AGENT & (* this->config)->options ? "yes" : "no");
+		const char * _debug = ((* this->config)->proxy.debug ? "yes" : "no");
+		const char * _daemon = ((* this->config)->proxy.daemon ? "yes" : "no");
+		const char * _reverse = ((* this->config)->proxy.reverse ? "yes" : "no");
+		const char * _forward = ((* this->config)->proxy.forward ? "yes" : "no");
+		const char * _transfer = ((* this->config)->proxy.transfer ? "yes" : "no");
+		const char * _deblock = ((* this->config)->proxy.deblock ? "yes" : "no");
+		const char * _optimos = ((* this->config)->proxy.optimos ? "yes" : "no");
+		const char * _bandlimin = ((* this->config)->firewall.bandlimin ? "yes" : "no");
+		const char * _cache = ((* this->config)->cache.response ? "yes" : "no");
+		const char * _allcon = ((* this->config)->connects.all > 0 ? to_string((* this->config)->connects.all).c_str() : "auto");
 		// Данные прокси сервера
 		string proxyname = APP_NAME, proxyver = APP_VERSION, proxytype, proxyskill;
 		// Внешний и внутренний адрес сервера
@@ -346,26 +345,26 @@ void LogApp::welcome(){
 				support = APP_SUPPORT,
 				copyright = APP_COPYRIGHT;
 		// Определяем тип прокси сервера
-		switch((* config)->proxy.type){
+		switch((* this->config)->proxy.type){
 			case 1: proxytype = "http";		break;
 			case 2: proxytype = "socks5";	break;
 			case 3: proxytype = "redirect";	break;
 		}
 		// Определяем скил прокси
-		if(OPT_SMART & (* config)->options)
+		if(OPT_SMART & (* this->config)->options)
 			proxyskill = "smart";
 		else proxyskill = "dumb";
 		// Определяем внешний и внутренний ip адрес
-		switch((* config)->proxy.ipver){
+		switch((* this->config)->proxy.ipver){
 			// Версия протокола IPv4
 			case 4: {
-				internal = (* config)->ipv4.internal;
-				external = (* config)->ipv4.external;
+				internal = (* this->config)->ipv4.internal;
+				external = (* this->config)->ipv4.external;
 			} break;
 			// Версия протокола IPv6
 			case 6: {
-				internal = (* config)->ipv6.internal;
-				external = (* config)->ipv6.external;
+				internal = (* this->config)->ipv6.internal;
+				external = (* this->config)->ipv6.external;
 			} break;
 		}
 		// Создаем буфер для хранения даты
@@ -420,21 +419,21 @@ void LogApp::welcome(){
 		// Записываем сообщение в буфер
 		len = sprintf(
 			buffer, format, proxyname.c_str(),
-			(* config)->proxy.name.c_str(),
+			(* this->config)->proxy.name.c_str(),
 			proxyver.c_str(),
-			(* config)->proxy.user.c_str(),
-			(* config)->proxy.group.c_str(),
+			(* this->config)->proxy.user.c_str(),
+			(* this->config)->proxy.group.c_str(),
 			_daemon, _debug, _gzipt, _gzipr,
-			_allcon, (* config)->connects.max,
-			(* config)->connects.fds, _cache,
+			_allcon, (* this->config)->connects.max,
+			(* this->config)->connects.fds, _cache,
 			_headname, _bandlimin, _deblock,
 			_optimos, _keepalive, _reverse,
 			_forward, _transfer, _connect,
-			proxytype.c_str(), (* config)->proxy.ipver,
+			proxytype.c_str(), (* this->config)->proxy.ipver,
 			proxyskill.c_str(), internal.c_str(),
-			external.c_str(), (* config)->proxy.port,
-			(* config)->os.ncpu, (* config)->os.cpu.c_str(),
-			(* config)->os.name.c_str(), date, copyright.c_str(),
+			external.c_str(), (* this->config)->proxy.port,
+			(* this->config)->os.ncpu, (* this->config)->os.cpu.c_str(),
+			(* this->config)->os.name.c_str(), date, copyright.c_str(),
 			site.c_str(), email.c_str(), support.c_str(), author.c_str()
 		);
 		// Выводим в консоль сообщение
@@ -456,9 +455,9 @@ LogApp::LogApp(Config ** config, u_short type){
 		// Запоминаем тип модуля
 		this->type = type;
 		// Запоминаем активирован или деактивирован модуль
-		this->enabled = (* config)->logs.enabled;
+		this->enabled = (* this->config)->logs.enabled;
 		// Запоминаем размер файла лога, максимальный размер не может быть больше 100Мб
-		this->size = ((* config)->logs.size <= 102400 ? (* config)->logs.size : 102400);
+		this->size = ((* this->config)->logs.size <= 102400 ? (* this->config)->logs.size : 102400);
 		// Переводим все в киллобайты
 		this->size *= 1024;
 	}
