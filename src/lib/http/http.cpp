@@ -829,10 +829,16 @@ HttpData::Compress HttpData::compressData(const char * buffer, size_t size, bool
 					z_stream zs;
 					// Заполняем его нулями
 					memset(&zs, 0, sizeof(z_stream));
+					/**
+					 * const static int NO_COMPRESSION
+					 * const static int BEST_SPEED
+					 * const static int BEST_COMPRESSION
+					 * const static int DEFAULT_COMPRESSION
+					 */
 					// Если поток инициализировать не удалось, выходим
 					if(deflateInit(&zs, Z_DEFAULT_COMPRESSION) == Z_OK){
 						// Максимальный размер выходного массива
-						size_t size_out = 10240;
+						size_t size_out = size;
 						// Создаем буфер с сжатыми данными
 						char * zbuff = new char [(const size_t) size_out];
 						// Заполняем входные данные буфера
@@ -843,6 +849,8 @@ HttpData::Compress HttpData::compressData(const char * buffer, size_t size, bool
 						zs.next_out = reinterpret_cast <Bytef *> (zbuff);
 						// Указываем максимальный размер выходног буфера
 						zs.avail_out = static_cast <uInt> (size_out);
+						// Получаем контрольную сумму
+						int checksum = crc32(0, zs.next_in, zs.avail_in);
 						// Выполняем сжатие данных буфера
 						int const result = deflate(&zs, Z_FINISH);
 						// Запоминаем размер полученных сжатых данных
@@ -851,18 +859,41 @@ HttpData::Compress HttpData::compressData(const char * buffer, size_t size, bool
 						deflateEnd(&zs);
 						// Заполняем вектор полученными данными
 						if(result == Z_STREAM_END){
+							// Префикс архива
+							const short prefix = 2;
+							// Суфикс архива
+							const short suffix = 4;
+							// Описание заголовков gzip: http://www.gzip.org/zlib/rfc-gzip.html
+							const char gzipheader[] = {
+								// Магические константы gzip
+								'\037',
+								'\213',
+								8,			// Метод сжатия "defalte"
+								1,			// Текстовые данные
+								0, 0, 0, 0,	// TimeStamp не устанавливаем
+								2,			// Флаг максимального сжатия
+								3			// Операционная система Unix
+							};
+							// Высчитываем конечный размер сжимаемых данных
+							size_out -= prefix + suffix;
 							// Создаем поток
 							stringstream stream;
 							// Заполняем поток данными
-							stream << std::hex << size_out;
+							stream << std::hex << (size_out + sizeof(gzipheader) + sizeof(checksum));
 							// Получаем размер сжатых данных в 16-м виде
 							string hsize(stream.str());
 							// Добавляем перевод строки
 							hsize.append("\r\n");
 							// Добавляем размер сжатых данных в вектор
 							data.assign(hsize.begin(), hsize.end());
+							// Преобразуем в указатель на char
+							const char * cchecksum = reinterpret_cast <char *> (&checksum);
+							// Добавляем заголовки архива в буфер данных чанка
+							copy(gzipheader, gzipheader + sizeof(gzipheader), back_inserter(data));
 							// Копируем в вектор полученные сжатые данные
-							copy(zbuff, zbuff + size_out, back_inserter(data));
+							copy(zbuff + prefix, zbuff + prefix + size_out, back_inserter(data));
+							// Добавляем данные контрольной суммы также в чанк
+							copy(cchecksum, cchecksum + sizeof(checksum), back_inserter(data));
 						}
 						// Удаляем выделенную ранее память
 						delete [] zbuff;

@@ -971,7 +971,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Если контент пришел не сжатым а сжатие требуется
 				if(gzip && http->headers.getHeader("content-encoding").empty()){
 					// Устанавливаем заголовок что данные придут сжатые
-					http->headers.setHeader("Content-Encoding", "gzip, deflate");
+					http->headers.setHeader("Content-Encoding", "gzip");
 					// Получаем данные заголовков
 					string headers = http->headers.getResponseHeaders();
 					// Добавляем в новый буфер модифицированные заголовки
