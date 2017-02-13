@@ -10,9 +10,11 @@
 
 #include <regex>
 #include <string>
-#include <cstring>
 #include <vector>
+#include <cstring>
+#include <sstream>
 #include <algorithm>
+#include <zlib.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include "base64/base64.h"
@@ -145,8 +147,16 @@ class HttpData {
 			string port;		// Порт
 			string protocol;	// Протокол
 		};
+		/**
+		 * Compress Структура результата сжатия контента
+		 */
+		struct Compress {
+			const char * content;	// Контент в сжатом виде
+			size_t size;			// Размер контента
+			size_t chunkSize;		// Размер первоначальных данных
+		};
 		// Основные переменные класса
-		bool			fullheaders;		// Заголовки заполнены
+		bool			fullHeaders;		// Заголовки заполнены
 		u_short			options;			// Параметры прокси сервера
 		string			appName;			// Название приложения
 		string			appVersion;			// Версия приложения
@@ -379,11 +389,25 @@ class HttpData {
 		 */
 		string getHeader(string key);
 		/**
+		 * compressData Метод сжатия буфера данных
+		 * @param  buffer  буфер данных для сжатия
+		 * @param  size    размер буфера данных
+		 * @param  chunked нужно ли сжимать чанками
+		 * @return         сжатые данные
+		 */
+		Compress compressData(const char * buffer, size_t size, bool chunked = false);
+		/**
 		 * setEntitybody Метод добавления данных вложения
 		 * @param buffer буфер с данными вложения
 		 * @param size   размер буфера
 		 */
 		bool setEntitybody(const char * buffer, size_t size);
+		/**
+		 * setHeader Метод добавления нового заголовка
+		 * @param key   ключ
+		 * @param value значение
+		 */
+		void setHeader(const string key, const string value);
 		/**
 		 * setOptions Метод установки настроек прокси сервера
 		 * @param options данные для установки

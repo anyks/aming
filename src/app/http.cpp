@@ -745,11 +745,11 @@ int HttpProxy::connect_server(void * ctx){
 					http->proxy->config->keepalive.keepintvl
 				);
 			// Если это не постоянное подключение
-			} else {
+			}/* else {
 				// Активируем отдачу буферов целиком одним разом
 				socket_tcpcork(http->sockets.server, http->proxy->log);
 				socket_tcpcork(http->sockets.client, http->proxy->log);
-			}
+			}*/
 			// Выполняем бинд на сокет
 			if(::bind(http->sockets.server, sin, sinlen) < 0){
 				// Выводим в лог сообщение
@@ -905,27 +905,39 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		http->set_timeout(TM_CLIENT, true, true);
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
-
-
-		/*
-		// Создаем буфер данных
-		char * buffer = new char[len];
-		// Копируем в буфер полученные данные
-		evbuffer_copyout(input, buffer, len);
-		
-		cout << " =================== " << buffer << endl;
-
-		// Удаляем буфер данных
-		delete [] buffer;
-		*/
-
-
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 		http->sleep(len, true);
+		// Определяем требуется ли сжатие на стороне прокси сервера
+		bool gzip = (http->proxy->config->options & OPT_PGZIP);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
-		if(http->client.connect || http->headers.getFullHeaders()) evbuffer_add_buffer(output, input);
+		if(http->client.connect || (!gzip && http->headers.getFullHeaders()))
+			// Обмениваемся данными такими как они есть
+			evbuffer_add_buffer(output, input);
+		// Если требуется сжатие и заголовки получены
+		else if(gzip && http->headers.getFullHeaders()){
+			// Создаем буфер данных
+			char * buffer = new char[len];
+			// Копируем в буфер полученные данные
+			evbuffer_copyout(input, buffer, len);
+			// Выполняем сжатие данных
+			auto res = http->headers.compressData(buffer, len, http->headers.getHeader("content-length").empty());
+			// Если данные получены
+			if(res.size){
+				// Создаем буфер для исходящих данных
+				struct evbuffer * tmp = evbuffer_new();
+				// Добавляем в буфер сжатые данные
+				evbuffer_add(tmp, res.content, res.size);
+				// Отправляем данные клиенту
+				evbuffer_add_buffer(output, tmp);
+				// Удаляем данные из буфера
+				evbuffer_drain(input, res.chunkSize);
+				// Удаляем временный буфер
+				evbuffer_free(tmp);
+			}
+			// Удаляем буфер данных
+			delete [] buffer;
 		// Иначе изменяем заголовки
-		else if(len){
+		} else if(len){
 			// Если блок заголовков ответа не существует
 			if(!http->headers.size()){
 				// Создаем объект данных заголовков
@@ -956,24 +968,37 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				}
 				// Создаем буфер для исходящих данных
 				struct evbuffer * tmp = evbuffer_new();
-				// Получаем данные заголовков
-				string headers = http->headers.getResponseHeaders();
-				// Добавляем в новый буфер модифицированные заголовки
-				evbuffer_add(tmp, headers.data(), headers.length());
-				// Получаем оставшиеся размеры данных
-				len = evbuffer_get_length(input);
-				// Создаем буфер данных
-				char * buffer = new char[len];
-				// Копируем в буфер полученные данные
-				evbuffer_copyout(input, buffer, len);
-				// Добавляем в буфер оставшиеся данные
-				evbuffer_add(tmp, buffer, len);
-				// Удаляем буфер данных
-				delete [] buffer;
-				// Отправляем данные клиенту
-				evbuffer_add_buffer(output, tmp);
-				// Удаляем данные из буфера
-				evbuffer_drain(input, len);
+				// Если контент пришел не сжатым а сжатие требуется
+				if(gzip && http->headers.getHeader("content-encoding").empty()){
+					// Устанавливаем заголовок что данные придут сжатые
+					http->headers.setHeader("Content-Encoding", "gzip, deflate");
+					// Получаем данные заголовков
+					string headers = http->headers.getResponseHeaders();
+					// Добавляем в новый буфер модифицированные заголовки
+					evbuffer_add(tmp, headers.data(), headers.length());
+					// Отправляем данные клиенту
+					evbuffer_add_buffer(output, tmp);
+				// Если сжатие не требуется
+				} else {
+					// Получаем данные заголовков
+					string headers = http->headers.getResponseHeaders();
+					// Добавляем в новый буфер модифицированные заголовки
+					evbuffer_add(tmp, headers.data(), headers.length());
+					// Получаем оставшиеся размеры данных
+					len = evbuffer_get_length(input);
+					// Создаем буфер данных
+					char * buffer = new char[len];
+					// Копируем в буфер полученные данные
+					evbuffer_copyout(input, buffer, len);
+					// Добавляем в буфер оставшиеся данные
+					evbuffer_add(tmp, buffer, len);
+					// Удаляем буфер данных
+					delete [] buffer;
+					// Отправляем данные клиенту
+					evbuffer_add_buffer(output, tmp);
+					// Удаляем данные из буфера
+					evbuffer_drain(input, len);
+				}
 				// Удаляем временный буфер
 				evbuffer_free(tmp);
 			}

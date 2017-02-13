@@ -472,7 +472,7 @@ void HttpData::clear(){
 	// Обнуляем размер
 	this->length = 0;
 	// Устанавливаем что заголовки не заполнены
-	this->fullheaders = false;
+	this->fullHeaders = false;
 	// Очищаем строки
 	this->query.clear();
 	this->http.clear();
@@ -652,7 +652,7 @@ bool HttpData::isAlive(){
  */
 bool HttpData::getFullHeaders(){
 	// Выводим данные о заполненности заголовков
-	return this->fullheaders;
+	return this->fullHeaders;
 }
 /**
  * size Метод получения размера запроса
@@ -778,6 +778,103 @@ string HttpData::getHeader(string key){
 	return this->headers.getHeader(key).value;
 }
 /**
+ * compressData Метод сжатия буфера данных
+ * @param  buffer  буфер данных для сжатия
+ * @param  size    размер буфера данных
+ * @param  chunked нужно ли сжимать чанками
+ * @return         сжатые данные
+ */
+HttpData::Compress HttpData::compressData(const char * buffer, size_t size, bool chunked){
+	// Вектор для исходящих данных
+	vector <char> data;
+	// Размер смещения
+	size_t inputSize = size;
+	// Если данные пришли чанками
+	if(chunked){
+		// Копируем данные буфера для поиска данных
+		string str(buffer);
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^(?:(\\r\\n0\\r\\n\\r\\n)|([ABCDEFabcdef\\d]+)\\r\\n)", regex::ECMAScript | regex::icase);
+		// Выполняем поиск протокола
+		regex_search(str, match, e);
+		// Если данные найдены
+		if(!match.empty()){
+			// Если это конечный чанк то выводим его так как он есть
+			if(!match[1].str().empty()){
+				// Получаем искомую строку
+				string str = match[1].str();
+				// Извлекаем данные из строки
+				data.assign(str.begin(), str.end());
+			// Выполняем сжатие данных
+			} else {
+				// Размер чанка
+				int ichunk = 0;
+				// Определяем размер чанка
+				string chunksize = match[2].str();
+				// Создаем поток
+				stringstream stream;
+				// Заполняем поток данными
+				stream << chunksize;
+				// Извлекаем размер в 10-м виде
+				stream >> std::hex >> ichunk;
+				// Определяем смещение
+				size_t offset = chunksize.length() + 2;
+				// Получаем размер чанка
+				inputSize = (ichunk + offset);
+				// Если все данные получены
+				if(size >= inputSize){
+					// Создаем поток zip
+					z_stream zs;
+					// Заполняем его нулями
+					memset(&zs, 0, sizeof(z_stream));
+					// Если поток инициализировать не удалось, выходим
+					if(deflateInit(&zs, Z_DEFAULT_COMPRESSION) == Z_OK){
+						// Максимальный размер выходного массива
+						size_t size_out = 10240;
+						// Создаем буфер с сжатыми данными
+						char * zbuff = new char [(const size_t) size_out];
+						// Заполняем входные данные буфера
+						zs.next_in = reinterpret_cast <Bytef *> (const_cast <char *> (buffer + offset));
+						// Указываем размер входного буфера
+						zs.avail_in = static_cast <uInt> (ichunk);
+						// Устанавливаем выходной буфер
+						zs.next_out = reinterpret_cast <Bytef *> (zbuff);
+						// Указываем максимальный размер выходног буфера
+						zs.avail_out = static_cast <uInt> (size_out);
+						// Выполняем сжатие данных буфера
+						int const result = deflate(&zs, Z_FINISH);
+						// Запоминаем размер полученных сжатых данных
+						size_out = zs.total_out;
+						// Завершаем сжатие
+						deflateEnd(&zs);
+						// Заполняем вектор полученными данными
+						if(result == Z_STREAM_END){
+							// Создаем поток
+							stringstream stream;
+							// Заполняем поток данными
+							stream << std::hex << size_out;
+							// Получаем размер сжатых данных в 16-м виде
+							string hsize(stream.str());
+							// Добавляем перевод строки
+							hsize.append("\r\n");
+							// Добавляем размер сжатых данных в вектор
+							data.assign(hsize.begin(), hsize.end());
+							// Копируем в вектор полученные сжатые данные
+							copy(zbuff, zbuff + size_out, back_inserter(data));
+						}
+						// Удаляем выделенную ранее память
+						delete [] zbuff;
+					}
+				}
+			}
+		}
+	}
+	// Выводим результат
+	return {data.data(), data.size(), inputSize};
+}
+/**
  * setEntitybody Метод добавления данных вложения
  * @param buffer буфер с данными вложения
  * @param size   размер буфера
@@ -826,6 +923,20 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
 	}
 	// Сообщаем что ничего не найдено
 	return false;
+}
+/**
+ * setHeader Метод добавления нового заголовка
+ * @param key   ключ
+ * @param value значение
+ */
+void HttpData::setHeader(const string key, const string value){
+	// Если параметры пришли верные
+	if(!key.empty() && !value.empty()){
+		// Устанавливаем заголовок
+		this->headers.append(key, value);
+		// Выполняем генерацию результирующего запроса
+		createHead();
+	}
 }
 /**
  * setOptions Метод установки настроек прокси сервера
@@ -937,7 +1048,7 @@ void HttpData::setFullHeaders(){
 	// Получаем длину массива заголовков
 	this->length = this->query.length();
 	// Запоминаем что заголовки заполены полностью
-	this->fullheaders = true;
+	this->fullHeaders = true;
 }
 /**
  * addHeader Метод добавления нового заголовка
@@ -1110,7 +1221,7 @@ void HttpData::init(const string str, const string name, const string version, c
 			// Получаем длину массива заголовков
 			this->length = this->query.length();
 			// Запоминаем что заголовки заполнены полностью
-			this->fullheaders = true;
+			this->fullHeaders = true;
 		}
 		// Генерируем данные подключения
 		genDataConnect();

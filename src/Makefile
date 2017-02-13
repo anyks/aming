@@ -76,7 +76,7 @@ dev:
 # Правила сборки под Prod
 prod:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -msse3 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -mavx2 -mbmi2 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
 
 # Правило запуска
 start:
