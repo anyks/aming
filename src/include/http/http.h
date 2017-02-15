@@ -56,11 +56,16 @@ class HttpHeaders {
 		 */
 		void clear();
 		/**
+		 * remove Метод удаления заголовка по ключу
+		 * @param key ключ заголовка
+		 */
+		void remove(const string key);
+		/**
 		 * append Метод добавления заголовка
 		 * @param key ключ
 		 * @param val значение
 		 */
-		void append(string key, string val);
+		void append(const string key, const string val);
 		/**
 		 * create Метод создания объекта http заголовков
 		 * @param buffer буфер с текстовыми данными
@@ -90,6 +95,118 @@ class HttpHeaders {
 		 * ~HttpHeaders Деструктор
 		 */
 		~HttpHeaders();
+};
+/**
+ * HttpBody Класс тела запроса
+ */
+class HttpBody {
+	private:
+		/**
+		 * Chunk Структура чанков
+		 */
+		struct Chunk {
+			size_t size;		// Размер чанка
+			string hsize;		// Размер чанка в 16-й системе
+			const char * data;	// Данные чанка
+		};
+		// Тип сжатия
+		u_int compress;
+		// Количество чанков
+		size_t count = 0;
+		// Предустановленный размер тела
+		size_t length;
+		// Максимальный размер чанков в байтах
+		size_t maxSize;
+		// Заполненность данных
+		bool end = false;
+		// Один чанк для вывода данных
+		Chunk chunk;
+		// Массив чанков
+		vector <Chunk> chunks;
+		/**
+		 * createChunk Метод создания чанка
+		 * @param buffer буфер с данными
+		 * @param size   размер передаваемых данных
+		 */
+		void createChunk(const char * buffer, const size_t size);
+		/**
+		 * getChunksSize Метод определения размера всех чанков
+		 * @return размер всех чанков
+		 */
+		size_t getChunksSize();
+	public:
+		/**
+		 * clear Метод сброса параметров
+		 */
+		void clear();
+		/**
+		 * setMaxSize Метод установки размера чанков
+		 * @param size размер чанков в байтах
+		 */
+		void setMaxSize(const size_t size);
+		/**
+		 * setCompress Метод установки типа сжатия
+		 * @param compress тип сжатия
+		 */
+		void setCompress(const u_int compress);
+		/**
+		 * setLength Метод установки размера тела
+		 * @param length размер тела
+		 */
+		void setLength(const size_t length);
+		/**
+		 * isEnd Метод проверки завершения формирования тела
+		 * @return результат проверки
+		 */
+		bool isEnd();
+		/**
+		 * addData Метод добавления данных тела
+		 * @param  buffer буфер с данными
+		 * @param  size   размер передаваемых данных
+		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
+		 * @return        количество обработанных байт
+		 */
+		size_t addData(const char * buffer, const size_t size, bool strict = false);
+		/**
+		 * countChunks Получить количество чанков
+		 * @return количество чанков тела
+		 */
+		const size_t countChunks();
+		/**
+		 * getChunk Метод получения указателя на чанк по индексу
+		 * @param  index индекс чанка
+		 * @return       данные чанка
+		 */
+		Chunk * getChunk(const size_t index);
+		/**
+		 * getChunk Метод получения указателя на чанк в сжатом виде по индексу
+		 * @param  index индекс чанка
+		 * @return       данные чанка
+		 */
+		Chunk * getGzipChunk(const size_t index);
+		/**
+		 * getBody Метод получения тела запроса
+		 * @param  chunked чанкованием
+		 * @return         данные тела запроса
+		 */
+		Chunk getBody(bool chunked = false);
+		/**
+		 * getGzipBody Метод получения тела запроса в сжатом виде
+		 * @param  chunked чанкованием
+		 * @return         данные тела запроса
+		 */
+		Chunk getGzipBody(bool chunked = false);
+		/**
+		 * HttpBody Конструктор
+		 * @param maxSize  максимальный размер каждого чанка (в байтах)
+		 * @param compress метод сжатия
+		 * @param length   максимальный размер тела
+		 */
+		HttpBody(const size_t maxSize = 100, const u_int compress = Z_DEFAULT_COMPRESSION, const size_t length = 0);
+		/**
+		 * ~HttpBody Деструктор
+		 */
+		~HttpBody();
 };
 /**
  * HttpQuery Класс данных для выполнения запросов на удаленном сервере
@@ -157,6 +274,7 @@ class HttpData {
 		};
 		// Основные переменные класса
 		bool			fullHeaders;		// Заголовки заполнены
+		bool			gzip;				// Выполнение компрессии данных
 		u_short			options;			// Параметры прокси сервера
 		string			appName;			// Название приложения
 		string			appVersion;			// Версия приложения
@@ -177,6 +295,7 @@ class HttpData {
 		string			request;			// Результирующий данные запроса
 		size_t			length = 0;			// Количество заголовков
 		vector <char>	entitybody;			// Данные http вложений
+		HttpBody		body;				// Тело http запроса
 		HttpHeaders		headers;			// Заголовки http запроса
 		// Шаблоны ответов
 		string html[12] = {
@@ -283,11 +402,23 @@ class HttpData {
 		 * @return     объект с данными запроса
 		 */
 		Connect getConnection(string str);
+		/**
+		 * compress Метод сжатия данных
+		 * @param  buffer буфер данных для сжатия
+		 * @param  size   размер данных
+		 * @return        полученный вектор
+		 */
+		vector <char> compress(const char * buffer, size_t size);
 	public:
 		/**
 		 * clear Метод очистки структуры
 		 */
 		void clear();
+		/**
+		 * isGzip Метод проверки активации режима сжатия
+		 * @return результат проверки
+		 */
+		bool isGzip();
 		/**
 		 * isConnect Метод проверяет является ли метод, методом connect
 		 * @return результат проверки на метод connect
@@ -402,6 +533,15 @@ class HttpData {
 		 * @param size   размер буфера
 		 */
 		bool setEntitybody(const char * buffer, size_t size);
+		/**
+		 * rmHeader Метод удаления заголовка
+		 * @param key название заголовка
+		 */
+		void rmHeader(const string key);
+		/**
+		 * setGzip Метод установки режима сжатия gzip
+		 */
+		void setGzip();
 		/**
 		 * setHeader Метод добавления нового заголовка
 		 * @param key   ключ
