@@ -266,10 +266,90 @@ HttpHeaders::~HttpHeaders(){
 	vector <Header> ().swap(this->headers);
 }
 /**
+ * compress Метод сжатия данных
+ * @param  buffer буфер с данными
+ * @param  size   размер передаваемых данных
+ * @return        данные сжатого чанка
+ */
+HttpBody::Chunk HttpBody::compress(const char * buffer, const size_t size){
+	// Вектор для исходящих данных
+	vector <char> data;
+	// Создаем поток zip
+	z_stream zs;
+	// Заполняем его нулями
+	memset(&zs, 0, sizeof(z_stream));
+	/**
+	 * const static int NO_COMPRESSION (4)
+	 * const static int BEST_SPEED (4)
+	 * const static int BEST_COMPRESSION (2)
+	 * const static int DEFAULT_COMPRESSION (2)
+	 */
+	// Если поток инициализировать не удалось, выходим
+	if(deflateInit(&zs, this->compress) == Z_OK){
+		// Максимальный размер выходного массива
+		size_t size_out = size;
+		// Создаем буфер с сжатыми данными
+		char * zbuff = new char [(const size_t) size_out];
+		// Заполняем входные данные буфера
+		zs.next_in = reinterpret_cast <Bytef *> (const_cast <char *> (buffer));
+		// Указываем размер входного буфера
+		zs.avail_in = static_cast <uInt> (size);
+		// Устанавливаем выходной буфер
+		zs.next_out = reinterpret_cast <Bytef *> (zbuff);
+		// Указываем максимальный размер выходног буфера
+		zs.avail_out = static_cast <uInt> (size_out);
+		// Получаем контрольную сумму
+		int checksum = crc32(0, zs.next_in, zs.avail_in);
+		// Выполняем сжатие данных буфера
+		int const result = deflate(&zs, Z_FINISH);
+		// Запоминаем размер полученных сжатых данных
+		size_out = zs.total_out;
+		// Завершаем сжатие
+		deflateEnd(&zs);
+		// Заполняем вектор полученными данными
+		if(result == Z_STREAM_END){
+			// Префикс архива
+			const short prefix = 2;
+			// Суфикс архива
+			const short suffix = 4;
+			// Описание заголовков gzip: http://www.gzip.org/zlib/rfc-gzip.html
+			/*
+			* '\037', '\213'			- Магические константы gzip
+			* 0x08						- Метод сжатия "defalte"
+			* 0x01						- Текстовые данные
+			* 0x00, 0x00, 0x00, 0x00	- TimeStamp не устанавливаем
+			* 0x02						- Флаг максимального сжатия
+			* 0x03						- Операционная система Unix
+			*/
+			const char gzipheader[] = {'\037', '\213', 0x08, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03};
+			// Высчитываем конечный размер сжимаемых данных
+			size_out -= prefix + suffix;
+			// Преобразуем в указатель на char
+			const char * cchecksum = reinterpret_cast <char *> (&checksum);
+			// Добавляем заголовки архива в буфер данных чанка
+			copy(gzipheader, gzipheader + sizeof(gzipheader), back_inserter(data));
+			// Копируем в вектор полученные сжатые данные
+			copy(zbuff + prefix, zbuff + prefix + size_out, back_inserter(data));
+			// Добавляем данные контрольной суммы также в чанк
+			copy(cchecksum, cchecksum + sizeof(checksum), back_inserter(data));
+		}
+		// Удаляем выделенную ранее память
+		delete [] zbuff;
+	}
+	// Создаем поток
+	stringstream stream;
+	// Заполняем поток данными
+	stream << std::hex << data.size();
+	// Получаем размер сжатых данных в 16-м виде
+	string hsize(stream.str());
+	// Выводим результат
+	return {data.size(), hsize, data.data()};
+}
+/**
  * getChunksSize Метод определения размера всех чанков
  * @return размер всех чанков
  */
-size_t HttpBody::getChunksSize(){
+const size_t HttpBody::getChunksSize(){
 	// Количество полученных данных тела
 	size_t size = 0;
 	// Определяем сколько данных мы получили
@@ -304,13 +384,64 @@ void HttpBody::createChunk(const char * buffer, const size_t size){
 	}
 }
 /**
+ * clear Метод сброса параметров
+ */
+void HttpBody::clear(){
+	// Сбрасываем количество чанков
+	this->count = 0;
+	// Сбрасываем заполненность данных
+	this->end = false;
+	// Сбрасываем полученные чанки
+	this->chunks.clear();
+}
+/**
+ * setMaxSize Метод установки размера чанков
+ * @param size размер чанков в байтах
+ */
+void HttpBody::setMaxSize(const size_t size){
+	// Устанавливаем максимальный размер чанков в байтах
+	this->maxSize = size;
+}
+/**
+ * setCompress Метод установки типа сжатия
+ * @param compress тип сжатия
+ */
+void HttpBody::setCompress(const u_int compress){
+	// Устанавливаем тип сжатия
+	this->compress = compress;
+}
+/**
+ * setLength Метод установки размера тела
+ * @param length размер тела
+ */
+void HttpBody::setLength(const size_t length){
+	// Устанавливаем предустановленный размер тела
+	this->length = length;
+}
+/**
+ * isEnd Метод проверки завершения формирования тела
+ * @return результат проверки
+ */
+bool HttpBody::isEnd(){
+	// Устанавливаем заполненность данных
+	return this->end;
+}
+/**
+ * countChunks Получить количество чанков
+ * @return количество чанков тела
+ */
+const size_t HttpBody::countChunks(){
+	// Выводим количество чанков
+	return this->count;
+}
+/**
  * addData Метод добавления данных тела
  * @param  buffer буфер с данными
  * @param  size   размер передаваемых данных
  * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
  * @return        количество обработанных байт
  */
-size_t HttpBody::addData(const char * buffer, const size_t size, bool strict){
+const size_t HttpBody::addData(const char * buffer, const size_t size, bool strict){
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
@@ -396,6 +527,122 @@ size_t HttpBody::addData(const char * buffer, const size_t size, bool strict){
 	}
 	// Выводим результат
 	return readbytes;
+}
+/**
+ * getChunk Метод получения указателя на чанк по индексу
+ * @param  index индекс чанка
+ * @return       данные чанка
+ */
+HttpBody::Chunk * HttpBody::getChunk(const size_t index){
+	// Если индекс в пределах нормальных значений
+	if(index < this->chunks.size()){
+		// Получаем нужное значение чанка
+		this->chunk = this->chunks[index];
+		// Выводим результат
+		return &this->chunk;
+	}
+	// Сообщаем что ничего не найдено
+	return NULL;
+}
+/**
+ * getChunk Метод получения указателя на чанк в сжатом виде по индексу
+ * @param  index индекс чанка
+ * @return       данные чанка
+ */
+HttpBody::Chunk * HttpBody::getGzipChunk(const size_t index){
+	// Если индекс в пределах нормальных значений
+	if(index < this->chunks.size()){
+		// Получаем нужное значение чанка
+		this->chunk = this->chunks[index];
+		// Выполняем сжатие данных
+		this->chunk = compress(this->chunk.data, this->chunk.size);
+		// Выводим результат
+		return &this->chunk;
+	}
+	// Сообщаем что ничего не найдено
+	return NULL;
+}
+/**
+ * getBody Метод получения тела запроса
+ * @param  chunked чанкованием
+ * @return         данные тела запроса
+ */
+HttpBody::Chunk HttpBody::getBody(bool chunked){
+	// Создаем вектор с данными
+	vector <char> data;
+	// Определяем количество чанков
+	size_t size = this->chunks.size();
+	// Переходим по всему массиву чанков
+	for(size_t i = 0; i < size; i++){
+		// Если это чанкование
+		if(chunked){
+			// Формируем строку чанка
+			string chunksize = (i ? "\r\n" : "");
+			// Добавляем размер чанка
+			string chunksize += (this->chunks[i].hsize + "\r\n");
+			// Добавляем в массив данных, полученный размер чанка
+			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
+		}
+		// Добавляем в массив данных, данные чанка
+		copy(this->chunks[i].data, this->chunks[i].data + this->chunks[i].size, back_inserter(data));
+		// Если это чанкование и конец обработки, добавляем завершающие данные
+		if(chunked && (i == (size - 1))){
+			// Формируем закрывающий символ
+			string endchunk = "\r\n0\r\n\r\n";
+			// Добавляем в массив данных, завершающий размер чанка
+			copy(endchunk.begin(), endchunk.end(), back_inserter(data));
+		}
+	}
+	// Создаем поток
+	stringstream stream;
+	// Заполняем поток данными
+	stream << std::hex << data.size();
+	// Получаем размер сжатых данных в 16-м виде
+	string hsize(stream.str());
+	// Выводим результат
+	return {data.size(), hsize, data.data()};
+}
+/**
+ * getGzipBody Метод получения тела запроса в сжатом виде
+ * @param  chunked чанкованием
+ * @return         данные тела запроса
+ */
+HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
+	// Создаем вектор с данными
+	vector <char> data;
+	// Определяем количество чанков
+	size_t size = this->chunks.size();
+	// Переходим по всему массиву чанков
+	for(size_t i = 0; i < size; i++){
+		// Выполняем сжатие данных
+		Chunk chunk = compress(this->chunks[i].data, this->chunks[i].size);
+		// Если это чанкование
+		if(chunked){
+			// Формируем строку чанка
+			string chunksize = (i ? "\r\n" : "");
+			// Добавляем размер чанка
+			string chunksize += (chunk.hsize + "\r\n");
+			// Добавляем в массив данных, полученный размер чанка
+			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
+		}
+		// Добавляем в массив данных, данные чанка
+		copy(chunk.data, chunk.data + chunk.size, back_inserter(data));
+		// Если это чанкование и конец обработки, добавляем завершающие данные
+		if(chunked && (i == (size - 1))){
+			// Формируем закрывающий символ
+			string endchunk = "\r\n0\r\n\r\n";
+			// Добавляем в массив данных, завершающий размер чанка
+			copy(endchunk.begin(), endchunk.end(), back_inserter(data));
+		}
+	}
+	// Создаем поток
+	stringstream stream;
+	// Заполняем поток данными
+	stream << std::hex << data.size();
+	// Получаем размер сжатых данных в 16-м виде
+	string hsize(stream.str());
+	// Выводим результат
+	return {data.size(), hsize, data.data()};
 }
 /**
  * HttpBody Конструктор

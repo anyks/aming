@@ -105,9 +105,9 @@ class HttpBody {
 		 * Chunk Структура чанков
 		 */
 		struct Chunk {
-			size_t size;		// Размер чанка
-			string hsize;		// Размер чанка в 16-й системе
-			const char * data;	// Данные чанка
+			const size_t size;		// Размер чанка
+			const string hsize;		// Размер чанка в 16-й системе
+			const char * data;		// Данные чанка
 		};
 		// Тип сжатия
 		u_int compress;
@@ -124,6 +124,13 @@ class HttpBody {
 		// Массив чанков
 		vector <Chunk> chunks;
 		/**
+		 * compress Метод сжатия данных
+		 * @param  buffer буфер с данными
+		 * @param  size   размер передаваемых данных
+		 * @return        данные сжатого чанка
+		 */
+		Chunk compress(const char * buffer, const size_t size);
+		/**
 		 * createChunk Метод создания чанка
 		 * @param buffer буфер с данными
 		 * @param size   размер передаваемых данных
@@ -133,7 +140,7 @@ class HttpBody {
 		 * getChunksSize Метод определения размера всех чанков
 		 * @return размер всех чанков
 		 */
-		size_t getChunksSize();
+		const size_t getChunksSize();
 	public:
 		/**
 		 * clear Метод сброса параметров
@@ -160,18 +167,18 @@ class HttpBody {
 		 */
 		bool isEnd();
 		/**
+		 * countChunks Получить количество чанков
+		 * @return количество чанков тела
+		 */
+		const size_t countChunks();
+		/**
 		 * addData Метод добавления данных тела
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
 		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
 		 * @return        количество обработанных байт
 		 */
-		size_t addData(const char * buffer, const size_t size, bool strict = false);
-		/**
-		 * countChunks Получить количество чанков
-		 * @return количество чанков тела
-		 */
-		const size_t countChunks();
+		const size_t addData(const char * buffer, const size_t size, bool strict = false);
 		/**
 		 * getChunk Метод получения указателя на чанк по индексу
 		 * @param  index индекс чанка
