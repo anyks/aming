@@ -902,7 +902,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
 		
-		bool http1 = false;
+		bool http1 = true;
 
 		// Ставим таймер только на чтение и запись
 		http->set_timeout(TM_CLIENT, true, true);
@@ -920,29 +920,37 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			evbuffer_copyout(input, buffer, len);
 			// Добавляем данные тела
 			size_t size = http->headers.setBodyData(buffer, len);
+
+			cout << " --------------- " << (char) buffer[len] << " == " << (char) '\0' << endl;
+
 			// Если данные существуют
 			if(size){
 				// Запрашиваем данные тела
 				auto body = http->headers.getResponseBody(!http1);
-				// Создаем буфер для исходящих данных
-				struct evbuffer * tmp = evbuffer_new();
-				// Если это http1.0
-				if(http1){
-					// Получаем данные заголовков
-					string headers = http->headers.getResponseHeaders();
-					// Добавляем в новый буфер модифицированные заголовки
-					evbuffer_add(tmp, headers.data(), headers.length());
+				// Получаем размер контента, если протокол 1.0
+				string cl = http->headers.getHeader("content-length");
+				// Если размер вложений найден или это обработка чанками
+				if((!cl.empty() && ::atoi(cl.c_str())) || http->sendBytes){
+					// Создаем буфер для исходящих данных
+					struct evbuffer * tmp = evbuffer_new();
+					// Если это http1.0
+					if(http1 && !http->sendBytes){
+						// Получаем данные заголовков
+						string headers = http->headers.getResponseHeaders();
+						// Добавляем в новый буфер модифицированные заголовки
+						evbuffer_add(tmp, headers.data(), headers.length());
+					}
+					// Добавляем в буфер оставшиеся данные
+					evbuffer_add(tmp, body.get() + http->sendBytes, body.size - http->sendBytes);
+					// Отправляем данные клиенту
+					evbuffer_add_buffer(output, tmp);
+					// Удаляем временный буфер
+					evbuffer_free(tmp);
+					// Увеличиваем количество переданных байт
+					http->sendBytes += (body.size - http->sendBytes);
 				}
-				// Добавляем в буфер оставшиеся данные
-				evbuffer_add(tmp, body.content + http->sendBytes, body.size - http->sendBytes);
-				// Отправляем данные клиенту
-				evbuffer_add_buffer(output, tmp);
 				// Удаляем данные из буфера
 				evbuffer_drain(input, size);
-				// Удаляем временный буфер
-				evbuffer_free(tmp);
-				// Увеличиваем количество переданных байт
-				http->sendBytes += (body.size - http->sendBytes);
 			}
 			// Удаляем буфер данных
 			delete [] buffer;
@@ -980,10 +988,10 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				if((http->proxy->config->options & OPT_PGZIP)
 				&& http->headers.getHeader("content-encoding").empty()){
 					// Устанавливаем что идет сжатие
-					//http->headers.setGzip();
+					// http->headers.setGzip();
 				}
 				// Получаем размер контента, если протокол 1.0
-				string cl = (http1 ? http->headers.getHeader("content-length") : "");
+				string cl = http->headers.getHeader("content-length");
 				// Получаем оставшиеся размеры данных
 				len = evbuffer_get_length(input);
 				// Создаем буфер данных
@@ -1005,7 +1013,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					// Добавляем в новый буфер модифицированные заголовки
 					evbuffer_add(tmp, headers.data(), headers.length());
 					// Добавляем в буфер оставшиеся данные
-					if(size) evbuffer_add(tmp, body.content, body.size);
+					if(size) evbuffer_add(tmp, body.get(), body.size);
 					// Отправляем данные клиенту
 					evbuffer_add_buffer(output, tmp);
 					// Удаляем данные из буфера

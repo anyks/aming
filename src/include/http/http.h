@@ -104,16 +104,26 @@ class HttpBody {
 		/**
 		 * Chunk Структура чанков
 		 */
-		struct Chunk {
-			size_t size		= 0;	// Размер чанка
-			string hsize	= "0";	// Размер чанка в 16-й системе
-			char * content	= NULL;	// Данные чанка
+		class Chunk {
+			private:
+				// Данные чанка
+				vector <char> content;
+			public:
+			// Размер чанка
+			size_t size = 0;
+			// Размер чанка в 16-й системе
+			string hsize = "0";
 			/**
 			 * operator = Оператор присваивания
 			 * @param chunk сторонний объект чанка
 			 * @return      указатель на текущий объект
 			 */
-			Chunk & operator = (Chunk chunk);
+			// Chunk & operator = (Chunk chunk);
+			/**
+			 * get Метод получения данных чанка
+			 * @return данные чанка
+			 */
+			const char * get();
 			/**
 			 * Chunk Конструктор
 			 * @param data данные для присваивания
@@ -236,7 +246,7 @@ class HttpBody {
 		 * @param compress метод сжатия
 		 * @param length   максимальный размер тела
 		 */
-		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, const size_t length = 0);
+		HttpBody(const size_t maxSize = 4096, const u_int compress = Z_DEFAULT_COMPRESSION, const size_t length = 0);
 		/**
 		 * ~HttpBody Деструктор
 		 */

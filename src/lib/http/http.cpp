@@ -270,18 +270,26 @@ HttpHeaders::~HttpHeaders(){
  * @param chunk сторонний объект чанка
  * @return      указатель на текущий объект
  */
+/*
 HttpBody::Chunk & HttpBody::Chunk::operator = (HttpBody::Chunk chunk){
 	// Запоминаем размеры чанка
 	this->size	= chunk.size;
 	this->hsize	= chunk.hsize;
 	// Если объект существовал ранее то удаляем его
-	if(this->content) delete [] this->content;
-	// Выделяем динамически память
-	this->content = new char [(const size_t) chunk.size];
+	if(!this->content.empty()) this->content.clear();
 	// Выполняем копирование данных
-	copy(chunk.content, chunk.content + chunk.size, this->content);
+	copy(chunk.get(), chunk.get() + chunk.size, back_inserter(this->content));
 	// Выводим указатель на текущий объект
 	return * this;
+}
+*/
+/**
+ * get Метод получения данных чанка
+ * @return данные чанка
+ */
+const char * HttpBody::Chunk::get(){
+	// Выводим данные чанка
+	return this->content.data();
 }
 /**
  * Chunk Конструктор
@@ -291,12 +299,10 @@ HttpBody::Chunk & HttpBody::Chunk::operator = (HttpBody::Chunk chunk){
 HttpBody::Chunk::Chunk(const char * data, const size_t size){
 	// Если данные существуют
 	if(data && size){
-		// Копируем размер данных
-		this->size = size;
-		// Выделяем динамически память
-		this->content = new char [this->size];
 		// Выполняем копирование данных
-		copy(data, data + this->size, this->content);
+		copy(data, data + size, back_inserter(this->content));
+		// Копируем размер данных
+		this->size = this->content.size();
 		// Создаем поток
 		stringstream stream;
 		// Заполняем поток данными
@@ -311,8 +317,8 @@ HttpBody::Chunk::Chunk(const char * data, const size_t size){
  * ~Chunk Деструктор
  */
 HttpBody::Chunk::~Chunk(){
-	// Удаляем выделенную память
-	//if(this->content) delete [] this->content;
+	// Удаляем объект чанков
+	vector <char> ().swap(this->content);
 }
 /**
  * compressData Метод сжатия данных
@@ -510,9 +516,9 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, bool stri
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
-	if(!this->end && size){
+	if(size){
 		// Если размер вложенных данных установлен
-		if(this->length){
+		if(!this->end && this->length){
 			// Если это строгий режим
 			// и размер переданных данных соответствует
 			if(strict && (size < this->length)) return 0;
@@ -545,7 +551,7 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, bool stri
 				// Выполняем поиск протокола
 				regex_search(str, match, e);
 				// Если данные найдены
-				if(!match.empty()){
+				if(!this->end && !match.empty()){
 					// Получаем заверщающий символ
 					string endChunk = match[1].str();
 					// Если это конечный чанк то выводим его так как он есть
@@ -581,8 +587,17 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, bool stri
 						// Если данные не найдены тогда выходим
 						} else break;
 					}
-				// Если данные не найдены тогда выходим
-				} else break;
+				// Если чанки не найдены тогда добавляем все что есть
+				} else {
+					// Выполняем создание чанков
+					createChunk(buffer, size);
+					// Увеличиваем количество использованных байт
+					used += size;
+					// Запоминаем что все данные получены
+					this->end = true;
+					// Выходим из цикла
+					break;
+				}
 			}
 			// Запоминаем количество чанков
 			this->count = this->chunks.size();
@@ -620,7 +635,7 @@ HttpBody::Chunk * HttpBody::getGzipChunk(const size_t index){
 		// Получаем нужное значение чанка
 		this->chunk = this->chunks[index];
 		// Выполняем сжатие данных
-		this->chunk = compressData(this->chunk.content, this->chunk.size);
+		this->chunk = compressData(this->chunk.get(), this->chunk.size);
 		// Выводим результат
 		return &this->chunk;
 	}
@@ -649,9 +664,12 @@ HttpBody::Chunk HttpBody::getBody(bool chunked){
 			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
 		}
 		// Добавляем в массив данных, данные чанка
-		copy(this->chunks[i].content, this->chunks[i].content + this->chunks[i].size, back_inserter(data));
+		copy(this->chunks[i].get(), this->chunks[i].get() + this->chunks[i].size, back_inserter(data));
 		// Добавляем завершающую строку
 		if(chunked) copy(chunkend.begin(), chunkend.end(), back_inserter(data));
+
+		cout << " -------- " << this->end << endl;
+
 		// Если это чанкование и конец обработки, добавляем завершающие данные
 		if(this->end && chunked && (i == (size - 1))){
 			// Формируем закрывающий символ
@@ -678,11 +696,11 @@ HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
 	// Переходим по всему массиву чанков
 	for(size_t i = 0; i < size; i++){
 		// Выполняем сжатие данных
-		Chunk chunk = compressData(this->chunks[i].content, this->chunks[i].size);
+		Chunk chunk = compressData(this->chunks[i].get(), this->chunks[i].size);
 
-		string chnk(this->chunks[i].content, this->chunks[i].size);
+		// string chnk(this->chunks[i].get(), this->chunks[i].size);
 
-		cout << " ======================= data ================1 " << chnk << " == " << this->chunks[i].size << endl;
+		// cout << " ======================= data ================1 " << chnk << " == " << this->chunks[i].size << endl;
 
 		// Формируем завершающую строку
 		string chunkend = "\r\n";
@@ -694,7 +712,7 @@ HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
 			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
 		}
 		// Добавляем в массив данных, данные чанка
-		copy(chunk.content, chunk.content + chunk.size, back_inserter(data));
+		copy(chunk.get(), chunk.get() + chunk.size, back_inserter(data));
 		// Добавляем завершающую строку
 		if(chunked) copy(chunkend.begin(), chunkend.end(), back_inserter(data));
 		// Если это чанкование и конец обработки, добавляем завершающие данные
@@ -706,7 +724,7 @@ HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
 		}
 	}
 
-	if(!data.empty()) cout << " ======================= data ================2 " << data.data() << " == " << data.size() << endl;
+	// if(!data.empty()) cout << " ======================= data ================2 " << data.data() << " == " << data.size() << endl;
 
 	// Создаем чанк
 	Chunk chunk(data.data(), data.size());
@@ -1384,7 +1402,7 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
  */
 void HttpData::initBody(const size_t length){
 	// Выполняем создание объекта body
-	HttpBody body = HttpBody(1024, Z_DEFAULT_COMPRESSION, length);
+	HttpBody body = HttpBody(4096, Z_DEFAULT_COMPRESSION, length);
 	// Запоминаем объект body
 	this->body = body;
 }
