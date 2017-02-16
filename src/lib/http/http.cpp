@@ -266,12 +266,12 @@ HttpHeaders::~HttpHeaders(){
 	vector <Header> ().swap(this->headers);
 }
 /**
- * compress Метод сжатия данных
+ * compressData Метод сжатия данных
  * @param  buffer буфер с данными
  * @param  size   размер передаваемых данных
  * @return        данные сжатого чанка
  */
-HttpBody::Chunk HttpBody::compress(const char * buffer, const size_t size){
+HttpBody::Chunk HttpBody::compressData(const char * buffer, const size_t size){
 	// Вектор для исходящих данных
 	vector <char> data;
 	// Создаем поток zip
@@ -575,7 +575,7 @@ HttpBody::Chunk * HttpBody::getGzipChunk(const size_t index){
 		// Получаем нужное значение чанка
 		this->chunk = this->chunks[index];
 		// Выполняем сжатие данных
-		this->chunk = compress(this->chunk.data, this->chunk.size);
+		this->chunk = compressData(this->chunk.data, this->chunk.size);
 		// Выводим результат
 		return &this->chunk;
 	}
@@ -599,7 +599,7 @@ HttpBody::Chunk HttpBody::getBody(bool chunked){
 			// Формируем строку чанка
 			string chunksize = (i ? "\r\n" : "");
 			// Добавляем размер чанка
-			string chunksize += (this->chunks[i].hsize + "\r\n");
+			chunksize += (this->chunks[i].hsize + "\r\n");
 			// Добавляем в массив данных, полученный размер чанка
 			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
 		}
@@ -635,13 +635,13 @@ HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
 	// Переходим по всему массиву чанков
 	for(size_t i = 0; i < size; i++){
 		// Выполняем сжатие данных
-		Chunk chunk = compress(this->chunks[i].data, this->chunks[i].size);
+		Chunk chunk = compressData(this->chunks[i].data, this->chunks[i].size);
 		// Если это чанкование
 		if(chunked){
 			// Формируем строку чанка
 			string chunksize = (i ? "\r\n" : "");
 			// Добавляем размер чанка
-			string chunksize += (chunk.hsize + "\r\n");
+			chunksize += (chunk.hsize + "\r\n");
 			// Добавляем в массив данных, полученный размер чанка
 			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
 		}
@@ -1257,16 +1257,16 @@ HttpBody::Chunk HttpData::getResponseBody(bool chunked){
 		// Удаляем из заголовков, заголовок передачи данных чанками
 		this->rmHeader("transfer-encoding");
 		// Устанавливаем размер входящих данных в сжатом виде
-		if(isGzip()) this->setHeader("Content-Length", to_string(this->headers.getGzipLength()));
+		if(isGzip()) this->setHeader("Content-Length", to_string(this->body.getGzipLength()));
 		// Устанавливаем размер входящих данных
-		else this->setHeader("Content-Length", to_string(this->headers.getLength()));
+		else this->setHeader("Content-Length", to_string(this->body.getLength()));
 	}
 	// Выполняем генерацию результирующего запроса
 	createHead();
 	// Если это сжатые данные
-	if(isGzip()) return this->headers.getGzipBody(chunked);
+	if(isGzip()) return this->body.getGzipBody(chunked);
 	// Выводим данные в несжатом виде
-	else return this->headers.getBody(chunked);
+	else return this->body.getBody(chunked);
 }
 /**
  * setBodyData Метод добавления данных тела

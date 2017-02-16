@@ -105,8 +105,8 @@ class HttpBody {
 		 * Chunk Структура чанков
 		 */
 		struct Chunk {
-			const size_t size;		// Размер чанка
-			const string hsize;		// Размер чанка в 16-й системе
+			size_t size;		// Размер чанка
+			string hsize;		// Размер чанка в 16-й системе
 			const char * data;		// Данные чанка
 		};
 	private:
@@ -125,12 +125,12 @@ class HttpBody {
 		// Массив чанков
 		vector <Chunk> chunks;
 		/**
-		 * compress Метод сжатия данных
+		 * compressData Метод сжатия данных
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
 		 * @return        данные сжатого чанка
 		 */
-		Chunk compress(const char * buffer, const size_t size);
+		Chunk compressData(const char * buffer, const size_t size);
 		/**
 		 * createChunk Метод создания чанка
 		 * @param buffer буфер с данными
