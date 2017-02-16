@@ -349,6 +349,12 @@ class HttpProxy {
 		 */
 		static int connect_server(void * ctx);
 		/**
+		 * send_http_data Функция отправки незашифрованных данных клиенту
+		 * @param ctx  передаваемый объект
+		 * @param flag нужно ли провести инициализацию
+		 */
+		static void send_http_data(void * ctx, bool flag = false);
+		/**
 		 * do_request Функция запроса данных у сервера
 		 * @param ctx  передаваемый объект
 		 * @param flag флаг разрешающий новый запрос данных

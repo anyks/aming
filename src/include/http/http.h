@@ -140,8 +140,6 @@ class HttpBody {
 		u_int compress;
 		// Количество чанков
 		size_t count = 0;
-		// Предустановленный размер тела
-		size_t length;
 		// Максимальный размер чанков в байтах
 		size_t maxSize;
 		// Заполненность данных
@@ -163,11 +161,6 @@ class HttpBody {
 		 * @param size   размер передаваемых данных
 		 */
 		void createChunk(const char * buffer, const size_t size);
-		/**
-		 * getChunksSize Метод определения размера всех чанков
-		 * @return размер всех чанков
-		 */
-		const size_t getChunksSize();
 	public:
 		/**
 		 * clear Метод сброса параметров
@@ -184,11 +177,6 @@ class HttpBody {
 		 */
 		void setCompress(const u_int compress);
 		/**
-		 * setLength Метод установки размера тела
-		 * @param length размер тела
-		 */
-		void setLength(const size_t length);
-		/**
 		 * isEnd Метод проверки завершения формирования тела
 		 * @return результат проверки
 		 */
@@ -199,23 +187,19 @@ class HttpBody {
 		 */
 		const size_t countChunks();
 		/**
-		 * getLength Метод получения размер тела
-		 * @return выводим размер тела
+		 * getChunksSize Метод определения размера всех чанков
+		 * @return размер всех чанков
 		 */
-		const size_t getLength();
-		/**
-		 * getLength Метод получения размер тела в сжатом виде
-		 * @return выводим размер тела
-		 */
-		const size_t getGzipLength();
+		const size_t getChunksSize();
 		/**
 		 * addData Метод добавления данных тела
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
+		 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
 		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
 		 * @return        количество обработанных байт
 		 */
-		const size_t addData(const char * buffer, const size_t size, bool strict = false);
+		const size_t addData(const char * buffer, const size_t size, size_t length = 0, bool strict = false);
 		/**
 		 * getChunk Метод получения указателя на чанк по индексу
 		 * @param  index индекс чанка
@@ -244,9 +228,8 @@ class HttpBody {
 		 * HttpBody Конструктор
 		 * @param maxSize  максимальный размер каждого чанка (в байтах)
 		 * @param compress метод сжатия
-		 * @param length   максимальный размер тела
 		 */
-		HttpBody(const size_t maxSize = 4096, const u_int compress = Z_DEFAULT_COMPRESSION, const size_t length = 0);
+		HttpBody(const size_t maxSize = 4096, const u_int compress = Z_DEFAULT_COMPRESSION);
 		/**
 		 * ~HttpBody Деструктор
 		 */
@@ -565,13 +548,20 @@ class HttpData {
 		 */
 		HttpBody::Chunk getResponseBody(bool chunked = false);
 		/**
+		 * getResponseData Метод получения http данных ответа
+		 * @param  chunked метод чанкование
+		 * @return         объект с данными
+		 */
+		vector <char> getResponseData(bool chunked = false);
+		/**
 		 * setBodyData Метод добавления данных тела
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
+		 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
 		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
 		 * @return        количество обработанных байт
 		 */
-		const size_t setBodyData(const char * buffer, const size_t size, bool strict = false);
+		const size_t setBodyData(const char * buffer, const size_t size, size_t length = 0, bool strict = false);
 		/**
 		 * setEntitybody Метод добавления данных вложения
 		 * @param buffer буфер с данными вложения
@@ -580,9 +570,8 @@ class HttpData {
 		bool setEntitybody(const char * buffer, size_t size);
 		/**
 		 * initBody Метод инициализации объекта тела
-		 * @param length размер тела
 		 */
-		void initBody(const size_t length = 0);
+		void initBody();
 		/**
 		 * rmHeader Метод удаления заголовка
 		 * @param key название заголовка

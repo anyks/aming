@@ -889,6 +889,67 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 	return;
 }
 /**
+ * send_http_data Функция отправки незашифрованных данных клиенту
+ * @param ctx  передаваемый объект
+ * @param flag нужно ли провести инициализацию
+ */
+void HttpProxy::send_http_data(void * ctx, bool flag){
+	// Получаем объект подключения
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
+	// Если подключение не передано
+	if(http){
+		// Получаем буферы входящих данных и исходящих
+		struct evbuffer * input		= bufferevent_get_input(http->events.server);
+		struct evbuffer * output	= bufferevent_get_output(http->events.client);
+
+		bool http1 = true;
+
+		// Метод обработки данных
+		size_t method = 0;
+		// Получаем размер входящих данных
+		size_t len = evbuffer_get_length(input);
+		// Получаем размер контента, если он есть
+		string cl = http->headers.getHeader("content-length");
+		// Получаем тип передачи данных
+		string te = http->headers.getHeader("transfer-encoding");
+		// Если размер данных существует то переключаем метод
+		if(!cl.empty()) method = ::atoi(cl.c_str());
+		// Если тип передачи данных чанками
+		if(!te.empty() && (te.find("chunked") != string::npos)) method = 1;
+		// Выполняем инициализацию тела данных
+		if(flag) http->headers.initBody();
+		// Создаем буфер данных
+		char * buffer = new char[len];
+		// Копируем в буфер полученные данные
+		evbuffer_copyout(input, buffer, len);
+		// Добавляем данные тела
+		//size_t size = http->headers.setBodyData(buffer, len, method, http1);
+		// Создаем буфер для исходящих данных
+		struct evbuffer * tmp = evbuffer_new();
+		// Если нужно провести инициализацию, отправляем заголовки
+		if(flag){
+			// Получаем данные заголовков
+			string headers = http->headers.getResponseHeaders();
+			// Добавляем в новый буфер модифицированные заголовки
+			evbuffer_add(tmp, headers.data(), headers.length());
+		}
+		// Добавляем в буфер оставшиеся данные
+		// if(size) evbuffer_add(tmp, buffer, size);
+		evbuffer_add(tmp, buffer, len);
+		// Отправляем данные клиенту
+		evbuffer_add_buffer(output, tmp);
+		// Удаляем данные из буфера
+		// if(size) evbuffer_drain(input, size);
+		evbuffer_drain(input, len);
+		// Удаляем временный буфер
+		evbuffer_free(tmp);
+		// Удаляем буфер данных
+		delete [] buffer;
+	}
+	// Выходим
+	return;
+}
+/**
  * read_server_cb Функция чтения данных с сокета сервера
  * @param bev буфер события
  * @param ctx передаваемый объект
@@ -901,9 +962,6 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
-		
-		bool http1 = true;
-
 		// Ставим таймер только на чтение и запись
 		http->set_timeout(TM_CLIENT, true, true);
 		// Получаем размер входящих данных
@@ -912,50 +970,10 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		http->sleep(len, true);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
 		if(http->client.connect) evbuffer_add_buffer(output, input);
-		// Если это не метод connect и заголовки уже отправлены
-		else if(http->headers.getFullHeaders()) {
-			// Создаем буфер данных
-			char * buffer = new char[len];
-			// Копируем в буфер полученные данные
-			evbuffer_copyout(input, buffer, len);
-			// Добавляем данные тела
-			size_t size = http->headers.setBodyData(buffer, len);
-
-			cout << " --------------- " << (char) buffer[len] << " == " << (char) '\0' << endl;
-
-			// Если данные существуют
-			if(size){
-				// Запрашиваем данные тела
-				auto body = http->headers.getResponseBody(!http1);
-				// Получаем размер контента, если протокол 1.0
-				string cl = http->headers.getHeader("content-length");
-				// Если размер вложений найден или это обработка чанками
-				if((!cl.empty() && ::atoi(cl.c_str())) || http->sendBytes){
-					// Создаем буфер для исходящих данных
-					struct evbuffer * tmp = evbuffer_new();
-					// Если это http1.0
-					if(http1 && !http->sendBytes){
-						// Получаем данные заголовков
-						string headers = http->headers.getResponseHeaders();
-						// Добавляем в новый буфер модифицированные заголовки
-						evbuffer_add(tmp, headers.data(), headers.length());
-					}
-					// Добавляем в буфер оставшиеся данные
-					evbuffer_add(tmp, body.get() + http->sendBytes, body.size - http->sendBytes);
-					// Отправляем данные клиенту
-					evbuffer_add_buffer(output, tmp);
-					// Удаляем временный буфер
-					evbuffer_free(tmp);
-					// Увеличиваем количество переданных байт
-					http->sendBytes += (body.size - http->sendBytes);
-				}
-				// Удаляем данные из буфера
-				evbuffer_drain(input, size);
-			}
-			// Удаляем буфер данных
-			delete [] buffer;
+		// Если это обычные данные, выполняем отправку данных
+		else if(http->headers.getFullHeaders()) send_http_data(http);
 		// Иначе изменяем заголовки
-		} else if(len){
+		else if(len){
 			// Если блок заголовков ответа не существует
 			if(!http->headers.size()){
 				// Создаем объект данных заголовков
@@ -988,43 +1006,10 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				if((http->proxy->config->options & OPT_PGZIP)
 				&& http->headers.getHeader("content-encoding").empty()){
 					// Устанавливаем что идет сжатие
-					// http->headers.setGzip();
+					//http->headers.setGzip();
 				}
-				// Получаем размер контента, если протокол 1.0
-				string cl = http->headers.getHeader("content-length");
-				// Получаем оставшиеся размеры данных
-				len = evbuffer_get_length(input);
-				// Создаем буфер данных
-				char * buffer = new char[len];
-				// Копируем в буфер полученные данные
-				evbuffer_copyout(input, buffer, len);
-				// Выполняем инициализацию тела данных
-				http->headers.initBody(!cl.empty() ? ::atoi(cl.c_str()) : 0);
-				// Добавляем данные тела
-				size_t size = http->headers.setBodyData(buffer, len, http1);
-				// Если размер данных существует или это не http1.0
-				if(size || !http1){
-					// Запрашиваем данные тела
-					auto body = http->headers.getResponseBody(true);
-					// Получаем данные заголовков
-					string headers = http->headers.getResponseHeaders();
-					// Создаем буфер для исходящих данных
-					struct evbuffer * tmp = evbuffer_new();
-					// Добавляем в новый буфер модифицированные заголовки
-					evbuffer_add(tmp, headers.data(), headers.length());
-					// Добавляем в буфер оставшиеся данные
-					if(size) evbuffer_add(tmp, body.get(), body.size);
-					// Отправляем данные клиенту
-					evbuffer_add_buffer(output, tmp);
-					// Удаляем данные из буфера
-					if(size) evbuffer_drain(input, size);
-					// Удаляем временный буфер
-					evbuffer_free(tmp);
-					// Увеличиваем количество переданных байт
-					if(size) http->sendBytes += body.size;
-				}
-				// Удаляем буфер данных
-				delete [] buffer;
+				// Выполняем отправку данных
+				send_http_data(http, true);
 			}
 		// Закрываем соединение
 		} else http->close();
