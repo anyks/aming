@@ -105,9 +105,25 @@ class HttpBody {
 		 * Chunk Структура чанков
 		 */
 		struct Chunk {
-			size_t size;		// Размер чанка
-			string hsize;		// Размер чанка в 16-й системе
-			const char * data;		// Данные чанка
+			size_t size		= 0;	// Размер чанка
+			string hsize	= "0";	// Размер чанка в 16-й системе
+			char * content	= NULL;	// Данные чанка
+			/**
+			 * operator = Оператор присваивания
+			 * @param chunk сторонний объект чанка
+			 * @return      указатель на текущий объект
+			 */
+			Chunk & operator = (Chunk chunk);
+			/**
+			 * Chunk Конструктор
+			 * @param data данные для присваивания
+			 * @param size размер данных
+			 */
+			Chunk(const char * data = NULL, const size_t size = 0);
+			/**
+			 * ~Chunk Деструктор
+			 */
+			~Chunk();
 		};
 	private:
 		// Тип сжатия

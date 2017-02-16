@@ -923,7 +923,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			// Если данные существуют
 			if(size){
 				// Запрашиваем данные тела
-				auto body = http->headers.getResponseBody(true);
+				auto body = http->headers.getResponseBody(!http1);
 				// Создаем буфер для исходящих данных
 				struct evbuffer * tmp = evbuffer_new();
 				// Если это http1.0
@@ -934,7 +934,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					evbuffer_add(tmp, headers.data(), headers.length());
 				}
 				// Добавляем в буфер оставшиеся данные
-				evbuffer_add(tmp, body.data + http->sendBytes, body.size - http->sendBytes);
+				evbuffer_add(tmp, body.content + http->sendBytes, body.size - http->sendBytes);
 				// Отправляем данные клиенту
 				evbuffer_add_buffer(output, tmp);
 				// Удаляем данные из буфера
@@ -980,7 +980,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				if((http->proxy->config->options & OPT_PGZIP)
 				&& http->headers.getHeader("content-encoding").empty()){
 					// Устанавливаем что идет сжатие
-					http->headers.setGzip();
+					//http->headers.setGzip();
 				}
 				// Получаем размер контента, если протокол 1.0
 				string cl = (http1 ? http->headers.getHeader("content-length") : "");
@@ -1005,7 +1005,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					// Добавляем в новый буфер модифицированные заголовки
 					evbuffer_add(tmp, headers.data(), headers.length());
 					// Добавляем в буфер оставшиеся данные
-					if(size) evbuffer_add(tmp, body.data, body.size);
+					if(size) evbuffer_add(tmp, body.content, body.size);
 					// Отправляем данные клиенту
 					evbuffer_add_buffer(output, tmp);
 					// Удаляем данные из буфера
@@ -1017,42 +1017,6 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				}
 				// Удаляем буфер данных
 				delete [] buffer;
-
-
-				/*
-				// Если контент пришел не сжатым а сжатие требуется
-				if((http->proxy->config->options & OPT_PGZIP)
-				&& http->headers.getHeader("content-encoding").empty()){
-					// Устанавливаем что идет сжатие
-					http->headers.setGzip();
-					// Перенаправляем запрос на компрессию
-					gzip_response(http);
-				// Если сжатие не требуется
-				} else {
-					// Получаем данные заголовков
-					string headers = http->headers.getResponseHeaders();
-					// Создаем буфер для исходящих данных
-					struct evbuffer * tmp = evbuffer_new();
-					// Добавляем в новый буфер модифицированные заголовки
-					evbuffer_add(tmp, headers.data(), headers.length());
-					// Получаем оставшиеся размеры данных
-					len = evbuffer_get_length(input);
-					// Создаем буфер данных
-					char * buffer = new char[len];
-					// Копируем в буфер полученные данные
-					evbuffer_copyout(input, buffer, len);
-					// Добавляем в буфер оставшиеся данные
-					evbuffer_add(tmp, buffer, len);
-					// Удаляем буфер данных
-					delete [] buffer;
-					// Отправляем данные клиенту
-					evbuffer_add_buffer(output, tmp);
-					// Удаляем данные из буфера
-					evbuffer_drain(input, len);
-					// Удаляем временный буфер
-					evbuffer_free(tmp);
-				}
-				*/
 			}
 		// Закрываем соединение
 		} else http->close();
