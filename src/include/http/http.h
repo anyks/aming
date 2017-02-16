@@ -100,7 +100,7 @@ class HttpHeaders {
  * HttpBody Класс тела запроса
  */
 class HttpBody {
-	private:
+	public:
 		/**
 		 * Chunk Структура чанков
 		 */
@@ -109,6 +109,7 @@ class HttpBody {
 			const string hsize;		// Размер чанка в 16-й системе
 			const char * data;		// Данные чанка
 		};
+	private:
 		// Тип сжатия
 		u_int compress;
 		// Количество чанков
@@ -172,6 +173,16 @@ class HttpBody {
 		 */
 		const size_t countChunks();
 		/**
+		 * getLength Метод получения размер тела
+		 * @return выводим размер тела
+		 */
+		const size_t getLength();
+		/**
+		 * getLength Метод получения размер тела в сжатом виде
+		 * @return выводим размер тела
+		 */
+		const size_t getGzipLength();
+		/**
 		 * addData Метод добавления данных тела
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
@@ -209,7 +220,7 @@ class HttpBody {
 		 * @param compress метод сжатия
 		 * @param length   максимальный размер тела
 		 */
-		HttpBody(const size_t maxSize = 100, const u_int compress = Z_DEFAULT_COMPRESSION, const size_t length = 0);
+		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, const size_t length = 0);
 		/**
 		 * ~HttpBody Деструктор
 		 */
@@ -274,11 +285,13 @@ class HttpData {
 		/**
 		 * Compress Структура результата сжатия контента
 		 */
+		/*
 		struct Compress {
 			const char * content;	// Контент в сжатом виде
 			size_t size;			// Размер контента
 			size_t chunkSize;		// Размер первоначальных данных
 		};
+		*/
 		// Основные переменные класса
 		bool			fullHeaders;		// Заголовки заполнены
 		bool			gzip;				// Выполнение компрессии данных
@@ -409,13 +422,6 @@ class HttpData {
 		 * @return     объект с данными запроса
 		 */
 		Connect getConnection(string str);
-		/**
-		 * compress Метод сжатия данных
-		 * @param  buffer буфер данных для сжатия
-		 * @param  size   размер данных
-		 * @return        полученный вектор
-		 */
-		vector <char> compress(const char * buffer, size_t size);
 	public:
 		/**
 		 * clear Метод очистки структуры
@@ -527,19 +533,30 @@ class HttpData {
 		 */
 		string getHeader(string key);
 		/**
-		 * compressData Метод сжатия буфера данных
-		 * @param  buffer  буфер данных для сжатия
-		 * @param  size    размер буфера данных
-		 * @param  chunked нужно ли сжимать чанками
-		 * @return         сжатые данные
+		 * getResponseBody Метод получения данных тела http запроса
+		 * @param  chunked метод чанкование
+		 * @return         объект с данными тела
 		 */
-		Compress compressData(const char * buffer, size_t size, bool chunked = false);
+		HttpBody::Chunk getResponseBody(bool chunked = false);
+		/**
+		 * setBodyData Метод добавления данных тела
+		 * @param  buffer буфер с данными
+		 * @param  size   размер передаваемых данных
+		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
+		 * @return        количество обработанных байт
+		 */
+		const size_t setBodyData(const char * buffer, const size_t size, bool strict = false);
 		/**
 		 * setEntitybody Метод добавления данных вложения
 		 * @param buffer буфер с данными вложения
 		 * @param size   размер буфера
 		 */
 		bool setEntitybody(const char * buffer, size_t size);
+		/**
+		 * initBody Метод инициализации объекта тела
+		 * @param length размер тела
+		 */
+		void initBody(const size_t length = 0);
 		/**
 		 * rmHeader Метод удаления заголовка
 		 * @param key название заголовка

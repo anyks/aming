@@ -102,51 +102,6 @@ class ConnectClients {
 		 */
 		void add(void * ctx);
 };
-
-
-class HttpBody {
-	private:
-		class Chunk {
-			private:
-				vector <char> data;	// Данные чанка
-			public:
-				size_t size;		// Размер чанка
-				string hsize;		// Размер чанка в 16-й системе
-				const * char getData(); // Получение данных
-				const * char getFull(); // Получение полных данных (с указанием размера)
-		};
-		vector <Chunk> chunks; // Массив чанков
-		size_t chunksSize;	// Размер чанков в байтах
-		int compress;		// Тип сжатия
-		HttpData headers;	// Данные http заголовков
-		bool end = false; // Заполненность данных
-		size_t count; // Количество чанков
-	public:
-		
-		size_t countChuncks(); // Получить количество чанков
-
-		vector <Chunk> getChuncks(); // Получить массив чанков
-		vector <Chunk> getGzipChunks(); // Получить массив сжатых чанков
-
-		Chunk getChunck(size_t index); // Получить указанный чанк
-		Chunk getGzipChunck(size_t index); // Получить указанный чанк в сжатом виде
-
-		Chunk getBody(bool type = false); // Получить тело запроса
-		Chunk getGzipBody(bool type = false); // Получить тело запроса в сжатом виде
-		Chunk getData(bool type = false); // Получить данные всего запроса
-		Chunk getGzipData(bool type = false); // Получить данные всего запроса в сжатом виде
-
-		bool isBody(); // Проверка на заполненность тела
-		HttpData getHeaders(bool type = false); // Получение данных заголовков
-		HttpData getGzipHeaders(bool type = false); // Получение данных заголовков в сжатом виде
-
-		bool addData(const char * buffer); // Добавление данных (если данные заполнены целиком то выводится true)
-
-		void clear(); // Очистка всех данных
-
-		// Конструктор
-		HttpBody(const HttpData headers);
-};
 /**
  * BufferHttpProxy Класс для работы с данными прокси сервера
  */
@@ -209,6 +164,8 @@ class BufferHttpProxy {
 		void * frze = NULL;
 		// Флаг авторизации
 		bool auth = false;
+		// Количество отосланных байт
+		size_t sendBytes = 0;
 		// Объект парсера
 		Http parser;
 		// Параметры подключившегося клиента

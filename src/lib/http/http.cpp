@@ -435,6 +435,26 @@ const size_t HttpBody::countChunks(){
 	return this->count;
 }
 /**
+ * getLength Метод получения размер тела
+ * @return выводим размер тела
+ */
+const size_t HttpBody::getLength(){
+	// Определяем размер данных
+	size_t size = this->length;
+	// Если размер не определен то высчитываем его
+	if(!size && this->end) size = getChunksSize();
+	// Выводим размер данных
+	return size;
+}
+/**
+ * getLength Метод получения размер тела в сжатом виде
+ * @return выводим размер тела
+ */
+const size_t HttpBody::getGzipLength(){
+	// Выводим размер данных
+	return (this->end ? getChunksSize() : 0);
+}
+/**
  * addData Метод добавления данных тела
  * @param  buffer буфер с данными
  * @param  size   размер передаваемых данных
@@ -586,7 +606,7 @@ HttpBody::Chunk HttpBody::getBody(bool chunked){
 		// Добавляем в массив данных, данные чанка
 		copy(this->chunks[i].data, this->chunks[i].data + this->chunks[i].size, back_inserter(data));
 		// Если это чанкование и конец обработки, добавляем завершающие данные
-		if(chunked && (i == (size - 1))){
+		if(this->end && chunked && (i == (size - 1))){
 			// Формируем закрывающий символ
 			string endchunk = "\r\n0\r\n\r\n";
 			// Добавляем в массив данных, завершающий размер чанка
@@ -628,7 +648,7 @@ HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
 		// Добавляем в массив данных, данные чанка
 		copy(chunk.data, chunk.data + chunk.size, back_inserter(data));
 		// Если это чанкование и конец обработки, добавляем завершающие данные
-		if(chunked && (i == (size - 1))){
+		if(this->end && chunked && (i == (size - 1))){
 			// Формируем закрывающий символ
 			string endchunk = "\r\n0\r\n\r\n";
 			// Добавляем в массив данных, завершающий размер чанка
@@ -1221,148 +1241,43 @@ string HttpData::getHeader(string key){
 	return this->headers.getHeader(key).value;
 }
 /**
- * compress Метод сжатия данных
- * @param  buffer буфер данных для сжатия
- * @param  size   размер данных
- * @return        полученный вектор
+ * getResponseBody Метод получения данных тела http запроса
+ * @param  chunked метод чанкование
+ * @return         объект с данными тела
  */
-vector <char> HttpData::compress(const char * buffer, size_t size){
-	// Вектор для исходящих данных
-	vector <char> data;
-	// Создаем поток zip
-	z_stream zs;
-	// Заполняем его нулями
-	memset(&zs, 0, sizeof(z_stream));
-	/**
-	 * const static int NO_COMPRESSION (4)
-	 * const static int BEST_SPEED (4)
-	 * const static int BEST_COMPRESSION (2)
-	 * const static int DEFAULT_COMPRESSION (2)
-	 */
-	// Если поток инициализировать не удалось, выходим
-	if(deflateInit(&zs, Z_BEST_COMPRESSION) == Z_OK){
-		// Максимальный размер выходного массива
-		size_t size_out = size;
-		// Создаем буфер с сжатыми данными
-		char * zbuff = new char [(const size_t) size_out];
-		// Заполняем входные данные буфера
-		zs.next_in = reinterpret_cast <Bytef *> (const_cast <char *> (buffer));
-		// Указываем размер входного буфера
-		zs.avail_in = static_cast <uInt> (size);
-		// Устанавливаем выходной буфер
-		zs.next_out = reinterpret_cast <Bytef *> (zbuff);
-		// Указываем максимальный размер выходног буфера
-		zs.avail_out = static_cast <uInt> (size_out);
-		// Получаем контрольную сумму
-		int checksum = crc32(0, zs.next_in, zs.avail_in);
-		// Выполняем сжатие данных буфера
-		int const result = deflate(&zs, Z_FINISH);
-		// Запоминаем размер полученных сжатых данных
-		size_out = zs.total_out;
-		// Завершаем сжатие
-		deflateEnd(&zs);
-		// Заполняем вектор полученными данными
-		if(result == Z_STREAM_END){
-			// Префикс архива
-			const short prefix = 2;
-			// Суфикс архива
-			const short suffix = 4;
-			// Описание заголовков gzip: http://www.gzip.org/zlib/rfc-gzip.html
-			/*
-			* '\037', '\213'			- Магические константы gzip
-			* 0x08						- Метод сжатия "defalte"
-			* 0x01						- Текстовые данные
-			* 0x00, 0x00, 0x00, 0x00	- TimeStamp не устанавливаем
-			* 0x02						- Флаг максимального сжатия
-			* 0x03						- Операционная система Unix
-			*/
-			const char gzipheader[] = {'\037', '\213', 0x08, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03};
-			// Высчитываем конечный размер сжимаемых данных
-			size_out -= prefix + suffix;
-			// Преобразуем в указатель на char
-			const char * cchecksum = reinterpret_cast <char *> (&checksum);
-			// Добавляем заголовки архива в буфер данных чанка
-			copy(gzipheader, gzipheader + sizeof(gzipheader), back_inserter(data));
-			// Копируем в вектор полученные сжатые данные
-			copy(zbuff + prefix, zbuff + prefix + size_out, back_inserter(data));
-			// Добавляем данные контрольной суммы также в чанк
-			copy(cchecksum, cchecksum + sizeof(checksum), back_inserter(data));
-		}
-		// Удаляем выделенную ранее память
-		delete [] zbuff;
+HttpBody::Chunk HttpData::getResponseBody(bool chunked){
+	// Если это чанкование
+	if(chunked){
+		// Удаляем из заголовков, заголовок размера
+		this->rmHeader("content-length");
+		// Устанавливаем заголовок что данные в виде чанков
+		this->setHeader("Transfer-Encoding", "chunked");
+	// Если это извлечение данных конкретного размера
+	} else {
+		// Удаляем из заголовков, заголовок передачи данных чанками
+		this->rmHeader("transfer-encoding");
+		// Устанавливаем размер входящих данных в сжатом виде
+		if(isGzip()) this->setHeader("Content-Length", to_string(this->headers.getGzipLength()));
+		// Устанавливаем размер входящих данных
+		else this->setHeader("Content-Length", to_string(this->headers.getLength()));
 	}
-	// Выводим результат
-	return data;
+	// Выполняем генерацию результирующего запроса
+	createHead();
+	// Если это сжатые данные
+	if(isGzip()) return this->headers.getGzipBody(chunked);
+	// Выводим данные в несжатом виде
+	else return this->headers.getBody(chunked);
 }
 /**
- * compressData Метод сжатия буфера данных
- * @param  buffer  буфер данных для сжатия
- * @param  size    размер буфера данных
- * @param  chunked нужно ли сжимать чанками
- * @return         сжатые данные
+ * setBodyData Метод добавления данных тела
+ * @param  buffer буфер с данными
+ * @param  size   размер передаваемых данных
+ * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
+ * @return        количество обработанных байт
  */
-HttpData::Compress HttpData::compressData(const char * buffer, size_t size, bool chunked){
-	// Вектор для исходящих данных
-	vector <char> data;
-	// Размер смещения
-	size_t inputSize = size;
-	// Если данные пришли чанками
-	if(chunked){
-		// Копируем данные буфера для поиска данных
-		string str(buffer);
-		// Результат работы регулярного выражения
-		smatch match;
-		// Устанавливаем правило регулярного выражения
-		regex e("^(?:(\\r\\n0\\r\\n\\r\\n)|([ABCDEFabcdef\\d]+)\\r\\n)", regex::ECMAScript | regex::icase);
-		// Выполняем поиск протокола
-		regex_search(str, match, e);
-		// Если данные найдены
-		if(!match.empty()){
-			// Если это конечный чанк то выводим его так как он есть
-			if(!match[1].str().empty()){
-				// Получаем искомую строку
-				string str = match[1].str();
-				// Извлекаем данные из строки
-				data.assign(str.begin(), str.end());
-			// Выполняем сжатие данных
-			} else {
-				// Размер чанка
-				int ichunk = 0;
-				// Определяем размер чанка
-				string chunksize = match[2].str();
-				// Создаем поток
-				stringstream stream;
-				// Заполняем поток данными
-				stream << chunksize;
-				// Извлекаем размер в 10-м виде
-				stream >> std::hex >> ichunk;
-				// Определяем смещение
-				size_t offset = chunksize.length() + 2;
-				// Получаем размер чанка
-				inputSize = (ichunk + offset);
-				// Если все данные получены, выполняем сжатие данных
-				if(size >= inputSize){
-					// Выполняем сжатие данных
-					vector <char> tmp = compress(buffer + offset, ichunk);
-					// Создаем поток
-					stringstream stream;
-					// Заполняем поток данными
-					stream << std::hex << tmp.size();
-					// Получаем размер сжатых данных в 16-м виде
-					string hsize(stream.str());
-					// Добавляем перевод строки
-					hsize.append("\r\n");
-					// Добавляем размер сжатых данных в вектор
-					data.assign(hsize.begin(), hsize.end());
-					// Добавляем сжатые данные в вектор
-					copy(tmp.begin(), tmp.end(), back_inserter(data));
-				}
-			}
-		}
-	// Иначе просто сжимаем данные так как они есть
-	} else data = compress(buffer, size);
-	// Выводим результат
-	return {data.data(), data.size(), inputSize};
+const size_t HttpData::setBodyData(const char * buffer, const size_t size, bool strict){
+	// Выполняем добавление данных тела
+	return this->body.addData(buffer, size, strict);
 }
 /**
  * setEntitybody Метод добавления данных вложения
@@ -1413,6 +1328,16 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
 	}
 	// Сообщаем что ничего не найдено
 	return false;
+}
+/**
+ * initBody Метод инициализации объекта тела
+ * @param length размер тела
+ */
+void HttpData::initBody(const size_t length){
+	// Выполняем создание объекта body
+	HttpBody body = HttpBody(1024, Z_DEFAULT_COMPRESSION, length);
+	// Запоминаем объект body
+	this->body = body;
 }
 /**
  * rmHeader Метод удаления заголовка
