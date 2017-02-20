@@ -144,8 +144,6 @@ class HttpBody {
 		size_t maxSize;
 		// Заполненность данных
 		bool end = false;
-		// Один чанк для вывода данных
-		// Chunk chunk;
 		// Массив чанков
 		vector <Chunk> chunks;
 		// Данные тела
@@ -189,15 +187,11 @@ class HttpBody {
 		 */
 		void setEnd();
 		/**
-		 * countChunks Получить количество чанков
-		 * @return количество чанков тела
+		 * size Метод определения размера данных
+		 * @param  chunked чанкованием
+		 * @return         размер тела
 		 */
-		//const size_t countChunks();
-		/**
-		 * getChunksSize Метод определения размера всех чанков
-		 * @return размер всех чанков
-		 */
-		//const size_t getChunksSize();
+		const size_t size(bool chunked = false);
 		/**
 		 * addData Метод добавления данных тела
 		 * @param  buffer буфер с данными
@@ -208,18 +202,6 @@ class HttpBody {
 		 * @return        количество обработанных байт
 		 */
 		const size_t addData(const char * buffer, const size_t size, size_t length = 0, bool gzip = false, bool strict = false);
-		/**
-		 * getChunk Метод получения указателя на чанк по индексу
-		 * @param  index индекс чанка
-		 * @return       данные чанка
-		 */
-		//Chunk * getChunk(const size_t index);
-		/**
-		 * getChunk Метод получения указателя на чанк в сжатом виде по индексу
-		 * @param  index индекс чанка
-		 * @return       данные чанка
-		 */
-		//Chunk * getGzipChunk(const size_t index);
 		/**
 		 * getBody Метод получения тела запроса
 		 * @param  chunked чанкованием
@@ -232,11 +214,14 @@ class HttpBody {
 		 * @return         данные тела запроса
 		 */
 		Chunk getGzipBody(bool chunked = false);
-
+		/**
+		 * getChunks Метод получения списка чанков
+		 */
 		vector <Chunk> getChunks();
-
+		/**
+		 * getGzipChunks Метод получения списка чанков в сжатом виде
+		 */
 		vector <Chunk> getGzipChunks();
-
 		/**
 		 * HttpBody Конструктор
 		 * @param maxSize  максимальный размер каждого чанка (в байтах)
@@ -581,6 +566,10 @@ class HttpData {
 		 * @param size   размер буфера
 		 */
 		bool setEntitybody(const char * buffer, size_t size);
+
+
+		bool isEndBody();
+
 		/**
 		 * initBody Метод инициализации объекта тела
 		 */

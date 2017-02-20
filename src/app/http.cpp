@@ -926,6 +926,7 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 		size_t size = http->headers.setBodyData(buffer, len, method);//, http1);
 		// Создаем буфер для исходящих данных
 		struct evbuffer * tmp = evbuffer_new();
+		/*
 		// Если нужно провести инициализацию, отправляем заголовки
 		if(flag){
 			// Получаем данные заголовков
@@ -941,6 +942,25 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 		// Удаляем данные из буфера
 		// if(size) evbuffer_drain(input, size);
 		evbuffer_drain(input, len);
+		*/
+	
+		evbuffer_drain(input, size);
+
+
+		if(http->headers.isEndBody()){
+			// Получаем данные тела
+			auto body = http->headers.getResponseBody(true);
+			// Получаем данные заголовков
+			string headers = http->headers.getResponseHeaders();
+			// Добавляем в новый буфер модифицированные заголовки
+			evbuffer_add(tmp, headers.data(), headers.length());
+			// Добавляем в буфер оставшиеся данные
+			evbuffer_add(tmp, body.get(), body.size);
+			// Отправляем данные клиенту
+			evbuffer_add_buffer(output, tmp);
+		}
+
+
 		// Удаляем временный буфер
 		evbuffer_free(tmp);
 		// Удаляем буфер данных
@@ -1006,7 +1026,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				if((http->proxy->config->options & OPT_PGZIP)
 				&& http->headers.getHeader("content-encoding").empty()){
 					// Устанавливаем что идет сжатие
-					//http->headers.setGzip();
+					http->headers.setGzip();
 				}
 				// Выполняем отправку данных
 				send_http_data(http, true);
@@ -1158,6 +1178,8 @@ void HttpProxy::do_request(void * ctx, bool flag){
 		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
 			// Очищаем таймеры для клиента
 			http->set_timeout(TM_CLIENT);
+			// Очищаем заголовки
+			http->headers.clear();
 			// Очищаем объект ответа
 			http->response.clear();
 			// Обнуляем количество отосланных байт

@@ -321,6 +321,23 @@ HttpBody::Chunk::~Chunk(){
 	vector <char> ().swap(this->content);
 }
 /**
+ * size Метод определения размера данных
+ * @param  chunked чанкованием
+ * @return         размер тела
+ */
+const size_t HttpBody::size(bool chunked){
+	// Выводим размер тела
+	size_t size = 0;
+	// Если это чанкование
+	if(chunked){
+		// Переходим по всем чанкам и считаем размеры
+		for(size_t i = 0; i < this->chunks.size(); i++) size += this->chunks[i].size;
+	// Иначе просто считаем размер блока
+	} else size = this->body.size();
+	// Выводим результат
+	return size;
+}
+/**
  * compressData Метод сжатия данных
  * @param  buffer буфер с данными
  * @param  size   размер передаваемых данных
@@ -432,6 +449,8 @@ void HttpBody::clear(){
 	this->end = false;
 	// Сбрасываем полученные чанки
 	this->chunks.clear();
+	// Очищаем тело
+	this->body.clear();
 }
 /**
  * setMaxSize Метод установки размера чанков
@@ -544,7 +563,7 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 								// Извлекаем размер чанка
 								copy(bodyBuffer + offset, bodyBuffer + offset + ichunk, back_inserter(body));
 								// Создаем чанк
-								Chunk chunk(bodyBuffer + offset, offset + ichunk);
+								Chunk chunk(bodyBuffer + offset, ichunk);
 								// Добавляем чанк
 								this->chunks.push_back(chunk);
 								// Увеличиваем смещение
@@ -643,6 +662,10 @@ HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
 		for(size_t i = 0; i < size; i++){
 			// Выполняем сжатие данных
 			Chunk chunk = compressData(this->chunks[i].get(), this->chunks[i].size);
+
+			cout << " --------------- " << chunk.size << " == " << chunk.hsize << endl;
+			cout << " =============== " << chunk.get() << " == " << this->chunks[i].get() << endl;
+
 			// Формируем завершающую строку
 			string chunkend = "\r\n";
 			// Формируем строку чанка
@@ -674,6 +697,29 @@ HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
 	}
 }
 /**
+ * getChunks Метод получения списка чанков
+ */
+vector <HttpBody::Chunk> HttpBody::getChunks(){
+	// Выводим результат
+	return this->chunks;
+}
+/**
+ * getGzipChunks Метод получения списка чанков в сжатом виде
+ */
+vector <HttpBody::Chunk> HttpBody::getGzipChunks(){
+	// Создаем список чанков
+	vector <Chunk> data;
+	// Переходим по всему массиву чанков
+	for(size_t i = 0; i < this->chunks.size(); i++){
+		// Выполняем сжатие данных
+		Chunk chunk = compressData(this->chunks[i].get(), this->chunks[i].size);
+		// Добавляем новые чанки в список
+		data.push_back(chunk);
+	}
+	// Выводим результат
+	return data;
+}
+/**
  * HttpBody Конструктор
  * @param maxSize  максимальный размер каждого чанка (в байтах)
  * @param compress метод сжатия
@@ -692,6 +738,8 @@ HttpBody::HttpBody(const size_t maxSize, const u_int compress){
 HttpBody::~HttpBody(){
 	// Очищаем все данные
 	clear();
+	// Удаляем объект тела
+	vector <char> ().swap(this->body);
 	// Удаляем объект чанков
 	vector <Chunk> ().swap(this->chunks);
 }
@@ -951,6 +999,8 @@ void HttpData::clear(){
 	this->request.clear();
 	// Очищаем карту заголовков
 	this->headers.clear();
+	// Очищаем тело
+	this->body.clear();
 }
 /**
  * genDataConnect Метод генерации данных для подключения
@@ -1263,7 +1313,7 @@ HttpBody::Chunk HttpData::getResponseBody(bool chunked){
 		// Удаляем из заголовков, заголовок передачи данных чанками
 		this->rmHeader("transfer-encoding");
 		// Устанавливаем размер входящих данных
-		//this->setHeader("Content-Length", to_string(this->body.getChunksSize()));
+		this->setHeader("Content-Length", to_string(this->body.size()));
 	}
 	// Выполняем генерацию результирующего запроса
 	createHead();
@@ -1272,6 +1322,13 @@ HttpBody::Chunk HttpData::getResponseBody(bool chunked){
 	// Выводим данные в несжатом виде
 	else return this->body.getBody(chunked);
 }
+
+
+bool HttpData::isEndBody(){
+	return this->body.isEnd();
+}
+
+
 /**
  * getResponseData Метод получения http данных ответа
  * @param  chunked метод чанкование
