@@ -902,7 +902,7 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
 
-		bool http1 = true;
+		bool http1 = false;//true;
 
 		// Метод обработки данных
 		size_t method = 0;
@@ -923,7 +923,7 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 		// Копируем в буфер полученные данные
 		evbuffer_copyout(input, buffer, len);
 		// Добавляем данные тела
-		//size_t size = http->headers.setBodyData(buffer, len, method, http1);
+		size_t size = http->headers.setBodyData(buffer, len, method);//, http1);
 		// Создаем буфер для исходящих данных
 		struct evbuffer * tmp = evbuffer_new();
 		// Если нужно провести инициализацию, отправляем заголовки

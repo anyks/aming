@@ -397,18 +397,6 @@ HttpBody::Chunk HttpBody::compressData(const char * buffer, const size_t size){
 	return chunk;
 }
 /**
- * getChunksSize Метод определения размера всех чанков
- * @return размер всех чанков
- */
-const size_t HttpBody::getChunksSize(){
-	// Количество полученных данных тела
-	size_t size = 0;
-	// Определяем сколько данных мы получили
-	for(size_t i = 0; i < this->chunks.size(); i++) size += this->chunks[i].size;
-	// Выводим размер всех чанков
-	return size;
-}
-/**
  * createChunk Метод создания чанка
  * @param buffer буфер с данными
  * @param size   размер передаваемых данных
@@ -470,115 +458,125 @@ bool HttpBody::isEnd(){
 	return this->end;
 }
 /**
- * countChunks Получить количество чанков
- * @return количество чанков тела
+ * setEnd Метод установки завершения передачи данных
+ * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
  */
-const size_t HttpBody::countChunks(){
-	// Выводим количество чанков
-	return this->count;
+void HttpBody::setEnd(){
+	/**
+	 * Здесь необходимо поставить проверку на gzip и расжимать данные если они сжатые +++++++++++++++++++++++++++++++++++++++++++++
+	 */
+	// Запоминаем что все данные получены
+	this->end = true;
+	// Создаем чанки
+	createChunk(this->body.data(), this->body.size());
 }
 /**
  * addData Метод добавления данных тела
  * @param  buffer буфер с данными
  * @param  size   размер передаваемых данных
  * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
+ * @param  gzip   данные пришли сжатые
  * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
  * @return        количество обработанных байт
  */
-const size_t HttpBody::addData(const char * buffer, const size_t size, size_t length, bool strict){
+const size_t HttpBody::addData(const char * buffer, const size_t size, size_t length, bool gzip, bool strict){
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
-	if(!this->end && size){
+	if(size){
 		// Определяем тип данных
 		switch(length){
 			// Обработка по умолчанию
 			case 0: {
-				// Выполняем создание чанков
-				createChunk(buffer, size);
 				// Увеличиваем количество использованных байт
 				readbytes = size;
-				// Запоминаем что все данные получены
-				if(int(buffer[size]) == 0) this->end = true;
+				// Добавляем данные тела
+				copy(buffer, buffer + readbytes, back_inserter(this->body));
 			} break;
 			// Обрабатываем чанкованием
 			case 1: {
-				// Количество использованных байт
-				size_t used = 0;
-				// Выполняем извлечение данных
-				while(true){
-					// Копируем данные буфера для поиска данных
-					string str(buffer + used);
-					// Результат работы регулярного выражения
-					smatch match;
-					// Устанавливаем правило регулярного выражения
-					regex e("^(?:(\\r\\n0\\r\\n\\r\\n)|([ABCDEFabcdef\\d]+)\\r\\n)", regex::ECMAScript | regex::icase);
-					// Выполняем поиск протокола
-					regex_search(str, match, e);
-					// Если данные найдены
-					if(!this->end && !match.empty()){
-						// Получаем заверщающий символ
-						string endChunk = match[1].str();
-						// Если это конечный чанк то выводим его так как он есть
-						if(!endChunk.empty()){
-							// Запоминаем что все данные получены
-							this->end = true;
-							// Увеличиваем количество использованных байт
-							used += endChunk.length();
-							// Выходим
-							break;
-						// Выполняем сжатие данных
-						} else {
+				// Выполняем поиск завершения передачи чанков
+				char * ptr = strstr(buffer, "\r\n0\r\n\r\n");
+				// Определяем позицию
+				if(ptr){
+					// Определяем позицию конца чанков
+					size_t pos = size_t(ptr - buffer);
+					// Запоминаем сколько байт мы прочитали
+					readbytes = (pos + 7);
+					// Запоминаем что все данные получены
+					this->end = true;
+				// Если это не конец, запоминаем сколько байт мы прочитали
+				} else readbytes = size;
+				// Иначе добавляем все что есть
+				copy(buffer, buffer + readbytes, back_inserter(this->body));
+				// Если все данные получены, выполняем преобразование тела
+				if(this->end){
+					// Смещение
+					size_t offset = 0;
+					// Новый буфер данных
+					vector <char> body;
+					// Получаем буфер для поиска
+					const char * bodyBuffer = this->body.data();
+					// Выполняем обработку до тех пор пока все не обработаем
+					while(true){
+						// Выполняем поиск завершения передачи чанков
+						char * ptr = strstr(bodyBuffer + offset, "\r\n");
+						// Если нашли переход
+						if(ptr){
 							// Размер чанка
 							size_t ichunk = 0;
-							// Определяем размер чанка
-							string chunksize = match[2].str();
-							// Создаем поток
-							stringstream stream;
-							// Заполняем поток данными
-							stream << chunksize;
-							// Извлекаем размер в 10-м виде
-							stream >> std::hex >> ichunk;
-							// Определяем смещение
-							size_t offset = chunksize.length() + 2;
-							// Получаем размер чанка
-							size_t inputSize = (ichunk + offset);
-							// Если все данные получены, выполняем сжатие данных
-							if((size - used) >= inputSize){
-								// Выполняем создание чанков
-								createChunk(buffer + offset + used, ichunk);
-								// Увеличиваем количество использованных байт
-								used += inputSize;
-							// Если данные не найдены тогда выходим
-							} else break;
-						}
-					// Если чанки не найдены тогда выходим
-					} else break;
+							// Определяем позицию конца чанков
+							size_t pos = size_t(ptr - (bodyBuffer + offset));
+							// Получаем размер данных в 16-й системе
+							string hsize(bodyBuffer + offset, pos);
+							// Если данные найдены
+							if(!hsize.empty()){
+								// Если это конец тогда выходим
+								if(hsize.compare("0") == 0) break;
+								// Создаем поток
+								stringstream stream;
+								// Заполняем поток данными
+								stream << hsize;
+								// Извлекаем размер в 10-м виде
+								stream >> std::hex >> ichunk;
+								// Увеличиваем смещение
+								offset += hsize.length() + 2;
+								// Извлекаем размер чанка
+								copy(bodyBuffer + offset, bodyBuffer + offset + ichunk, back_inserter(body));
+								// Создаем чанк
+								Chunk chunk(bodyBuffer + offset, offset + ichunk);
+								// Добавляем чанк
+								this->chunks.push_back(chunk);
+								// Увеличиваем смещение
+								offset += ichunk;
+							// Смещаемся на два байта
+							} else offset += 2;
+						// Если чанки не найдены тогда выходим
+						} else break;
+					}
+					// Заменяем тело данных
+					this->body = body;
 				}
-				// Запоминаем количество чанков
-				this->count = this->chunks.size();
-				// Запоминаем сколько байт мы прочитали
-				readbytes = used;
 			} break;
 			// Если это размер данных
 			default: {
 				// Если это строгий режим
 				// и размер переданных данных соответствует
 				if(strict && (size < length)) return 0;
-				// Определяем текущий размер чанков
-				size_t csize = getChunksSize();
+				// Определяем текущий размер сохраненных данных
+				size_t csize = this->body.size();
 				// Копируемый размер данных
 				size_t copySize = (size > length ? length : size);
-				// Если размер результирующий размер чанков больше установленного
+				// Если итоговый размер больше установленного
 				if((copySize + csize) > length) copySize = length - csize;
-				// Выполняем создание чанков
-				createChunk(buffer, copySize);
-				// Запоминаем количество чанков
-				this->count = this->chunks.size();
-				// Определяем все ли данные заполнены
-				if(length == getChunksSize()) this->end = true;
 				// Запоминаем сколько байт мы прочитали
 				readbytes = copySize;
+				// Добавляем данные тела
+				copy(buffer, buffer + readbytes, back_inserter(this->body));
+				// Определяем все ли данные заполнены
+				if(length == this->body.size()) this->end = true;
+				// Если все данные собраны, формируем чанки
+				if(this->end) createChunk(this->body.data(), length);
 			}
 		}
 	}
@@ -586,76 +584,48 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 	return readbytes;
 }
 /**
- * getChunk Метод получения указателя на чанк по индексу
- * @param  index индекс чанка
- * @return       данные чанка
- */
-HttpBody::Chunk * HttpBody::getChunk(const size_t index){
-	// Если индекс в пределах нормальных значений
-	if(index < this->chunks.size()){
-		// Получаем нужное значение чанка
-		this->chunk = this->chunks[index];
-		// Выводим результат
-		return &this->chunk;
-	}
-	// Сообщаем что ничего не найдено
-	return NULL;
-}
-/**
- * getChunk Метод получения указателя на чанк в сжатом виде по индексу
- * @param  index индекс чанка
- * @return       данные чанка
- */
-HttpBody::Chunk * HttpBody::getGzipChunk(const size_t index){
-	// Если индекс в пределах нормальных значений
-	if(index < this->chunks.size()){
-		// Получаем нужное значение чанка
-		this->chunk = this->chunks[index];
-		// Выполняем сжатие данных
-		this->chunk = compressData(this->chunk.get(), this->chunk.size);
-		// Выводим результат
-		return &this->chunk;
-	}
-	// Сообщаем что ничего не найдено
-	return NULL;
-}
-/**
  * getBody Метод получения тела запроса
  * @param  chunked чанкованием
  * @return         данные тела запроса
  */
 HttpBody::Chunk HttpBody::getBody(bool chunked){
-	// Создаем вектор с данными
-	vector <char> data;
-	// Определяем количество чанков
-	size_t size = this->chunks.size();
-	// Переходим по всему массиву чанков
-	for(size_t i = 0; i < size; i++){
-		// Формируем завершающую строку
-		string chunkend = "\r\n";
-		// Если это чанкование
-		if(chunked){
+	// Если это чанкование
+	if(chunked){
+		// Создаем вектор с данными
+		vector <char> data;
+		// Определяем количество чанков
+		size_t size = this->chunks.size();
+		// Переходим по всему массиву чанков
+		for(size_t i = 0; i < size; i++){
+			// Формируем завершающую строку
+			string chunkend = "\r\n";
 			// Формируем строку чанка
 			string chunksize = (this->chunks[i].hsize + "\r\n");
 			// Добавляем в массив данных, полученный размер чанка
 			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
+			// Добавляем в массив данных, данные чанка
+			copy(this->chunks[i].get(), this->chunks[i].get() + this->chunks[i].size, back_inserter(data));
+			// Добавляем завершающую строку
+			copy(chunkend.begin(), chunkend.end(), back_inserter(data));
+			// Если это конец обработки, добавляем завершающие данные
+			if(i == (size - 1)){
+				// Формируем закрывающий символ
+				string endchunk = "0\r\n\r\n";
+				// Добавляем в массив данных, завершающий размер чанка
+				copy(endchunk.begin(), endchunk.end(), back_inserter(data));
+			}
 		}
-		// Добавляем в массив данных, данные чанка
-		copy(this->chunks[i].get(), this->chunks[i].get() + this->chunks[i].size, back_inserter(data));
-		// Добавляем завершающую строку
-		if(chunked) copy(chunkend.begin(), chunkend.end(), back_inserter(data));
-		// Если это чанкование и конец обработки, добавляем завершающие данные
-		if(this->end && chunked && (i == (size - 1))){
-			// Формируем закрывающий символ
-			string endchunk = "0\r\n\r\n";
-			// Добавляем в массив данных, завершающий размер чанка
-			copy(endchunk.begin(), endchunk.end(), back_inserter(data));
-		}
+		// Создаем чанк
+		Chunk chunk(data.data(), data.size());
+		// Выводим результат
+		return chunk;
+	// Выводим результат такой как он есть
+	} else {
+		// Создаем чанк
+		Chunk chunk(this->body.data(), this->body.size());
+		// Выводим результат
+		return chunk;
 	}
-	// Создаем чанк
-	Chunk chunk(data.data(), data.size());
-	// Выводим результат
-	return chunk;
 }
 /**
  * getGzipBody Метод получения тела запроса в сжатом виде
@@ -663,47 +633,45 @@ HttpBody::Chunk HttpBody::getBody(bool chunked){
  * @return         данные тела запроса
  */
 HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
-	// Создаем вектор с данными
-	vector <char> data;
-	// Определяем количество чанков
-	size_t size = this->chunks.size();
-	// Переходим по всему массиву чанков
-	for(size_t i = 0; i < size; i++){
-		// Выполняем сжатие данных
-		Chunk chunk = compressData(this->chunks[i].get(), this->chunks[i].size);
-
-		// string chnk(this->chunks[i].get(), this->chunks[i].size);
-
-		// cout << " ======================= data ================1 " << chnk << " == " << this->chunks[i].size << endl;
-
-		// Формируем завершающую строку
-		string chunkend = "\r\n";
-		// Если это чанкование
-		if(chunked){
+	// Если это чанкование
+	if(chunked){
+		// Создаем вектор с данными
+		vector <char> data;
+		// Определяем количество чанков
+		size_t size = this->chunks.size();
+		// Переходим по всему массиву чанков
+		for(size_t i = 0; i < size; i++){
+			// Выполняем сжатие данных
+			Chunk chunk = compressData(this->chunks[i].get(), this->chunks[i].size);
+			// Формируем завершающую строку
+			string chunkend = "\r\n";
 			// Формируем строку чанка
 			string chunksize = (chunk.hsize + "\r\n");
 			// Добавляем в массив данных, полученный размер чанка
 			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
+			// Добавляем в массив данных, данные чанка
+			copy(chunk.get(), chunk.get() + chunk.size, back_inserter(data));
+			// Добавляем завершающую строку
+			copy(chunkend.begin(), chunkend.end(), back_inserter(data));
+			// Если это конец обработки, добавляем завершающие данные
+			if(i == (size - 1)){
+				// Формируем закрывающий символ
+				string endchunk = "0\r\n\r\n";
+				// Добавляем в массив данных, завершающий размер чанка
+				copy(endchunk.begin(), endchunk.end(), back_inserter(data));
+			}
 		}
-		// Добавляем в массив данных, данные чанка
-		copy(chunk.get(), chunk.get() + chunk.size, back_inserter(data));
-		// Добавляем завершающую строку
-		if(chunked) copy(chunkend.begin(), chunkend.end(), back_inserter(data));
-		// Если это чанкование и конец обработки, добавляем завершающие данные
-		if(this->end && chunked && (i == (size - 1))){
-			// Формируем закрывающий символ
-			string endchunk = "0\r\n\r\n";
-			// Добавляем в массив данных, завершающий размер чанка
-			copy(endchunk.begin(), endchunk.end(), back_inserter(data));
-		}
+		// Создаем чанк
+		Chunk chunk(data.data(), data.size());
+		// Выводим результат
+		return chunk;
+	// Выводим результат такой как он есть
+	} else {
+		// Выполняем сжатие данных
+		Chunk chunk = compressData(this->body.data(), this->body.size());
+		// Выводим результат
+		return chunk;
 	}
-
-	// if(!data.empty()) cout << " ======================= data ================2 " << data.data() << " == " << data.size() << endl;
-
-	// Создаем чанк
-	Chunk chunk(data.data(), data.size());
-	// Выводим результат
-	return chunk;
 }
 /**
  * HttpBody Конструктор
@@ -1295,7 +1263,7 @@ HttpBody::Chunk HttpData::getResponseBody(bool chunked){
 		// Удаляем из заголовков, заголовок передачи данных чанками
 		this->rmHeader("transfer-encoding");
 		// Устанавливаем размер входящих данных
-		this->setHeader("Content-Length", to_string(this->body.getChunksSize()));
+		//this->setHeader("Content-Length", to_string(this->body.getChunksSize()));
 	}
 	// Выполняем генерацию результирующего запроса
 	createHead();

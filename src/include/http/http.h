@@ -145,9 +145,11 @@ class HttpBody {
 		// Заполненность данных
 		bool end = false;
 		// Один чанк для вывода данных
-		Chunk chunk;
+		// Chunk chunk;
 		// Массив чанков
 		vector <Chunk> chunks;
+		// Данные тела
+		vector <char> body;
 		/**
 		 * compressData Метод сжатия данных
 		 * @param  buffer буфер с данными
@@ -182,36 +184,42 @@ class HttpBody {
 		 */
 		bool isEnd();
 		/**
+		 * setEnd Метод установки завершения передачи данных
+		 * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
+		 */
+		void setEnd();
+		/**
 		 * countChunks Получить количество чанков
 		 * @return количество чанков тела
 		 */
-		const size_t countChunks();
+		//const size_t countChunks();
 		/**
 		 * getChunksSize Метод определения размера всех чанков
 		 * @return размер всех чанков
 		 */
-		const size_t getChunksSize();
+		//const size_t getChunksSize();
 		/**
 		 * addData Метод добавления данных тела
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
 		 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
+		 * @param  gzip   данные пришли сжатые
 		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
 		 * @return        количество обработанных байт
 		 */
-		const size_t addData(const char * buffer, const size_t size, size_t length = 0, bool strict = false);
+		const size_t addData(const char * buffer, const size_t size, size_t length = 0, bool gzip = false, bool strict = false);
 		/**
 		 * getChunk Метод получения указателя на чанк по индексу
 		 * @param  index индекс чанка
 		 * @return       данные чанка
 		 */
-		Chunk * getChunk(const size_t index);
+		//Chunk * getChunk(const size_t index);
 		/**
 		 * getChunk Метод получения указателя на чанк в сжатом виде по индексу
 		 * @param  index индекс чанка
 		 * @return       данные чанка
 		 */
-		Chunk * getGzipChunk(const size_t index);
+		//Chunk * getGzipChunk(const size_t index);
 		/**
 		 * getBody Метод получения тела запроса
 		 * @param  chunked чанкованием
@@ -224,12 +232,17 @@ class HttpBody {
 		 * @return         данные тела запроса
 		 */
 		Chunk getGzipBody(bool chunked = false);
+
+		vector <Chunk> getChunks();
+
+		vector <Chunk> getGzipChunks();
+
 		/**
 		 * HttpBody Конструктор
 		 * @param maxSize  максимальный размер каждого чанка (в байтах)
 		 * @param compress метод сжатия
 		 */
-		HttpBody(const size_t maxSize = 4096, const u_int compress = Z_DEFAULT_COMPRESSION);
+		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION);
 		/**
 		 * ~HttpBody Деструктор
 		 */
