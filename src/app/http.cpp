@@ -902,12 +902,15 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
 
-		bool http1 = false;//true;
+		// bool http1 = false;//true;
 
 		// Метод обработки данных
 		size_t method = 0;
-		// Получаем размер входящих данных
-		size_t len = evbuffer_get_length(input);
+		
+
+		
+		
+
 		// Получаем размер контента, если он есть
 		string cl = http->headers.getHeader("content-length");
 		// Получаем тип передачи данных
@@ -916,10 +919,36 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 		if(!cl.empty()) method = ::atoi(cl.c_str());
 		// Если тип передачи данных чанками
 		if(!te.empty() && (te.find("chunked") != string::npos)) method = 1;
+
+
+		if(!cl.empty() && !method){
+			// Создаем буфер для исходящих данных
+			struct evbuffer * tmp = evbuffer_new();
+			// Получаем данные заголовков
+			string headers = http->headers.getResponseHeaders();
+			// Добавляем в новый буфер модифицированные заголовки
+			evbuffer_add(tmp, headers.data(), headers.length());
+			// Отправляем данные клиенту
+			evbuffer_add_buffer(output, tmp);
+			// Удаляем временный буфер
+			evbuffer_free(tmp);
+
+			return;
+		}
+
+		// Получаем размер входящих данных
+		size_t len = evbuffer_get_length(input);
+
+		if(!len) return;
+
+
 		// Выполняем инициализацию тела данных
 		if(flag) http->headers.initBody();
 		// Создаем буфер данных
 		char * buffer = new char[len];
+
+		cout << " +++++++++++++++++++++2 " << len << endl;
+
 		// Копируем в буфер полученные данные
 		evbuffer_copyout(input, buffer, len);
 		// Добавляем данные тела
@@ -946,8 +975,23 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 	
 		evbuffer_drain(input, size);
 
+		cout << " ===================== Заполняем ==================== " << " == " << len << endl;
 
-		if(http->headers.isEndBody()){
+		// Если это не удачно завершенный запрос
+		if(flag && (http->headers.getStatus() != 200)){
+			// Получаем данные заголовков
+			string headers = http->headers.getResponseHeaders();
+			// Добавляем в новый буфер модифицированные заголовки
+			evbuffer_add(tmp, headers.data(), headers.length());
+			// Отправляем данные клиенту
+			evbuffer_add_buffer(output, tmp);
+		// Если это удачно завершенный запрос и тело получено
+		} else if(http->headers.isEndBody()){
+
+
+
+			cout << " ===================== Запрашиваем тело ==================== " << " == " << len << endl;
+
 			// Получаем данные тела
 			auto body = http->headers.getResponseBody(true);
 			// Получаем данные заголовков
@@ -958,6 +1002,10 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 			evbuffer_add(tmp, body.get(), body.size);
 			// Отправляем данные клиенту
 			evbuffer_add_buffer(output, tmp);
+
+			cout << " ===================== Вывели тело ==================== " << " == " << body.size << endl;
+
+			//http->close();
 		}
 
 
@@ -1025,6 +1073,9 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Если контент пришел не сжатым а сжатие требуется
 				if((http->proxy->config->options & OPT_PGZIP)
 				&& http->headers.getHeader("content-encoding").empty()){
+					
+					// if(http->headers.getHeader("content-type").find("text") != string::npos)
+
 					// Устанавливаем что идет сжатие
 					http->headers.setGzip();
 				}

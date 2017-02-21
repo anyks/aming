@@ -196,7 +196,7 @@ bool HttpHeaders::create(const char * buffer){
 	// Выполняем поиск протокола
 	regex_search(str, match, e);
 	// Если данные найдены
-	if(!match.empty() && (match.size() == 2)){
+	if(!match.empty()){
 		// Запоминаем первые символы
 		str = match[1].str();
 		// Массив строк
@@ -238,7 +238,7 @@ bool HttpHeaders::empty(){
  * size Метод получения размера
  * @return данные размера
  */
-size_t HttpHeaders::size(){
+const size_t HttpHeaders::size(){
 	// Выводим размер http заголовков
 	return this->headers.size();
 }
@@ -292,15 +292,15 @@ const char * HttpBody::Chunk::get(){
 	return this->content.data();
 }
 /**
- * Chunk Конструктор
+ * init Метод инициализации чанка
  * @param data данные для присваивания
  * @param size размер данных
  */
-HttpBody::Chunk::Chunk(const char * data, const size_t size){
+void HttpBody::Chunk::init(const char * data, const size_t size){
 	// Если данные существуют
 	if(data && size){
 		// Выполняем копирование данных
-		copy(data, data + size, back_inserter(this->content));
+		this->content.assign(data, data + size);
 		// Копируем размер данных
 		this->size = this->content.size();
 		// Создаем поток
@@ -312,6 +312,15 @@ HttpBody::Chunk::Chunk(const char * data, const size_t size){
 		// Запоминаем размер в 16-м виде
 		this->hsize = hsize;
 	}
+}
+/**
+ * Chunk Конструктор
+ * @param data данные для присваивания
+ * @param size размер данных
+ */
+HttpBody::Chunk::Chunk(const char * data, const size_t size){
+	// Выполняем инициализацию чанка
+	init(data, size);
 }
 /**
  * ~Chunk Деструктор
@@ -499,6 +508,9 @@ void HttpBody::setEnd(){
  * @return        количество обработанных байт
  */
 const size_t HttpBody::addData(const char * buffer, const size_t size, size_t length, bool gzip, bool strict){
+	
+	cout << " ---------------------- Заполняем ------------------- " << " == " << size << endl;
+
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
@@ -562,10 +574,13 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 								offset += hsize.length() + 2;
 								// Извлекаем размер чанка
 								copy(bodyBuffer + offset, bodyBuffer + offset + ichunk, back_inserter(body));
-								// Создаем чанк
-								Chunk chunk(bodyBuffer + offset, ichunk);
-								// Добавляем чанк
-								this->chunks.push_back(chunk);
+								// Если сжатие не установлено
+								if(!this->gzip){
+									// Создаем чанк
+									Chunk chunk(bodyBuffer + offset, ichunk);
+									// Добавляем чанк
+									this->chunks.push_back(chunk);
+								}
 								// Увеличиваем смещение
 								offset += ichunk;
 							// Смещаемся на два байта
@@ -573,8 +588,16 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 						// Если чанки не найдены тогда выходим
 						} else break;
 					}
-					// Заменяем тело данных
-					this->body = body;
+					// Если это не gzip
+					if(!gzip && this->gzip){
+						// Выполняем сжатие тела
+						Chunk chunk = compressData(body.data(), body.size());
+						// Создаем тело в сжатом виде
+						this->body.assign(chunk.get(), chunk.get() + chunk.size);
+						// Создаем чанки в сжатом виде
+						createChunk(this->body.data(), this->body.size());
+					// Просто сохраняем данные тела
+					} else this->body.assign(body.data(), body.data() + body.size());
 				}
 			} break;
 			// Если это размер данных
@@ -595,10 +618,25 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 				// Определяем все ли данные заполнены
 				if(length == this->body.size()) this->end = true;
 				// Если все данные собраны, формируем чанки
-				if(this->end) createChunk(this->body.data(), length);
+				if(this->end){
+					// Создаем чанки для несжатых данных
+					if(!this->gzip) createChunk(this->body.data(), length);
+					// Если это не gzip
+					else if(!gzip && this->gzip){
+						// Выполняем сжатие тела
+						Chunk chunk = compressData(this->body.data(), this->body.size());
+						// Создаем тело в сжатом виде
+						this->body.assign(chunk.get(), chunk.get() + chunk.size);
+						// Создаем чанки в сжатом виде
+						createChunk(this->body.data(), this->body.size());
+					}
+				}
 			}
 		}
 	}
+
+	cout << " ---------------------- Заполнили ------------------- " << " == " << readbytes << endl;
+
 	// Выводим результат
 	return readbytes;
 }
@@ -608,6 +646,8 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
  * @return         данные тела запроса
  */
 HttpBody::Chunk HttpBody::getBody(bool chunked){
+	// Создаем чанк
+	Chunk chunk;
 	// Если это чанкование
 	if(chunked){
 		// Создаем вектор с данными
@@ -635,66 +675,11 @@ HttpBody::Chunk HttpBody::getBody(bool chunked){
 			}
 		}
 		// Создаем чанк
-		Chunk chunk(data.data(), data.size());
-		// Выводим результат
-		return chunk;
+		chunk.init(data.data(), data.size());
 	// Выводим результат такой как он есть
-	} else {
-		// Создаем чанк
-		Chunk chunk(this->body.data(), this->body.size());
-		// Выводим результат
-		return chunk;
-	}
-}
-/**
- * getGzipBody Метод получения тела запроса в сжатом виде
- * @param  chunked чанкованием
- * @return         данные тела запроса
- */
-HttpBody::Chunk HttpBody::getGzipBody(bool chunked){
-	// Если это чанкование
-	if(chunked){
-		// Создаем вектор с данными
-		vector <char> data;
-		// Определяем количество чанков
-		size_t size = this->chunks.size();
-		// Переходим по всему массиву чанков
-		for(size_t i = 0; i < size; i++){
-			// Выполняем сжатие данных
-			Chunk chunk = compressData(this->chunks[i].get(), this->chunks[i].size);
-
-			cout << " --------------- " << chunk.size << " == " << chunk.hsize << endl;
-			cout << " =============== " << chunk.get() << " == " << this->chunks[i].get() << endl;
-
-			// Формируем завершающую строку
-			string chunkend = "\r\n";
-			// Формируем строку чанка
-			string chunksize = (chunk.hsize + "\r\n");
-			// Добавляем в массив данных, полученный размер чанка
-			copy(chunksize.begin(), chunksize.end(), back_inserter(data));
-			// Добавляем в массив данных, данные чанка
-			copy(chunk.get(), chunk.get() + chunk.size, back_inserter(data));
-			// Добавляем завершающую строку
-			copy(chunkend.begin(), chunkend.end(), back_inserter(data));
-			// Если это конец обработки, добавляем завершающие данные
-			if(i == (size - 1)){
-				// Формируем закрывающий символ
-				string endchunk = "0\r\n\r\n";
-				// Добавляем в массив данных, завершающий размер чанка
-				copy(endchunk.begin(), endchunk.end(), back_inserter(data));
-			}
-		}
-		// Создаем чанк
-		Chunk chunk(data.data(), data.size());
-		// Выводим результат
-		return chunk;
-	// Выводим результат такой как он есть
-	} else {
-		// Выполняем сжатие данных
-		Chunk chunk = compressData(this->body.data(), this->body.size());
-		// Выводим результат
-		return chunk;
-	}
+	} else chunk.init(this->body.data(), this->body.size());
+	// Выводим результат
+	return chunk;
 }
 /**
  * getChunks Метод получения списка чанков
@@ -704,33 +689,20 @@ vector <HttpBody::Chunk> HttpBody::getChunks(){
 	return this->chunks;
 }
 /**
- * getGzipChunks Метод получения списка чанков в сжатом виде
- */
-vector <HttpBody::Chunk> HttpBody::getGzipChunks(){
-	// Создаем список чанков
-	vector <Chunk> data;
-	// Переходим по всему массиву чанков
-	for(size_t i = 0; i < this->chunks.size(); i++){
-		// Выполняем сжатие данных
-		Chunk chunk = compressData(this->chunks[i].get(), this->chunks[i].size);
-		// Добавляем новые чанки в список
-		data.push_back(chunk);
-	}
-	// Выводим результат
-	return data;
-}
-/**
  * HttpBody Конструктор
  * @param maxSize  максимальный размер каждого чанка (в байтах)
  * @param compress метод сжатия
+ * @param gzip     активация режима сжатия
  */
-HttpBody::HttpBody(const size_t maxSize, const u_int compress){
+HttpBody::HttpBody(const size_t maxSize, const u_int compress, bool gzip){
 	// Очищаем все данные
 	clear();
 	// Запоминаем размер чанка
 	this->maxSize = maxSize;
 	// Запоминаем метод сжатия
 	this->compress = compress;
+	// Запоминаем режим сжатия
+	this->gzip = gzip;
 }
 /**
  * ~HttpBody Деструктор
@@ -764,7 +736,7 @@ const char * HttpQuery::data(){
  * size Метод получения размера
  * @return данные размера
  */
-size_t HttpQuery::size(){
+const size_t HttpQuery::size(){
 	// Выводим размер http запроса
 	return this->result.size();
 }
@@ -978,6 +950,8 @@ HttpData::Connect HttpData::getConnection(string str){
 void HttpData::clear(){
 	// Обнуляем размер
 	this->length = 0;
+	// Обнуляем статус запроса
+	this->status = 0;
 	// Устанавливаем что режим сжатия отключен
 	this->gzip = false;
 	// Устанавливаем что заголовки не заполнены
@@ -1177,7 +1151,7 @@ bool HttpData::getFullHeaders(){
  * size Метод получения размера запроса
  * @return размер запроса
  */
-size_t HttpData::size(){
+const size_t HttpData::size(){
 	// Выводим размер запроса
 	return this->length;
 }
@@ -1185,15 +1159,23 @@ size_t HttpData::size(){
  * getPort Метод получения порта запроса
  * @return порт удаленного ресурса
  */
-u_int HttpData::getPort(){
+const u_int HttpData::getPort(){
 	// Выводим значение переменной
 	return (!this->port.empty() ? ::atoi(this->port.c_str()) : 80);
+}
+/**
+ * getStatus Метод получения статуса запроса
+ * @return статус запроса
+ */
+const u_int HttpData::getStatus(){
+	// Выводим значение переменной
+	return this->status;
 }
 /**
  * getVersion Метод получения версии протокола запроса
  * @return версия протокола запроса
  */
-float HttpData::getVersion(){
+const float HttpData::getVersion(){
 	// Выводим значение переменной
 	return (!this->version.empty() ? ::atof(this->version.c_str()) : 1.0);
 }
@@ -1201,7 +1183,7 @@ float HttpData::getVersion(){
  * getHttp Метод получения http запроса
  * @return http запрос
  */
-string HttpData::getHttp(){
+const string HttpData::getHttp(){
 	// Выводим значение переменной
 	return this->http;
 }
@@ -1209,7 +1191,7 @@ string HttpData::getHttp(){
  * getMethod Метод получения метода запроса
  * @return метод запроса
  */
-string HttpData::getMethod(){
+const string HttpData::getMethod(){
 	// Выводим значение переменной
 	return this->method;
 }
@@ -1217,7 +1199,7 @@ string HttpData::getMethod(){
  * getHost Метод получения хоста запроса
  * @return хост запроса
  */
-string HttpData::getHost(){
+const string HttpData::getHost(){
 	// Выводим значение переменной
 	return this->host;
 }
@@ -1225,7 +1207,7 @@ string HttpData::getHost(){
  * getPath Метод получения пути запроса
  * @return путь запроса
  */
-string HttpData::getPath(){
+const string HttpData::getPath(){
 	// Выводим значение переменной
 	return this->path;
 }
@@ -1233,7 +1215,7 @@ string HttpData::getPath(){
  * getProtocol Метод получения протокола запроса
  * @return протокол запроса
  */
-string HttpData::getProtocol(){
+const string HttpData::getProtocol(){
 	// Выводим значение переменной
 	return this->protocol;
 }
@@ -1241,7 +1223,7 @@ string HttpData::getProtocol(){
  * getAuth Метод получения метода авторизации запроса
  * @return метод авторизации
  */
-string HttpData::getAuth(){
+const string HttpData::getAuth(){
 	// Выводим значение переменной
 	return this->auth;
 }
@@ -1249,7 +1231,7 @@ string HttpData::getAuth(){
  * getLogin Метод получения логина авторизации запроса
  * @return логин авторизации
  */
-string HttpData::getLogin(){
+const string HttpData::getLogin(){
 	// Выводим значение переменной
 	return this->login;
 }
@@ -1257,7 +1239,7 @@ string HttpData::getLogin(){
  * getPassword Метод получения пароля авторизации запроса
  * @return пароль авторизации
  */
-string HttpData::getPassword(){
+const string HttpData::getPassword(){
 	// Выводим значение переменной
 	return this->password;
 }
@@ -1265,7 +1247,7 @@ string HttpData::getPassword(){
  * getUseragent Метод получения юзерагента запроса
  * @return юзерагент
  */
-string HttpData::getUseragent(){
+const string HttpData::getUseragent(){
 	// Выводим значение переменной
 	return this->useragent;
 }
@@ -1273,7 +1255,7 @@ string HttpData::getUseragent(){
  * getQuery Метод получения буфера запроса
  * @return буфер запроса
  */
-string HttpData::getQuery(){
+const string HttpData::getQuery(){
 	// Выводим значение переменной
 	return this->query;
 }
@@ -1281,7 +1263,7 @@ string HttpData::getQuery(){
  * getResponseHeaders Метод получения заголовков http ответа
  * @return сформированные заголовки ответа
  */
-string HttpData::getResponseHeaders(){
+const string HttpData::getResponseHeaders(){
 	// Получаем сформированный ответ
 	vector <char> data = this->getHttpRequest();
 	// Получаем данные запроса
@@ -1292,7 +1274,7 @@ string HttpData::getResponseHeaders(){
  * @param  key ключ заголовка
  * @return     строка с данными заголовка
  */
-string HttpData::getHeader(string key){
+const string HttpData::getHeader(string key){
 	// Выводим данные заголовков
 	return this->headers.getHeader(key).value;
 }
@@ -1317,18 +1299,17 @@ HttpBody::Chunk HttpData::getResponseBody(bool chunked){
 	}
 	// Выполняем генерацию результирующего запроса
 	createHead();
-	// Если это сжатые данные
-	if(isGzip()) return this->body.getGzipBody(chunked);
-	// Выводим данные в несжатом виде
-	else return this->body.getBody(chunked);
+	// Выводим результат
+	return this->body.getBody(chunked);
 }
-
-
+/**
+ * isEndBody Метод определения заполненности тела ответа данными
+ * @return результат проверки
+ */
 bool HttpData::isEndBody(){
+	// Выводим результат проверки на заполненность тела ответа
 	return this->body.isEnd();
 }
-
-
 /**
  * getResponseData Метод получения http данных ответа
  * @param  chunked метод чанкование
@@ -1415,7 +1396,7 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
  */
 void HttpData::initBody(){
 	// Выполняем создание объекта body
-	HttpBody body = HttpBody(4096, Z_DEFAULT_COMPRESSION);
+	HttpBody body = HttpBody(4096, Z_DEFAULT_COMPRESSION, this->gzip);
 	// Запоминаем объект body
 	this->body = body;
 }
@@ -1587,7 +1568,7 @@ void HttpData::addHeader(const char * buffer){
 	regex e(
 		"((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
 		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+)|"
-		"(?:[A-Za-z]+\\/[\\d\\.]+\\s+\\d+(?:\\s+[A-Za-z\\s\\-]+)?))|"
+		"(?:[A-Za-z]+\\/[\\d\\.]+\\s+(\\d+)(?:\\s+[A-Za-z\\s\\-]+)?))|"
 		"(?:([\\w\\-]+)\\s*\\:\\s*([^\\r\\n]+))",
 		regex::ECMAScript | regex::icase
 	);
@@ -1596,12 +1577,12 @@ void HttpData::addHeader(const char * buffer){
 	// Выполняем поиск протокола
 	regex_search(str, match, e);
 	// Если данные найдены
-	if(!match.empty() && (match.size() == 4)){
+	if(!match.empty()){
 		// Если найдены заголовки
 		if(match[1].str().empty()){
 			// Получаем данные заголовков
-			string key = match[2].str();
-			string val = match[3].str();
+			string key = match[3].str();
+			string val = match[4].str();
 			// Добавляем новый заголовок
 			this->headers.append(key, val);
 			// Запоминаем первые символы
@@ -1612,6 +1593,8 @@ void HttpData::addHeader(const char * buffer){
 			clear();
 			// Запоминаем http запрос
 			this->http = match[1].str();
+			// Запоминаем статус запроса
+			this->status = ::atoi(match[2].str().c_str());
 			// Запоминаем первые символы
 			this->query = (this->http + "\r\n");
 		}
@@ -1728,18 +1711,20 @@ void HttpData::init(const string str, const string name, const string version, c
 		regex e(
 			"^((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
 			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
-			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
+			"\\/[\\d\\.]+\\s+(\\d+)(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
 			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
 			regex::ECMAScript | regex::icase
 		);
 		// Выполняем поиск протокола
 		regex_search(str, match, e);
 		// Если данные найдены
-		if(!match.empty() && (match.size() == 3)){
+		if(!match.empty()){
 			// Получаем строку запроса
 			this->http = match[1].str();
 			// Запоминаем http запрос
 			this->http = ::trim(this->http);
+			// Запоминаем статус запроса
+			this->status = ::atoi(match[2].str().c_str());
 			// Запоминаем первые символы
 			this->query = match[0].str();
 			// Создаем объект с заголовками
@@ -1823,7 +1808,7 @@ size_t Http::parse(const char * buffer, size_t size, bool flag){
 	// Выполняем поиск протокола
 	regex_search(str, match, e);
 	// Если данные найдены
-	if(!match.empty() && (match.size() == 3)){
+	if(!match.empty()){
 		// Запоминаем первые символы
 		string badchars = match[1].str();
 		// Увеличиваем значение общих найденных символов

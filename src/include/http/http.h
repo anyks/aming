@@ -80,7 +80,7 @@ class HttpHeaders {
 		 * size Метод получения размера
 		 * @return данные размера
 		 */
-		size_t size();
+		const size_t size();
 		/**
 		 * cbegin Метод получения начального итератора
 		 * @return начальный итератор
@@ -125,6 +125,12 @@ class HttpBody {
 			 */
 			const char * get();
 			/**
+			 * init Метод инициализации чанка
+			 * @param data данные для присваивания
+			 * @param size размер данных
+			 */
+			void init(const char * data, const size_t size);
+			/**
 			 * Chunk Конструктор
 			 * @param data данные для присваивания
 			 * @param size размер данных
@@ -142,6 +148,8 @@ class HttpBody {
 		size_t count = 0;
 		// Максимальный размер чанков в байтах
 		size_t maxSize;
+		// Активация режима сжатия
+		bool gzip = false;
 		// Заполненность данных
 		bool end = false;
 		// Массив чанков
@@ -209,25 +217,16 @@ class HttpBody {
 		 */
 		Chunk getBody(bool chunked = false);
 		/**
-		 * getGzipBody Метод получения тела запроса в сжатом виде
-		 * @param  chunked чанкованием
-		 * @return         данные тела запроса
-		 */
-		Chunk getGzipBody(bool chunked = false);
-		/**
 		 * getChunks Метод получения списка чанков
 		 */
 		vector <Chunk> getChunks();
 		/**
-		 * getGzipChunks Метод получения списка чанков в сжатом виде
-		 */
-		vector <Chunk> getGzipChunks();
-		/**
 		 * HttpBody Конструктор
 		 * @param maxSize  максимальный размер каждого чанка (в байтах)
 		 * @param compress метод сжатия
+		 * @param gzip     активация режима сжатия
 		 */
-		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION);
+		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, bool gzip = false);
 		/**
 		 * ~HttpBody Деструктор
 		 */
@@ -258,7 +257,7 @@ class HttpQuery {
 		 * size Метод получения размера
 		 * @return данные размера
 		 */
-		size_t size();
+		const size_t size();
 		/**
 		 * empty Метод определяет наличие данных
 		 * @return проверка о наличи данных
@@ -303,6 +302,7 @@ class HttpData {
 		bool			fullHeaders;		// Заголовки заполнены
 		bool			gzip;				// Выполнение компрессии данных
 		u_short			options;			// Параметры прокси сервера
+		u_int			status;				// Статус код запроса
 		string			appName;			// Название приложения
 		string			appVersion;			// Версия приложения
 		string			query;				// Данные запроса
@@ -467,78 +467,83 @@ class HttpData {
 		 * size Метод получения размера запроса
 		 * @return размер запроса
 		 */
-		size_t size();
+		const size_t size();
 		/**
 		 * getPort Метод получения порта запроса
 		 * @return порт удаленного ресурса
 		 */
-		u_int getPort();
+		const u_int getPort();
+		/**
+		 * getStatus Метод получения статуса запроса
+		 * @return статус запроса
+		 */
+		const u_int getStatus();
 		/**
 		 * getVersion Метод получения версии протокола запроса
 		 * @return версия протокола запроса
 		 */
-		float getVersion();
+		const float getVersion();
 		/**
 		 * getHttp Метод получения http запроса
 		 * @return http запрос
 		 */
-		string getHttp();
+		const string getHttp();
 		/**
 		 * getMethod Метод получения метода запроса
 		 * @return метод запроса
 		 */
-		string getMethod();
+		const string getMethod();
 		/**
 		 * getHost Метод получения хоста запроса
 		 * @return хост запроса
 		 */
-		string getHost();
+		const string getHost();
 		/**
 		 * getPath Метод получения пути запроса
 		 * @return путь запроса
 		 */
-		string getPath();
+		const string getPath();
 		/**
 		 * getProtocol Метод получения протокола запроса
 		 * @return протокол запроса
 		 */
-		string getProtocol();
+		const string getProtocol();
 		/**
 		 * getAuth Метод получения метода авторизации запроса
 		 * @return метод авторизации
 		 */
-		string getAuth();
+		const string getAuth();
 		/**
 		 * getLogin Метод получения логина авторизации запроса
 		 * @return логин авторизации
 		 */
-		string getLogin();
+		const string getLogin();
 		/**
 		 * getPassword Метод получения пароля авторизации запроса
 		 * @return пароль авторизации
 		 */
-		string getPassword();
+		const string getPassword();
 		/**
 		 * getUseragent Метод получения юзерагента запроса
 		 * @return юзерагент
 		 */
-		string getUseragent();
+		const string getUseragent();
 		/**
 		 * getQuery Метод получения буфера запроса
 		 * @return буфер запроса
 		 */
-		string getQuery();
+		const string getQuery();
 		/**
 		 * getResponseHeaders Метод получения заголовков http ответа
 		 * @return сформированные заголовки ответа
 		 */
-		string getResponseHeaders();
+		const string getResponseHeaders();
 		/**
 		 * getHeader Метод извлекает данные заголовка по его ключу
 		 * @param  key ключ заголовка
 		 * @return     строка с данными заголовка
 		 */
-		string getHeader(string key);
+		const string getHeader(string key);
 		/**
 		 * getResponseBody Метод получения данных тела http запроса
 		 * @param  chunked метод чанкование
@@ -566,10 +571,11 @@ class HttpData {
 		 * @param size   размер буфера
 		 */
 		bool setEntitybody(const char * buffer, size_t size);
-
-
+		/**
+		 * isEndBody Метод определения заполненности тела ответа данными
+		 * @return результат проверки
+		 */
 		bool isEndBody();
-
 		/**
 		 * initBody Метод инициализации объекта тела
 		 */
