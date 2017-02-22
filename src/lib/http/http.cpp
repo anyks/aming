@@ -456,6 +456,9 @@ void HttpBody::clear(){
 	this->count = 0;
 	// Сбрасываем заполненность данных
 	this->end = false;
+	// Сбрасываем режимы сжатия
+	this->intGzip = false;
+	this->extGzip = false;
 	// Сбрасываем полученные чанки
 	this->chunks.clear();
 	// Очищаем тело
@@ -482,13 +485,21 @@ void HttpBody::setCompress(const u_int compress){
  * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
  */
 void HttpBody::setEnd(){
-	/**
-	 * Здесь необходимо поставить проверку на gzip и расжимать данные если они сжатые +++++++++++++++++++++++++++++++++++++++++++++
-	 */
 	// Запоминаем что все данные получены
 	this->end = true;
-	// Создаем чанки
-	createChunk(this->body.data(), this->body.size());
+	// Создаем чанки для несжатых данных
+	if(!this->intGzip) createChunk(this->body.data(), this->body.size());
+	// Если это не gzip
+	else if(!this->extGzip && this->intGzip){
+		// Выполняем сжатие тела
+		Chunk chunk = compressData(this->body.data(), this->body.size());
+		// Создаем тело в сжатом виде
+		if(chunk.size) this->body.assign(chunk.get(), chunk.get() + chunk.size);
+		// Если сжатие не удалось тогда не сжимаем данные
+		else this->intGzip = false;
+		// Создаем чанки в сжатом виде
+		createChunk(this->body.data(), this->body.size());
+	}
 }
 /**
  * isEnd Метод проверки завершения формирования тела
@@ -499,23 +510,30 @@ bool HttpBody::isEnd(){
 	return this->end;
 }
 /**
- * isCompress Метод проверки на активацию сжатия на стороне прокси
+ * isIntCompress Метод проверки на активацию внутреннего сжатия
  * @return результат проверки
  */
-bool HttpBody::isCompress(){
-	// Выводим результат проверки активации сжатия на стороне прокси
-	return this->gzip;
+bool HttpBody::isIntCompress(){
+	// Выводим результат проверки активации внутреннего сжатия
+	return this->intGzip;
+}
+/**
+ * isExtCompress Метод проверки на активацию внешнего сжатия
+ * @return результат проверки
+ */
+bool HttpBody::isExtCompress(){
+	// Выводим результат проверки активации внешнего сжатия
+	return this->extGzip;
 }
 /**
  * addData Метод добавления данных тела
  * @param  buffer буфер с данными
  * @param  size   размер передаваемых данных
  * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
- * @param  gzip   данные пришли сжатые
  * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
  * @return        количество обработанных байт
  */
-const size_t HttpBody::addData(const char * buffer, const size_t size, size_t length, bool gzip, bool strict){
+const size_t HttpBody::addData(const char * buffer, const size_t size, size_t length, bool strict){
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
@@ -580,7 +598,7 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 								// Извлекаем размер чанка
 								copy(bodyBuffer + offset, bodyBuffer + offset + ichunk, back_inserter(body));
 								// Если сжатие не установлено
-								if(!this->gzip){
+								if(!this->intGzip){
 									// Создаем чанк
 									Chunk chunk(bodyBuffer + offset, ichunk);
 									// Добавляем чанк
@@ -594,7 +612,7 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 						} else break;
 					}
 					// Если это не gzip
-					if(!gzip && this->gzip){
+					if(!this->extGzip && this->intGzip){
 						// Выполняем сжатие тела
 						Chunk chunk = compressData(body.data(), body.size());
 						// Создаем тело в сжатом виде
@@ -604,7 +622,7 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 							// Запоминаем не сжатые данные
 							this->body.assign(body.data(), body.data() + body.size());
 							// Отключаем сжатие
-							this->gzip = false;
+							this->intGzip = false;
 						}
 						// Создаем чанки в сжатом виде
 						createChunk(this->body.data(), this->body.size());
@@ -632,15 +650,15 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 				// Если все данные собраны, формируем чанки
 				if(this->end){
 					// Создаем чанки для несжатых данных
-					if(!this->gzip) createChunk(this->body.data(), length);
+					if(!this->intGzip) createChunk(this->body.data(), length);
 					// Если это не gzip
-					else if(!gzip && this->gzip){
+					else if(!this->extGzip && this->intGzip){
 						// Выполняем сжатие тела
 						Chunk chunk = compressData(this->body.data(), this->body.size());
 						// Создаем тело в сжатом виде
 						if(chunk.size) this->body.assign(chunk.get(), chunk.get() + chunk.size);
 						// Если сжатие не удалось тогда не сжимаем данные
-						else this->gzip = false;
+						else this->intGzip = false;
 						// Создаем чанки в сжатом виде
 						createChunk(this->body.data(), this->body.size());
 					}
@@ -703,9 +721,10 @@ vector <HttpBody::Chunk> HttpBody::getChunks(){
  * HttpBody Конструктор
  * @param maxSize  максимальный размер каждого чанка (в байтах)
  * @param compress метод сжатия
- * @param gzip     активация режима сжатия
+ * @param intGzip  активация режима внутреннего сжатия
+ * @param extGzip  активация режима внешнего сжатия
  */
-HttpBody::HttpBody(const size_t maxSize, const u_int compress, bool gzip){
+HttpBody::HttpBody(const size_t maxSize, const u_int compress, bool intGzip, bool extGzip){
 	// Очищаем все данные
 	clear();
 	// Запоминаем размер чанка
@@ -713,7 +732,8 @@ HttpBody::HttpBody(const size_t maxSize, const u_int compress, bool gzip){
 	// Запоминаем метод сжатия
 	this->compress = compress;
 	// Запоминаем режим сжатия
-	this->gzip = gzip;
+	this->intGzip = intGzip;
+	this->extGzip = extGzip;
 }
 /**
  * ~HttpBody Деструктор
@@ -964,7 +984,8 @@ void HttpData::clear(){
 	// Обнуляем статус запроса
 	this->status = 0;
 	// Устанавливаем что режим сжатия отключен
-	this->gzip = false;
+	this->intGzip = false;
+	this->extGzip = false;
 	// Устанавливаем что заголовки не заполнены
 	this->fullHeaders = false;
 	// Очищаем строки
@@ -1104,12 +1125,20 @@ void HttpData::genDataConnect(){
 	createHead();
 }
 /**
- * isGzip Метод проверки активации режима сжатия
+ * isIntGzip Метод проверки активации режима сжатия
  * @return результат проверки
  */
-bool HttpData::isGzip(){
+bool HttpData::isIntGzip(){
 	// Сообщаем активирован ли режим сжатия
-	return this->gzip;
+	return this->intGzip;
+}
+/**
+ * isExtGzip Метод проверки активации режима внешнего сжатия
+ * @return результат проверки
+ */
+bool HttpData::isExtGzip(){
+	// Сообщаем активирован ли режим сжатия
+	return this->extGzip;
 }
 /**
  * isConnect Метод проверяет является ли метод, методом connect
@@ -1296,7 +1325,8 @@ const string HttpData::getHeader(string key){
  */
 HttpBody::Chunk HttpData::getResponseBody(bool chunked){
 	// Если не активно сжатие, снимает режим сжатия и здесь
-	if(!this->body.isCompress()) this->unsetGzip();
+	if(!this->body.isIntCompress()
+	&& !this->body.isExtCompress()) this->unsetGzip();
 	// Если это чанкование
 	if(chunked){
 		// Удаляем из заголовков, заголовок размера
@@ -1407,7 +1437,7 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
  */
 void HttpData::initBody(){
 	// Выполняем создание объекта body
-	HttpBody body = HttpBody(4096, Z_DEFAULT_COMPRESSION, this->gzip);
+	HttpBody body = HttpBody(4096, Z_DEFAULT_COMPRESSION, this->intGzip, this->extGzip);
 	// Запоминаем объект body
 	this->body = body;
 }
@@ -1426,37 +1456,47 @@ void HttpData::rmHeader(const string key){
 }
 /**
  * setGzip Метод установки режима сжатия gzip
+ * @param intGzip активация внутреннего режима сжатия
+ * @param extGzip активация внешнего режима сжатия
  */
-void HttpData::setGzip(){
-	// Получаем данные заголовка etag
-	string etag = this->getHeader("etag");
-	// Если Etag существует
-	if(!etag.empty() && (etag.find("W/") == string::npos)){
-		// Изменяем заголовок Etag
-		this->setHeader("ETag", string("W/") + etag);
+void HttpData::setGzip(bool intGzip, bool extGzip){
+	// Если один из режимов активирован
+	if(intGzip || extGzip){
+		// Получаем данные заголовка etag
+		string etag = this->getHeader("etag");
+		// Если Etag существует
+		if(!etag.empty() && (etag.find("W/") == string::npos)){
+			// Изменяем заголовок Etag
+			this->setHeader("ETag", string("W/") + etag);
+		}
+		// Устанавливаем заголовок что данные придут сжатые
+		this->setHeader("Content-Encoding", "gzip");
+		// Удаляем ненужные заголовки
+		this->rmHeader("accept-ranges");
+		// Запоминаем что режим gzip активирован
+		this->intGzip = intGzip;
+		this->extGzip = extGzip;
 	}
-	// Устанавливаем заголовок что данные придут сжатые
-	this->setHeader("Content-Encoding", "gzip");
-	// Удаляем ненужные заголовки
-	this->rmHeader("accept-ranges");
-	// Запоминаем что режим gzip активирован
-	this->gzip = true;
 }
 /**
  * unsetGzip Метод снятия режима сжатия gzip
  */
 void HttpData::unsetGzip(){
-	// Получаем данные заголовка etag
-	string etag = this->getHeader("etag");
-	// Если Etag существует
-	if(!etag.empty() && (etag.find("W/") != string::npos)){
-		// Изменяем заголовок Etag
-		this->setHeader("ETag", etag.replace(0, 2, ""));
+	// Если один из режимов активирован
+	if(this->intGzip || this->extGzip){
+		// Получаем данные заголовка etag
+		string etag = this->getHeader("etag");
+		// Если Etag существует
+		if(!etag.empty() && (etag.find("W/") != string::npos)){
+			// Изменяем заголовок Etag
+			this->setHeader("ETag", etag.replace(0, 2, ""));
+		}
+		// Удаляем ненужные заголовки
+		this->rmHeader("content-encoding");
+		// Запоминаем что режим gzip активирован
+		this->intGzip = false;
+		this->extGzip = false;
 	}
-	// Удаляем ненужные заголовки
-	this->rmHeader("content-encoding");
-	// Запоминаем что режим gzip активирован
-	this->gzip = false;
 }
 /**
  * setHeader Метод добавления нового заголовка
@@ -1614,6 +1654,9 @@ void HttpData::addHeader(const char * buffer){
 			this->headers.append(key, val);
 			// Запоминаем первые символы
 			this->query.append(key + string(": ") + val + "\r\n");
+			// Если сжатие активировано
+			if((::toCase(key).compare("content-encoding") == 0)
+			&& (val.find("gzip") != string::npos)) this->extGzip = true;
 		// Запоминаем результат запроса или ответа
 		} else {
 			// Очищаем все заголовки

@@ -148,8 +148,10 @@ class HttpBody {
 		size_t count = 0;
 		// Максимальный размер чанков в байтах
 		size_t maxSize;
-		// Активация режима сжатия
-		bool gzip = false;
+		// Активация режима внутреннего сжатия
+		bool intGzip = false;
+		// Активация режима внешнего сжатия
+		bool extGzip = false;
 		// Заполненность данных
 		bool end = false;
 		// Массив чанков
@@ -195,10 +197,15 @@ class HttpBody {
 		 */
 		bool isEnd();
 		/**
-		 * isCompress Метод проверки на активацию сжатия на стороне прокси
+		 * isIntCompress Метод проверки на активацию внутреннего сжатия
 		 * @return результат проверки
 		 */
-		bool isCompress();
+		bool isIntCompress();
+		/**
+		 * isExtCompress Метод проверки на активацию внешнего сжатия
+		 * @return результат проверки
+		 */
+		bool isExtCompress();
 		/**
 		 * size Метод определения размера данных
 		 * @param  chunked чанкованием
@@ -210,11 +217,10 @@ class HttpBody {
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
 		 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
-		 * @param  gzip   данные пришли сжатые
 		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
 		 * @return        количество обработанных байт
 		 */
-		const size_t addData(const char * buffer, const size_t size, size_t length = 0, bool gzip = false, bool strict = false);
+		const size_t addData(const char * buffer, const size_t size, size_t length = 0, bool strict = false);
 		/**
 		 * getBody Метод получения тела запроса
 		 * @param  chunked чанкованием
@@ -229,9 +235,10 @@ class HttpBody {
 		 * HttpBody Конструктор
 		 * @param maxSize  максимальный размер каждого чанка (в байтах)
 		 * @param compress метод сжатия
-		 * @param gzip     активация режима сжатия
+		 * @param intGzip  активация режима внутреннего сжатия
+		 * @param extGzip  активация режима внешнего сжатия
 		 */
-		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, bool gzip = false);
+		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, bool intGzip = false, bool extGzip = false);
 		/**
 		 * ~HttpBody Деструктор
 		 */
@@ -305,7 +312,8 @@ class HttpData {
 		*/
 		// Основные переменные класса
 		bool			fullHeaders;		// Заголовки заполнены
-		bool			gzip;				// Выполнение компрессии данных
+		bool			intGzip;			// Активация внутреннего режима сжатия
+		bool			extGzip;			// Активация внешнего режима сжатия
 		u_short			options;			// Параметры прокси сервера
 		u_int			status;				// Статус код запроса
 		string			appName;			// Название приложения
@@ -440,10 +448,15 @@ class HttpData {
 		 */
 		void clear();
 		/**
-		 * isGzip Метод проверки активации режима сжатия
+		 * isIntGzip Метод проверки активации режима внутреннего сжатия
 		 * @return результат проверки
 		 */
-		bool isGzip();
+		bool isIntGzip();
+		/**
+		 * isExtGzip Метод проверки активации режима внешнего сжатия
+		 * @return результат проверки
+		 */
+		bool isExtGzip();
 		/**
 		 * isConnect Метод проверяет является ли метод, методом connect
 		 * @return результат проверки на метод connect
@@ -590,8 +603,10 @@ class HttpData {
 		void rmHeader(const string key);
 		/**
 		 * setGzip Метод установки режима сжатия gzip
+		 * @param intGzip активация внутреннего режима сжатия
+		 * @param extGzip активация внешнего режима сжатия
 		 */
-		void setGzip();
+		void setGzip(bool intGzip = true, bool extGzip = false);
 		/**
 		 * unsetGzip Метод снятия режима сжатия gzip
 		 */

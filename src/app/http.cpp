@@ -961,7 +961,7 @@ void HttpProxy::send_http_data(void * ctx){
 			// Добавляем данные тела
 			size_t size = http->headers.setBodyData(buffer, len, http->getBodyMethod());
 			// Если это не режим сжатия, тогда отправляем заголовок
-			if(!http->headers.isGzip()){
+			if(!http->headers.isIntGzip()){
 				// Добавляем в буфер оставшиеся данные
 				evbuffer_add(tmp, buffer, size);
 				// Отправляем данные клиенту
@@ -1041,7 +1041,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Активируем сжатие данных, на стороне прокси сервера
 				http->setCompress();
 				// Если это не режим сжатия, тогда отправляем заголовок
-				if(!http->headers.isGzip() || (http->headers.getStatus() != 200)){
+				if(!http->headers.isIntGzip() || (http->headers.getStatus() != 200)){
 					// Создаем буфер для исходящих данных
 					struct evbuffer * tmp = evbuffer_new();
 					// Получаем данные заголовков
