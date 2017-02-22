@@ -144,9 +144,9 @@ void BufferHttpProxy::free_event(struct bufferevent ** event){
 	}
 }
 /**
- * close_client Метод закрытия соединения клиента
+ * closeClient Метод закрытия соединения клиента
  */
-void BufferHttpProxy::close_client(){
+void BufferHttpProxy::closeClient(){
 	// Захватываем поток
 	this->mtx.lock();
 	// Закрываем сокет
@@ -157,9 +157,9 @@ void BufferHttpProxy::close_client(){
 	this->mtx.unlock();
 }
 /**
- * close_server Метод закрытия соединения сервера
+ * closeServer Метод закрытия соединения сервера
  */
-void BufferHttpProxy::close_server(){
+void BufferHttpProxy::closeServer(){
 	// Захватываем поток
 	this->mtx.lock();
 	// Закрываем сокет
@@ -174,9 +174,9 @@ void BufferHttpProxy::close_server(){
  */
 void BufferHttpProxy::close(){
 	// Закрываем подключение клиента
-	close_client();
+	closeClient();
 	// Закрываем подключение сервера
-	close_server();
+	closeServer();
 	// Захватываем поток
 	this->mtx.lock();
 	// Удаляем базу событий
@@ -197,6 +197,54 @@ void BufferHttpProxy::freeze(){
 		// Блокируем поток
 		frze->cond.wait(locker);
 	}
+}
+/**
+ * setCompress Метод проверки активации режима сжатия данных на уровне прокси сервера
+ */
+void BufferHttpProxy::setCompress(){
+	// Если контент пришел не сжатым а сжатие требуется
+	if((this->proxy->config->options & OPT_PGZIP)
+	&& this->headers.getHeader("content-encoding").empty()
+	&& this->getBodyMethod()){
+		// if(this->headers.getHeader("content-type").find("text") != string::npos)
+		// Устанавливаем что идет сжатие
+		this->headers.setGzip();
+	}
+}
+/**
+ * checkUpgrade Метод проверки на желание смены протокола
+ */
+void BufferHttpProxy::checkUpgrade(){
+	// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
+	if((this->headers.getHttp().find("101 Switching Protocols") != string::npos)
+	&& !this->headers.getHeader("upgrade").empty()
+	&& (this->headers.getHeader("connection").find("Upgrade") != string::npos)){
+		// Устанавливаем что это соединение CONNECT,
+		// для будущего обмена данными, так как они будут приходить бинарные
+		this->client.connect = true;
+	}
+}
+/**
+ * getBodyMethod Метод получения метода обработки входящих данных тела
+ * @return метод обработки входящих данных тела
+ */
+const size_t BufferHttpProxy::getBodyMethod(){
+	// Метод обработки данных
+	size_t method = 1;
+	// Получаем размер контента, если он есть
+	string cl = this->headers.getHeader("content-length");
+	// Получаем тип передачи данных
+	string te = this->headers.getHeader("transfer-encoding");
+	// Если размер данных существует то переключаем метод
+	if(!cl.empty()){
+		// Устанавливаем размер получаемых данных
+		method = ::atoi(cl.c_str());
+		// Если размер получаемых данных определить нельзя тогда сообщаем что метод не определен
+		if(!method) method = 0;
+	// Если тип передачи данных чанками
+	} else if(!te.empty() && (te.find("chunked") != string::npos)) method = 2;
+	// Выводим значение метода обработки данных
+	return method;
 }
 /**
  * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
@@ -220,12 +268,12 @@ void BufferHttpProxy::sleep(size_t size, bool type){
 	}
 }
 /**
- * set_timeout Метод установки таймаутов
+ * setTimeout Метод установки таймаутов
  * @param type  тип подключения (клиент или сервер)
  * @param read  таймаут на чтение
  * @param write таймаут на запись
  */
-void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
+void BufferHttpProxy::setTimeout(const u_short type, bool read, bool write){
 	// Устанавливаем таймаут ожидания результата на чтение с сервера
 	struct timeval _read = {this->proxy->config->timeouts.read, 0};
 	// Устанавливаем таймаут записи результата на запись
@@ -890,10 +938,9 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 }
 /**
  * send_http_data Функция отправки незашифрованных данных клиенту
- * @param ctx  передаваемый объект
- * @param flag нужно ли провести инициализацию
+ * @param ctx передаваемый объект
  */
-void HttpProxy::send_http_data(void * ctx, bool flag){
+void HttpProxy::send_http_data(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
@@ -901,118 +948,42 @@ void HttpProxy::send_http_data(void * ctx, bool flag){
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
-
-		// bool http1 = false;//true;
-
-		// Метод обработки данных
-		size_t method = 0;
-		
-
-		
-		
-
-		// Получаем размер контента, если он есть
-		string cl = http->headers.getHeader("content-length");
-		// Получаем тип передачи данных
-		string te = http->headers.getHeader("transfer-encoding");
-		// Если размер данных существует то переключаем метод
-		if(!cl.empty()) method = ::atoi(cl.c_str());
-		// Если тип передачи данных чанками
-		if(!te.empty() && (te.find("chunked") != string::npos)) method = 1;
-
-
-		if(!cl.empty() && !method){
-			// Создаем буфер для исходящих данных
-			struct evbuffer * tmp = evbuffer_new();
-			// Получаем данные заголовков
-			string headers = http->headers.getResponseHeaders();
-			// Добавляем в новый буфер модифицированные заголовки
-			evbuffer_add(tmp, headers.data(), headers.length());
-			// Отправляем данные клиенту
-			evbuffer_add_buffer(output, tmp);
-			// Удаляем временный буфер
-			evbuffer_free(tmp);
-
-			return;
-		}
-
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
-
-		if(!len) return;
-
-
-		// Выполняем инициализацию тела данных
-		if(flag) http->headers.initBody();
-		// Создаем буфер данных
-		char * buffer = new char[len];
-
-		cout << " +++++++++++++++++++++2 " << len << endl;
-
-		// Копируем в буфер полученные данные
-		evbuffer_copyout(input, buffer, len);
-		// Добавляем данные тела
-		size_t size = http->headers.setBodyData(buffer, len, method);//, http1);
-		// Создаем буфер для исходящих данных
-		struct evbuffer * tmp = evbuffer_new();
-		/*
-		// Если нужно провести инициализацию, отправляем заголовки
-		if(flag){
-			// Получаем данные заголовков
-			string headers = http->headers.getResponseHeaders();
-			// Добавляем в новый буфер модифицированные заголовки
-			evbuffer_add(tmp, headers.data(), headers.length());
+		// Если данные существуют
+		if(len){
+			// Создаем буфер данных
+			char * buffer = new char[len];
+			// Создаем буфер для исходящих данных
+			struct evbuffer * tmp = evbuffer_new();
+			// Копируем в буфер полученные данные
+			evbuffer_copyout(input, buffer, len);
+			// Добавляем данные тела
+			size_t size = http->headers.setBodyData(buffer, len, http->getBodyMethod());
+			// Если это не режим сжатия, тогда отправляем заголовок
+			if(!http->headers.isGzip()){
+				// Добавляем в буфер оставшиеся данные
+				evbuffer_add(tmp, buffer, size);
+				// Отправляем данные клиенту
+				evbuffer_add_buffer(output, tmp);
+			// Если это удачно завершенный запрос и тело получено
+			} else if(http->headers.isEndBody()){
+				// Получаем данные для отправки в виде чанков
+				auto data = http->headers.getResponseData();
+				// Добавляем в буфер оставшиеся данные
+				evbuffer_add(tmp, data.data(), data.size());
+				// Отправляем данные клиенту
+				evbuffer_add_buffer(output, tmp);
+			}
+			// Удаляем данные из буфера
+			evbuffer_drain(input, size);
+			// Если тело собрано то получаем данные тела для логов
+			// if(http->headers.isEndBody()) write_log(http->headers.getRawData());
+			// Удаляем временный буфер
+			evbuffer_free(tmp);
+			// Удаляем буфер данных
+			delete [] buffer;
 		}
-		// Добавляем в буфер оставшиеся данные
-		// if(size) evbuffer_add(tmp, buffer, size);
-		evbuffer_add(tmp, buffer, len);
-		// Отправляем данные клиенту
-		evbuffer_add_buffer(output, tmp);
-		// Удаляем данные из буфера
-		// if(size) evbuffer_drain(input, size);
-		evbuffer_drain(input, len);
-		*/
-	
-		evbuffer_drain(input, size);
-
-		cout << " ===================== Заполняем ==================== " << " == " << len << endl;
-
-		// Если это не удачно завершенный запрос
-		if(flag && (http->headers.getStatus() != 200)){
-			// Получаем данные заголовков
-			string headers = http->headers.getResponseHeaders();
-			// Добавляем в новый буфер модифицированные заголовки
-			evbuffer_add(tmp, headers.data(), headers.length());
-			// Отправляем данные клиенту
-			evbuffer_add_buffer(output, tmp);
-		// Если это удачно завершенный запрос и тело получено
-		} else if(http->headers.isEndBody()){
-
-
-
-			cout << " ===================== Запрашиваем тело ==================== " << " == " << len << endl;
-
-			// Получаем данные тела
-			auto body = http->headers.getResponseBody(true);
-			// Получаем данные заголовков
-			string headers = http->headers.getResponseHeaders();
-			// Добавляем в новый буфер модифицированные заголовки
-			evbuffer_add(tmp, headers.data(), headers.length());
-			// Добавляем в буфер оставшиеся данные
-			evbuffer_add(tmp, body.get(), body.size);
-			// Отправляем данные клиенту
-			evbuffer_add_buffer(output, tmp);
-
-			cout << " ===================== Вывели тело ==================== " << " == " << body.size << endl;
-
-			//http->close();
-		}
-
-
-		// Удаляем временный буфер
-		evbuffer_free(tmp);
-		// Удаляем буфер данных
-		delete [] buffer;
 	}
 	// Выходим
 	return;
@@ -1031,7 +1002,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
 		// Ставим таймер только на чтение и запись
-		http->set_timeout(TM_CLIENT, true, true);
+		http->setTimeout(TM_CLIENT, true, true);
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
 		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
@@ -1062,25 +1033,27 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			}
 			// Если все данные получены
 			if(http->headers.getFullHeaders()){
-				// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
-				if((http->headers.getHttp().find("101 Switching Protocols") != string::npos)
-				&& !http->headers.getHeader("upgrade").empty()
-				&& (http->headers.getHeader("connection").find("Upgrade") != string::npos)){
-					// Устанавливаем что это соединение CONNECT,
-					// для будущего обмена данными, так как они будут приходить бинарные
-					http->client.connect = true;
+				// Проверяем является ли это переключение на другой протокол
+				http->checkUpgrade();
+				// Активируем сжатие данных, на стороне прокси сервера
+				http->setCompress();
+				// Если это не режим сжатия, тогда отправляем заголовок
+				if(!http->headers.isGzip() || (http->headers.getStatus() != 200)){
+					// Создаем буфер для исходящих данных
+					struct evbuffer * tmp = evbuffer_new();
+					// Получаем данные заголовков
+					string headers = http->headers.getResponseHeaders();
+					// Добавляем в новый буфер модифицированные заголовки
+					evbuffer_add(tmp, headers.data(), headers.length());
+					// Отправляем данные клиенту
+					evbuffer_add_buffer(output, tmp);
+					// Удаляем временный буфер
+					evbuffer_free(tmp);
 				}
-				// Если контент пришел не сжатым а сжатие требуется
-				if((http->proxy->config->options & OPT_PGZIP)
-				&& http->headers.getHeader("content-encoding").empty()){
-					
-					// if(http->headers.getHeader("content-type").find("text") != string::npos)
-
-					// Устанавливаем что идет сжатие
-					http->headers.setGzip();
-				}
+				// Выполняем инициализацию тела данных
+				http->headers.initBody();
 				// Выполняем отправку данных
-				send_http_data(http, true);
+				send_http_data(http);
 			}
 		// Закрываем соединение
 		} else http->close();
@@ -1124,7 +1097,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					// Если хост и порт сервера не совпадают тогда очищаем данные
 					if(http->events.server
 					&& ((http->server.host.compare(ip) != 0)
-					|| (http->server.port != port))) http->close_server();
+					|| (http->server.port != port))) http->closeServer();
 					// Запоминаем хост и порт сервера
 					http->server.host = ip;
 					http->server.port = port;
@@ -1154,9 +1127,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							// Если это не постоянное подключение
 							if(!http->client.alive)
 								// Устанавливаем таймаут на чтение и запись
-								http->set_timeout(TM_SERVER, true, true);
+								http->setTimeout(TM_SERVER, true, true);
 							// Устанавливаем таймаут только на запись
-							else http->set_timeout(TM_SERVER, false, true);
+							else http->setTimeout(TM_SERVER, false, true);
 							// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 							http->sleep(http->response.size(), false);
 							// Отправляем серверу сообщение
@@ -1199,9 +1172,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 		// Ответ готов
 		if(!http->response.empty()){
 			// Если это код разрешающий коннект, устанавливаем таймер для клиента
-			if(http->response.code == 200) http->set_timeout(TM_CLIENT, true, true);
+			if(http->response.code == 200) http->setTimeout(TM_CLIENT, true, true);
 			// Если это завершение работы то устанавливаем таймер только на запись
-			else http->set_timeout(TM_CLIENT, false, true);
+			else http->setTimeout(TM_CLIENT, false, true);
 			// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 			if(http->response.code == 200) http->sleep(http->response.size(), false);
 			// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
@@ -1228,7 +1201,7 @@ void HttpProxy::do_request(void * ctx, bool flag){
 		// Если данные еще не заполнены, но они есть в массиве
 		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
 			// Очищаем таймеры для клиента
-			http->set_timeout(TM_CLIENT);
+			http->setTimeout(TM_CLIENT);
 			// Очищаем заголовки
 			http->headers.clear();
 			// Очищаем объект ответа
@@ -1274,7 +1247,7 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 	// Если подключение не передано
 	if(http){
 		// Удаляем таймер для клиента
-		http->set_timeout(TM_CLIENT | TM_SERVER);
+		http->setTimeout(TM_CLIENT | TM_SERVER);
 		// Определяем connect прокси разрешен
 		bool conn_enabled = (http->proxy->config->options & OPT_CONNECT);
 		// Получаем буферы входящих данных и исходящих
@@ -1290,9 +1263,9 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 			// Если это не постоянное подключение
 			if(!http->client.alive)
 				// Устанавливаем таймаут на чтение и запись
-				http->set_timeout(TM_SERVER, true, true);
+				http->setTimeout(TM_SERVER, true, true);
 			// Устанавливаем таймаут только на запись
-			else http->set_timeout(TM_SERVER, false, true);
+			else http->setTimeout(TM_SERVER, false, true);
 			// Выводим ответ сервера
 			evbuffer_add_buffer(output, input);
 		// Если это обычный запрос
@@ -1331,7 +1304,7 @@ void HttpProxy::connection(void * ctx){
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 		// Устанавливаем таймер для клиента
-		http->set_timeout(TM_CLIENT, true);
+		http->setTimeout(TM_CLIENT, true);
 		// Устанавливаем водяной знак на 5 байт (чтобы считывать данные когда они действительно приходят)
 		bufferevent_setwatermark(http->events.client, EV_READ | EV_WRITE, 5, 0);
 		// Устанавливаем коллбеки

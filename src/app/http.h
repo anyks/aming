@@ -195,13 +195,13 @@ class BufferHttpProxy {
 		// Коллбек для определения количества активных подключений
 		function <u_int (void)> activeConnects;
 		/**
-		 * close_client Метод закрытия соединения клиента
+		 * closeClient Метод закрытия соединения клиента
 		 */
-		void close_client();
+		void closeClient();
 		/**
-		 * close_server Метод закрытия соединения сервера
+		 * closeServer Метод закрытия соединения сервера
 		 */
-		void close_server();
+		void closeServer();
 		/**
 		 * close Метод закрытия подключения
 		 */
@@ -211,6 +211,19 @@ class BufferHttpProxy {
 		 */
 		void freeze();
 		/**
+		 * setCompress Метод проверки активации режима сжатия данных на уровне прокси сервера
+		 */
+		void setCompress();
+		/**
+		 * checkUpgrade Метод проверки на желание смены протокола
+		 */
+		void checkUpgrade();
+		/**
+		 * getBodyMethod Метод получения метода обработки входящих данных тела
+		 * @return метод обработки входящих данных тела
+		 */
+		const size_t getBodyMethod();
+		/**
 		 * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
 		 * @param  size размер передаваемых данных
 		 * @param  type тип передаваемого сообщения (true - чтение, false - запись)
@@ -218,12 +231,12 @@ class BufferHttpProxy {
 		 */
 		void sleep(size_t size, bool type);
 		/**
-		 * set_timeout Метод установки таймаутов
+		 * setTimeout Метод установки таймаутов
 		 * @param type  тип подключения (клиент или сервер)
 		 * @param read  таймаут на чтение
 		 * @param write таймаут на запись
 		 */
-		void set_timeout(const u_short type, bool read = false, bool write = false);
+		void setTimeout(const u_short type, bool read = false, bool write = false);
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param proxy объект данных прокси сервера
@@ -350,10 +363,9 @@ class HttpProxy {
 		static int connect_server(void * ctx);
 		/**
 		 * send_http_data Функция отправки незашифрованных данных клиенту
-		 * @param ctx  передаваемый объект
-		 * @param flag нужно ли провести инициализацию
+		 * @param ctx передаваемый объект
 		 */
-		static void send_http_data(void * ctx, bool flag = false);
+		static void send_http_data(void * ctx);
 		/**
 		 * do_request Функция запроса данных у сервера
 		 * @param ctx  передаваемый объект

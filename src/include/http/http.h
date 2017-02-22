@@ -552,19 +552,17 @@ class HttpData {
 		HttpBody::Chunk getResponseBody(bool chunked = false);
 		/**
 		 * getResponseData Метод получения http данных ответа
-		 * @param  chunked метод чанкование
-		 * @return         объект с данными
+		 * @return объект с данными
 		 */
-		vector <char> getResponseData(bool chunked = false);
+		vector <char> getResponseData();
 		/**
 		 * setBodyData Метод добавления данных тела
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
 		 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
-		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
 		 * @return        количество обработанных байт
 		 */
-		const size_t setBodyData(const char * buffer, const size_t size, size_t length = 0, bool strict = false);
+		const size_t setBodyData(const char * buffer, const size_t size, size_t length = 0);
 		/**
 		 * setEntitybody Метод добавления данных вложения
 		 * @param buffer буфер с данными вложения

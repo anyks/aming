@@ -508,9 +508,6 @@ void HttpBody::setEnd(){
  * @return        количество обработанных байт
  */
 const size_t HttpBody::addData(const char * buffer, const size_t size, size_t length, bool gzip, bool strict){
-	
-	cout << " ---------------------- Заполняем ------------------- " << " == " << size << endl;
-
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
@@ -518,14 +515,14 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 		// Определяем тип данных
 		switch(length){
 			// Обработка по умолчанию
-			case 0: {
+			case 1: {
 				// Увеличиваем количество использованных байт
 				readbytes = size;
 				// Добавляем данные тела
 				copy(buffer, buffer + readbytes, back_inserter(this->body));
 			} break;
 			// Обрабатываем чанкованием
-			case 1: {
+			case 2: {
 				// Выполняем поиск завершения передачи чанков
 				char * ptr = strstr(buffer, "\r\n0\r\n\r\n");
 				// Определяем позицию
@@ -634,9 +631,6 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 			}
 		}
 	}
-
-	cout << " ---------------------- Заполнили ------------------- " << " == " << readbytes << endl;
-
 	// Выводим результат
 	return readbytes;
 }
@@ -1312,14 +1306,13 @@ bool HttpData::isEndBody(){
 }
 /**
  * getResponseData Метод получения http данных ответа
- * @param  chunked метод чанкование
- * @return         объект с данными
+ * @return объект с данными
  */
-vector <char> HttpData::getResponseData(bool chunked){
+vector <char> HttpData::getResponseData(){
 	// Результирующий объект данных
 	vector <char> result;
 	// Получаем данные тела
-	HttpBody::Chunk body = getResponseBody(chunked);
+	HttpBody::Chunk body = getResponseBody(getVersion() > 1);
 	// Получаем данные заголовков
 	string headers = getResponseHeaders();
 	// Выполняем добавление заголовков в результат
@@ -1334,12 +1327,11 @@ vector <char> HttpData::getResponseData(bool chunked){
  * @param  buffer буфер с данными
  * @param  size   размер передаваемых данных
  * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
- * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
  * @return        количество обработанных байт
  */
-const size_t HttpData::setBodyData(const char * buffer, const size_t size, size_t length, bool strict){
+const size_t HttpData::setBodyData(const char * buffer, const size_t size, size_t length){
 	// Выполняем добавление данных тела
-	return this->body.addData(buffer, size, length, strict);
+	return this->body.addData(buffer, size, length);
 }
 /**
  * setEntitybody Метод добавления данных вложения
@@ -1567,8 +1559,8 @@ void HttpData::addHeader(const char * buffer){
 	// Устанавливаем правило регулярного выражения
 	regex e(
 		"((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
-		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+)|"
-		"(?:[A-Za-z]+\\/[\\d\\.]+\\s+(\\d+)(?:\\s+[A-Za-z\\s\\-]+)?))|"
+		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+))|"
+		"(?:[A-Za-z]+\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[A-Za-z\\s\\-]+)?))|"
 		"(?:([\\w\\-]+)\\s*\\:\\s*([^\\r\\n]+))",
 		regex::ECMAScript | regex::icase
 	);
@@ -1581,8 +1573,8 @@ void HttpData::addHeader(const char * buffer){
 		// Если найдены заголовки
 		if(match[1].str().empty()){
 			// Получаем данные заголовков
-			string key = match[3].str();
-			string val = match[4].str();
+			string key = match[5].str();
+			string val = match[6].str();
 			// Добавляем новый заголовок
 			this->headers.append(key, val);
 			// Запоминаем первые символы
@@ -1591,10 +1583,16 @@ void HttpData::addHeader(const char * buffer){
 		} else {
 			// Очищаем все заголовки
 			clear();
+			// Определяем версию протокола
+			string version = match[2].str();
+			// Если версия не существует получаем второе значение
+			if(version.empty()) version = match[3].str();
 			// Запоминаем http запрос
 			this->http = match[1].str();
+			// Запоминаем версию протокола
+			this->version = version;
 			// Запоминаем статус запроса
-			this->status = ::atoi(match[2].str().c_str());
+			this->status = ::atoi(match[4].str().c_str());
 			// Запоминаем первые символы
 			this->query = (this->http + "\r\n");
 		}
@@ -1710,8 +1708,8 @@ void HttpData::init(const string str, const string name, const string version, c
 		// Устанавливаем правило регулярного выражения
 		regex e(
 			"^((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
-			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
-			"\\/[\\d\\.]+\\s+(\\d+)(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
+			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+)\\r\\n)|(?:[A-Za-z]+"
+			"\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
 			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
 			regex::ECMAScript | regex::icase
 		);
@@ -1719,12 +1717,18 @@ void HttpData::init(const string str, const string name, const string version, c
 		regex_search(str, match, e);
 		// Если данные найдены
 		if(!match.empty()){
+			// Определяем версию протокола
+			string version = match[2].str();
+			// Если версия не существует получаем второе значение
+			if(version.empty()) version = match[3].str();
+			// Запоминаем версию протокола
+			this->version = version;
 			// Получаем строку запроса
 			this->http = match[1].str();
 			// Запоминаем http запрос
 			this->http = ::trim(this->http);
 			// Запоминаем статус запроса
-			this->status = ::atoi(match[2].str().c_str());
+			this->status = ::atoi(match[4].str().c_str());
 			// Запоминаем первые символы
 			this->query = match[0].str();
 			// Создаем объект с заголовками
