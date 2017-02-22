@@ -478,14 +478,6 @@ void HttpBody::setCompress(const u_int compress){
 	this->compress = compress;
 }
 /**
- * isEnd Метод проверки завершения формирования тела
- * @return результат проверки
- */
-bool HttpBody::isEnd(){
-	// Устанавливаем заполненность данных
-	return this->end;
-}
-/**
  * setEnd Метод установки завершения передачи данных
  * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
  */
@@ -497,6 +489,22 @@ void HttpBody::setEnd(){
 	this->end = true;
 	// Создаем чанки
 	createChunk(this->body.data(), this->body.size());
+}
+/**
+ * isEnd Метод проверки завершения формирования тела
+ * @return результат проверки
+ */
+bool HttpBody::isEnd(){
+	// Выводим результат проверки заполненности данных
+	return this->end;
+}
+/**
+ * isCompress Метод проверки на активацию сжатия на стороне прокси
+ * @return результат проверки
+ */
+bool HttpBody::isCompress(){
+	// Выводим результат проверки активации сжатия на стороне прокси
+	return this->gzip;
 }
 /**
  * addData Метод добавления данных тела
@@ -590,7 +598,14 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 						// Выполняем сжатие тела
 						Chunk chunk = compressData(body.data(), body.size());
 						// Создаем тело в сжатом виде
-						this->body.assign(chunk.get(), chunk.get() + chunk.size);
+						if(chunk.size) this->body.assign(chunk.get(), chunk.get() + chunk.size);
+						// Если сжатие не удалось тогда не сжимаем данные
+						else {
+							// Запоминаем не сжатые данные
+							this->body.assign(body.data(), body.data() + body.size());
+							// Отключаем сжатие
+							this->gzip = false;
+						}
 						// Создаем чанки в сжатом виде
 						createChunk(this->body.data(), this->body.size());
 					// Просто сохраняем данные тела
@@ -623,7 +638,9 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 						// Выполняем сжатие тела
 						Chunk chunk = compressData(this->body.data(), this->body.size());
 						// Создаем тело в сжатом виде
-						this->body.assign(chunk.get(), chunk.get() + chunk.size);
+						if(chunk.size) this->body.assign(chunk.get(), chunk.get() + chunk.size);
+						// Если сжатие не удалось тогда не сжимаем данные
+						else this->gzip = false;
 						// Создаем чанки в сжатом виде
 						createChunk(this->body.data(), this->body.size());
 					}
@@ -1278,6 +1295,8 @@ const string HttpData::getHeader(string key){
  * @return         объект с данными тела
  */
 HttpBody::Chunk HttpData::getResponseBody(bool chunked){
+	// Если не активно сжатие, снимает режим сжатия и здесь
+	if(!this->body.isCompress()) this->unsetGzip();
 	// Если это чанкование
 	if(chunked){
 		// Удаляем из заголовков, заголовок размера
@@ -1422,6 +1441,22 @@ void HttpData::setGzip(){
 	this->rmHeader("accept-ranges");
 	// Запоминаем что режим gzip активирован
 	this->gzip = true;
+}
+/**
+ * unsetGzip Метод снятия режима сжатия gzip
+ */
+void HttpData::unsetGzip(){
+	// Получаем данные заголовка etag
+	string etag = this->getHeader("etag");
+	// Если Etag существует
+	if(!etag.empty() && (etag.find("W/") != string::npos)){
+		// Изменяем заголовок Etag
+		this->setHeader("ETag", etag.replace(0, 2, ""));
+	}
+	// Удаляем ненужные заголовки
+	this->rmHeader("content-encoding");
+	// Запоминаем что режим gzip активирован
+	this->gzip = false;
 }
 /**
  * setHeader Метод добавления нового заголовка

@@ -977,6 +977,9 @@ void HttpProxy::send_http_data(void * ctx){
 			}
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);
+
+			// if(!this->body.isCompress()) this->unsetGzip(); ++++++++++++++++++++++++++++++++++++ Учесть при добавлении поддержки стороннего сжатия gzip
+
 			// Если тело собрано то получаем данные тела для логов
 			// if(http->headers.isEndBody()) write_log(http->headers.getRawData());
 			// Удаляем временный буфер

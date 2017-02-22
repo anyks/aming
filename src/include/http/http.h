@@ -185,15 +185,20 @@ class HttpBody {
 		 */
 		void setCompress(const u_int compress);
 		/**
+		 * setEnd Метод установки завершения передачи данных
+		 * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
+		 */
+		void setEnd();
+		/**
 		 * isEnd Метод проверки завершения формирования тела
 		 * @return результат проверки
 		 */
 		bool isEnd();
 		/**
-		 * setEnd Метод установки завершения передачи данных
-		 * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
+		 * isCompress Метод проверки на активацию сжатия на стороне прокси
+		 * @return результат проверки
 		 */
-		void setEnd();
+		bool isCompress();
 		/**
 		 * size Метод определения размера данных
 		 * @param  chunked чанкованием
@@ -587,6 +592,10 @@ class HttpData {
 		 * setGzip Метод установки режима сжатия gzip
 		 */
 		void setGzip();
+		/**
+		 * unsetGzip Метод снятия режима сжатия gzip
+		 */
+		void unsetGzip();
 		/**
 		 * setHeader Метод добавления нового заголовка
 		 * @param key   ключ
