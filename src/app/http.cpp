@@ -216,6 +216,7 @@ void BufferHttpProxy::freeze(){
 void BufferHttpProxy::setCompress(){
 	// Если контент пришел не сжатым а сжатие требуется
 	if((this->proxy->config->options & OPT_PGZIP)
+	&& !this->client.connect
 	&& this->httpResponse.size()
 	&& this->httpResponse.getHeader("content-encoding").empty()
 	&& this->getBodyMethod()){
@@ -229,8 +230,9 @@ void BufferHttpProxy::setCompress(){
  */
 void BufferHttpProxy::checkUpgrade(){
 	// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
-	if(this->httpResponse.size()
-	&& (this->httpResponse.getHttp().find("101 Switching Protocols") != string::npos)
+	if(!this->client.connect
+	&& this->httpResponse.size()
+	&& (this->httpResponse.getStatus() == 101)
 	&& !this->httpResponse.getHeader("upgrade").empty()
 	&& (toCase(this->httpResponse.getHeader("connection")).find("upgrade") != string::npos)){
 		// Устанавливаем что это соединение CONNECT,
@@ -243,7 +245,8 @@ void BufferHttpProxy::checkUpgrade(){
  */
 void BufferHttpProxy::checkClose(){
 	// Если это закрытие коннекта на стороне сервера
-	if(this->httpResponse.size()
+	if(!this->client.connect
+	&& this->httpResponse.size()
 	&& (toCase(this->httpResponse.getHeader("connection"))
 	.find("close") != string::npos)){
 		// Если это режим сжатия, тогда отправляем завершающие данные
@@ -262,12 +265,12 @@ void BufferHttpProxy::checkClose(){
 			evbuffer_add_buffer(output, tmp);
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
-		}
+		// Выполняем отключение
+		} else close();
 		// Если тело собрано то получаем данные тела для логов
 		// write_log(this->httpResponse.getRawResponseData());
-	}
 	// Выполняем отключение
-	close();
+	} else close();
 }
 /**
  * getBodyMethod Метод получения метода обработки входящих данных тела
@@ -966,6 +969,8 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 					http->server.port,
 					current_fd
 				);
+				// Закрываем подключение
+				http->close();
 			// Если отключился сервер
 			} else {
 				// Выводим в лог сообщение
@@ -977,9 +982,9 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 					http->client.ip.c_str(),
 					current_fd
 				);
+				// Закрываем подключение
+				http->checkClose();
 			}
-			// Закрываем подключение
-			http->checkClose();
 		}
 	}
 	// Выходим
@@ -1026,18 +1031,8 @@ void HttpProxy::send_http_data(void * ctx){
 			}
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);
-
-
-			// cout << " ================================ " << http->httpResponse.getRawResponseData() << endl;
-
-			// string dd = http->httpResponse.getRawResponseData();
-
-			// if(!dd.empty()) cout << " ================================ " << dd << endl;
-
-			// if(!this->body.isCompress()) this->unsetGzip(); ++++++++++++++++++++++++++++++++++++ Учесть при добавлении поддержки стороннего сжатия gzip
-
 			// Если тело собрано то получаем данные тела для логов
-			// if(http->httpResponse.isEndBody()) write_log(http->httpResponse.getRawData());
+			// if(http->httpResponse.isEndBody()) write_log(http->httpResponse.getRawResponseData());
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
 			// Удаляем буфер данных

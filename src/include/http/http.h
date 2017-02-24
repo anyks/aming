@@ -315,7 +315,7 @@ class HttpData {
 		bool			intGzip;			// Активация внутреннего режима сжатия
 		bool			extGzip;			// Активация внешнего режима сжатия
 		u_short			options;			// Параметры прокси сервера
-		u_int			status;				// Статус код запроса
+		u_int			status;				// Статус код http запроса
 		string			appName;			// Название приложения
 		string			appVersion;			// Версия приложения
 		string			query;				// Данные запроса
