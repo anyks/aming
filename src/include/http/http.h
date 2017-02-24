@@ -20,6 +20,11 @@
 #include "base64/base64.h"
 #include "config/conf.h"
 
+// Параметры сжатия gzip
+#define MOD_GZIP_ZLIB_WINDOWSIZE	15
+#define MOD_GZIP_ZLIB_CFACTOR		9
+#define MOD_GZIP_ZLIB_BSIZE			8096
+
 // Устанавливаем пространство имен
 using namespace std;
 
@@ -100,17 +105,13 @@ class HttpHeaders {
  * HttpBody Класс тела запроса
  */
 class HttpBody {
-	public:
+	private:
 		/**
 		 * Chunk Структура чанков
 		 */
-		class Chunk {
-			private:
-				// Данные чанка
-				vector <char> content;
-			public:
-			// Размер чанка
-			size_t size = 0;
+		struct Chunk {
+			// Данные чанка
+			string content;
 			// Размер чанка в 16-й системе
 			string hsize = "0";
 			/**
@@ -119,11 +120,6 @@ class HttpBody {
 			 * @return      указатель на текущий объект
 			 */
 			// Chunk & operator = (Chunk chunk);
-			/**
-			 * get Метод получения данных чанка
-			 * @return данные чанка
-			 */
-			const char * get();
 			/**
 			 * init Метод инициализации чанка
 			 * @param data данные для присваивания
@@ -136,35 +132,44 @@ class HttpBody {
 			 * @param size размер данных
 			 */
 			Chunk(const char * data = NULL, const size_t size = 0);
-			/**
-			 * ~Chunk Деструктор
-			 */
-			~Chunk();
 		};
-	private:
 		// Тип сжатия
 		u_int compress;
 		// Количество чанков
 		size_t count = 0;
 		// Максимальный размер чанков в байтах
 		size_t maxSize;
+		// Значение оригинального размера
+		size_t origSize;
 		// Активация режима внутреннего сжатия
 		bool intGzip = false;
 		// Активация режима внешнего сжатия
 		bool extGzip = false;
 		// Заполненность данных
 		bool end = false;
+		// Данные тела
+		string body;
 		// Массив чанков
 		vector <Chunk> chunks;
-		// Данные тела
-		vector <char> body;
+		/**
+		 * compress_gzip Метод сжатия данных методом GZIP
+		 * @param  str   строка для сжатия данных
+		 * @return       результат сжатия
+		 */
+		const string compress_gzip(const string &str);
+		/**
+		 * decompress_gzip Метод рассжатия данных методом GZIP
+		 * @param  str   строка для расжатия данных
+		 * @return       результат расжатия
+		 */
+		const string decompress_gzip(const string &str);
 		/**
 		 * compressData Метод сжатия данных
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных
 		 * @return        данные сжатого чанка
 		 */
-		Chunk compressData(const char * buffer, const size_t size);
+		const string compressData(const char * buffer, const size_t size);
 		/**
 		 * createChunk Метод создания чанка
 		 * @param buffer буфер с данными
@@ -226,7 +231,12 @@ class HttpBody {
 		 * @param  chunked чанкованием
 		 * @return         данные тела запроса
 		 */
-		Chunk getBody(bool chunked = false);
+		const string getBody(bool chunked = false);
+		/**
+		 * getRawBody Метод получения тела данных в чистом виде
+		 * @return данные тела запроса
+		 */
+		const string getRawBody();
 		/**
 		 * getChunks Метод получения списка чанков
 		 */
@@ -300,16 +310,6 @@ class HttpData {
 			string port;		// Порт
 			string protocol;	// Протокол
 		};
-		/**
-		 * Compress Структура результата сжатия контента
-		 */
-		/*
-		struct Compress {
-			const char * content;	// Контент в сжатом виде
-			size_t size;			// Размер контента
-			size_t chunkSize;		// Размер первоначальных данных
-		};
-		*/
 		// Основные переменные класса
 		bool			fullHeaders;		// Заголовки заполнены
 		bool			intGzip;			// Активация внутреннего режима сжатия
@@ -333,7 +333,7 @@ class HttpData {
 		string			connection;			// Заголовок connection
 		string			responseHeaders;	// Результирующие данные ответа
 		string			request;			// Результирующий данные запроса
-		size_t			length = 0;			// Количество заголовков
+		size_t			length = 0;			// Количество данных в объекте
 		vector <char>	entitybody;			// Данные http вложений
 		HttpBody		body;				// Тело http запроса
 		HttpHeaders		headers;			// Заголовки http запроса
@@ -565,14 +565,19 @@ class HttpData {
 		/**
 		 * getResponseBody Метод получения данных тела http запроса
 		 * @param  chunked метод чанкование
-		 * @return         объект с данными тела
+		 * @return         строка с данными тела
 		 */
-		HttpBody::Chunk getResponseBody(bool chunked = false);
+		const string getResponseBody(bool chunked = false);
 		/**
 		 * getResponseData Метод получения http данных ответа
-		 * @return объект с данными
+		 * @return строка с данными тела
 		 */
-		vector <char> getResponseData();
+		const string getResponseData();
+		/**
+		 * getRawResponseData Метод получения http данных ответа в чистом виде
+		 * @return строка с данными тела
+		 */
+		const string getRawResponseData();
 		/**
 		 * setBodyData Метод добавления данных тела
 		 * @param  buffer буфер с данными
@@ -602,15 +607,19 @@ class HttpData {
 		 */
 		void rmHeader(const string key);
 		/**
+		 * unsetGzip Метод снятия режима сжатия gzip
+		 */
+		void unsetGzip();
+		/**
 		 * setGzip Метод установки режима сжатия gzip
 		 * @param intGzip активация внутреннего режима сжатия
 		 * @param extGzip активация внешнего режима сжатия
 		 */
 		void setGzip(bool intGzip = true, bool extGzip = false);
 		/**
-		 * unsetGzip Метод снятия режима сжатия gzip
+		 * setBodyEnd Метод установки завершения сбора данных тела
 		 */
-		void unsetGzip();
+		void setBodyEnd();
 		/**
 		 * setHeader Метод добавления нового заголовка
 		 * @param key   ключ

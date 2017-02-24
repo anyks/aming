@@ -150,6 +150,13 @@ class BufferHttpProxy {
 			string	useragent	= "";		// userAgent клиента
 		};
 		/**
+		 * toCase Функция перевода в указанный регистр
+		 * @param  str  строка для перевода в указанных регистр
+		 * @param  flag флаг указания типа регистра
+		 * @return      результирующая строка
+		 */
+		const string toCase(string str, bool flag = false);
+		/**
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)
 		 */
@@ -177,9 +184,9 @@ class BufferHttpProxy {
 		// Сокеты подключений
 		Sockets sockets;
 		// Данные http заголовков
-		HttpData headers;
+		HttpData httpResponse;
 		// Данные http запроса
-		HttpData httpData;
+		HttpData httpRequest;
 		// Ответ системы
 		HttpQuery response;
 		// Параметры прокси сервера
@@ -218,6 +225,10 @@ class BufferHttpProxy {
 		 * checkUpgrade Метод проверки на желание смены протокола
 		 */
 		void checkUpgrade();
+		/**
+		 * checkClose Метод проверки на отключение от сервера
+		 */
+		void checkClose();
 		/**
 		 * getBodyMethod Метод получения метода обработки входящих данных тела
 		 * @return метод обработки входящих данных тела
