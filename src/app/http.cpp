@@ -526,9 +526,7 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	// Создаем новую базу событий
 	this->base = event_base_new();
 	// Создаем объект для работы с http заголовками
-	Http parser(this->proxy->config->proxy.name, this->proxy->config->options);
-	// Запоминаем данные http парсера
-	this->parser = parser;
+	this->parser.create(this->proxy->config->proxy.name, this->proxy->config->options);
 	// Определяем тип подключения
 	switch(this->proxy->config->proxy.ipver){
 		// Для протокола IPv4
@@ -1248,21 +1246,14 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		else if(http->httpResponse.getFullHeaders()) send_http_data(http);
 		// Иначе изменяем заголовки
 		else if(len){
-			// Если блок заголовков ответа не существует
-			if(!http->httpResponse.size()){
-				// Создаем объект данных заголовков
-				HttpData httpData(http->proxy->config->proxy.name, http->proxy->config->options);
-				// Копируем объект http заголовков
-				http->httpResponse = httpData;
-			}
+			// Создаем объект данных заголовков
+			http->httpResponse.create(http->proxy->config->proxy.name, http->proxy->config->options);
 			// Считываем данные из буфера до тех пор пока можешь считать
-			while(true){
+			while(!http->httpResponse.getFullHeaders()){
 				// Считываем строки из буфера
 				const char * line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF_STRICT);
-				// Проверяем дошли ли мы до конца
-				if(line && !strlen(line)) http->httpResponse.setFullHeaders();
 				// Если данные не найдены тогда выходим
-				if((line == NULL) || !strlen(line)) break;
+				if(!line) break;
 				// Добавляем заголовки в запрос
 				http->httpResponse.addHeader(line);
 			}
@@ -1454,10 +1445,6 @@ void HttpProxy::do_request(void * ctx, bool flag){
 			auto httpData = http->parser.httpData.begin();
 			// Запоминаем данные объекта http запроса
 			http->httpRequest = * httpData;
-
-			// http://xn--j1ail.xn--p1ai/
-			cout << " ------------------ " << http->httpRequest.getHost() << endl;
-
 			// Выполняем ресолв домена
 			http->dns->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http);
 		}

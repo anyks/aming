@@ -1024,7 +1024,7 @@ HttpData::Connect HttpData::getConnection(string str){
 	// Устанавливаем правило для поиска
 	regex eh(
 		// Стандартная запись домена anyks.com
-		"\\b([\\w\\.\\-]+\\.[A-Za-z\\-\\d]+|"
+		"\\b([\\w\\.\\-]+\\.[\\w\\-]+|"
 		// Стандартная запись IPv4 127.0.0.1
 		"\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|"
 		// Стандартная запись IPv6 [2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d]
@@ -1752,68 +1752,68 @@ void HttpData::setClose(){
 	createHead();
 }
 /**
- * setFullHeaders Метод установки конца ввода данных заголовков
- */
-void HttpData::setFullHeaders(){
-	// Устанавливаем завершающие символы запроса
-	this->query += "\r\n";
-	// Получаем длину массива заголовков
-	this->length = this->query.length();
-	// Запоминаем что заголовки заполены полностью
-	this->fullHeaders = true;
-}
-/**
  * addHeader Метод добавления нового заголовка
  * @param buffer буфер с данными заголовка
  */
 void HttpData::addHeader(const char * buffer){
-	// Результат работы регулярного выражения
-	smatch match;
-	// Устанавливаем правило регулярного выражения
-	regex e(
-		"((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
-		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+))|"
-		"(?:[A-Za-z]+\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[A-Za-z\\s\\-]+)?))|"
-		"(?:([\\w\\-]+)\\s*\\:\\s*([^\\r\\n]+))",
-		regex::ECMAScript | regex::icase
-	);
-	// Запоминаем входящую строку
-	string str = buffer;
-	// Выполняем поиск протокола
-	regex_search(str, match, e);
-	// Если данные найдены
-	if(!match.empty()){
-		// Если найдены заголовки
-		if(match[1].str().empty()){
-			// Получаем данные заголовков
-			string key = match[5].str();
-			string val = match[6].str();
-			// Добавляем новый заголовок
-			this->headers.append(key, val);
-			// Запоминаем первые символы
-			this->query.append(key + string(": ") + val + "\r\n");
-			// Если сжатие активировано
-			if((::toCase(key).compare("content-encoding") == 0)
-			&& (val.find("gzip") != string::npos)) this->extGzip = true;
-		// Запоминаем результат запроса или ответа
-		} else {
-			// Очищаем все заголовки
-			clear();
-			// Определяем версию протокола
-			string version = match[2].str();
-			// Если версия не существует получаем второе значение
-			if(version.empty()) version = match[3].str();
-			// Запоминаем http запрос
-			this->http = match[1].str();
-			// Запоминаем версию протокола
-			this->version = version;
-			// Запоминаем статус запроса
-			this->status = ::atoi(match[4].str().c_str());
-			// Запоминаем первые символы
-			this->query = (this->http + "\r\n");
+	// Если данные существуют
+	if(strlen(buffer)){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			"((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+))|"
+			"(?:[A-Za-z]+\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[A-Za-z\\s\\-]+)?))|"
+			"(?:([\\w\\-]+)\\s*\\:\\s*([^\\r\\n]+))",
+			regex::ECMAScript | regex::icase
+		);
+		// Запоминаем входящую строку
+		string str = buffer;
+		// Выполняем поиск протокола
+		regex_search(str, match, e);
+		// Если данные найдены
+		if(!match.empty()){
+			// Если найдены заголовки
+			if(match[1].str().empty()){
+				// Получаем данные заголовков
+				string key = match[5].str();
+				string val = match[6].str();
+				// Добавляем новый заголовок
+				this->headers.append(key, val);
+				// Запоминаем первые символы
+				this->query.append(key + string(": ") + val + "\r\n");
+				// Если сжатие активировано
+				if((::toCase(key).compare("content-encoding") == 0)
+				&& (val.find("gzip") != string::npos)) this->extGzip = true;
+			// Запоминаем результат запроса или ответа
+			} else {
+				// Очищаем все заголовки
+				clear();
+				// Определяем версию протокола
+				string version = match[2].str();
+				// Если версия не существует получаем второе значение
+				if(version.empty()) version = match[3].str();
+				// Запоминаем http запрос
+				this->http = match[1].str();
+				// Запоминаем версию протокола
+				this->version = version;
+				// Запоминаем статус запроса
+				this->status = ::atoi(match[4].str().c_str());
+				// Запоминаем первые символы
+				this->query = (this->http + "\r\n");
+			}
+			// Получаем длину массива заголовков
+			this->length = this->query.length();
 		}
+	// Если данные пришли пустые значит они существуют и это завершение заголовков
+	} else if(buffer) {
+		// Устанавливаем завершающие символы запроса
+		this->query += "\r\n";
 		// Получаем длину массива заголовков
 		this->length = this->query.length();
+		// Запоминаем что заголовки заполены полностью
+		this->fullHeaders = true;
 	}
 }
 /**
@@ -1959,19 +1959,31 @@ void HttpData::init(const string str, const string name, const string version, c
 	}
 }
 /**
+ * init Метод создания объекта
+ * @param name    название приложения
+ * @param options опции http парсера
+ */
+void HttpData::create(const string name, const u_short options){
+	// Если объект не создан
+	if(!size()){
+		// Очищаем полученные данные
+		clear();
+		// Запоминаем название приложения
+		this->appName = name;
+		// Запоминаем параметры http парсера
+		this->options = options;
+		// Запоминаем версию приложения
+		this->appVersion = APP_VERSION;
+	}
+}
+/**
  * HttpData Конструктор
  * @param name    название приложения
  * @param options опции http парсера
  */
 HttpData::HttpData(const string name, const u_short options){
-	// Очищаем полученные данные
-	clear();
-	// Запоминаем название приложения
-	this->appName = name;
-	// Запоминаем параметры http парсера
-	this->options = options;
-	// Запоминаем версию приложения
-	this->appVersion = APP_VERSION;
+	// Выполняем создание объекта
+	create(name, options);
 }
 /**
  * ~HttpData Деструктор
@@ -2089,17 +2101,26 @@ void Http::clear(){
 	this->httpData.clear();
 }
 /**
- * Http Конструктор
+ * create Метод создания объекта
  * @param name    строка содержащая название прокси сервера
  * @param options параметры прокси сервера
  */
-Http::Http(const string name, const u_short options){
+void Http::create(const string name, const u_short options){
 	// Если имя передано то запоминаем его
 	this->name = name;
 	// Запоминаем тип прокси сервера
 	this->options = options;
 	// Устанавливаем версию системы
 	this->version = APP_VERSION;
+}
+/**
+ * Http Конструктор
+ * @param name    строка содержащая название прокси сервера
+ * @param options параметры прокси сервера
+ */
+Http::Http(const string name, const u_short options){
+	// Выполняем создание объекта
+	create(name, options);
 }
 /**
  * ~Http Деструктор

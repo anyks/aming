@@ -679,14 +679,10 @@ class HttpData {
 		 */
 		void setClose();
 		/**
-		 * setFullHeaders Метод установки конца ввода данных заголовков
-		 */
-		void setFullHeaders();
-		/**
 		 * addHeader Метод добавления нового заголовка
 		 * @param buffer буфер с данными заголовка
 		 */
-		void addHeader(const char * buffer);
+		void addHeader(const char * buffer = NULL);
 		/**
 		 * createRequest Функция создания ответа сервера
 		 * @param  index   индекс в массиве ответа
@@ -744,6 +740,12 @@ class HttpData {
 		 */
 		void init(const string str, const string name, const string version, const u_short options);
 		/**
+		 * create Метод создания объекта
+		 * @param name    название приложения
+		 * @param options опции http парсера
+		 */
+		void create(const string name, const u_short options);
+		/**
 		 * HttpData Конструктор
 		 * @param name    название приложения
 		 * @param options опции http парсера
@@ -795,6 +797,12 @@ class Http {
 		 * Http::clear Метод очистки всех полученных данных
 		 */
 		void clear();
+		/**
+		 * create Метод создания объекта
+		 * @param name    строка содержащая название прокси сервера
+		 * @param options параметры прокси сервера
+		 */
+		void create(const string name, const u_short options);
 		/**
 		 * Http Конструктор
 		 * @param name    строка содержащая название прокси сервера
