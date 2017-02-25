@@ -220,9 +220,176 @@ void BufferHttpProxy::setCompress(){
 	&& this->httpResponse.size()
 	&& this->httpResponse.getHeader("content-encoding").empty()
 	&& this->getBodyMethod()){
-		// if(this->httpResponse.getHeader("content-type").find("text") != string::npos)
-		// Устанавливаем что идет сжатие
-		this->httpResponse.setGzip();
+		// Если это режим сжатия, тогда отправляем завершающие данные
+		if(!this->httpResponse.isIntGzip()){
+			// Флаг установки режима сжатия
+			bool gzip = true;
+			// Результат работы регулярного выражения
+			smatch match;
+			// Получаем тип файла
+			string cmime = this->httpResponse.getHeader("content-type");
+			// Получаем размер тела
+			string clength = this->httpResponse.getHeader("content-length");
+			// Получаем наличие заголовка Via
+			string via = this->httpResponse.getHeader("via");
+			// Устанавливаем правило регулярного выражения
+			regex e(this->proxy->config->gzip.regex, regex::ECMAScript | regex::icase);
+			// Получаем версию протокола
+			for(u_int i = 0; i < this->proxy->config->gzip.vhttp.size(); i++){
+				// Поверяем на соответствие версии
+				if(this->httpResponse.getVersion() == float(::atof(this->proxy->config->gzip.vhttp[i].c_str()))){
+					// Запоминаем что протокол проверку прошел
+					gzip = true;
+					// Выходим
+					break;
+				// Запрещаем сжатие
+				} else gzip = false;
+			}
+			// Если сжатие разрешено
+			if(gzip){
+				// Проверяем на тип данных
+				for(u_int i = 0; i < this->proxy->config->gzip.types.size(); i++){
+					// Выполняем проверку на тип данных
+					if((this->proxy->config->gzip.types[i].compare("*") == 0)
+					|| (cmime.find(this->proxy->config->gzip.types[i]) != string::npos)){
+						// Запоминаем что протокол проверку прошел
+						gzip = true;
+						// Выходим
+						break;
+					// Запрещаем сжатие
+					} else gzip = false;
+				}
+				// Если сжатие разрешено
+				if(gzip && !via.empty()){
+					// Readme: http://nginx.org/ru/docs/http/ngx_http_gzip_module.html
+					// Запрещаем сжатие
+					gzip = false;
+					// Переходим по всем параметрам
+					for(u_int i = 0; i < this->proxy->config->gzip.proxied.size(); i++){
+						// Получаем параметр
+						const string param = this->proxy->config->gzip.proxied[i];
+						// Запрещаем сжатие для всех проксированных запросов, игнорируя остальные параметры;
+						if(param.compare("off") == 0){
+							// Запрещаем сжатие
+							gzip = false;
+							// Выходим
+							break;
+						// Разрешаем сжатие для всех проксированных запросов;
+						} else if(param.compare("any") == 0) {
+							// Разрешаем сжатие
+							gzip = true;
+							// Выходим
+							break;
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Expires” со значением, запрещающим кэширование;
+						} else if(param.compare("expired") == 0) {
+							// Получаем наличие заголовка Expires
+							if(!this->httpResponse.getHeader("expires").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “no-cache”;
+						} else if(param.compare("no-cache") == 0) {
+							// Получаем наличие заголовка Cache-Control
+							string cc = this->httpResponse.getHeader("cache-control");
+							// Если заголовок существует
+							if(!cc.empty() && (cc.find(param) != string::npos)) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “no-store”;
+						} else if(param.compare("no-store") == 0) {
+							// Получаем наличие заголовка Cache-Control
+							string cc = this->httpResponse.getHeader("cache-control");
+							// Если заголовок существует
+							if(!cc.empty() && (cc.find(param) != string::npos)) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “private”;
+						} else if(param.compare("private") == 0) {
+							// Получаем наличие заголовка Cache-Control
+							string cc = this->httpResponse.getHeader("cache-control");
+							// Если заголовок существует
+							if(!cc.empty() && (cc.find(param) != string::npos)) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа нет поля “Last-Modified”;
+						} else if(param.compare("no_last_modified") == 0) {
+							// Получаем наличие заголовка Last-Modified
+							if(this->httpResponse.getHeader("last-modified").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа нет поля “ETag”;
+						} else if(param.compare("no_etag") == 0) {
+							// Получаем наличие заголовка ETag
+							if(this->httpResponse.getHeader("etag").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке запроса есть поле “Authorization”;
+						} else if(param.compare("auth") == 0) {
+							// Получаем наличие заголовка Authorization
+							if(!this->httpResponse.getHeader("authorization").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						}
+					}
+				}
+				// Проверяем есть ли размер
+				if(gzip && !clength.empty()){
+					// Проверяем соответствует ли размер
+					if(this->proxy->config->gzip.length > ::atoi(clength.c_str())) gzip = false;
+				}
+				// Если сжатие разрешено
+				if(gzip){
+					// Выполняем проверку
+					regex_search(this->client.useragent, match, e);
+					// Если проверка не пройдена тогда запрещаем сжатие
+					if(!match.empty()) gzip = false;
+				}
+				// Если запрещено выводить заголовок Vary
+				if(gzip && this->proxy->config->gzip.vary){
+					// Считываем заголовок
+					string vary = this->httpResponse.getHeader("vary");
+					// Проверяем наличие
+					if(!vary.empty() && (toCase(vary)
+					.find("accept-encoding") != string::npos)) this->httpResponse.rmHeader("vary");
+				}
+			}
+			// Устанавливаем что идет сжатие
+			if(gzip) this->httpResponse.setGzip();
+		}
 	}
 }
 /**
@@ -1023,7 +1190,7 @@ void HttpProxy::send_http_data(void * ctx){
 			// Если это удачно завершенный запрос и тело получено
 			} else if(http->httpResponse.isEndBody()){
 				// Получаем данные для отправки в виде чанков
-				string data = http->httpResponse.getResponseData();
+				string data = http->httpResponse.getResponseData(http->httpResponse.getVersion() > 1);
 				// Добавляем в буфер оставшиеся данные
 				evbuffer_add(tmp, data.data(), data.size());
 				// Отправляем данные клиенту
@@ -1032,6 +1199,11 @@ void HttpProxy::send_http_data(void * ctx){
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);
 			// Если тело собрано то получаем данные тела для логов
+			
+			// http->httpResponse.getRawResponseData();
+
+			// cout << " ==================== " << http->httpResponse.getRawResponseData() << endl;
+
 			// if(http->httpResponse.isEndBody()) write_log(http->httpResponse.getRawResponseData());
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
@@ -1105,7 +1277,10 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					evbuffer_free(tmp);
 				}
 				// Выполняем инициализацию тела данных
-				http->httpResponse.initBody();
+				http->httpResponse.initBody(
+					http->proxy->config->gzip.chunk,
+					http->proxy->config->gzip.level
+				);
 				// Выполняем отправку данных
 				send_http_data(http);
 			}

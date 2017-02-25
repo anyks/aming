@@ -52,34 +52,35 @@ string & Config::trim(string &str, const char * t){
 	return ltrim(rtrim(str, t), t);
 }
 /**
- * getResolver Метод извлечения dns серверов из строки в массив
- * @param  str строка с dns серверами
- * @return     массив с dns серверами
+ * split Метод разбива строки на составляющие
+ * @param  str исходная строка
+ * @return     массив составляющих строки
  */
-vector <string> Config::getResolver(const string str){
-	vector <string> resolver;
+vector <string> Config::split(const string str){
+	// Результат данных
+	vector <string> result;
 	// Если строка передана
 	if(!str.empty()){
-		string dns, delim = ",";
+		string data, delim = "|";
 		string::size_type i = 0;
 		string::size_type j = str.find(delim);
 		u_int len = delim.length();
 		// Выполняем разбиение строк
 		while(j != string::npos){
-			dns = str.substr(i, j - i);
-			resolver.push_back(trim(dns));
+			data = str.substr(i, j - i);
+			result.push_back(trim(data));
 			i = ++j + (len - 1);
 			j = str.find(delim, j);
 			if(j == string::npos){
-				dns = str.substr(i, str.length());
-				resolver.push_back(trim(dns));
+				data = str.substr(i, str.length());
+				result.push_back(trim(data));
 			}
 		}
 		// Если данные не существуют то устанавливаем строку по умолчанию
-		if(resolver.empty()) resolver.push_back(str);
+		if(result.empty()) result.push_back(str);
 	}
 	// Выводим результат
-	return resolver;
+	return result;
 }
 /**
  * isFileExist Функция проверки существования файла
@@ -99,7 +100,7 @@ bool Config::isFileExist(const char * path){
  * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
  * @return     размер буфера в байтах
  */
-int Config::getSizeBuffer(string str){
+long Config::getSizeBuffer(const string str){
 	/*
 	* Help - http://www.securitylab.ru/analytics/243414.php
 	*
@@ -110,10 +111,8 @@ int Config::getSizeBuffer(string str){
 	* (2 * 0.04) * ((100 * 1024000) / 8)  = 1000 байт
 	*
 	*/
-	// Скорость подключения
-	float speed;
 	// Размер буфера в байтах
-	int size = -1;
+	long size = -1;
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -125,9 +124,9 @@ int Config::getSizeBuffer(string str){
 		// Запоминаем параметры
 		string param = match[2].str();
 		// Размерность скорости
-		float dimension = 1;
+		double dimension = 1;
 		// Получаем значение скорости
-		speed = ::atof(match[1].str().c_str());
+		double speed = ::atof(match[1].str().c_str());
 		// Проверяем являются ли переданные данные байтами (8, 16, 32, 64, 128, 256, 512, 1024 ...)
 		bool isbite = !fmod(speed / 8, 2);
 		// Если это байты
@@ -139,9 +138,49 @@ int Config::getSizeBuffer(string str){
 		// Если это размерность в гигабитах
 		else if(param.compare("Gbps") == 0) dimension = (isbite ? 1000000000 : 1024000000);
 		// Размер буфера по умолчанию
-		size = (int) speed;
+		size = (long) speed;
 		// Если скорость установлена тогда расчитываем размер буфера
 		if(speed > -1) size = (2 * 0.04) * ((speed * dimension) / 8);
+	}
+	// Выводим результат
+	return size;
+}
+/**
+ * getBytes Функция получения размера в байтах из строки
+ * @param  str строка обозначения размерности
+ * @return     размер в байтах
+ */
+size_t Config::getBytes(const string str){
+	// Размер буфера в байтах
+	size_t size = 0;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([\\d\\.\\,]+)(B|KB|MB|GB)", regex::ECMAScript);
+	// Выполняем поиск протокола
+	regex_search(str, match, e);
+	// Если данные найдены
+	if(!match.empty() && (match.size() == 3)){
+		// Запоминаем параметры
+		string param = match[2].str();
+		// Размерность скорости
+		double dimension = 1;
+		// Получаем значение размерности
+		double value = ::atof(match[1].str().c_str());
+		// Проверяем являются ли переданные данные байтами (8, 16, 32, 64, 128, 256, 512, 1024 ...)
+		bool isbite = !fmod(value / 8, 2);
+		// Если это байты
+		if(param.compare("B") == 0) dimension = 1;
+		// Если это размерность в киллобитах
+		else if(param.compare("KB") == 0) dimension = (isbite ? 1000 : 1024);
+		// Если это размерность в мегабитах
+		else if(param.compare("MB") == 0) dimension = (isbite ? 1000000 : 1024000);
+		// Если это размерность в гигабитах
+		else if(param.compare("GB") == 0) dimension = (isbite ? 1000000000 : 1024000000);
+		// Размер буфера по умолчанию
+		size = (long) value;
+		// Если скорость установлена тогда расчитываем размер буфера
+		if(value > -1) size = (value * dimension);
 	}
 	// Выводим результат
 	return size;
@@ -239,6 +278,25 @@ Config::Config(const string filename){
 			// Каталог хранения кеш файлов
 			CACHE_DIR
 		};
+		// Заполняем структуру gzip
+		this->gzip = {
+			// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
+			GZIP_VARY,
+			// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
+			Z_DEFAULT_COMPRESSION,
+			// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
+			GZIP_LENGTH,
+			// Максимальный размер чанка в байтах
+			getBytes(GZIP_CHUNK),
+			// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
+			GZIP_REGEX,
+			// Версия http протокола
+			GZIP_VHTTP,
+			// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
+			GZIP_PROXIED,
+			// Разрешает сжатие ответа методом gzip для указанных MIME-типов
+			GZIP_TYPES
+		};
 		// Заполняем структуру firewall
 		this->firewall = {
 			// Количество неудачных попыток авторизации
@@ -271,8 +329,10 @@ Config::Config(const string filename){
 			LOGS_FILES,
 			// Разрешить ведение логов
 			LOGS_ENABLED,
-			// Размер файла лога в Кб
-			LOGS_SIZE,
+			// Разрешить ведение логов данных для обмена
+			LOGS_DATA,
+			// Размер файла лога
+			getBytes(LOGS_SIZE),
 			// Адрес хранения логов
 			LOGS_DIR
 		};
@@ -354,6 +414,18 @@ Config::Config(const string filename){
 		this->options = (this->options | (ini.GetBoolean("keepalive", "enabled", true) ? OPT_KEEPALIVE : OPT_NULL));
 		// Активируем логирование данных
 		this->options = (this->options | (ini.GetBoolean("logs", "enabled", true) ? OPT_LOG : OPT_NULL));
+		// Уровень сжатия gzip
+		int glevel = Z_DEFAULT_COMPRESSION;
+		// Получаем уровень сжатия
+		string gzipLevel = ini.Get("gzip", "level", "");
+		// Если размер указан
+		if(!gzipLevel.empty()){
+			// Определяем тип сжатия
+			if(gzipLevel.compare("default") == 0)		glevel = Z_DEFAULT_COMPRESSION;
+			else if(gzipLevel.compare("best") == 0)		glevel = Z_BEST_COMPRESSION;
+			else if(gzipLevel.compare("speed") == 0)	glevel = Z_BEST_SPEED;
+			else if(gzipLevel.compare("no") == 0)		glevel = Z_NO_COMPRESSION;
+		}
 		// Тип ключа определения коннектов к прокси
 		u_int connect_key = (toCase(ini.Get("connects", "key", CONNECTS_KEY)).compare("mac") == 0 ? 1 : 0);
 		// Тип прокси сервера
@@ -379,11 +451,23 @@ Config::Config(const string filename){
 			case 3: proxy_port = PROXY_REDIRECT_PORT;	break;
 		}
 		// Массив dns серверов
-		vector <string> resolver = getResolver(ini.Get("proxy", "resolver", ""));
+		vector <string> resolver = split(ini.Get("proxy", "resolver", ""));
 		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
 		if(resolver.empty() && (proxy_ipv == 6)) resolver = PROXY_RESOLVER6;
 		// Если ресолвер пустой и протокол версии 4
 		else if(resolver.empty()) resolver = PROXY_RESOLVER;
+		// Массив версий http протоколов
+		vector <string> gvhttp = split(ini.Get("gzip", "vhttp", ""));
+		// Если версии не указаны тогда устанавливаем значение по умолчанию
+		if(gvhttp.empty()) gvhttp = GZIP_VHTTP;
+		// Массив параметров сжатия для проксированных запросов
+		vector <string> gproxied = split(ini.Get("gzip", "proxied", ""));
+		// Если версии не указаны тогда устанавливаем значение по умолчанию
+		if(gproxied.empty()) gproxied = GZIP_PROXIED;
+		// Массив параметров сжатия для типов данных
+		vector <string> gtypes = split(ini.Get("gzip", "types", ""));
+		// Если версии не указаны тогда устанавливаем значение по умолчанию
+		if(gtypes.empty()) gtypes = GZIP_TYPES;
 		// Заполняем структуру proxy
 		this->proxy = {
 			// Версия протокола интернета (4, 6)
@@ -420,6 +504,25 @@ Config::Config(const string filename){
 			ini.Get("proxy", "confdir", CONFIG_DIR),
 			// Список dns серверов
 			resolver
+		};
+		// Заполняем структуру gzip
+		this->gzip = {
+			// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
+			ini.GetBoolean("gzip", "vary", GZIP_VARY),
+			// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
+			glevel,
+			// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
+			ini.GetInteger("gzip", "length", GZIP_LENGTH),
+			// Максимальный размер чанка в байтах
+			getBytes(ini.Get("gzip", "chunk", GZIP_CHUNK)),
+			// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
+			ini.Get("gzip", "regex", GZIP_REGEX),
+			// Версия http протокола
+			gvhttp,
+			// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
+			gproxied,
+			// Разрешает сжатие ответа методом gzip для указанных MIME-типов
+			gtypes
 		};
 		// Заполняем структуру cache
 		this->cache = {
@@ -462,8 +565,10 @@ Config::Config(const string filename){
 			ini.GetBoolean("logs", "files", LOGS_FILES),
 			// Разрешить ведение логов
 			ini.GetBoolean("logs", "enabled", LOGS_ENABLED),
-			// Размер файла лога в Кб
-			(u_int) ini.GetInteger("logs", "size", LOGS_SIZE),
+			// Разрешить ведение логов данных для обмена
+			ini.GetBoolean("logs", "data", LOGS_DATA),
+			// Размер файла лога
+			getBytes(ini.Get("logs", "size", LOGS_SIZE)),
 			// Адрес хранения логов
 			ini.Get("logs", "dir", LOGS_DIR)
 		};

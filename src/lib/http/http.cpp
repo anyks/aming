@@ -394,23 +394,25 @@ const string HttpBody::decompress_gzip(const string &str){
 		zs.next_in = (Bytef *) str.data();
 		// Указываем размер входного буфера
 		zs.avail_in = str.size();
-		// Создаем буфер с результирующими данными
-		char * zbuff = new char[(const size_t) this->origSize];
+		// Получаем размер выходных данных
+		const size_t osize = (zs.avail_in * 10);
 		// Выполняем расжатие данных
 		do {
+			// Создаем буфер с результирующими данными
+			char * zbuff = new char[osize];
 			// Устанавливаем буфер для получения результата
 			zs.next_out = reinterpret_cast<Bytef *> (zbuff);
 			// Устанавливаем максимальный размер буфера
-			zs.avail_out = this->origSize;
+			zs.avail_out = osize;
 			// Выполняем расжатие
 			ret = inflate(&zs, 0);
 			// Если данные добавлены не полностью
 			if(outstring.size() < zs.total_out)
 				// Добавляем оставшиеся данные
 				outstring.append(zbuff, zs.total_out - outstring.size());
+			// Удаляем буфер данных
+			delete [] zbuff;
 		} while(ret == Z_OK);
-		// Удаляем буфер данных
-		delete [] zbuff;
 	}
 	// Завершаем расжатие
 	inflateEnd(&zs);
@@ -558,8 +560,10 @@ void HttpBody::setCompress(const u_int compress){
 void HttpBody::setEnd(){
 	// Запоминаем что все данные получены
 	this->end = true;
-	// Запоминаем оринигальный размер тела
-	this->origSize = this->body.size();
+	// Запоминаем сырые данные
+	if(!this->extGzip) this->rody = this->body;
+	// Иначе выполняем дешифровку данных
+	else this->rody = decompress_gzip(this->body);
 	// Создаем чанки для несжатых данных
 	if(!this->intGzip) createChunk(this->body.data(), this->body.size());
 	// Если это не gzip
@@ -684,8 +688,10 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 						// Если чанки не найдены тогда выходим
 						} else break;
 					}
-					// Запоминаем оринигальный размер тела
-					this->origSize = body.size();
+					// Запоминаем сырые данные
+					if(!this->extGzip) this->rody = body;
+					// Иначе выполняем дешифровку данных
+					else this->rody = decompress_gzip(body);
 					// Если это не gzip
 					if(!this->extGzip && this->intGzip){
 						// Выполняем сжатие тела
@@ -724,8 +730,10 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, size_t le
 				if(length == this->body.size()) this->end = true;
 				// Если все данные собраны, формируем чанки
 				if(this->end){
-					// Запоминаем оринигальный размер тела
-					this->origSize = this->body.size();
+					// Запоминаем сырые данные
+					if(!this->extGzip) this->rody = this->body;
+					// Иначе выполняем дешифровку данных
+					else this->rody = decompress_gzip(this->body);
 					// Создаем чанки для несжатых данных
 					if(!this->intGzip) createChunk(this->body.data(), length);
 					// Если это не gzip
@@ -781,16 +789,8 @@ const string HttpBody::getBody(bool chunked){
  * @return данные тела запроса
  */
 const string HttpBody::getRawBody(){
-	// Тело с данными
-	string body;
-	// Если тело внутри функции сжато
-	if(this->intGzip || this->extGzip)
-		// Выполняем декомпрессию данных
-		body = decompress_gzip(this->body);
-	// Выводим тело таким какое оно есть
-	else body = this->body;
 	// Выводим результат
-	return body;
+	return this->rody;
 }
 /**
  * getChunks Метод получения списка чанков
@@ -1434,15 +1434,16 @@ const string HttpData::getResponseBody(bool chunked){
 }
 /**
  * getResponseData Метод получения http данных ответа
+ * @param  chunked метод чанкование
  * @return строка с данными тела
  */
-const string HttpData::getResponseData(){
+const string HttpData::getResponseData(bool chunked){
 	// Результирующий объект данных
 	string result;
 	// Если данные тела получены
 	if(isEndBody()){
 		// Получаем данные тела
-		string body = getResponseBody(getVersion() > 1);
+		string body = getResponseBody(chunked);
 		// Получаем данные заголовков
 		string headers = getResponseHeaders();
 		// Выполняем добавление заголовков в результат
@@ -1562,10 +1563,12 @@ bool HttpData::isEndBody(){
 }
 /**
  * initBody Метод инициализации объекта тела
+ * @param chunk максимальный размер чанка в байтах
+ * @param level тип сжатия
  */
-void HttpData::initBody(){
+void HttpData::initBody(size_t chunk, int level){
 	// Выполняем создание объекта body
-	HttpBody body = HttpBody(4096, Z_DEFAULT_COMPRESSION, this->intGzip, this->extGzip);
+	HttpBody body = HttpBody(chunk, level, this->intGzip, this->extGzip);
 	// Запоминаем строку body
 	this->body = body;
 }

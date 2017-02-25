@@ -139,8 +139,6 @@ class HttpBody {
 		size_t count = 0;
 		// Максимальный размер чанков в байтах
 		size_t maxSize;
-		// Значение оригинального размера
-		size_t origSize;
 		// Активация режима внутреннего сжатия
 		bool intGzip = false;
 		// Активация режима внешнего сжатия
@@ -149,6 +147,8 @@ class HttpBody {
 		bool end = false;
 		// Данные тела
 		string body;
+		// Данные тела в чистом виде
+		string rody;
 		// Массив чанков
 		vector <Chunk> chunks;
 		/**
@@ -570,9 +570,10 @@ class HttpData {
 		const string getResponseBody(bool chunked = false);
 		/**
 		 * getResponseData Метод получения http данных ответа
+		 * @param  chunked метод чанкование
 		 * @return строка с данными тела
 		 */
-		const string getResponseData();
+		const string getResponseData(bool chunked = false);
 		/**
 		 * getRawResponseData Метод получения http данных ответа в чистом виде
 		 * @return строка с данными тела
@@ -599,8 +600,10 @@ class HttpData {
 		bool isEndBody();
 		/**
 		 * initBody Метод инициализации объекта тела
+		 * @param chunk максимальный размер чанка в байтах
+		 * @param level тип сжатия
 		 */
-		void initBody();
+		void initBody(size_t chunk = 1024, int level = Z_DEFAULT_COMPRESSION);
 		/**
 		 * rmHeader Метод удаления заголовка
 		 * @param key название заголовка

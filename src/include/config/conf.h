@@ -13,6 +13,7 @@
 #include <regex>
 #include <iostream>
 #include <math.h>
+#include <zlib.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include "ini/ini.h"
@@ -63,7 +64,6 @@
 
 // Адреса конфигурационных файлов
 #define PID_DIR "/var/run"
-#define LOGS_DIR "/var/log"
 #define CONFIG_DIR "/usr/local/etc"
 
 // Максимальное количество воркеров (0 - auto)
@@ -104,7 +104,9 @@
 // Модуль логов
 #define LOGS_ENABLED true
 #define LOGS_FILES true
-#define LOGS_SIZE 1024
+#define LOGS_DATA false
+#define LOGS_SIZE "1KB"
+#define LOGS_DIR "/var/log"
 
 // Модуль постоянного подключения
 #define KEEPALIVE_CNT 6
@@ -115,6 +117,15 @@
 #define AUTH_OS_USERS true
 #define AUTH_FILE_USERS false
 #define AUTH_ENABLED false
+
+// Модуль GZIP
+#define GZIP_VARY false
+#define GZIP_LENGTH 100
+#define GZIP_CHUNK "4KB"
+#define GZIP_REGEX "msie6"
+#define GZIP_VHTTP {"1.0", "1.1"}
+#define GZIP_PROXIED {"off"}
+#define GZIP_TYPES {"text/html", "text/css", "text/plain", "text/xml", "text/javascript", "text/csv"}
 
 // Модуль блокировок
 #define FIREWALL_MAX_TRYAUTH 10
@@ -134,6 +145,19 @@ using namespace std;
 class Config {
 	private:
 		/**
+		 * Gzip Параметры сжатия данных на уровне прокси сервера
+		 */
+		struct Gzip {
+			bool vary;					// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
+			int level;					// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
+			long length;				// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
+			size_t chunk;				// Максимальный размер чанка в байтах
+			string regex;				// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
+			vector <string> vhttp;		// Версия http протокола
+			vector <string> proxied;	// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
+			vector <string> types;		// Разрешает сжатие ответа методом gzip для указанных MIME-типов
+		};
+		/**
 		 * Timeout Структура таймаутов
 		 */
 		struct Timeouts {
@@ -144,8 +168,8 @@ class Config {
 		 * BufferSize Структура размеров буфера
 		 */
 		struct BufferSize {
-			int read;		// Буфер на чтение
-			int write;		// Буфер на запись
+			long read;		// Буфер на чтение
+			long write;		// Буфер на запись
 		};
 		/**
 		 * Ipv4 Подключение по IPv4
@@ -182,7 +206,8 @@ class Config {
 		struct Logs {
 			bool files;		// Разрешить хранить логи в файлах
 			bool enabled;	// Разрешить ведение логов
-			u_int size;		// Размер файла лога в Кб
+			bool data;		// Разрешить ведение логов данных для обмена
+			size_t size;	// Размер файла лога в Кб
 			string dir;		// Адрес каталога для хранения логов
 		};
 		/**
@@ -283,17 +308,23 @@ class Config {
 		 */
 		string & trim(string &str, const char * t = " \t\n\r\f\v");
 		/**
-		 * getResolver Метод извлечения dns серверов из строки в массив
-		 * @param  str строка с dns серверами
-		 * @return     массив с dns серверами
+		 * split Метод разбива строки на составляющие
+		 * @param  str исходная строка
+		 * @return     массив составляющих строки
 		 */
-		vector <string> getResolver(const string str);
+		vector <string> split(const string str);
 		/**
 		 * getSizeBuffer Функция получения размера буфера в байтах
 		 * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
 		 * @return     размер буфера в байтах
 		 */
-		int getSizeBuffer(string str);
+		long getSizeBuffer(const string str);
+		/**
+		 * getBytes Функция получения размера в байтах из строки
+		 * @param  str строка обозначения размерности
+		 * @return     размер в байтах
+		 */
+		size_t getBytes(const string str);
 		/**
 		 * isFileExist Функция проверки существования файла
 		 * @param  path адрес каталога
@@ -306,6 +337,7 @@ class Config {
 		Ipv6 ipv6;				// Подключение по IPv6
 		Ipv4 ipv4;				// Подключение по IPv4
 		Logs logs;				// Параметры логов
+		Gzip gzip;				// Параметры gzip
 		Cache cache;			// Параметры кеширования
 		Proxy proxy;			// Параметры самого прокси-сервера
 		Header rmheader;		// Удалять указанные http заголовки из запроса или ответа
