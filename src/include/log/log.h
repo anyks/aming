@@ -46,6 +46,8 @@ class LogApp {
 		string name;
 		// Разрешено использовать лог или запрещено
 		bool enabled;
+		// Разрешено использовать запись в лог данных запроса
+		bool dataEnabled;
 		// Тип логов (1 - запись в файл, 2 - запись в коносль, 3 - запись в базу данных)
 		u_short type;
 		// Размер максимального лог файла в килобайтах
@@ -94,6 +96,13 @@ class LogApp {
 		 */
 		bool isFileExist(const char * path);
 		/**
+		 * write_data_to_file Функция записи в лога полученных данных в файл
+		 * @param id   идентификатор записи
+		 * @param data полученные данные
+		 * @param ctx  указатель на объект модуля логов
+		 */
+		static void write_data_to_file(const string id, const string data, void * ctx = NULL);
+		/**
 		 * write_to_file Функция записи лога в файл
 		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
 		 * @param message сообщение для записи
@@ -109,6 +118,12 @@ class LogApp {
 		 */
 		static void write_to_console(u_short type, const char * message, void * ctx, u_int sec = 0);
 	public:
+		/**
+		 * write_data Метод записи данных запроса в лог
+		 * @param id   идентификатор записи
+		 * @param data данные для записи
+		 */
+		void write_data(const string id, const string data);
 		/**
 		 * write Метод записи данных в лог
 		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)

@@ -435,7 +435,14 @@ void BufferHttpProxy::checkClose(){
 		// Выполняем отключение
 		} else close();
 		// Если тело собрано то получаем данные тела для логов
-		// write_log(this->httpResponse.getRawResponseData());
+		if(this->httpResponse.isEndBody()){
+			// Формируем лог данные
+			string log = this->client.request;
+			// Дополняем лог данные, данными ответа
+			log.append(this->httpResponse.getRawResponseData());
+			// Выполняем запись данные запроса в лог
+			this->proxy->log->write_data(this->client.ip, log);
+		}
 	// Выполняем отключение
 	} else close();
 }
@@ -1199,12 +1206,14 @@ void HttpProxy::send_http_data(void * ctx){
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);
 			// Если тело собрано то получаем данные тела для логов
-			
-			// http->httpResponse.getRawResponseData();
-
-			// cout << " ==================== " << http->httpResponse.getRawResponseData() << endl;
-
-			// if(http->httpResponse.isEndBody()) write_log(http->httpResponse.getRawResponseData());
+			if(http->httpResponse.isEndBody()){
+				// Формируем лог данные
+				string log = http->client.request;
+				// Дополняем лог данные, данными ответа
+				log.append(http->httpResponse.getRawResponseData());
+				// Выполняем запись данные запроса в лог
+				http->proxy->log->write_data(http->client.ip, log);
+			}
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
 			// Удаляем буфер данных
@@ -1353,6 +1362,8 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							if(!http->client.alive) http->httpRequest.setClose();
 							// Формируем запрос на сервер
 							http->response = http->httpRequest.getRequest();
+							// Запоминаем данные запроса
+							http->client.request = string(http->response.data(), http->response.size());
 							// Если это не постоянное подключение
 							if(!http->client.alive)
 								// Устанавливаем таймаут на чтение и запись
@@ -1406,6 +1417,8 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			else http->setTimeout(TM_CLIENT, false, true);
 			// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 			if(http->response.code == 200) http->sleep(http->response.size(), false);
+			// Запоминаем данные запроса
+			http->client.request = string(http->response.data(), http->response.size());
 			// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 			bufferevent_setwatermark(http->events.client, EV_WRITE, http->response.size(), 0);
 			// Отправляем клиенту сообщение
@@ -1441,6 +1454,10 @@ void HttpProxy::do_request(void * ctx, bool flag){
 			auto httpData = http->parser.httpData.begin();
 			// Запоминаем данные объекта http запроса
 			http->httpRequest = * httpData;
+
+			// http://xn--j1ail.xn--p1ai/
+			cout << " ------------------ " << http->httpRequest.getHost() << endl;
+
 			// Выполняем ресолв домена
 			http->dns->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http);
 		}

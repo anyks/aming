@@ -148,6 +148,7 @@ class BufferHttpProxy {
 			string	ip			= "";		// ip адрес клиента
 			string	mac			= "";		// Мак адрес клиента
 			string	useragent	= "";		// userAgent клиента
+			string	request		= "";		// Данные запроса
 		};
 		/**
 		 * toCase Функция перевода в указанный регистр

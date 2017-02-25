@@ -129,6 +129,66 @@ bool LogApp::isFileExist(const char * path){
 	return (info.st_mode & S_IFMT) != 0;
 }
 /**
+ * write_data_to_file Функция записи в лога полученных данных в файл
+ * @param id   идентификатор записи
+ * @param data полученные данные
+ * @param ctx  указатель на объект модуля логов
+ */
+void LogApp::write_data_to_file(const string id, const string data, void * ctx){
+	// Получаем объект сигнала
+	LogApp * log = reinterpret_cast <LogApp *> (ctx);
+	// Если объект передан
+	if(log && log->dataEnabled){
+		// Адрес каталога для хранения логов
+		string path = ((* log->config)->logs.dir + string("/") + (* log->config)->proxy.name) + string("/data");
+		// Проверяем существует ли нужный нам каталог
+		if(!log->makePath(path.c_str())){
+			// Сообщаем что каталог не может быть создан
+			perror("Unable to create directory for log files");
+			// Выходим из приложения
+			exit(EXIT_FAILURE);
+		}
+		// Создаем буфер для хранения даты
+		char datefile[80], date[80];
+		// Определяем количество секунд
+		time_t seconds = time(NULL);
+		// Получаем структуру локального времени
+		struct tm * timeinfo = localtime(&seconds);
+		// Создаем формат полученного времени
+		string fileformat = "_%m-%d-%Y";
+		// Создаем формат полученного времени
+		string dateformat = "%m/%d/%Y %H:%M:%S";
+		// Копируем в буфер полученную дату и время
+		int filelen = strftime(datefile, sizeof(datefile), fileformat.c_str(), timeinfo);
+		// Копируем в буфер полученную дату и время
+		int datelen = strftime(date, sizeof(date), dateformat.c_str(), timeinfo);
+		// Устанавливаем конец строки
+		datefile[filelen] = '\0';
+		// Устанавливаем конец строки
+		date[datelen] = '\0';
+		// Создаем строку с датой
+		string zdate(date, datelen);
+		// Добавляем заголовок к дате
+		zdate = string("Log date: ") + date;
+		// Стартовая строка
+		string filename = string(id + datefile) + ".log.gz";
+		// Открываем файл на сжатие
+		gzFile gz = gzopen(string(path + string("/") + filename).c_str(), "ab9h");
+		// Записываем разделитель
+		gzwrite(gz, "*************** START ***************\r\n\r\n", 41);
+		// Записываем дату
+		gzwrite(gz, zdate.c_str(), zdate.size());
+		// Записываем разделитель
+		gzwrite(gz, "\r\n\r\n", 4);
+		// Записываем сами данные
+		gzwrite(gz, data.data(), data.size());
+		// Записываем разделитель
+		gzwrite(gz, "\r\n\r\n---------------- END ----------------\r\n\r\n", 45);
+		// Закрываем сжатый файл
+		gzclose(gz);
+	}
+}
+/**
  * write_to_file Функция записи лога в файл
  * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
  * @param message сообщение для записи
@@ -200,7 +260,7 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 						// Заменяем название файла
 						gzlogfile.replace(gzlogfile.length() - 4, 4, string(datefile) + ".log.gz");
 						// Открываем файл на сжатие
-						gzFile gz = gzopen(gzlogfile.c_str(), "w6h");
+						gzFile gz = gzopen(gzlogfile.c_str(), "wb9h");
 						// Считываем до тех пор пока все удачно
 						while(logfile.good()){
 							// Считываем строку из файла
@@ -271,6 +331,18 @@ void LogApp::enable(){
 void LogApp::disable(){
 	// Запоминаем что модуль деактивирован
 	this->enabled = false;
+}
+/**
+ * write_data Метод записи данных запроса в лог
+ * @param id   идентификатор записи
+ * @param data данные для записи
+ */
+void LogApp::write_data(const string id, const string data){
+	// Если модуль активирован
+	if(this->enabled && this->dataEnabled){
+		// Выполняем асинхронную запись в файл, переданных данных
+		async(launch::async, &LogApp::write_data_to_file, id, data, this);
+	}
 }
 /**
  * write Метод записи данных в лог
@@ -456,6 +528,8 @@ LogApp::LogApp(Config ** config, u_short type){
 		this->type = type;
 		// Запоминаем активирован или деактивирован модуль
 		this->enabled = (* this->config)->logs.enabled;
+		// Запоминаем активирована ли возможность запись данных в лог
+		this->dataEnabled = (* this->config)->logs.data;
 		// Запоминаем размер файла лога, максимальный размер не может быть больше 100Мб
 		this->size = ((* this->config)->logs.size <= 102400 ? (* this->config)->logs.size : 102400);
 		// Переводим все в киллобайты
