@@ -296,7 +296,7 @@ void BufferHttpProxy::setCompress(){
 							// Получаем наличие заголовка Cache-Control
 							string cc = this->httpResponse.getHeader("cache-control");
 							// Если заголовок существует
-							if(!cc.empty() && (cc.find(param) != string::npos)) gzip = true;
+							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
 							// Если проверка не пройдена
 							else {
 								// Запрещаем сжатие
@@ -309,7 +309,7 @@ void BufferHttpProxy::setCompress(){
 							// Получаем наличие заголовка Cache-Control
 							string cc = this->httpResponse.getHeader("cache-control");
 							// Если заголовок существует
-							if(!cc.empty() && (cc.find(param) != string::npos)) gzip = true;
+							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
 							// Если проверка не пройдена
 							else {
 								// Запрещаем сжатие
@@ -322,7 +322,7 @@ void BufferHttpProxy::setCompress(){
 							// Получаем наличие заголовка Cache-Control
 							string cc = this->httpResponse.getHeader("cache-control");
 							// Если заголовок существует
-							if(!cc.empty() && (cc.find(param) != string::npos)) gzip = true;
+							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
 							// Если проверка не пройдена
 							else {
 								// Запрещаем сжатие
