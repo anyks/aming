@@ -327,9 +327,6 @@ class HttpData {
 		string			port;				// Порт запроса
 		string			login;				// Логин
 		string			password;			// Пароль
-		string			useragent;			// UserAgent браузера
-		string			connection;			// Заголовок connection
-		string			responseHeaders;	// Результирующие данные ответа
 		string			request;			// Результирующий данные запроса
 		size_t			length = 0;			// Количество данных в объекте
 		vector <char>	entitybody;			// Данные http вложений
@@ -435,6 +432,11 @@ class HttpData {
 		 */
 		void genDataConnect();
 		/**
+		 * getHttpRequest Метод получения сформированного http запроса только с добавлением заголовков
+		 * @return сформированный http запрос
+		 */
+		const string getHttpRequest();
+		/**
 		 * getConnection Функция извлечения данных подключения
 		 * @param  str строка запроса
 		 * @return     объект с данными запроса
@@ -455,6 +457,11 @@ class HttpData {
 		 * @return результат проверки
 		 */
 		bool isExtGzip();
+		/**
+		 * isUpgrade Метод проверки желания сервера сменить протокол
+		 * @return результат проверки
+		 */
+		bool isUpgrade();
 		/**
 		 * isConnect Метод проверяет является ли метод, методом connect
 		 * @return результат проверки на метод connect
@@ -723,11 +730,6 @@ class HttpData {
 		 * @return сформированный http запрос
 		 */
 		HttpQuery getRequest();
-		/**
-		 * getHttpRequest Метод получения сформированного http запроса только с добавлением заголовков
-		 * @return сформированный http запрос
-		 */
-		vector <char> getHttpRequest();
 		/**
 		 * init Метод инициализации класса
 		 * @param  str     строка http запроса

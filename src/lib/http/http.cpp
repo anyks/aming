@@ -893,7 +893,7 @@ HttpQuery::~HttpQuery(){
  * getHttpRequest Метод получения сформированного http запроса только с добавлением заголовков
  * @return сформированный http запрос
  */
-vector <char> HttpData::getHttpRequest(){
+const string HttpData::getHttpRequest(){
 	// Определяем тип прокси
 	bool smart = (this->options & OPT_SMART);
 	// Определяем разрешено ли выводить название агента
@@ -901,7 +901,7 @@ vector <char> HttpData::getHttpRequest(){
 	// Формируем запрос
 	string request = (this->http + string("\r\n"));
 	// Тип подключения
-	string connection = this->headers.getHeader("connection").value;
+	string connection = getHeader("connection");
 	// Если заголовок не найден тогда устанавливаем по умолчанию
 	if(connection.empty()) connection = "close";
 	// Добавляем остальные заголовки
@@ -919,13 +919,13 @@ vector <char> HttpData::getHttpRequest(){
 	// Если это dumb прокси
 	if(!smart){
 		// Проверяем есть ли заголовок соединения прокси
-		string proxy_connection = this->headers.getHeader("proxy-connection").value;
+		string proxy_connection = getHeader("proxy-connection");
 		// Добавляем заголовок закрытия подключения
 		if(proxy_connection.empty()) request.append(string("Proxy-Connection: ") + connection + string("\r\n"));
 	// Если это smart прокси
 	} else {
 		// Получаем заголовок Proxy-Connection
-		string proxy_connection = this->headers.getHeader("proxy-connection").value;
+		string proxy_connection = getHeader("proxy-connection");
 		// Если постоянное соединение не установлено
 		if(!proxy_connection.empty()) connection = proxy_connection;
 	}
@@ -933,10 +933,8 @@ vector <char> HttpData::getHttpRequest(){
 	request.append(string("Connection: ") + connection + string("\r\n"));
 	// Запоминаем конец запроса
 	request.append(string("\r\n"));
-	// Создаем результат
-	vector <char> result(request.begin(), request.end());
 	// Выводим результат
-	return result;
+	return request;
 }
 /**
  * createHead Функция получения сформированного заголовка запроса
@@ -968,8 +966,10 @@ void HttpData::createHead(){
 	*/
 	// Устанавливаем заголовок Host:
 	this->request.append(string("Host: ") + this->host + string("\r\n"));
+	// Получаем UserAgent
+	string useragent = getHeader("user-agent");
 	// Добавляем useragent
-	if(!this->useragent.empty()) this->request.append(string("User-Agent: ") + this->useragent + string("\r\n"));
+	if(!useragent.empty()) this->request.append(string("User-Agent: ") + useragent + string("\r\n"));
 	// Добавляем остальные заголовки
 	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
 		// Фильтруем заголовки
@@ -986,17 +986,19 @@ void HttpData::createHead(){
 	// Устанавливаем название прокси
 	if(agent) this->request.append(string("Proxy-Agent: ") + this->appName + string("/") + this->appVersion + string("\r\n"));
 	// Если постоянное подключение запрещено
-	if(!keepalive) this->connection = "close";
+	if(!keepalive) setHeader("Connection", "close");
+	// Получаем параметры подключения
+	string connection = getHeader("connection");
 	// Добавляем заголовок connection
-	if(!this->connection.empty()){
+	if(!connection.empty()){
 		// Устанавливаем заголовок подключения
-		this->request.append(string("Connection: ") + this->connection + string("\r\n"));
+		this->request.append(string("Connection: ") + connection + string("\r\n"));
 		// Если это dumb прокси
 		if(!smart){
 			// Проверяем есть ли заголовок соединения прокси
-			string pc = this->headers.getHeader("proxy-connection").value;
+			string pc = getHeader("proxy-connection");
 			// Добавляем заголовок закрытия подключения
-			if(pc.empty()) this->request.append(string("Proxy-Connection: ") + this->connection + string("\r\n"));
+			if(pc.empty()) this->request.append(string("Proxy-Connection: ") + connection + string("\r\n"));
 		}
 	}
 	// Запоминаем конец запроса
@@ -1079,11 +1081,7 @@ void HttpData::clear(){
 	this->port.clear();
 	this->login.clear();
 	this->password.clear();
-	this->useragent.clear();
-	this->connection.clear();
 	this->request.clear();
-	// Очищаем результат заголовков
-	this->responseHeaders.clear();
 	// Очищаем тело вложений
 	this->entitybody.clear();
 	// Очищаем карту заголовков
@@ -1112,17 +1110,15 @@ void HttpData::genDataConnect(){
 		// Запоминаем версию протокола
 		this->version = match[4].str();
 		// Извлекаем данные хоста
-		string host = this->headers.getHeader("host").value;
+		string host = getHeader("host");
 		// Извлекаем данные авторизации
-		string auth = this->headers.getHeader("proxy-authorization").value;
+		string auth = getHeader("proxy-authorization");
 		// Получаем заголовок Proxy-Connection
-		string proxy_connection = this->headers.getHeader("proxy-connection").value;
-		// Получаем данные юзерагента
-		this->useragent = this->headers.getHeader("user-agent").value;
-		// Получаем данные заголовока коннекта
-		this->connection = ::toCase(this->headers.getHeader("connection").value);
+		string proxy_connection = getHeader("proxy-connection");
 		// Если постоянное соединение не установлено
-		if((this->options & OPT_SMART) && !proxy_connection.empty()) this->connection = proxy_connection;
+		if((this->options & OPT_SMART) && !proxy_connection.empty())
+			// Добавляем заголовок подключения
+			setHeader("Connection", proxy_connection);
 		// Если хост найден
 		if(!host.empty()){
 			// Выполняем получение параметров подключения
@@ -1224,6 +1220,15 @@ bool HttpData::isExtGzip(){
 	return this->extGzip;
 }
 /**
+ * isUpgrade Метод проверки желания сервера сменить протокол
+ * @return результат проверки
+ */
+bool HttpData::isUpgrade(){
+	// Сообщаем является ли запрос, желанием смены протокола
+	return (!getHeader("upgrade").empty()
+	&& (::toCase(getHeader("connection")).find("upgrade") != string::npos));
+}
+/**
  * isConnect Метод проверяет является ли метод, методом connect
  * @return результат проверки на метод connect
  */
@@ -1237,7 +1242,7 @@ bool HttpData::isConnect(){
  */
 bool HttpData::isClose(){
 	// Сообщаем должно ли быть закрыто подключение
-	return (this->connection.compare("close") == 0);
+	return (::toCase(getHeader("connection")).find("close") != string::npos);
 }
 /**
  * isHttps Метод проверяет является ли подключение защищенным
@@ -1252,16 +1257,14 @@ bool HttpData::isHttps(){
  * @return результат проверки
  */
 bool HttpData::isAlive(){
+	// Получаем тип подключения
+	string connection = ::toCase(getHeader("connection"));
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
 	if(getVersion() > 1){
-		// Проверяем указан ли заголовок отключения
-		if(this->connection.compare("close") == 0) return false;
-		// Иначе сообщаем что подключение должно жить долго
-		return true;
-	// Проверяем указан ли заголовок удержания соединения
-	} else if(this->connection.compare("keep-alive") == 0) return true;
-	// Сообщаем что подключение жить не должно
-	return false;
+		// Выводим результат провери
+		return (connection.find("close") == string::npos);
+	// Или если указано явно что это постоянное подключение
+	} else return (connection.find("keep-alive") != string::npos);
 }
 /**
  * getFullHeaders Метод получения данных о заполненности заголовков
@@ -1372,7 +1375,7 @@ const string HttpData::getPassword(){
  */
 const string HttpData::getUseragent(){
 	// Выводим значение переменной
-	return this->useragent;
+	return getHeader("user-agent");
 }
 /**
  * getQuery Метод получения буфера запроса
@@ -1387,10 +1390,8 @@ const string HttpData::getQuery(){
  * @return сформированные заголовки ответа
  */
 const string HttpData::getResponseHeaders(){
-	// Получаем сформированный ответ
-	vector <char> data = this->getHttpRequest();
 	// Получаем данные запроса
-	return this->responseHeaders.assign(data.begin(), data.end());
+	return this->getHttpRequest();
 }
 /**
  * getHeader Метод извлекает данные заголовка по его ключу
@@ -1517,14 +1518,14 @@ bool HttpData::setEntitybody(const char * buffer, size_t size){
 		// Размер вложений
 		u_int body_size = 0;
 		// Проверяем есть ли размер вложений
-		string cl = this->headers.getHeader("content-length").value;
+		string cl = getHeader("content-length");
 		// Если найден размер вложений
 		// Определяем размер вложений
 		if(!cl.empty() && ::isNumber(cl)) body_size = (::atoi(cl.c_str()) + this->length);
 		// Если вложения не найдены
 		else {
 			// Проверяем есть ли чанкование
-			string ch = this->headers.getHeader("transfer-encoding").value;
+			string ch = getHeader("transfer-encoding");
 			// Если это чанкование
 			if(!ch.empty() && (ch.find("chunked") != string::npos)){
 				// Выполняем поиск подстроки
@@ -1741,7 +1742,7 @@ void HttpData::setAuth(const string str){
  */
 void HttpData::setUseragent(const string str){
 	// Запоминаем данные
-	this->useragent = str;
+	setHeader("User-Agent", str);
 	// Выполняем генерацию результирующего запроса
 	createHead();
 }
@@ -1750,7 +1751,7 @@ void HttpData::setUseragent(const string str){
  */
 void HttpData::setClose(){
 	// Запоминаем данные
-	this->connection = "close";
+	setHeader("Connection", "close");
 	// Выполняем генерацию результирующего запроса
 	createHead();
 }
@@ -2084,13 +2085,13 @@ void Http::modify(vector <char> &data){
 		// Если завершение заголовка найдено
 		u_int pos = (strstr(headers, "\r\n\r\n") - headers) + 4;
 		// Получаем данные запроса
-		vector <char> last, query = httpQuery.getHttpRequest();
-		// Заполняем последние данные структуры
-		last.assign(data.begin() + pos, data.end());
+		string last(data.data() + pos, data.size() - pos);
+		// Получаем данные заголовков
+		string query = httpQuery.getResponseHeaders();
 		// Объединяем блоки
-		copy(last.begin(), last.end(), back_inserter(query));
+		query.append(last);
 		// Заменяем первоначальный блок с данными
-		data = query;
+		data.assign(query.begin(), query.end());
 	}
 }
 /**

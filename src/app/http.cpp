@@ -399,9 +399,8 @@ void BufferHttpProxy::checkUpgrade(){
 	// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
 	if(!this->client.connect
 	&& this->httpResponse.size()
-	&& (this->httpResponse.getStatus() == 101)
-	&& !this->httpResponse.getHeader("upgrade").empty()
-	&& (toCase(this->httpResponse.getHeader("connection")).find("upgrade") != string::npos)){
+	&& this->httpResponse.isUpgrade()
+	&& (this->httpResponse.getStatus() == 101)){
 		// Устанавливаем что это соединение CONNECT,
 		// для будущего обмена данными, так как они будут приходить бинарные
 		this->client.connect = true;
@@ -414,8 +413,7 @@ void BufferHttpProxy::checkClose(){
 	// Если это закрытие коннекта на стороне сервера
 	if(!this->client.connect
 	&& this->httpResponse.size()
-	&& (toCase(this->httpResponse.getHeader("connection"))
-	.find("close") != string::npos)){
+	&& this->httpResponse.isClose()){
 		// Указываем что запрос завершен
 		this->httpResponse.setBodyEnd();
 		// Если это режим сжатия, тогда отправляем завершающие данные
@@ -1193,7 +1191,9 @@ void HttpProxy::send_http_data(void * ctx){
 				// Отправляем данные клиенту
 				evbuffer_add_buffer(output, tmp);
 			// Если это удачно завершенный запрос и тело получено
-			} else if(http->httpResponse.isEndBody()){
+			} else if(http->httpResponse.isEndBody()
+			// И если это не автоотключение от сервера, так как эти данные будут отправлены при событии отключения
+			&& !http->httpResponse.isClose()){
 				// Получаем данные для отправки в виде чанков
 				string data = http->httpResponse.getResponseData(http->httpResponse.getVersion() > 1);
 				// Добавляем в буфер оставшиеся данные
@@ -1209,8 +1209,11 @@ void HttpProxy::send_http_data(void * ctx){
 				log.append(http->httpResponse.getRawResponseData());
 				// Выполняем запись данные запроса в лог
 				http->proxy->log->write_data(http->client.ip, log);
-				// Очищаем заголовки
-				http->httpResponse.clear();
+				// Очищаем объект http данных
+				http->httpRequest.clear();
+				// Если данные в массиве существуют тогда продолжаем загрузку
+				if(!http->parser.httpData.empty()
+				&& !http->httpResponse.isClose()) do_request(http);
 			}
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);
@@ -1272,7 +1275,8 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Активируем сжатие данных, на стороне прокси сервера
 				http->setCompress();
 				// Если это не режим сжатия, тогда отправляем заголовок
-				if(!http->httpResponse.isIntGzip() || (http->httpResponse.getStatus() != 200)){
+				if(!http->httpResponse.isIntGzip()
+				|| (http->httpResponse.getStatus() != 200)){
 					// Создаем буфер для исходящих данных
 					struct evbuffer * tmp = evbuffer_new();
 					// Получаем данные заголовков
@@ -1375,10 +1379,6 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							bufferevent_write(http->events.server, http->response.data(), http->response.size());
 							// Удаляем объект подключения
 							http->parser.httpData.erase(httpData);
-							// Если данные в массиве существуют тогда продолжаем загрузку
-							if(!http->parser.httpData.empty()) do_request(http, true);
-							// Очищаем объект http данных если запросов больше нет
-							else http->httpRequest.clear();
 							// Выходим
 							return;
 						}
@@ -1431,16 +1431,15 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 }
 /**
  * do_request Функция запроса данных у сервера
- * @param ctx  передаваемый объект
- * @param flag флаг разрешающий новый запрос данных
+ * @param ctx передаваемый объект
  */
-void HttpProxy::do_request(void * ctx, bool flag){
+void HttpProxy::do_request(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http){
 		// Если данные еще не заполнены, но они есть в массиве
-		if(!http->parser.httpData.empty() && (!http->httpRequest.size() || flag)){
+		if(!http->parser.httpData.empty() && !http->httpRequest.size()){
 			// Очищаем таймеры для клиента
 			http->setTimeout(TM_CLIENT);
 			// Очищаем заголовки

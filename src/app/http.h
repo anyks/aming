@@ -380,10 +380,9 @@ class HttpProxy {
 		static void send_http_data(void * ctx);
 		/**
 		 * do_request Функция запроса данных у сервера
-		 * @param ctx  передаваемый объект
-		 * @param flag флаг разрешающий новый запрос данных
+		 * @param ctx передаваемый объект
 		 */
-		static void do_request(void * ctx, bool flag = false);
+		static void do_request(void * ctx);
 		/**
 		 * resolve_cb Функция выполняющая ресолвинг домена
 		 * @param ip  IP адрес сервера
