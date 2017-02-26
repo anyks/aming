@@ -416,14 +416,14 @@ void BufferHttpProxy::checkClose(){
 	&& this->httpResponse.size()
 	&& (toCase(this->httpResponse.getHeader("connection"))
 	.find("close") != string::npos)){
+		// Указываем что запрос завершен
+		this->httpResponse.setBodyEnd();
 		// Если это режим сжатия, тогда отправляем завершающие данные
 		if(this->httpResponse.isIntGzip()){
 			// Получаем буфер исходящих данных
 			struct evbuffer * output = bufferevent_get_output(this->events.client);
 			// Создаем буфер для исходящих данных
 			struct evbuffer * tmp = evbuffer_new();
-			// Указываем что запрос завершен
-			this->httpResponse.setBodyEnd();
 			// Получаем данные для отправки в виде чанков
 			string data = this->httpResponse.getResponseData();
 			// Добавляем в буфер оставшиеся данные
