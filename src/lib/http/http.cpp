@@ -1967,17 +1967,14 @@ void HttpData::init(const string str, const string name, const string version, c
  * @param options опции http парсера
  */
 void HttpData::create(const string name, const u_short options){
-	// Если объект не создан
-	if(!size()){
-		// Очищаем полученные данные
-		clear();
-		// Запоминаем название приложения
-		this->appName = name;
-		// Запоминаем параметры http парсера
-		this->options = options;
-		// Запоминаем версию приложения
-		this->appVersion = APP_VERSION;
-	}
+	// Очищаем полученные данные
+	clear();
+	// Запоминаем название приложения
+	this->appName = name;
+	// Запоминаем параметры http парсера
+	this->options = options;
+	// Запоминаем версию приложения
+	this->appVersion = APP_VERSION;
 }
 /**
  * HttpData Конструктор

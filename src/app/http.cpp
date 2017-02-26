@@ -1200,11 +1200,7 @@ void HttpProxy::send_http_data(void * ctx){
 				evbuffer_add(tmp, data.data(), data.size());
 				// Отправляем данные клиенту
 				evbuffer_add_buffer(output, tmp);
-				// Очищаем заголовки
-				http->httpResponse.clear();
 			}
-			// Удаляем данные из буфера
-			evbuffer_drain(input, size);
 			// Если тело собрано то получаем данные тела для логов
 			if(http->httpResponse.isEndBody()){
 				// Формируем лог данные
@@ -1213,7 +1209,11 @@ void HttpProxy::send_http_data(void * ctx){
 				log.append(http->httpResponse.getRawResponseData());
 				// Выполняем запись данные запроса в лог
 				http->proxy->log->write_data(http->client.ip, log);
+				// Очищаем заголовки
+				http->httpResponse.clear();
 			}
+			// Удаляем данные из буфера
+			evbuffer_drain(input, size);
 			// Удаляем временный буфер
 			evbuffer_free(tmp);
 			// Удаляем буфер данных
@@ -1248,8 +1248,14 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		else if(http->httpResponse.getFullHeaders()) send_http_data(http);
 		// Иначе изменяем заголовки
 		else if(len){
-			// Создаем объект данных заголовков
-			http->httpResponse.create(http->proxy->config->proxy.name, http->proxy->config->options);
+			// Если объект http данных не создан
+			if(!http->httpResponse.size()){
+				// Создаем объект http данных
+				http->httpResponse.create(
+					http->proxy->config->proxy.name,
+					http->proxy->config->options
+				);
+			}
 			// Считываем данные из буфера до тех пор пока можешь считать
 			while(!http->httpResponse.getFullHeaders()){
 				// Считываем строки из буфера
