@@ -173,7 +173,7 @@ void LogApp::write_data_to_file(const string id, const string data, void * ctx){
 		// Стартовая строка
 		string filename = string(id + datefile) + ".log.gz";
 		// Открываем файл на сжатие
-		gzFile gz = gzopen(string(path + string("/") + filename).c_str(), "ab9h");
+		gzFile gz = gzopen(string(path + string("/") + filename).c_str(), "ab9f");
 		// Записываем разделитель
 		gzwrite(gz, "*************** START ***************\r\n\r\n", 41);
 		// Записываем дату
@@ -531,8 +531,6 @@ LogApp::LogApp(Config ** config, u_short type){
 		// Запоминаем активирована ли возможность запись данных в лог
 		this->dataEnabled = (* this->config)->logs.data;
 		// Запоминаем размер файла лога, максимальный размер не может быть больше 100Мб
-		this->size = ((* this->config)->logs.size <= 102400 ? (* this->config)->logs.size : 102400);
-		// Переводим все в киллобайты
-		this->size *= 1024;
+		this->size = ((* this->config)->logs.size <= 104857600 ? (* this->config)->logs.size : 104857600);
 	}
 }

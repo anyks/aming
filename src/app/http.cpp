@@ -437,7 +437,7 @@ void BufferHttpProxy::checkClose(){
 		// Если тело собрано то получаем данные тела для логов
 		if(this->httpResponse.isEndBody()){
 			// Формируем лог данные
-			string log = this->client.request;
+			string log = (this->client.request + "\r\n\r\n");
 			// Дополняем лог данные, данными ответа
 			log.append(this->httpResponse.getRawResponseData());
 			// Выполняем запись данные запроса в лог
@@ -1175,7 +1175,7 @@ void HttpProxy::send_http_data(void * ctx){
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
 		// Получаем размер входящих данных
-		size_t len = evbuffer_get_length(input);
+		const size_t len = evbuffer_get_length(input);
 		// Если данные существуют
 		if(len){
 			// Создаем буфер данных
@@ -1206,7 +1206,7 @@ void HttpProxy::send_http_data(void * ctx){
 			// Если тело собрано то получаем данные тела для логов
 			if(http->httpResponse.isEndBody()){
 				// Формируем лог данные
-				string log = http->client.request;
+				string log = (http->client.request + "\r\n\r\n");
 				// Дополняем лог данные, данными ответа
 				log.append(http->httpResponse.getRawResponseData());
 				// Выполняем запись данные запроса в лог

@@ -124,7 +124,7 @@
 #define GZIP_CHUNK "4KB"
 #define GZIP_REGEX "msie6"
 #define GZIP_VHTTP {"1.0", "1.1"}
-#define GZIP_PROXIED {"off"}
+#define GZIP_PROXIED {"private", "no-cache", "no-store"}
 #define GZIP_TYPES {"text/html", "text/css", "text/plain", "text/xml", "text/javascript", "text/csv"}
 
 // Модуль блокировок
