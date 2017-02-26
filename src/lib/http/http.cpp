@@ -525,8 +525,6 @@ void HttpBody::createChunk(const char * buffer, const size_t size){
  * clear Метод сброса параметров
  */
 void HttpBody::clear(){
-	// Сбрасываем количество чанков
-	this->count = 0;
 	// Сбрасываем заполненность данных
 	this->end = false;
 	// Сбрасываем режимы сжатия
@@ -536,6 +534,7 @@ void HttpBody::clear(){
 	this->chunks.clear();
 	// Очищаем тело
 	this->body.clear();
+	this->rody.clear();
 }
 /**
  * setMaxSize Метод установки размера чанков
@@ -610,11 +609,11 @@ bool HttpBody::isExtCompress(){
  * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
  * @return        количество обработанных байт
  */
-const size_t HttpBody::addData(const char * buffer, const size_t size, size_t length, bool strict){
+const size_t HttpBody::addData(const char * buffer, const size_t size, const size_t length, bool strict){
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
-	if(size){
+	if(!this->end && size && length && (size != string::npos) && (length != string::npos)){
 		// Определяем тип данных
 		switch(length){
 			// Обработка по умолчанию
@@ -1083,6 +1082,10 @@ void HttpData::clear(){
 	this->useragent.clear();
 	this->connection.clear();
 	this->request.clear();
+	// Очищаем результат заголовков
+	this->responseHeaders.clear();
+	// Очищаем тело вложений
+	this->entitybody.clear();
 	// Очищаем карту заголовков
 	this->headers.clear();
 	// Очищаем тело

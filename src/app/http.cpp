@@ -1200,6 +1200,8 @@ void HttpProxy::send_http_data(void * ctx){
 				evbuffer_add(tmp, data.data(), data.size());
 				// Отправляем данные клиенту
 				evbuffer_add_buffer(output, tmp);
+				// Очищаем заголовки
+				http->httpResponse.clear();
 			}
 			// Удаляем данные из буфера
 			evbuffer_drain(input, size);

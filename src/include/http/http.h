@@ -135,8 +135,6 @@ class HttpBody {
 		};
 		// Тип сжатия
 		u_int compress;
-		// Количество чанков
-		size_t count = 0;
 		// Максимальный размер чанков в байтах
 		size_t maxSize;
 		// Активация режима внутреннего сжатия
@@ -225,7 +223,7 @@ class HttpBody {
 		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
 		 * @return        количество обработанных байт
 		 */
-		const size_t addData(const char * buffer, const size_t size, size_t length = 0, bool strict = false);
+		const size_t addData(const char * buffer, const size_t size, const size_t length = 0, bool strict = false);
 		/**
 		 * getBody Метод получения тела запроса
 		 * @param  chunked чанкованием
