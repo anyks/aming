@@ -105,7 +105,7 @@
 #define LOGS_ENABLED true
 #define LOGS_FILES true
 #define LOGS_DATA false
-#define LOGS_SIZE "1KB"
+#define LOGS_SIZE "1MB"
 #define LOGS_DIR "/var/log"
 
 // Модуль постоянного подключения
