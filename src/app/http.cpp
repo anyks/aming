@@ -1240,10 +1240,13 @@ void HttpProxy::send_http_data(void * ctx){
 			struct evbuffer * tmp = evbuffer_new();
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
+			// Получаем метод отправки данных
+			size_t method = http->getBodyMethod();
 			// Добавляем данные тела
-			size_t size = http->httpResponse.setBodyData(buffer, len, http->getBodyMethod());
+			size_t size = http->httpResponse.setBodyData(buffer, len, method);
 			// Получаем размер данных превысил разрешенный предел
-			if(http->httpResponse.getRawBodySize() > http->proxy->config->connects.size){
+			if(((method > 0) && (method < 3))
+			&& (http->httpResponse.getRawBodySize() > http->proxy->config->connects.size)){
 				// Закрываем подключение сервера
 				http->closeServer();
 				// Формируем ответ клиенту, что домен не найден
