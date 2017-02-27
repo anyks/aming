@@ -1356,7 +1356,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					return;
 				}
 				// Если размер данных меньше 1KB и подключение не постоянное, тогда активируем отправку одним разом
-				if(!http->client.alive && ((size > 2) && (size <= 1024))){
+				if((size > 2) && (size <= 1024)){
 					// Активируем отдачу буферов целиком одним разом
 					socket_tcpcork(http->sockets.server, http->proxy->log);
 					socket_tcpcork(http->sockets.client, http->proxy->log);
