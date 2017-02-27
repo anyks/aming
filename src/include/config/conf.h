@@ -50,7 +50,7 @@
 #define PROXY_OPTIMOS false
 #define PROXY_DEBUG false
 #define PROXY_DAEMON false
-#define PROXY_IPV 4
+#define PROXY_IPV "4 -> 4"
 #define PROXY_HTTP_PORT 8080
 #define PROXY_SOCKS5_PORT 1080
 #define PROXY_REDIRECT_PORT 1180
@@ -76,6 +76,7 @@
 #define CONNECTS_ALL 100
 #define CONNECTS_MAX 100
 #define CONNECTS_FDS 1024 * 10
+#define CONNECTS_SIZE "5MB"
 
 // Модуль скрытия заголовков
 #define RM_HEADERS_REQUEST false
@@ -254,12 +255,14 @@ class Config {
 			u_int max;		// Максимальное количество подключений (одного клиента к прокси серверу)
 			u_int fds;		// Максимальное количество файловых дескрипторов
 			int all;		// Общее количество одновременных подключений к прокси серверу
+			size_t size;	// Максимальный размер скачиваемых данных в байтах
 		};
 		/**
 		 * Proxy Параметры самого прокси-сервера
 		 */
 		struct Proxy {
-			u_int ipver;				// Версия протокола интернета (4, 6)
+			u_int intIPv;				// Версия протокола интернета внутреннего (4, 6)
+			u_int extIPv;				// Версия протокола интернета внешнего (4, 6)
 			u_int type;					// Тип прокси сервера (http = 1, socks5 = 2, redirect = 3)
 			u_int port;					// Порт прокси сервера
 			u_int workers;				// Количество воркеров
@@ -309,10 +312,11 @@ class Config {
 		string & trim(string &str, const char * t = " \t\n\r\f\v");
 		/**
 		 * split Метод разбива строки на составляющие
-		 * @param  str исходная строка
-		 * @return     массив составляющих строки
+		 * @param  str   исходная строка
+		 * @param  delim разделитель
+		 * @return       массив составляющих строки
 		 */
-		vector <string> split(const string str);
+		vector <string> split(const string str, const string delim);
 		/**
 		 * getSizeBuffer Функция получения размера буфера в байтах
 		 * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)

@@ -321,6 +321,13 @@ class HttpProxy {
 		 */
 		static int socket_tcpcork(evutil_socket_t fd, LogApp * log);
 		/**
+		 * socket_untcpcork Функция де активации tcp_cork
+		 * @param  fd   файловый дескриптор (сокет)
+		 * @param  log  указатель на объект ведения логов
+		 * @return      результат работы функции
+		 */
+		static int socket_untcpcork(evutil_socket_t fd, LogApp * log);
+		/**
 		 * socket_tcpnodelay Функция отключения алгоритма Нейгла
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
@@ -373,6 +380,11 @@ class HttpProxy {
 		 * @return    результат подключения
 		 */
 		static int connect_server(void * ctx);
+		/**
+		 * send_client_response Функция отправки ответа клиенту
+		 * @param ctx передаваемый объект
+		 */
+		static void send_client_response(void * ctx);
 		/**
 		 * send_http_data Функция отправки незашифрованных данных клиенту
 		 * @param ctx передаваемый объект

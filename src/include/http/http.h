@@ -585,6 +585,16 @@ class HttpData {
 		 */
 		const string getRawResponseData();
 		/**
+		 * getBodySize Метод получения размера тела http данных
+		 * @return размер тела данных
+		 */
+		const size_t getBodySize();
+		/**
+		 * getRawBodySize Метод получения размера тела http данных в чистом виде
+		 * @return размер тела данных
+		 */
+		const size_t getRawBodySize();
+		/**
 		 * setBodyData Метод добавления данных тела
 		 * @param  buffer буфер с данными
 		 * @param  size   размер передаваемых данных

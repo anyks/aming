@@ -427,7 +427,7 @@ void LogApp::welcome(){
 			proxyskill = "smart";
 		else proxyskill = "dumb";
 		// Определяем внешний и внутренний ip адрес
-		switch((* this->config)->proxy.ipver){
+		switch((* this->config)->proxy.intIPv){
 			// Версия протокола IPv4
 			case 4: {
 				internal = (* this->config)->ipv4.internal;
@@ -480,7 +480,7 @@ void LogApp::welcome(){
 		"*   keep-alive:           %s\n*   reverse:              %s\n"
 		"*   forward:              %s\n*   transfer:             %s\n"
 		"*   connect:              %s\n*   type:                 %s\n"
-		"*   internet protocol:    IPv%i\n*   skill:                %s\n"
+		"*   internet protocol:    IPv%i -> IPv%i\n*   skill:                %s\n"
 		"*   internal ip:          %s\n*   external ip:          %s\n"
 		"*   port:                 %i\n*   cpu cores:            %i\n"
 		"*   cpu name:             %s\n*   operating system:     %s\n"
@@ -501,7 +501,9 @@ void LogApp::welcome(){
 			_headname, _bandlimin, _deblock,
 			_optimos, _keepalive, _reverse,
 			_forward, _transfer, _connect,
-			proxytype.c_str(), (* this->config)->proxy.ipver,
+			proxytype.c_str(),
+			(* this->config)->proxy.intIPv,
+			(* this->config)->proxy.extIPv,
 			proxyskill.c_str(), internal.c_str(),
 			external.c_str(), (* this->config)->proxy.port,
 			(* this->config)->os.ncpu, (* this->config)->os.cpu.c_str(),

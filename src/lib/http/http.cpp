@@ -214,7 +214,7 @@ bool HttpHeaders::create(const char * buffer){
 				// Выполняем поиск протокола
 				regex_search(strings[i], match, e);
 				// Если заголовок найден
-				if(!match.empty() && (match.size() == 3)){
+				if(!match.empty()){
 					// Добавляем данные заголовка
 					this->append(match[1].str(), match[2].str());
 				}
@@ -682,6 +682,8 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, const siz
 								}
 								// Увеличиваем смещение
 								offset += ichunk;
+								// Если смещение ушло далеко то выходим
+								if(offset > len) break;
 							// Смещаемся на два байта
 							} else offset += 2;
 						// Если чанки не найдены тогда выходим
@@ -1019,9 +1021,7 @@ HttpData::Connect HttpData::getConnection(string str){
 	// Выполняем поиск протокола
 	regex_search(str, match, ep);
 	// Если протокол найден
-	if(!match.empty() && (match.size() == 2))
-		// Запоминаем версию протокола
-		data.protocol = ::toCase(match[1].str());
+	if(!match.empty()) data.protocol = ::toCase(match[1].str());
 	// Устанавливаем правило для поиска
 	regex eh(
 		// Стандартная запись домена anyks.com
@@ -1035,7 +1035,7 @@ HttpData::Connect HttpData::getConnection(string str){
 	// Выполняем поиск домена и порта
 	regex_search(str, match, eh);
 	// Если протокол найден
-	if(!match.empty() && (match.size() > 1)){
+	if(!match.empty()){
 		// Запоминаем хост
 		data.host = ::toCase(match[1].str());
 		// Если порт найден, тогда запоминаем его
@@ -1100,7 +1100,7 @@ void HttpData::genDataConnect(){
 	// Выполняем поиск протокола
 	regex_search(this->http, match, e);
 	// Если данные найдены
-	if(!match.empty() && (match.size() == 5)){
+	if(!match.empty()){
 		// Запоминаем метод запроса
 		this->method = ::toCase(match[1].str());
 		// Запоминаем путь запроса
@@ -1178,7 +1178,7 @@ void HttpData::genDataConnect(){
 			// Выполняем поиск протокола
 			regex_search(auth, match, e);
 			// Если данные найдены
-			if(!match.empty() && (match.size() == 3)){
+			if(!match.empty()){
 				// Запоминаем тип авторизации
 				this->auth = ::toCase(match[1].str());
 				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
@@ -1190,7 +1190,7 @@ void HttpData::genDataConnect(){
 					// Выполняем поиск протокола
 					regex_search(dauth, match, e);
 					// Если данные найдены
-					if(!match.empty() && (match.size() == 3)){
+					if(!match.empty()){
 						// Запоминаем логин
 						this->login = match[1].str();
 						// Запоминаем пароль
@@ -1495,6 +1495,22 @@ const string HttpData::getRawResponseData(){
 	}
 	// Выводим результат
 	return result;
+}
+/**
+ * getBodySize Метод получения размера тела http данных
+ * @return размер тела данных
+ */
+const size_t HttpData::getBodySize(){
+	// Выводим размер данных
+	return this->body.size();
+}
+/**
+ * getRawBodySize Метод получения размера тела http данных в чистом виде
+ * @return размер тела данных
+ */
+const size_t HttpData::getRawBodySize(){
+	// Выводим размер блока данных в чистом виде
+	return this->body.getRawBody().size();
 }
 /**
  * setBodyData Метод добавления данных тела

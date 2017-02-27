@@ -53,15 +53,16 @@ string & Config::trim(string &str, const char * t){
 }
 /**
  * split Метод разбива строки на составляющие
- * @param  str исходная строка
- * @return     массив составляющих строки
+ * @param  str   исходная строка
+ * @param  delim разделитель
+ * @return       массив составляющих строки
  */
-vector <string> Config::split(const string str){
+vector <string> Config::split(const string str, const string delim){
 	// Результат данных
 	vector <string> result;
 	// Если строка передана
 	if(!str.empty()){
-		string data, delim = "|";
+		string data;
 		string::size_type i = 0;
 		string::size_type j = str.find(delim);
 		u_int len = delim.length();
@@ -134,9 +135,9 @@ long Config::getSizeBuffer(const string str){
 		// Если это размерность в киллобитах
 		else if(param.compare("kbps") == 0) dimension = (isbite ? 1000 : 1024);
 		// Если это размерность в мегабитах
-		else if(param.compare("Mbps") == 0) dimension = (isbite ? 1000000 : 1024000);
+		else if(param.compare("Mbps") == 0) dimension = (isbite ? 1000000 : 1048576);
 		// Если это размерность в гигабитах
-		else if(param.compare("Gbps") == 0) dimension = (isbite ? 1000000000 : 1024000000);
+		else if(param.compare("Gbps") == 0) dimension = (isbite ? 1000000000 : 1073741824);
 		// Размер буфера по умолчанию
 		size = (long) speed;
 		// Если скорость установлена тогда расчитываем размер буфера
@@ -174,9 +175,9 @@ size_t Config::getBytes(const string str){
 		// Если это размерность в киллобитах
 		else if(param.compare("KB") == 0) dimension = (isbite ? 1000 : 1024);
 		// Если это размерность в мегабитах
-		else if(param.compare("MB") == 0) dimension = (isbite ? 1000000 : 1024000);
+		else if(param.compare("MB") == 0) dimension = (isbite ? 1000000 : 1048576);
 		// Если это размерность в гигабитах
-		else if(param.compare("GB") == 0) dimension = (isbite ? 1000000000 : 1024000000);
+		else if(param.compare("GB") == 0) dimension = (isbite ? 1000000000 : 1073741824);
 		// Размер буфера по умолчанию
 		size = (long) value;
 		// Если скорость установлена тогда расчитываем размер буфера
@@ -218,6 +219,12 @@ Config::Config(const string filename){
 		u_int connect_key = (string(CONNECTS_KEY).compare("mac") == 0 ? 1 : 0);
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port;
+		// Массив протоколов
+		vector <string> ipVx = split(PROXY_IPV, "->");
+		// Запоминаем внешнюю версию интернет протокола
+		const u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
+		// Запоминаем внутреннюю версию интернет протокола
+		const u_int proxy_extIPv = ::atoi(ipVx[1].c_str());
 		// Если прокси сервер это http
 		if(type.compare("http") == 0) proxy_type = 1;
 		else if(type.compare("socks5") == 0) proxy_type = 2;
@@ -234,8 +241,10 @@ Config::Config(const string filename){
 		}
 		// Заполняем структуру proxy
 		this->proxy = {
-			// Версия протокола интернета (4, 6)
-			PROXY_IPV,
+			// Версия внутреннего протокола интернета (4, 6)
+			proxy_intIPv,
+			// Версия внешнего протокола интернета (4, 6)
+			proxy_extIPv,
 			// Тип прокси сервера (http, socks5, redirect)
 			proxy_type,
 			// Устанавливаем порт прокси сервера
@@ -359,7 +368,9 @@ Config::Config(const string filename){
 			// Максимальное количество файловых дескрипторов
 			CONNECTS_FDS,
 			// Общее количество одновременных подключений к прокси серверу
-			CONNECTS_ALL
+			CONNECTS_ALL,
+			// Максимальный размер скачиваемых данных в байтах
+			getBytes(CONNECTS_SIZE)
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
@@ -429,11 +440,7 @@ Config::Config(const string filename){
 		// Тип ключа определения коннектов к прокси
 		u_int connect_key = (toCase(ini.Get("connects", "key", CONNECTS_KEY)).compare("mac") == 0 ? 1 : 0);
 		// Тип прокси сервера
-		u_int proxy_type, proxy_port, proxy_ipv;
-		// Получаем версию протокола интернета
-		proxy_ipv = ini.GetInteger("proxy", "ipver", PROXY_IPV);
-		// Если версия меньше 4 или больше 6 то устанавливаем версию по умолчанию
-		proxy_ipv = ((proxy_ipv < 4) || (proxy_ipv > 6) ? PROXY_IPV : proxy_ipv);
+		u_int proxy_type, proxy_port;
 		// Получаем тип прокси сервера
 		string type = ini.Get("proxy", "type", PROXY_TYPE);
 		// Если прокси сервер это http
@@ -450,28 +457,39 @@ Config::Config(const string filename){
 			// Порт redirect прокси
 			case 3: proxy_port = PROXY_REDIRECT_PORT;	break;
 		}
+		// Массив протоколов
+		vector <string> ipVx = split(ini.Get("proxy", "ipver", PROXY_IPV), "->");
+		// Запоминаем внешнюю версию интернет протокола
+		u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
+		// Запоминаем внутреннюю версию интернет протокола
+		u_int proxy_extIPv = ::atoi(ipVx[1].c_str());
+		// Если версия меньше 4 или больше 6 то устанавливаем версию по умолчанию
+		proxy_intIPv = ((proxy_intIPv < 4) || (proxy_intIPv > 6) ? 4 : proxy_intIPv);
+		proxy_extIPv = ((proxy_extIPv < 4) || (proxy_extIPv > 6) ? 4 : proxy_extIPv);
 		// Массив dns серверов
-		vector <string> resolver = split(ini.Get("proxy", "resolver", ""));
+		vector <string> resolver = split(ini.Get("proxy", "resolver", ""), "|");
 		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
-		if(resolver.empty() && (proxy_ipv == 6)) resolver = PROXY_RESOLVER6;
+		if(resolver.empty() && (proxy_extIPv == 6)) resolver = PROXY_RESOLVER6;
 		// Если ресолвер пустой и протокол версии 4
 		else if(resolver.empty()) resolver = PROXY_RESOLVER;
 		// Массив версий http протоколов
-		vector <string> gvhttp = split(ini.Get("gzip", "vhttp", ""));
+		vector <string> gvhttp = split(ini.Get("gzip", "vhttp", ""), "|");
 		// Если версии не указаны тогда устанавливаем значение по умолчанию
 		if(gvhttp.empty()) gvhttp = GZIP_VHTTP;
 		// Массив параметров сжатия для проксированных запросов
-		vector <string> gproxied = split(ini.Get("gzip", "proxied", ""));
+		vector <string> gproxied = split(ini.Get("gzip", "proxied", ""), "|");
 		// Если версии не указаны тогда устанавливаем значение по умолчанию
 		if(gproxied.empty()) gproxied = GZIP_PROXIED;
 		// Массив параметров сжатия для типов данных
-		vector <string> gtypes = split(ini.Get("gzip", "types", ""));
+		vector <string> gtypes = split(ini.Get("gzip", "types", ""), "|");
 		// Если версии не указаны тогда устанавливаем значение по умолчанию
 		if(gtypes.empty()) gtypes = GZIP_TYPES;
 		// Заполняем структуру proxy
 		this->proxy = {
-			// Версия протокола интернета (4, 6)
-			proxy_ipv,
+			// Версия внутреннего протокола интернета (4, 6)
+			proxy_intIPv,
+			// Версия внешнего протокола интернета (4, 6)
+			proxy_extIPv,
 			// Тип прокси сервера (http, socks5, redirect)
 			proxy_type,
 			// Устанавливаем порт прокси сервера
@@ -595,7 +613,9 @@ Config::Config(const string filename){
 			// Максимальное количество файловых дескрипторов
 			(u_int) ini.GetInteger("connects", "fds", CONNECTS_FDS),
 			// Общее количество одновременных подключений к прокси серверу
-			(int) ini.GetInteger("connects", "all", CONNECTS_ALL)
+			(int) ini.GetInteger("connects", "all", CONNECTS_ALL),
+			// Максимальный размер скачиваемых данных в байтах
+			getBytes(ini.Get("connects", "size", CONNECTS_SIZE))
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
