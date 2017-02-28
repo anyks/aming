@@ -649,6 +649,10 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, const siz
 					const char * bodyBuffer = this->body.data();
 					// Выполняем обработку до тех пор пока все не обработаем
 					while(true){
+						
+
+						cout << " ******************** " << (bodyBuffer + offset) << " == " << len << endl;
+
 						// Получаем новую строку
 						string data = string(bodyBuffer + offset, len);
 						// Выполняем поиск завершения передачи чанков
@@ -861,12 +865,12 @@ bool HttpQuery::empty(){
 	return this->result.empty();
 }
 /**
- * HttpQuery Конструктор
+ * init Метод инициализации
  * @param code       код сообщения
  * @param mess       данные сообщения
  * @param entitybody вложенные данные
  */
-HttpQuery::HttpQuery(short code, string mess, vector <char> entitybody){
+void HttpQuery::init(const short code, const string mess, vector <char> entitybody){
 	// Очищаем вектор
 	this->result.clear();
 	// Если строка существует
@@ -881,6 +885,16 @@ HttpQuery::HttpQuery(short code, string mess, vector <char> entitybody){
 			copy(entitybody.begin(), entitybody.end(), back_inserter(this->result));
 		}
 	}
+}
+/**
+ * HttpQuery Конструктор
+ * @param code       код сообщения
+ * @param mess       данные сообщения
+ * @param entitybody вложенные данные
+ */
+HttpQuery::HttpQuery(const short code, const string mess, vector <char> entitybody){
+	// Выполняем инициализацию
+	init(code, mess, entitybody);
 }
 /**
  * ~HttpQuery Деструктор

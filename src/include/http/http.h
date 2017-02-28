@@ -284,12 +284,19 @@ class HttpQuery {
 		 */
 		bool empty();
 		/**
+		 * init Метод инициализации
+		 * @param code       код сообщения
+		 * @param mess       данные сообщения
+		 * @param entitybody вложенные данные
+		 */
+		void init(const short code, const string mess, vector <char> entitybody = {});
+		/**
 		 * HttpQuery Конструктор
 		 * @param code       код сообщения
 		 * @param mess       данные сообщения
 		 * @param entitybody вложенные данные
 		 */
-		HttpQuery(short code = 0, string mess = "", vector <char> entitybody = {});
+		HttpQuery(const short code = 0, const string mess = "", vector <char> entitybody = {});
 		/**
 		 * ~HttpQuery Деструктор
 		 */

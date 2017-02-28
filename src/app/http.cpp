@@ -418,18 +418,14 @@ void BufferHttpProxy::checkClose(){
 		this->httpResponse.setBodyEnd();
 		// Если это режим сжатия, тогда отправляем завершающие данные
 		if(this->httpResponse.isIntGzip()){
-			// Получаем буфер исходящих данных
-			struct evbuffer * output = bufferevent_get_output(this->events.client);
-			// Создаем буфер для исходящих данных
-			struct evbuffer * tmp = evbuffer_new();
-			// Получаем данные для отправки в виде чанков
+			// Получаем данные для отправки в целом виде
 			string data = this->httpResponse.getResponseData();
-			// Добавляем в буфер оставшиеся данные
-			evbuffer_add(tmp, data.data(), data.size());
-			// Отправляем данные клиенту
-			evbuffer_add_buffer(output, tmp);
-			// Удаляем временный буфер
-			evbuffer_free(tmp);
+			// Данные для вывода
+			this->response.init(this->httpResponse.getStatus(), data);
+			// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
+			bufferevent_setwatermark(this->events.client, EV_WRITE, data.size(), 0);
+			// Отправляем клиенту сообщение
+			bufferevent_write(this->events.client, data.data(), data.size());
 		// Выполняем отключение
 		} else close();
 		// Если тело собрано то получаем данные тела для логов
@@ -450,7 +446,7 @@ void BufferHttpProxy::checkClose(){
  */
 const size_t BufferHttpProxy::getBodyMethod(){
 	// Метод обработки данных
-	size_t method = 1;
+	size_t method = 0;
 	// Если данные существуют
 	if(this->httpResponse.size()){
 		// Получаем размер контента, если он есть
@@ -465,8 +461,9 @@ const size_t BufferHttpProxy::getBodyMethod(){
 			if(!method) method = 0;
 		// Если тип передачи данных чанками
 		} else if(!te.empty() && (te.find("chunked") != string::npos)) method = 2;
-	// Указываем что метод не определен
-	} else method = 0;
+		// Если это не автоотключение тогда устанавливаем запрещенный метод
+		else if(this->httpResponse.isClose()) method = 1;
+	}
 	// Выводим значение метода обработки данных
 	return method;
 }
@@ -1206,15 +1203,14 @@ void HttpProxy::send_http_data(void * ctx){
 			struct evbuffer * tmp = evbuffer_new();
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
-			// Получаем метод отправки данных
-			size_t method = http->getBodyMethod();
 			// Добавляем данные тела
-			size_t size = http->httpResponse.setBodyData(buffer, len, method);
+			size_t size = http->httpResponse.setBodyData(buffer, len, http->getBodyMethod());
 			// Получаем размер данных превысил разрешенный предел
-			if(((method > 0) && (method < 3))
-			&& (http->httpResponse.getRawBodySize() > http->proxy->config->connects.size)){
+			if(http->httpResponse.getRawBodySize() > http->proxy->config->connects.size){
 				// Закрываем подключение сервера
 				http->closeServer();
+				// Активируем отдачу буферов целиком одним разом
+				socket_tcpcork(http->sockets.client, http->proxy->log);
 				// Формируем ответ клиенту, что домен не найден
 				http->response = http->httpRequest.brokenRequest();
 				// Отправляем ответ что подключение запрещено
@@ -1308,12 +1304,18 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			}
 			// Если все данные получены
 			if(http->httpResponse.getFullHeaders()){
-				// Получаем размер ожидаемых данных
-				size_t size = http->getBodyMethod();
+				// Если размер данных меньше 1KB и подключение не постоянное, тогда активируем отправку одним разом
+				if(!http->client.alive && (http->httpResponse.getStatus() > 300)){
+					// Активируем отдачу буферов целиком одним разом
+					socket_tcpcork(http->sockets.server, http->proxy->log);
+					socket_tcpcork(http->sockets.client, http->proxy->log);
+				}
 				// Получаем размер данных превысил разрешенный предел
-				if(size > http->proxy->config->connects.size){
+				if(http->getBodyMethod() > http->proxy->config->connects.size){
 					// Закрываем подключение сервера
 					http->closeServer();
+					// Активируем отдачу буферов целиком одним разом
+					socket_tcpcork(http->sockets.client, http->proxy->log);
 					// Формируем ответ клиенту, что домен не найден
 					http->response = http->httpRequest.brokenRequest();
 					// Отправляем ответ что подключение запрещено
@@ -1321,37 +1323,28 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					// Выходим из обработки данных
 					return;
 				}
-				// Если размер данных меньше 1KB и подключение не постоянное, тогда активируем отправку одним разом
-				if(!http->client.alive && ((size > 2) && (size <= 1024))){
-					// Активируем отдачу буферов целиком одним разом
-					socket_tcpcork(http->sockets.server, http->proxy->log);
-					socket_tcpcork(http->sockets.client, http->proxy->log);
-				}
 				// Проверяем является ли это переключение на другой протокол
 				http->checkUpgrade();
 				// Активируем сжатие данных, на стороне прокси сервера
 				http->setCompress();
-				// Если это не режим сжатия, тогда отправляем заголовок
-				if(!http->httpResponse.isIntGzip()
-				|| (http->httpResponse.getStatus() != 200)){
-					// Создаем буфер для исходящих данных
-					struct evbuffer * tmp = evbuffer_new();
+				// Если данных нет или это не сжатие на стороне прокси, отправляем заголовки
+				if(!http->httpResponse.isIntGzip()){
 					// Получаем данные заголовков
 					string headers = http->httpResponse.getResponseHeaders();
-					// Добавляем в новый буфер модифицированные заголовки
-					evbuffer_add(tmp, headers.data(), headers.length());
-					// Отправляем данные клиенту
-					evbuffer_add_buffer(output, tmp);
-					// Удаляем временный буфер
-					evbuffer_free(tmp);
+					// Данные для вывода
+					http->response.init(http->httpResponse.getStatus(), headers);
+					// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
+					bufferevent_setwatermark(http->events.client, EV_WRITE, headers.size(), 0);
+					// Отправляем клиенту сообщение
+					bufferevent_write(http->events.client, headers.data(), headers.size());
 				}
 				// Выполняем инициализацию тела данных
 				http->httpResponse.initBody(
 					http->proxy->config->gzip.chunk,
 					http->proxy->config->gzip.level
 				);
-				// Выполняем отправку данных
-				send_http_data(http);
+				// Если данные есть тогда продолжаем обработку данных
+				if(evbuffer_get_length(input)) send_http_data(http);
 			}
 		// Закрываем соединение
 		} else http->close();
@@ -1512,8 +1505,9 @@ void HttpProxy::write_client_cb(struct bufferevent * bev, void * ctx){
 	// Если подключение не передано
 	if(http){
 		// Это закрывающее соединение
-		if(!http->response.empty()
-		&& (http->response.code != 200)) http->close();
+		if((!http->response.empty()
+		&& (http->response.code > 300))
+		|| http->httpResponse.isClose()) http->close();
 	}
 	// Выходим
 	return;
