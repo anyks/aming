@@ -496,11 +496,11 @@ void BufferHttpProxy::sendClient(HttpData &http){
 	else this->setTimeout(TM_CLIENT, false, true);
 	// Запоминаем данные запроса
 	string response = http.getResponseData(!http.isClose() && (http.getVersion() > 1));
-
-	// cout << " --------------------2 " << http.isClose() << " == " << response << endl;
-
 	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 	if(!http.isClose()) this->sleep(response.size(), false);
+
+	// cout << " --------------------2 " << http.isClose() << " == " << response << " == " << response.size() << endl;
+
 	// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 	bufferevent_setwatermark(this->events.client, EV_WRITE, response.size(), 0);
 	// Отправляем клиенту сообщение
@@ -1480,8 +1480,15 @@ void HttpProxy::do_request(void * ctx){
 void HttpProxy::write_client_cb(struct bufferevent * bev, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
-	// Если подключение не передано
-	if(http && http->httpResponse.isClose()) http->close();
+	// Если подключение передано
+	if(http){
+		// Получаем буферы входящих данных и исходящих
+		struct evbuffer * output = bufferevent_get_output(http->events.client);
+		// Получаем размер входящих данных
+		const size_t len = evbuffer_get_length(output);
+		// Отключаем клиента если требуется
+		if(!len && http->httpResponse.isClose()) http->close();
+	}
 	// Выходим
 	return;
 }

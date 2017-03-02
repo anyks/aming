@@ -675,7 +675,7 @@ const size_t HttpData::HttpBody::addData(const char * buffer, const size_t size,
 						cout << " ******************** body = " << strlen(bodyBuffer) << " == offset = " << offset << " == len = " << len << endl;
 
 						// Получаем новую строку
-						string data = string(bodyBuffer + offset, len);
+						string data = string(bodyBuffer + offset, len - offset);
 						// Выполняем поиск завершения передачи чанков
 						size_t pos = data.find("\r\n");
 						// Если нашли переход
