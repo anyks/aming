@@ -428,7 +428,7 @@ void BufferHttpProxy::checkClose(){
 		// Указываем что запрос завершен
 		this->httpResponse.setBodyEnd();
 		// Отсылаем данные клиенту
-		this->sendClient(this->httpResponse);
+		this->sendClient();
 		// Формируем лог данные
 		string log = (this->client.request + "\r\n\r\n");
 		// Дополняем лог данные, данными ответа
@@ -487,37 +487,27 @@ void BufferHttpProxy::setTimeout(const u_short type, const bool read, const bool
 }
 /**
  * sendClient Метод отправки данных на клиент
- * @param http объект http данных
  */
-void BufferHttpProxy::sendClient(HttpData &http){
+void BufferHttpProxy::sendClient(){
 	// Если это код разрешающий коннект, устанавливаем таймер для клиента
-	if(!http.isClose()) this->setTimeout(TM_CLIENT, true, true);
+	if(!this->httpResponse.isClose()) this->setTimeout(TM_CLIENT, true, true);
 	// Если это завершение работы то устанавливаем таймер только на запись
 	else this->setTimeout(TM_CLIENT, false, true);
 	// Запоминаем данные запроса
-	string response = http.getResponseData(!http.isClose() && (http.getVersion() > 1));
+	string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
 	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
-	if(!http.isClose()) this->sleep(response.size(), false);
-
-	// cout << " --------------------2 " << http.isClose() << " == " << response << " == " << response.size() << endl;
-
+	if(!this->httpResponse.isClose()) this->sleep(response.size(), false);
 	// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 	bufferevent_setwatermark(this->events.client, EV_WRITE, response.size(), 0);
 	// Активируем ватермарк
 	bufferevent_enable(this->events.client, EV_WRITE);
 	// Отправляем клиенту сообщение
 	bufferevent_write(this->events.client, response.data(), response.size());
-	// Удаляем объект подключения
-	if(http.isClose() && !this->parser.httpData.empty()){
-		// Удаляем из массива объект запроса
-		this->parser.httpData.erase(this->parser.httpData.begin());
-	}
 }
 /**
  * sendServer Метод отправки данных на сервер
- * @param http объект http данных
  */
-void BufferHttpProxy::sendServer(HttpData &http){
+void BufferHttpProxy::sendServer(){
 	// Если это не постоянное подключение
 	if(!this->client.alive)
 		// Устанавливаем таймаут на чтение и запись
@@ -525,10 +515,7 @@ void BufferHttpProxy::sendServer(HttpData &http){
 	// Устанавливаем таймаут только на запись
 	else this->setTimeout(TM_SERVER, false, true);
 	// Формируем запрос на сервер
-	this->client.request = http.getRequestData();
-
-	// cout << " --------------------1 " << this->client.request << endl;
-
+	this->client.request = this->httpRequest.getRequestData();
 	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 	this->sleep(this->client.request.size(), false);
 	// Отправляем серверу сообщение
@@ -1212,9 +1199,9 @@ void HttpProxy::send_http_data(void * ctx){
 				// Активируем отдачу буферов целиком одним разом
 				socket_tcpcork(http->sockets.client, http->proxy->log);
 				// Формируем ответ клиенту, что домен не найден
-				http->httpRequest.brokenRequest();
+				http->httpResponse.brokenRequest();
 				// Отправляем ответ клиенту
-				http->sendClient(http->httpRequest);
+				http->sendClient();
 			// Если данные соответствуют разрешенным размерам
 			} else {
 				// И если это не автоотключение от сервера, так как эти данные будут отправлены при событии отключения
@@ -1230,7 +1217,7 @@ void HttpProxy::send_http_data(void * ctx){
 						// Удаляем временный буфер
 						evbuffer_free(tmp);
 					// Если это удачно завершенный запрос и тело получено, отправляем данные клиенту
-					} else if(http->httpResponse.isEndBody()) http->sendClient(http->httpResponse);
+					} else if(http->httpResponse.isEndBody()) http->sendClient();
 				}
 				// Если тело собрано то получаем данные тела для логов
 				if(http->httpResponse.isEndBody()){
@@ -1281,14 +1268,6 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		else if(http->httpResponse.isEndHeaders()) send_http_data(http);
 		// Иначе изменяем заголовки
 		else if(len){
-			// Если объект http данных не создан
-			if(http->httpResponse.isEmpty()){
-				// Создаем объект http данных
-				http->httpResponse.create(
-					http->proxy->config->proxy.name,
-					http->proxy->config->options
-				);
-			}
 			// Считываем данные из буфера до тех пор пока можешь считать
 			while(!http->httpResponse.isEndHeaders()){
 				// Считываем строки из буфера
@@ -1322,9 +1301,9 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					// Активируем отдачу буферов целиком одним разом
 					socket_tcpcork(http->sockets.client, http->proxy->log);
 					// Формируем ответ клиенту, что домен не найден
-					http->httpRequest.brokenRequest();
+					http->httpResponse.brokenRequest();
 					// Отправляем ответ клиенту
-					http->sendClient(http->httpRequest);
+					http->sendClient();
 					// Выходим из обработки данных
 					return;
 				}
@@ -1334,7 +1313,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				http->setCompress();
 				// Если данных нет или это не сжатие на стороне прокси, отправляем заголовки
 				if(!http->httpResponse.isIntGzip()
-				&& !http->httpResponse.isClose()) http->sendClient(http->httpResponse);
+				&& !http->httpResponse.isClose()) http->sendClient();
 				// Выполняем инициализацию тела данных
 				http->httpResponse.initBody(
 					http->proxy->config->gzip.chunk,
@@ -1371,11 +1350,11 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 				if(!http->auth && (http->httpRequest.getLogin().empty()
 				|| http->httpRequest.getPassword().empty())){
 					// Формируем ответ клиенту
-					http->httpRequest.requiredAuth();
+					http->httpResponse.requiredAuth();
 				// Сообщаем что авторизация не удачная
 				} else if(!http->auth) {
 					// Формируем ответ клиенту
-					http->httpRequest.faultAuth();
+					http->httpResponse.faultAuth();
 				// Если авторизация прошла
 				} else {
 					// Получаем порт сервера
@@ -1399,22 +1378,22 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 						// Определяем порт, если это метод connect
 						if(http->client.connect && (conn_enabled || http->client.https))
 							// Формируем ответ клиенту
-							http->httpRequest.authSuccess();
+							http->httpResponse.authSuccess();
 						// Если connect разрешен только для https подключений
 						else if(!conn_enabled && http->client.connect)
 							// Сообращем что подключение запрещено
-							http->httpRequest.faultConnect();
+							http->httpResponse.faultConnect();
 						// Иначе делаем запрос на получение данных
 						else {
 							// Указываем что нужно отключится сразу после отправки запроса
 							if(!http->client.alive) http->httpRequest.setClose();
 							// Отправляем данные на сервер
-							http->sendServer(http->httpRequest);
+							http->sendServer();
 							// Выходим
 							return;
 						}
 					// Если подключение не удачное то сообщаем об этом
-					} else if(connect == 0) http->httpRequest.faultConnect();
+					} else if(connect == 0) http->httpResponse.faultConnect();
 					// Если подключение удалено, выходим
 					else {
 						// Закрываем подключение
@@ -1424,7 +1403,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					}
 				}
 			// Если подключение к указанному серверу запрещено
-			} else http->httpRequest.faultAuth();
+			} else http->httpResponse.faultAuth();
 		// Если домен не найден
 		} else {
 			// Выводим в лог сообщение
@@ -1437,12 +1416,12 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 				http->sockets.client
 			);
 			// Формируем ответ клиенту, что домен не найден
-			http->httpRequest.faultConnect();
+			http->httpResponse.faultConnect();
 		}
 		// Активируем отдачу буферов целиком одним разом
-		if(http->httpRequest.isClose()) socket_tcpcork(http->sockets.client, http->proxy->log);
+		if(http->httpResponse.isClose()) socket_tcpcork(http->sockets.client, http->proxy->log);
 		// Отправляем ответ клиенту
-		http->sendClient(http->httpRequest);
+		http->sendClient();
 	}
 	// Выходим
 	return;
@@ -1458,11 +1437,16 @@ void HttpProxy::do_request(void * ctx){
 	if(http){
 		// Если данные еще не заполнены, но они есть в массиве
 		if(!http->parser.httpData.empty()
-		&& !http->httpRequest.isEndHeaders()){
+		&& http->httpRequest.isEmpty()){
 			// Очищаем таймеры для клиента
 			http->setTimeout(TM_CLIENT);
 			// Очищаем объект ответа
 			http->httpResponse.clear();
+			// Создаем объект http данных
+			http->httpResponse.create(
+				http->proxy->config->proxy.name,
+				http->proxy->config->options
+			);
 			// Получаем первый элемент из массива
 			auto httpData = http->parser.httpData.begin();
 			// Запоминаем данные объекта http запроса
@@ -1489,7 +1473,7 @@ void HttpProxy::write_client_cb(struct bufferevent * bev, void * ctx){
 		// Получаем размер входящих данных
 		const size_t len = evbuffer_get_length(output);
 		// Отключаем клиента если требуется
-		if(!len && (http->httpResponse.isClose() || http->httpRequest.isClose())) http->close();
+		if(!len && http->httpResponse.isClose()) http->close();
 	}
 	// Выходим
 	return;
@@ -1532,9 +1516,6 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 			char * buffer = new char[len];
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
-
-			// cout << " ############### " << string(buffer, len) << endl;
-
 			// Удаляем данные из буфера
 			evbuffer_drain(input, http->parser.parse(buffer, len));
 			// Удаляем буфер данных

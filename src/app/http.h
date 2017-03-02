@@ -242,14 +242,12 @@ class BufferHttpProxy {
 		void setTimeout(const u_short type, const bool read = false, const bool write = false);
 		/**
 		 * sendClient Метод отправки данных на клиент
-		 * @param http объект http данных
 		 */
-		void sendClient(HttpData &http);
+		void sendClient();
 		/**
 		 * sendServer Метод отправки данных на сервер
-		 * @param http объект http данных
 		 */
-		void sendServer(HttpData &http);
+		void sendServer();
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param proxy объект данных прокси сервера

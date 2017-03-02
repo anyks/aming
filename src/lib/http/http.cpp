@@ -670,10 +670,6 @@ const size_t HttpData::HttpBody::addData(const char * buffer, const size_t size,
 					const char * bodyBuffer = this->body.data();
 					// Выполняем обработку до тех пор пока все не обработаем
 					while(true){
-						
-
-						cout << " ******************** body = " << strlen(bodyBuffer) << " == offset = " << offset << " == len = " << len << endl;
-
 						// Получаем новую строку
 						string data = string(bodyBuffer + offset, len - offset);
 						// Выполняем поиск завершения передачи чанков
@@ -975,9 +971,11 @@ void HttpData::createRequest(const u_short index){
 		setStatus(this->response[index].code);
 		// Очищаем тело вложений
 		this->body.clear();
+		// Устанавливаем версию протокола
+		this->version = "1.1";
 		// Формируем запрос
 		this->http = (
-			string("HTTP/1.1 ")
+			string("HTTP/") + this->version + string(" ")
 			+ to_string(this->response[index].code)
 			+ string(" ") + this->response[index].text
 		);
@@ -1024,9 +1022,9 @@ const string HttpData::createHeadResponse(){
 		// Фильтруем заголовки
 		if(agent && (::toCase(head).compare("via") == 0)){
 			// Добавляем стандартный заголовок проксирования
-			value = (this->version + string(" ")
+			value += (string(", ") + this->version + string(" ")
 			+ this->appName + string(" (") + string(APP_NAME)
-			+ string("/") + this->appVersion + string("), ") + value);
+			+ string("/") + this->appVersion + string(")"));
 			// Запоминаем что заменили заголовок
 			via = true;
 		}
@@ -1112,9 +1110,9 @@ const string HttpData::createHeadRequest(){
 		// Фильтруем заголовки
 		if(agent && (::toCase(head).compare("via") == 0)){
 			// Добавляем стандартный заголовок проксирования
-			value = (this->version + string(" ")
+			value += (string(", ") + this->version + string(" ")
 			+ this->appName + string(" (") + string(APP_NAME)
-			+ string("/") + this->appVersion + string("), ") + value);
+			+ string("/") + this->appVersion + string(")"));
 			// Запоминаем что заменили заголовок
 			via = true;
 		}
@@ -1336,7 +1334,20 @@ const size_t HttpData::setEntitybody(const char * buffer, const size_t size){
 			// Если это чанкование
 			if(!ch.empty() && (ch.find("chunked") != string::npos)) length = 2;
 			// Если это не автоотключение тогда копируем данные так как они есть
-			else if(isClose()) length = 1;
+			else if(isClose()){
+				// Результат работы регулярного выражения
+				smatch match;
+				// Устанавливаем правило регулярного выражения
+				regex e(
+					"^(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+					"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+",
+					regex::ECMAScript | regex::icase
+				);
+				// Выполняем поиск протокола
+				regex_search(this->http, match, e);
+				// Если протокол найден
+				if(match.empty()) length = 1;
+			}
 		}
 		// Добавляем данные тела
 		return this->body.addData(buffer, size, length);
