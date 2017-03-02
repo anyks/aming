@@ -503,6 +503,8 @@ void BufferHttpProxy::sendClient(HttpData &http){
 
 	// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 	bufferevent_setwatermark(this->events.client, EV_WRITE, response.size(), 0);
+	// Активируем ватермарк
+	bufferevent_enable(this->events.client, EV_WRITE);
 	// Отправляем клиенту сообщение
 	bufferevent_write(this->events.client, response.data(), response.size());
 	// Удаляем объект подключения
@@ -1487,7 +1489,7 @@ void HttpProxy::write_client_cb(struct bufferevent * bev, void * ctx){
 		// Получаем размер входящих данных
 		const size_t len = evbuffer_get_length(output);
 		// Отключаем клиента если требуется
-		if(!len && http->httpResponse.isClose()) http->close();
+		if(!len && (http->httpResponse.isClose() || http->httpRequest.isClose())) http->close();
 	}
 	// Выходим
 	return;
