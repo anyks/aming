@@ -156,7 +156,7 @@ class BufferHttpProxy {
 		 * @param  flag флаг указания типа регистра
 		 * @return      результирующая строка
 		 */
-		const string toCase(string str, bool flag = false);
+		const string toCase(const string str, const bool flag = false);
 		/**
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)
@@ -172,8 +172,6 @@ class BufferHttpProxy {
 		void * frze = NULL;
 		// Флаг авторизации
 		bool auth = false;
-		// Количество отосланных байт
-		size_t sendBytes = 0;
 		// Объект парсера
 		Http parser;
 		// Параметры подключившегося клиента
@@ -188,8 +186,6 @@ class BufferHttpProxy {
 		HttpData httpResponse;
 		// Данные http запроса
 		HttpData httpRequest;
-		// Ответ системы
-		HttpQuery response;
 		// Параметры прокси сервера
 		System * proxy = NULL;
 		// Создаем объект dns ресолвера
@@ -231,24 +227,29 @@ class BufferHttpProxy {
 		 */
 		void checkClose();
 		/**
-		 * getBodyMethod Метод получения метода обработки входящих данных тела
-		 * @return метод обработки входящих данных тела
-		 */
-		const size_t getBodyMethod();
-		/**
 		 * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
 		 * @param  size размер передаваемых данных
 		 * @param  type тип передаваемого сообщения (true - чтение, false - запись)
 		 * @return      время в секундах на которое следует задержать поток
 		 */
-		void sleep(size_t size, bool type);
+		void sleep(const size_t size, const bool type);
 		/**
 		 * setTimeout Метод установки таймаутов
 		 * @param type  тип подключения (клиент или сервер)
 		 * @param read  таймаут на чтение
 		 * @param write таймаут на запись
 		 */
-		void setTimeout(const u_short type, bool read = false, bool write = false);
+		void setTimeout(const u_short type, const bool read = false, const bool write = false);
+		/**
+		 * sendClient Метод отправки данных на клиент
+		 * @param http объект http данных
+		 */
+		void sendClient(HttpData &http);
+		/**
+		 * sendServer Метод отправки данных на сервер
+		 * @param http объект http данных
+		 */
+		void sendServer(HttpData &http);
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param proxy объект данных прокси сервера
@@ -280,60 +281,60 @@ class HttpProxy {
 		 * @param mac аппаратный адрес сетевого интерфейса клиента
 		 * @param fd  файловый дескриптор (сокет) подключившегося клиента
 		 */
-		void create_client(const string ip, const string mac, evutil_socket_t fd);
+		void create_client(const string ip, const string mac, const evutil_socket_t fd);
 		/**
 		 * create_server Функция создания прокси сервера
 		 * @return сокет прокси сервера
 		 */
-		evutil_socket_t create_server();
+		const evutil_socket_t create_server();
 		/**
 		 * get_mac Метод определения мак адреса клиента
 		 * @param  ctx указатель на объект подключения
 		 * @return     данные мак адреса
 		 */
-		static string get_mac(void * ctx);
+		static const string get_mac(void * ctx);
 		/**
 		 * get_ip Функция получения данных ip адреса
 		 * @param  family тип интернет протокола
 		 * @param  ctx    указатель на объект подключения
 		 * @return        данные ip адреса
 		 */
-		static string get_ip(int family, void * ctx);
+		static const string get_ip(const int family, void * ctx);
 		/**
 		 * socket_nosigpipe Функция установки отключения сигнала записи в оборванное подключение
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int socket_nosigpipe(evutil_socket_t fd, LogApp * log);
+		static const int socket_nosigpipe(const evutil_socket_t fd, LogApp * log);
 		/**
 		 * socket_nonblocking Функция установки неблокирующего сокета
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int socket_nonblocking(evutil_socket_t fd, LogApp * log);
+		static const int socket_nonblocking(const evutil_socket_t fd, LogApp * log);
 		/**
 		 * socket_tcpcork Функция активации tcp_cork
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int socket_tcpcork(evutil_socket_t fd, LogApp * log);
+		static const int socket_tcpcork(const evutil_socket_t fd, LogApp * log);
 		/**
 		 * socket_tcpnodelay Функция отключения алгоритма Нейгла
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int socket_tcpnodelay(evutil_socket_t fd, LogApp * log);
+		static const int socket_tcpnodelay(const evutil_socket_t fd, LogApp * log);
 		/**
 		 * socket_reuseable Функция разрешающая повторно использовать сокет после его удаления
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static int socket_reuseable(evutil_socket_t fd, LogApp * log);
+		static const int socket_reuseable(const evutil_socket_t fd, LogApp * log);
 		/**
 		 * socket_keepalive Функция устанавливает постоянное подключение на сокет
 		 * @param  fd      файловый дескриптор (сокет)
@@ -343,7 +344,7 @@ class HttpProxy {
 		 * @param  intvl   время между попытками
 		 * @return         результат работы функции
 		 */
-		static int socket_keepalive(evutil_socket_t fd, LogApp * log, int cnt, int idle, int intvl);
+		static const int socket_keepalive(const evutil_socket_t fd, LogApp * log, const int cnt, const int idle, const int intvl);
 		/**
 		 * socket_buffersize Функция установки размеров буфера
 		 * @param  fd         файловый дескриптор (сокет)
@@ -353,31 +354,26 @@ class HttpProxy {
 		 * @param  log        указатель на объект ведения логов
 		 * @return            результат работы функции
 		 */
-		static int socket_buffersize(evutil_socket_t fd, int read_size, int write_size, u_int maxcon, LogApp * log);
+		static const int socket_buffersize(const evutil_socket_t fd, const int read_size, const int write_size, const u_int maxcon, LogApp * log);
 		/**
 		 * check_auth Функция проверки логина и пароля
 		 * @param ctx объект входящих данных
 		 * @return    результат проверки подлинности
 		 */
-		static bool check_auth(void * ctx);
+		static const bool check_auth(void * ctx);
 		/**
 		 * isallow_remote_connect Функция проверяет разрешено ли подключение к удаленному серверу
 		 * @param  ip  ip адрес удаленного сервера
 		 * @param  ctx объект с данными подключения
 		 * @return     результат проверки
 		 */
-		static bool isallow_remote_connect(const string ip, void * ctx);
+		static const bool isallow_remote_connect(const string ip, void * ctx);
 		/**
 		 * connect_server Функция создания сокета для подключения к удаленному серверу
 		 * @param ctx объект входящих данных
 		 * @return    результат подключения
 		 */
-		static int connect_server(void * ctx);
-		/**
-		 * send_client_response Функция отправки ответа клиенту
-		 * @param ctx передаваемый объект
-		 */
-		static void send_client_response(void * ctx);
+		static const int connect_server(void * ctx);
 		/**
 		 * send_http_data Функция отправки незашифрованных данных клиенту
 		 * @param ctx передаваемый объект
@@ -400,7 +396,7 @@ class HttpProxy {
 		 * @param events произошедшее событие
 		 * @param ctx    объект входящих данных
 		 */
-		static void event_cb(struct bufferevent * bev, short events, void * ctx);
+		static void event_cb(struct bufferevent * bev, const short events, void * ctx);
 		/**
 		 * write_client_cb Функция записи данных в сокет клиента
 		 * @param bev буфер события
@@ -425,21 +421,22 @@ class HttpProxy {
 		 * @param event событие на которое сработала функция обратного вызова
 		 * @param ctx   объект передаваемый как значение
 		 */
-		static void accept_cb(evutil_socket_t fd, short event, void * ctx);
+		static void accept_cb(const evutil_socket_t fd, const short event, void * ctx);
 		/**
 		 * HttpProxy::run_server Метод запуска прокси сервера
-		 * @param socket сокет который слушает прокси сервер
+		 * @param fd  сокет (файловый дескриптор) который слушает прокси сервер
+		 * @param ctx объект прокси сервера
 		 */
-		static void run_server(evutil_socket_t socket, void * ctx);
+		static void run_server(const evutil_socket_t fd, void * ctx);
 		/**
 		 * run_works Метод запуска воркеров
-		 * @param pids   указатель на массив пидов процессов
-		 * @param socket сокет прокси сервера
-		 * @param cur    текущее значение пида процесса
-		 * @param max    максимальное значение пидов процессов
-		 * @param ctx    объект прокси сервера
+		 * @param pids указатель на массив пидов процессов
+		 * @param fd   сокет (файловый дескриптор) прокси сервера
+		 * @param cur  текущее значение пида процесса
+		 * @param max  максимальное значение пидов процессов
+		 * @param ctx  объект прокси сервера
 		 */
-		static void run_works(pid_t * pids, evutil_socket_t socket, size_t cur, size_t max, void * ctx);
+		static void run_works(pid_t * pids, const evutil_socket_t socket, const size_t cur, const size_t max, void * ctx);
 	public:
 		/**
 		 * connection Функция обработки данных подключения в треде

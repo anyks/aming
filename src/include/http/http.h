@@ -29,284 +29,254 @@
 using namespace std;
 
 /**
- * HttpHeaders Класс http заголовков
- */
-class HttpHeaders {
-	private:
-		/**
-		 * Header Структура содержащая данные заголовка
-		 */
-		struct Header {
-			string head;	// Заголовок
-			string value;	// значение заголовка
-		};
-		// Заголовки http запроса
-		vector <Header> headers;
-		/**
-		 * split Функция разделения строк на составляющие
-		 * @param str   строка для поиска
-		 * @param delim разделитель
-		 * @param v     результирующий вектор
-		 */
-		void split(const string &str, const string delim, vector <string> &v);
-	public:
-		/**
-		 * getHeader Метод извлекает данные заголовка по его ключу
-		 * @param  key ключ заголовка
-		 * @return     строка с данными заголовка
-		 */
-		HttpHeaders::Header getHeader(string key);
-		/**
-		 * clear Метод очистки данных
-		 */
-		void clear();
-		/**
-		 * remove Метод удаления заголовка по ключу
-		 * @param key ключ заголовка
-		 */
-		void remove(const string key);
-		/**
-		 * append Метод добавления заголовка
-		 * @param key ключ
-		 * @param val значение
-		 */
-		void append(const string key, const string val);
-		/**
-		 * create Метод создания объекта http заголовков
-		 * @param buffer буфер с текстовыми данными
-		 */
-		bool create(const char * buffer);
-		/**
-		 * empty Метод определяет наличие данных
-		 * @return проверка о наличи данных
-		 */
-		bool empty();
-		/**
-		 * size Метод получения размера
-		 * @return данные размера
-		 */
-		const size_t size();
-		/**
-		 * cbegin Метод получения начального итератора
-		 * @return начальный итератор
-		 */
-		vector <Header>::const_iterator cbegin() const noexcept;
-		/**
-		 * cend Метод получения конечного итератора
-		 * @return конечный итератор
-		 */
-		vector <Header>::const_iterator cend() const noexcept;
-		/**
-		 * ~HttpHeaders Деструктор
-		 */
-		~HttpHeaders();
-};
-/**
- * HttpBody Класс тела запроса
- */
-class HttpBody {
-	private:
-		/**
-		 * Chunk Структура чанков
-		 */
-		struct Chunk {
-			// Данные чанка
-			string content;
-			// Размер чанка в 16-й системе
-			string hsize = "0";
-			/**
-			 * operator = Оператор присваивания
-			 * @param chunk сторонний объект чанка
-			 * @return      указатель на текущий объект
-			 */
-			// Chunk & operator = (Chunk chunk);
-			/**
-			 * init Метод инициализации чанка
-			 * @param data данные для присваивания
-			 * @param size размер данных
-			 */
-			void init(const char * data, const size_t size);
-			/**
-			 * Chunk Конструктор
-			 * @param data данные для присваивания
-			 * @param size размер данных
-			 */
-			Chunk(const char * data = NULL, const size_t size = 0);
-		};
-		// Тип сжатия
-		u_int compress;
-		// Максимальный размер чанков в байтах
-		size_t maxSize;
-		// Активация режима внутреннего сжатия
-		bool intGzip = false;
-		// Активация режима внешнего сжатия
-		bool extGzip = false;
-		// Заполненность данных
-		bool end = false;
-		// Данные тела
-		string body;
-		// Данные тела в чистом виде
-		string rody;
-		// Массив чанков
-		vector <Chunk> chunks;
-		/**
-		 * compress_gzip Метод сжатия данных методом GZIP
-		 * @param  str   строка для сжатия данных
-		 * @return       результат сжатия
-		 */
-		const string compress_gzip(const string &str);
-		/**
-		 * decompress_gzip Метод рассжатия данных методом GZIP
-		 * @param  str   строка для расжатия данных
-		 * @return       результат расжатия
-		 */
-		const string decompress_gzip(const string &str);
-		/**
-		 * compressData Метод сжатия данных
-		 * @param  buffer буфер с данными
-		 * @param  size   размер передаваемых данных
-		 * @return        данные сжатого чанка
-		 */
-		const string compressData(const char * buffer, const size_t size);
-		/**
-		 * createChunk Метод создания чанка
-		 * @param buffer буфер с данными
-		 * @param size   размер передаваемых данных
-		 */
-		void createChunk(const char * buffer, const size_t size);
-	public:
-		/**
-		 * clear Метод сброса параметров
-		 */
-		void clear();
-		/**
-		 * setMaxSize Метод установки размера чанков
-		 * @param size размер чанков в байтах
-		 */
-		void setMaxSize(const size_t size);
-		/**
-		 * setCompress Метод установки типа сжатия
-		 * @param compress тип сжатия
-		 */
-		void setCompress(const u_int compress);
-		/**
-		 * setEnd Метод установки завершения передачи данных
-		 * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
-		 */
-		void setEnd();
-		/**
-		 * isEnd Метод проверки завершения формирования тела
-		 * @return результат проверки
-		 */
-		bool isEnd();
-		/**
-		 * isIntCompress Метод проверки на активацию внутреннего сжатия
-		 * @return результат проверки
-		 */
-		bool isIntCompress();
-		/**
-		 * isExtCompress Метод проверки на активацию внешнего сжатия
-		 * @return результат проверки
-		 */
-		bool isExtCompress();
-		/**
-		 * size Метод определения размера данных
-		 * @param  chunked чанкованием
-		 * @return         размер тела
-		 */
-		const size_t size(bool chunked = false);
-		/**
-		 * addData Метод добавления данных тела
-		 * @param  buffer буфер с данными
-		 * @param  size   размер передаваемых данных
-		 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
-		 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
-		 * @return        количество обработанных байт
-		 */
-		const size_t addData(const char * buffer, const size_t size, const size_t length = 0, bool strict = false);
-		/**
-		 * getBody Метод получения тела запроса
-		 * @param  chunked чанкованием
-		 * @return         данные тела запроса
-		 */
-		const string getBody(bool chunked = false);
-		/**
-		 * getRawBody Метод получения тела данных в чистом виде
-		 * @return данные тела запроса
-		 */
-		const string getRawBody();
-		/**
-		 * getChunks Метод получения списка чанков
-		 */
-		vector <Chunk> getChunks();
-		/**
-		 * HttpBody Конструктор
-		 * @param maxSize  максимальный размер каждого чанка (в байтах)
-		 * @param compress метод сжатия
-		 * @param intGzip  активация режима внутреннего сжатия
-		 * @param extGzip  активация режима внешнего сжатия
-		 */
-		HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, bool intGzip = false, bool extGzip = false);
-		/**
-		 * ~HttpBody Деструктор
-		 */
-		~HttpBody();
-};
-/**
- * HttpQuery Класс данных для выполнения запросов на удаленном сервере
- */
-class HttpQuery {
-	private:
-		// Результирующий вектор
-		vector <char> result;
-	public:
-		// Код сообщения
-		short code;
-		// Смещение в буфере
-		size_t offset = 0;
-		/**
-		 * clear Метод очистки данных
-		 */
-		void clear();
-		/**
-		 * data Метод получения данных запроса
-		 * @return данные запроса
-		 */
-		const char * data();
-		/**
-		 * size Метод получения размера
-		 * @return данные размера
-		 */
-		const size_t size();
-		/**
-		 * empty Метод определяет наличие данных
-		 * @return проверка о наличи данных
-		 */
-		bool empty();
-		/**
-		 * init Метод инициализации
-		 * @param code       код сообщения
-		 * @param mess       данные сообщения
-		 * @param entitybody вложенные данные
-		 */
-		void init(const short code, const string mess, vector <char> entitybody = {});
-		/**
-		 * HttpQuery Конструктор
-		 * @param code       код сообщения
-		 * @param mess       данные сообщения
-		 * @param entitybody вложенные данные
-		 */
-		HttpQuery(const short code = 0, const string mess = "", vector <char> entitybody = {});
-		/**
-		 * ~HttpQuery Деструктор
-		 */
-		~HttpQuery();
-};
-/**
  * HttpData Класс http данных
  */
 class HttpData {
 	private:
+		/**
+		 * HttpHeaders Класс http заголовков
+		 */
+		class HttpHeaders {
+			private:
+				/**
+				 * Header Структура содержащая данные заголовка
+				 */
+				struct Header {
+					string head;	// Заголовок
+					string value;	// значение заголовка
+				};
+				// Заполненность данных
+				bool end = false;
+				// Заголовки http запроса
+				vector <Header> headers;
+				/**
+				 * split Функция разделения строк на составляющие
+				 * @param str   строка для поиска
+				 * @param delim разделитель
+				 * @param v     результирующий вектор
+				 */
+				void split(const string &str, const string delim, vector <string> &v);
+			public:
+				/**
+				 * getHeader Метод извлекает данные заголовка по его ключу
+				 * @param  key ключ заголовка
+				 * @return     строка с данными заголовка
+				 */
+				HttpHeaders::Header getHeader(const string key);
+				/**
+				 * clear Метод очистки данных
+				 */
+				void clear();
+				/**
+				 * remove Метод удаления заголовка по ключу
+				 * @param key ключ заголовка
+				 */
+				void remove(const string key);
+				/**
+				 * append Метод добавления заголовка
+				 * @param key ключ
+				 * @param val значение
+				 */
+				void append(const string key, const string val);
+				/**
+				 * setEnd Метод установки завершения передачи данных
+				 */
+				void setEnd();
+				/**
+				 * create Метод создания объекта http заголовков
+				 * @param buffer буфер с текстовыми данными
+				 */
+				const bool create(const char * buffer);
+				/**
+				 * isEnd Метод проверки завершения формирования заголовков
+				 * @return результат проверки
+				 */
+				const bool isEnd();
+				/**
+				 * empty Метод определяет наличие данных
+				 * @return проверка о наличи данных
+				 */
+				const bool empty();
+				/**
+				 * size Метод получения размера
+				 * @return данные размера
+				 */
+				const size_t size();
+				/**
+				 * cbegin Метод получения начального итератора
+				 * @return начальный итератор
+				 */
+				vector <Header>::const_iterator cbegin() const noexcept;
+				/**
+				 * cend Метод получения конечного итератора
+				 * @return конечный итератор
+				 */
+				vector <Header>::const_iterator cend() const noexcept;
+				/**
+				 * ~HttpHeaders Деструктор
+				 */
+				~HttpHeaders();
+		};
+		/**
+		 * HttpBody Класс тела запроса
+		 */
+		class HttpBody {
+			private:
+				/**
+				 * Chunk Структура чанков
+				 */
+				struct Chunk {
+					// Данные чанка
+					string content;
+					// Размер чанка в 16-й системе
+					string hsize = "0";
+					/**
+					 * operator = Оператор присваивания
+					 * @param chunk сторонний объект чанка
+					 * @return      указатель на текущий объект
+					 */
+					// Chunk & operator = (Chunk chunk);
+					/**
+					 * init Метод инициализации чанка
+					 * @param data данные для присваивания
+					 * @param size размер данных
+					 */
+					void init(const char * data, const size_t size);
+					/**
+					 * Chunk Конструктор
+					 * @param data данные для присваивания
+					 * @param size размер данных
+					 */
+					Chunk(const char * data = NULL, const size_t size = 0);
+				};
+				// Тип сжатия
+				u_int compress;
+				// Максимальный размер чанков в байтах
+				size_t maxSize;
+				// Активация режима внутреннего сжатия
+				bool intGzip = false;
+				// Активация режима внешнего сжатия
+				bool extGzip = false;
+				// Заполненность данных
+				bool end = false;
+				// Данные тела
+				string body;
+				// Данные тела в чистом виде
+				string rody;
+				// Массив чанков
+				vector <Chunk> chunks;
+				/**
+				 * compress_gzip Метод сжатия данных методом GZIP
+				 * @param  str   строка для сжатия данных
+				 * @return       результат сжатия
+				 */
+				const string compress_gzip(const string &str);
+				/**
+				 * decompress_gzip Метод рассжатия данных методом GZIP
+				 * @param  str   строка для расжатия данных
+				 * @return       результат расжатия
+				 */
+				const string decompress_gzip(const string &str);
+				/**
+				 * compressData Метод сжатия данных
+				 * @param  buffer буфер с данными
+				 * @param  size   размер передаваемых данных
+				 * @return        данные сжатого чанка
+				 */
+				const string compressData(const char * buffer, const size_t size);
+				/**
+				 * createChunk Метод создания чанка
+				 * @param buffer буфер с данными
+				 * @param size   размер передаваемых данных
+				 */
+				void createChunk(const char * buffer, const size_t size);
+			public:
+				/**
+				 * clear Метод сброса параметров
+				 */
+				void clear();
+				/**
+				 * setMaxSize Метод установки размера чанков
+				 * @param size размер чанков в байтах
+				 */
+				void setMaxSize(const size_t size);
+				/**
+				 * setCompress Метод установки типа сжатия
+				 * @param compress тип сжатия
+				 */
+				void setCompress(const u_int compress);
+				/**
+				 * setEnd Метод установки завершения передачи данных
+				 * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
+				 */
+				void setEnd();
+				/**
+				 * isEnd Метод проверки завершения формирования тела
+				 * @return результат проверки
+				 */
+				const bool isEnd();
+				/**
+				 * isIntCompress Метод проверки на активацию внутреннего сжатия
+				 * @return результат проверки
+				 */
+				const bool isIntCompress();
+				/**
+				 * isExtCompress Метод проверки на активацию внешнего сжатия
+				 * @return результат проверки
+				 */
+				const bool isExtCompress();
+				/**
+				 * size Метод определения размера данных
+				 * @param  chunked чанкованием
+				 * @return         размер тела
+				 */
+				const size_t size(const bool chunked = false);
+				/**
+				 * addData Метод добавления данных тела
+				 * @param  buffer буфер с данными
+				 * @param  size   размер передаваемых данных
+				 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
+				 * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
+				 * @return        количество обработанных байт
+				 */
+				const size_t addData(const char * buffer, const size_t size, const size_t length = 0, const bool strict = false);
+				/**
+				 * getBody Метод получения тела запроса
+				 * @param  chunked чанкованием
+				 * @return         данные тела запроса
+				 */
+				const string getBody(const bool chunked = false);
+				/**
+				 * getRawBody Метод получения тела данных в чистом виде
+				 * @return данные тела запроса
+				 */
+				const string getRawBody();
+				/**
+				 * getChunks Метод получения списка чанков
+				 */
+				vector <Chunk> getChunks();
+				/**
+				 * HttpBody Конструктор
+				 * @param maxSize  максимальный размер каждого чанка (в байтах)
+				 * @param compress метод сжатия
+				 * @param intGzip  активация режима внутреннего сжатия
+				 * @param extGzip  активация режима внешнего сжатия
+				 */
+				HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, const bool intGzip = false, const bool extGzip = false);
+				/**
+				 * ~HttpBody Деструктор
+				 */
+				~HttpBody();
+		};
+		/**
+		 * Http Структура http данных
+		 */
+		struct Http {
+			short code;		// Код запроса
+			string text;	// Текст запроса
+			string headers;	// Заголовки
+			string body;	// Тело
+		};
 		/**
 		 * Connect Структура подключения
 		 */
@@ -316,14 +286,12 @@ class HttpData {
 			string protocol;	// Протокол
 		};
 		// Основные переменные класса
-		bool			fullHeaders;		// Заголовки заполнены
 		bool			intGzip;			// Активация внутреннего режима сжатия
 		bool			extGzip;			// Активация внешнего режима сжатия
 		u_short			options;			// Параметры прокси сервера
 		u_int			status;				// Статус код http запроса
 		string			appName;			// Название приложения
 		string			appVersion;			// Версия приложения
-		string			query;				// Данные запроса
 		string			http;				// http запрос
 		string			auth;				// Тип авторизации
 		string			method;				// Метод запроса
@@ -334,170 +302,203 @@ class HttpData {
 		string			port;				// Порт запроса
 		string			login;				// Логин
 		string			password;			// Пароль
-		string			request;			// Результирующий данные запроса
-		size_t			length = 0;			// Количество данных в объекте
-		vector <char>	entitybody;			// Данные http вложений
 		HttpBody		body;				// Тело http запроса
 		HttpHeaders		headers;			// Заголовки http запроса
 		// Шаблоны ответов
-		string html[12] = {
+		vector <Http> response = {
 			// Подключение разрешено [0]
-			"HTTP/1.0 200 Connection established\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n\r\n",
+			{
+				200, "Connection established", "\r\n", ""
 			// Продолжить подключение [1]
-			"HTTP/1.1 100 Continue\r\n\r\n",
+			},{
+				100, "Continue", "\r\n", ""
 			// Требуется авторизация в прокси [2]
-			"HTTP/1.0 407 Proxy Authentication Required\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>407 Proxy Authentication Required</title></head>\r\n"
-			"<body><h2>407 Proxy Authentication Required</h2>\r\n"
-			"<h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3>\r\n"
-			"</body></html>\r\n",
+			},{
+				407, "Proxy Authentication Required",
+				"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>407 Proxy Authentication Required</title></head>\r\n"
+				"<body><h2>407 Proxy Authentication Required</h2>\r\n"
+				"<h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3>\r\n"
+				"</body></html>\r\n"
 			// Ошибка запроса [3]
-			"HTTP/1.0 400 Bad Request\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>400 Bad Request</title></head>\r\n"
-			"<body><h2>400 Bad Request</h2></body></html>\r\n",
+			},{
+				400, "Bad Request",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>400 Bad Request</title></head>\r\n"
+				"<body><h2>400 Bad Request</h2></body></html>\r\n"
 			// Страница не найдена [4]
-			"HTTP/1.0 404 Not Found\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>404 Not Found</title></head>\r\n"
-			"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n",
+			},{
+				404, "Not Found",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>404 Not Found</title></head>\r\n"
+				"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n"
 			// Доступ закрыт [5]
-			"HTTP/1.0 403 Forbidden\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>403 Access Denied</title></head>\r\n"
-			"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n",
+			},{
+				403, "Forbidden",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>403 Access Denied</title></head>\r\n"
+				"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n"
 			// Шлюз не доступен (хост не найден или ошибка подключения) [6]
-			"HTTP/1.0 502 Bad Gateway\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>502 Bad Gateway</title></head>\r\n"
-			"<body><h2>502 Bad Gateway</h2><h3>Host Not Found or connection failed</h3></body></html>\r\n",
+			},{
+				502, "Bad Gateway",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>502 Bad Gateway</title></head>\r\n"
+				"<body><h2>502 Bad Gateway</h2><h3>Host Not Found or connection failed</h3></body></html>\r\n"
 			// Сервис не доступен (вы исчерпали свой трафик) [7]
-			"HTTP/1.0 503 Service Unavailable\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>503 Service Unavailable</title></head>\r\n"
-			"<body><h2>503 Service Unavailable</h2><h3>You have exceeded your traffic limit</h3></body></html>\r\n",
+			},{
+				503, "Service Unavailable",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>503 Service Unavailable</title></head>\r\n"
+				"<body><h2>503 Service Unavailable</h2><h3>You have exceeded your traffic limit</h3></body></html>\r\n"
 			// Сервис не доступен (обнаружена рекурсия) [8]
-			"HTTP/1.0 503 Service Unavailable\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>503 Service Unavailable</title></head>\r\n"
-			"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n",
+			},{
+				503, "Service Unavailable",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>503 Service Unavailable</title></head>\r\n"
+				"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n"
 			// Сервис не доступен (Требуемое действие не поддерживается прокси сервером) [9]
-			"HTTP/1.0 501 Not Implemented\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>501 Not Implemented</title></head>\r\n"
-			"<body><h2>501 Not Implemented</h2><h3>Required action is not supported by proxy server</h3></body></html>\r\n",
+			},{
+				501, "Not Implemented",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>501 Not Implemented</title></head>\r\n"
+				"<body><h2>501 Not Implemented</h2><h3>Required action is not supported by proxy server</h3></body></html>\r\n"
 			// Сервис не доступен (Не удалось подключится к родительской прокси) [10]
-			"HTTP/1.0 502 Bad Gateway\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>502 Bad Gateway</title></head>\r\n"
-			"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n",
+			},{
+				502, "Bad Gateway",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>502 Bad Gateway</title></head>\r\n"
+				"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n"
 			// Внутренняя ошибка [11]
-			"HTTP/1.0 500 Internal Error\r\n"
-			"Proxy-Agent: ProxyAnyks/1.0\r\n"
-			"Proxy-Connection: close\r\n"
-			"Content-type: text/html; charset=utf-8\r\n"
-			"\r\n"
-			"<html><head><title>500 Internal Error</title></head>\r\n"
-			"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
+			},{
+				500, "Internal Error",
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"\r\n",
+				"<html><head><title>500 Internal Error</title></head>\r\n"
+				"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
+			}
 		};
-		/**
-		 * createHead Функция получения сформированного заголовка запроса
-		 */
-		void createHead();
 		/**
 		 * genDataConnect Метод генерации данных для подключения
 		 */
 		void genDataConnect();
 		/**
-		 * getHttpRequest Метод получения сформированного http запроса только с добавлением заголовков
-		 * @return сформированный http запрос
+		 * createRequest Функция создания ответа сервера
+		 * @param index индекс в массиве ответа
 		 */
-		const string getHttpRequest();
+		void createRequest(const u_short index);
+		/**
+		 * createHeadResponse Функция получения сформированного заголовков ответа
+		 * @return собранные заголовки ответа
+		 */
+		const string createHeadResponse();
+		/**
+		 * createHeadRequest Функция получения сформированного заголовка запроса
+		 * @return собранные заголовки ответа
+		 */
+		const string createHeadRequest();
 		/**
 		 * getConnection Функция извлечения данных подключения
 		 * @param  str строка запроса
 		 * @return     объект с данными запроса
 		 */
-		Connect getConnection(string str);
+		Connect getConnection(const string str);
 	public:
-		/**
-		 * clear Метод очистки структуры
-		 */
-		void clear();
 		/**
 		 * isIntGzip Метод проверки активации режима внутреннего сжатия
 		 * @return результат проверки
 		 */
-		bool isIntGzip();
+		const bool isIntGzip();
 		/**
 		 * isExtGzip Метод проверки активации режима внешнего сжатия
 		 * @return результат проверки
 		 */
-		bool isExtGzip();
+		const bool isExtGzip();
 		/**
 		 * isUpgrade Метод проверки желания сервера сменить протокол
 		 * @return результат проверки
 		 */
-		bool isUpgrade();
+		const bool isUpgrade();
 		/**
 		 * isConnect Метод проверяет является ли метод, методом connect
 		 * @return результат проверки на метод connect
 		 */
-		bool isConnect();
+		const bool isConnect();
 		/**
 		 * isClose Метод проверяет должно ли быть закрыто подключение
 		 * @return результат проверки на закрытие подключения
 		 */
-		bool isClose();
+		const bool isClose();
 		/**
 		 * isHttps Метод проверяет является ли подключение защищенным
 		 * @return результат проверки на защищенное подключение
 		 */
-		bool isHttps();
+		const bool isHttps();
 		/**
 		 * isAlive Метод определения нужно ли держать соединение для прокси
 		 * @return результат проверки
 		 */
-		bool isAlive();
+		const bool isAlive();
 		/**
-		 * getFullHeaders Метод получения данных о заполненности заголовков
+		 * isEmpty Если данные не созданы
+		 * @return результат проверки
 		 */
-		bool getFullHeaders();
+		const bool isEmpty();
 		/**
-		 * size Метод получения размера запроса
-		 * @return размер запроса
+		 * isEndHeaders Метод получения данных о заполненности заголовков
 		 */
-		const size_t size();
+		const bool isEndHeaders();
+		/**
+		 * isEndBody Метод определения заполненности тела ответа данными
+		 * @return результат проверки
+		 */
+		const bool isEndBody();
+		/**
+		 * getBodySize Метод получения размера тела http данных
+		 * @return размер тела данных
+		 */
+		const size_t getBodySize();
+		/**
+		 * getRawBodySize Метод получения размера тела http данных в чистом виде
+		 * @return размер тела данных
+		 */
+		const size_t getRawBodySize();
+		/**
+		 * setEntitybody Метод добавления данных вложения
+		 * @param buffer буфер с данными вложения
+		 * @param size   размер буфера
+		 * @return       количество добавленных данных
+		 */
+		const size_t setEntitybody(const char * buffer, const size_t size);
 		/**
 		 * getPort Метод получения порта запроса
 		 * @return порт удаленного ресурса
@@ -559,73 +560,58 @@ class HttpData {
 		 */
 		const string getUseragent();
 		/**
-		 * getQuery Метод получения буфера запроса
-		 * @return буфер запроса
+		 * getHeader Метод извлекает данные заголовка по его ключу
+		 * @param  key ключ заголовка
+		 * @return     строка с данными заголовка
 		 */
-		const string getQuery();
+		const string getHeader(const string key);
 		/**
 		 * getResponseHeaders Метод получения заголовков http ответа
 		 * @return сформированные заголовки ответа
 		 */
 		const string getResponseHeaders();
 		/**
-		 * getHeader Метод извлекает данные заголовка по его ключу
-		 * @param  key ключ заголовка
-		 * @return     строка с данными заголовка
+		 * getRequestHeaders Метод получения заголовков http запроса
+		 * @return сформированные заголовки запроса
 		 */
-		const string getHeader(string key);
+		const string getRequestHeaders();
 		/**
-		 * getResponseBody Метод получения данных тела http запроса
+		 * getBody Метод получения данных тела http
 		 * @param  chunked метод чанкование
 		 * @return         строка с данными тела
 		 */
-		const string getResponseBody(bool chunked = false);
+		const string getBody(const bool chunked = false);
 		/**
 		 * getResponseData Метод получения http данных ответа
 		 * @param  chunked метод чанкование
-		 * @return строка с данными тела
+		 * @return строка с данными ответа
 		 */
-		const string getResponseData(bool chunked = false);
+		const string getResponseData(const bool chunked = false);
+		/**
+		 * getRequestData Метод получения http данных запроса
+		 * @return строка с данными запроса
+		 */
+		const string getRequestData();
 		/**
 		 * getRawResponseData Метод получения http данных ответа в чистом виде
-		 * @return строка с данными тела
+		 * @return строка с данными ответа
 		 */
 		const string getRawResponseData();
 		/**
-		 * getBodySize Метод получения размера тела http данных
-		 * @return размер тела данных
+		 * getRawRequestData Метод получения http данных запроса в чистом виде
+		 * @return строка с данными запроса
 		 */
-		const size_t getBodySize();
+		const string getRawRequestData();
 		/**
-		 * getRawBodySize Метод получения размера тела http данных в чистом виде
-		 * @return размер тела данных
+		 * clear Метод очистки структуры
 		 */
-		const size_t getRawBodySize();
-		/**
-		 * setBodyData Метод добавления данных тела
-		 * @param  buffer буфер с данными
-		 * @param  size   размер передаваемых данных
-		 * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
-		 * @return        количество обработанных байт
-		 */
-		const size_t setBodyData(const char * buffer, const size_t size, size_t length = 0);
-		/**
-		 * setEntitybody Метод добавления данных вложения
-		 * @param buffer буфер с данными вложения
-		 * @param size   размер буфера
-		 */
-		bool setEntitybody(const char * buffer, size_t size);
-		/**
-		 * isEndBody Метод определения заполненности тела ответа данными
-		 * @return результат проверки
-		 */
-		bool isEndBody();
+		void clear();
 		/**
 		 * initBody Метод инициализации объекта тела
 		 * @param chunk максимальный размер чанка в байтах
 		 * @param level тип сжатия
 		 */
-		void initBody(size_t chunk = 1024, int level = Z_DEFAULT_COMPRESSION);
+		void initBody(const size_t chunk = 1024, const int level = Z_DEFAULT_COMPRESSION);
 		/**
 		 * rmHeader Метод удаления заголовка
 		 * @param key название заголовка
@@ -640,7 +626,7 @@ class HttpData {
 		 * @param intGzip активация внутреннего режима сжатия
 		 * @param extGzip активация внешнего режима сжатия
 		 */
-		void setGzip(bool intGzip = true, bool extGzip = false);
+		void setGzip(const bool intGzip = true, const bool extGzip = false);
 		/**
 		 * setBodyEnd Метод установки завершения сбора данных тела
 		 */
@@ -655,7 +641,7 @@ class HttpData {
 		 * setOptions Метод установки настроек прокси сервера
 		 * @param options данные для установки
 		 */
-		void setOptions(u_short options);
+		void setOptions(const u_short options);
 		/**
 		 * setMethod Метод установки метода запроса
 		 * @param str строка с данными для установки
@@ -670,7 +656,12 @@ class HttpData {
 		 * setPort Метод установки порта запроса
 		 * @param number номер порта для установки
 		 */
-		void setPort(u_int number);
+		void setPort(const u_int number);
+		/**
+		 * setStatus Метод установки статуса запроса
+		 * @param number номер статуса для установки
+		 */
+		void setStatus(const u_int number);
 		/**
 		 * setPath Метод установки пути запроса
 		 * @param str строка с данными для установки
@@ -685,7 +676,7 @@ class HttpData {
 		 * setVersion Метод установки версии протокола запроса
 		 * @param number номер версии протокола
 		 */
-		void setVersion(float number);
+		void setVersion(const float number);
 		/**
 		 * setAuth Метод установки метода авторизации запроса
 		 * @param str строка с данными для установки
@@ -706,47 +697,29 @@ class HttpData {
 		 */
 		void addHeader(const char * buffer = NULL);
 		/**
-		 * createRequest Функция создания ответа сервера
-		 * @param  index   индекс в массиве ответа
-		 * @param  request номер ответа
-		 * @return         объект с данными ответа
+		 * brokenRequest Метод генерации ответа (неудачного отправленного запроса)
 		 */
-		HttpQuery createRequest(u_short index, u_short request);
+		void brokenRequest();
 		/**
-		 * brokenRequest Метод получения ответа (неудачного отправленного запроса)
-		 * @return ответ в формате html
+		 * faultConnect Метод генерации ответа (неудачного подключения к удаленному серверу)
 		 */
-		HttpQuery brokenRequest();
+		void faultConnect();
 		/**
-		 * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
-		 * @return ответ в формате html
+		 * pageNotFound Метод генерации ответа (страница не найдена)
 		 */
-		HttpQuery faultConnect();
+		void pageNotFound();
 		/**
-		 * pageNotFound Метод получения ответа (страница не найдена)
-		 * @return ответ в формате html
+		 * faultAuth Метод генерации ответа (неудачной авторизации)
 		 */
-		HttpQuery pageNotFound();
+		void faultAuth();
 		/**
-		 * faultAuth Метод получения ответа (неудачной авторизации)
-		 * @return ответ в формате html
+		 * requiredAuth Метод генерации ответа (запроса ввода логина и пароля)
 		 */
-		HttpQuery faultAuth();
+		void requiredAuth();
 		/**
-		 * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
-		 * @return ответ в формате html
+		 * authSuccess Метод генерации ответа (подтверждения авторизации)
 		 */
-		HttpQuery requiredAuth();
-		/**
-		 * authSuccess Метод получения ответа (подтверждения авторизации)
-		 * @return ответ в формате html
-		 */
-		HttpQuery authSuccess();
-		/**
-		 * getRequest Метод получения сформированного http запроса
-		 * @return сформированный http запрос
-		 */
-		HttpQuery getRequest();
+		void authSuccess();
 		/**
 		 * init Метод инициализации класса
 		 * @param  str     строка http запроса
@@ -767,7 +740,7 @@ class HttpData {
 		 * @param name    название приложения
 		 * @param options опции http парсера
 		 */
-		HttpData(string name = APP_NAME, u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
+		HttpData(const string name = APP_NAME, const u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
 		/**
 		 * ~HttpData Деструктор
 		 */
@@ -797,14 +770,13 @@ class Http {
 		 * @param  buffer буфер входящих данных
 		 * @return        результат проверки
 		 */
-		bool isHttp(const string buffer);
+		const bool isHttp(const string buffer);
 		/**
 		 * parse Функция извлечения данных из буфера
 		 * @param buffer буфер с входящими запросами
 		 * @param size   размер входящих данных
-		 * @param flag   обрабатывать весь блок данных
 		 */
-		size_t parse(const char * buffer, size_t size, bool flag = false);
+		const size_t parse(const char * buffer, const size_t size);
 		/**
 		 * modify Функция модифицирования ответных данных
 		 * @param data ссылка на данные полученные от сервера
@@ -825,7 +797,7 @@ class Http {
 		 * @param name    строка содержащая название прокси сервера
 		 * @param options параметры прокси сервера
 		 */
-		Http(const string name = APP_NAME, u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
+		Http(const string name = APP_NAME, const u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
 		/**
 		 * ~Http Деструктор
 		 */

@@ -27,7 +27,7 @@ const string toCase(string str, bool flag = false){
  * @param  str строка для проверки
  * @return     результат проверки
  */
-bool isNumber(const string &str){
+const bool isNumber(const string &str){
 	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
 		return !isdigit(c);
 	}) == str.end();
@@ -66,7 +66,7 @@ string & trim(string &str, const char * t = " \t\n\r\f\v"){
  * @param  port входная строка якобы содержащая порт
  * @return      результат проверки
  */
-bool checkPort(string str){
+const bool checkPort(string str){
 	// Если строка существует
 	if(!str.empty()){
 		// Преобразуем строку в цифры
@@ -99,7 +99,7 @@ void replace(string &s, const string f, const string r){
  * @param delim разделитель
  * @param v     результирующий вектор
  */
-void HttpHeaders::split(const string &str, const string delim, vector <string> &v){
+void HttpData::HttpHeaders::split(const string &str, const string delim, vector <string> &v){
 	string::size_type i = 0;
 	string::size_type j = str.find(delim);
 	u_int len = delim.length();
@@ -116,12 +116,14 @@ void HttpHeaders::split(const string &str, const string delim, vector <string> &
  * @param  key ключ заголовка
  * @return     строка с данными заголовка
  */
-HttpHeaders::Header HttpHeaders::getHeader(string key){
+HttpData::HttpHeaders::Header HttpData::HttpHeaders::getHeader(const string key){
+	// Копируем ключ
+	string val = key;
 	// Переходим по всему массиву и ищем там нужный нам заголовок
 	for(u_int i = 0; i < this->headers.size(); i++){
 		// Если заголовок найден
 		if(::toCase(this->headers[i].head)
-		.compare(::toCase(key)) == 0){
+		.compare(::toCase(val)) == 0){
 			// Выводим результат
 			return this->headers[i];
 		}
@@ -132,7 +134,9 @@ HttpHeaders::Header HttpHeaders::getHeader(string key){
 /**
  * clear Метод очистки данных
  */
-void HttpHeaders::clear(){
+void HttpData::HttpHeaders::clear(){
+	// Запоминаем что заголовки не заполнены
+	this->end = false;
 	// Очищаем данные http заголовков
 	this->headers.clear();
 }
@@ -140,7 +144,7 @@ void HttpHeaders::clear(){
  * remove Метод удаления заголовка по ключу
  * @param key ключ заголовка
  */
-void HttpHeaders::remove(const string key){
+void HttpData::HttpHeaders::remove(const string key){
 	// Присваиваем значения строк
 	string ckey = key;
 	// Убираем пробелы
@@ -162,7 +166,7 @@ void HttpHeaders::remove(const string key){
  * @param key ключ
  * @param val значение
  */
-void HttpHeaders::append(const string key, const string val){
+void HttpData::HttpHeaders::append(const string key, const string val){
 	// Присваиваем значения строк
 	string ckey = key;
 	string cval = val;
@@ -175,10 +179,17 @@ void HttpHeaders::append(const string key, const string val){
 	this->headers.push_back({ckey, cval});
 }
 /**
+ * setEnd Метод установки завершения передачи данных
+ */
+void HttpData::HttpHeaders::setEnd(){
+	// Запоминаем что заголовки заполнены
+	this->end = true;
+}
+/**
  * create Метод создания объекта http заголовков
  * @param buffer буфер с текстовыми данными
  */
-bool HttpHeaders::create(const char * buffer){
+const bool HttpData::HttpHeaders::create(const char * buffer){
 	// Очищаем заголовки
 	clear();
 	// Запоминаем буфер входящих данных
@@ -219,6 +230,8 @@ bool HttpHeaders::create(const char * buffer){
 					this->append(match[1].str(), match[2].str());
 				}
 			}
+			// Запоминаем что заголовки сформированны
+			setEnd();
 			// Если данные получены
 			return this->headers.size();
 		}
@@ -227,10 +240,18 @@ bool HttpHeaders::create(const char * buffer){
 	return false;
 }
 /**
+ * isEnd Метод проверки завершения формирования заголовков
+ * @return результат проверки
+ */
+const bool HttpData::HttpHeaders::isEnd(){
+	// Выводим результат проверки
+	return this->end;
+}
+/**
  * empty Метод определяет наличие данных
  * @return проверка о наличи данных
  */
-bool HttpHeaders::empty(){
+const bool HttpData::HttpHeaders::empty(){
 	// Выводим существования данных http заголовков
 	return this->headers.empty();
 }
@@ -238,7 +259,7 @@ bool HttpHeaders::empty(){
  * size Метод получения размера
  * @return данные размера
  */
-const size_t HttpHeaders::size(){
+const size_t HttpData::HttpHeaders::size(){
 	// Выводим размер http заголовков
 	return this->headers.size();
 }
@@ -246,7 +267,7 @@ const size_t HttpHeaders::size(){
  * cbegin Метод получения начального итератора
  * @return начальный итератор
  */
-vector <HttpHeaders::Header>::const_iterator HttpHeaders::cbegin() const noexcept {
+vector <HttpData::HttpHeaders::Header>::const_iterator HttpData::HttpHeaders::cbegin() const noexcept {
 	// Выводим начальный итератор
 	return this->headers.cbegin();
 }
@@ -254,14 +275,14 @@ vector <HttpHeaders::Header>::const_iterator HttpHeaders::cbegin() const noexcep
  * cend Метод получения конечного итератора
  * @return конечный итератор
  */
-vector <HttpHeaders::Header>::const_iterator HttpHeaders::cend() const noexcept {
+vector <HttpData::HttpHeaders::Header>::const_iterator HttpData::HttpHeaders::cend() const noexcept {
 	// Выводим конечный итератор
 	return this->headers.cend();
 }
 /**
  * ~HttpHeaders Деструктор
  */
-HttpHeaders::~HttpHeaders(){
+HttpData::HttpHeaders::~HttpHeaders(){
 	// Удаляем данные http заголовков
 	vector <Header> ().swap(this->headers);
 }
@@ -271,7 +292,7 @@ HttpHeaders::~HttpHeaders(){
  * @return      указатель на текущий объект
  */
 /*
-HttpBody::Chunk & HttpBody::Chunk::operator = (HttpBody::Chunk chunk){
+HttpData::HttpBody::Chunk & HttpData::HttpBody::Chunk::operator = (HttpData::HttpBody::Chunk chunk){
 	// Запоминаем размеры чанка
 	this->size	= chunk.size;
 	this->hsize	= chunk.hsize;
@@ -288,7 +309,7 @@ HttpBody::Chunk & HttpBody::Chunk::operator = (HttpBody::Chunk chunk){
  * @param data данные для присваивания
  * @param size размер данных
  */
-void HttpBody::Chunk::init(const char * data, const size_t size){
+void HttpData::HttpBody::Chunk::init(const char * data, const size_t size){
 	// Если данные существуют
 	if(data && size){
 		// Выполняем копирование данных
@@ -308,7 +329,7 @@ void HttpBody::Chunk::init(const char * data, const size_t size){
  * @param data данные для присваивания
  * @param size размер данных
  */
-HttpBody::Chunk::Chunk(const char * data, const size_t size){
+HttpData::HttpBody::Chunk::Chunk(const char * data, const size_t size){
 	// Выполняем инициализацию чанка
 	init(data, size);
 }
@@ -317,7 +338,7 @@ HttpBody::Chunk::Chunk(const char * data, const size_t size){
  * @param  chunked чанкованием
  * @return         размер тела
  */
-const size_t HttpBody::size(bool chunked){
+const size_t HttpData::HttpBody::size(const bool chunked){
 	// Выводим размер тела
 	size_t size = 0;
 	// Если это чанкование
@@ -334,7 +355,7 @@ const size_t HttpBody::size(bool chunked){
  * @param  str   строка для сжатия данных
  * @return       результат сжатия
  */
-const string HttpBody::compress_gzip(const string &str){
+const string HttpData::HttpBody::compress_gzip(const string &str){
 	// Создаем поток zip
 	z_stream zs;
 	// Результирующий размер данных
@@ -379,7 +400,7 @@ const string HttpBody::compress_gzip(const string &str){
  * @param  str   строка для расжатия данных
  * @return       результат расжатия
  */
-const string HttpBody::decompress_gzip(const string &str){
+const string HttpData::HttpBody::decompress_gzip(const string &str){
 	// Создаем поток zip
 	z_stream zs;
 	// Результирующий размер данных
@@ -427,7 +448,7 @@ const string HttpBody::decompress_gzip(const string &str){
  * @param  size   размер передаваемых данных
  * @return        данные сжатого чанка
  */
-const string HttpBody::compressData(const char * buffer, const size_t size){
+const string HttpData::HttpBody::compressData(const char * buffer, const size_t size){
 	// Вектор для исходящих данных
 	vector <char> data;
 	// Создаем поток zip
@@ -500,7 +521,7 @@ const string HttpBody::compressData(const char * buffer, const size_t size){
  * @param buffer буфер с данными
  * @param size   размер передаваемых данных
  */
-void HttpBody::createChunk(const char * buffer, const size_t size){
+void HttpData::HttpBody::createChunk(const char * buffer, const size_t size){
 	// Копируемый размер данных
 	size_t copySize = size;
 	// Количество обработанных байт
@@ -524,7 +545,7 @@ void HttpBody::createChunk(const char * buffer, const size_t size){
 /**
  * clear Метод сброса параметров
  */
-void HttpBody::clear(){
+void HttpData::HttpBody::clear(){
 	// Сбрасываем заполненность данных
 	this->end = false;
 	// Сбрасываем режимы сжатия
@@ -540,7 +561,7 @@ void HttpBody::clear(){
  * setMaxSize Метод установки размера чанков
  * @param size размер чанков в байтах
  */
-void HttpBody::setMaxSize(const size_t size){
+void HttpData::HttpBody::setMaxSize(const size_t size){
 	// Устанавливаем максимальный размер чанков в байтах
 	this->maxSize = size;
 }
@@ -548,7 +569,7 @@ void HttpBody::setMaxSize(const size_t size){
  * setCompress Метод установки типа сжатия
  * @param compress тип сжатия
  */
-void HttpBody::setCompress(const u_int compress){
+void HttpData::HttpBody::setCompress(const u_int compress){
 	// Устанавливаем тип сжатия
 	this->compress = compress;
 }
@@ -556,7 +577,7 @@ void HttpBody::setCompress(const u_int compress){
  * setEnd Метод установки завершения передачи данных
  * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
  */
-void HttpBody::setEnd(){
+void HttpData::HttpBody::setEnd(){
 	// Запоминаем что все данные получены
 	this->end = true;
 	// Запоминаем сырые данные
@@ -581,7 +602,7 @@ void HttpBody::setEnd(){
  * isEnd Метод проверки завершения формирования тела
  * @return результат проверки
  */
-bool HttpBody::isEnd(){
+const bool HttpData::HttpBody::isEnd(){
 	// Выводим результат проверки заполненности данных
 	return this->end;
 }
@@ -589,7 +610,7 @@ bool HttpBody::isEnd(){
  * isIntCompress Метод проверки на активацию внутреннего сжатия
  * @return результат проверки
  */
-bool HttpBody::isIntCompress(){
+const bool HttpData::HttpBody::isIntCompress(){
 	// Выводим результат проверки активации внутреннего сжатия
 	return this->intGzip;
 }
@@ -597,7 +618,7 @@ bool HttpBody::isIntCompress(){
  * isExtCompress Метод проверки на активацию внешнего сжатия
  * @return результат проверки
  */
-bool HttpBody::isExtCompress(){
+const bool HttpData::HttpBody::isExtCompress(){
 	// Выводим результат проверки активации внешнего сжатия
 	return this->extGzip;
 }
@@ -609,11 +630,11 @@ bool HttpBody::isExtCompress(){
  * @param  strict жесткие правила проверки (при установки данного флага, данные принимаются только в точном соответствии)
  * @return        количество обработанных байт
  */
-const size_t HttpBody::addData(const char * buffer, const size_t size, const size_t length, bool strict){
+const size_t HttpData::HttpBody::addData(const char * buffer, const size_t size, const size_t length, const bool strict){
 	// Количество прочитанных байт
 	size_t readbytes = 0;
 	// Если данные тела еще не заполнены
-	if(!this->end && size && length && (size != string::npos) && (length != string::npos)){
+	if(!this->end && size && length){
 		// Определяем тип данных
 		switch(length){
 			// Обработка по умолчанию
@@ -651,7 +672,7 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, const siz
 					while(true){
 						
 
-						cout << " ******************** " << (bodyBuffer + offset) << " == " << len << endl;
+						cout << " ******************** body = " << strlen(bodyBuffer) << " == offset = " << offset << " == len = " << len << endl;
 
 						// Получаем новую строку
 						string data = string(bodyBuffer + offset, len);
@@ -764,7 +785,7 @@ const size_t HttpBody::addData(const char * buffer, const size_t size, const siz
  * @param  chunked чанкованием
  * @return         данные тела запроса
  */
-const string HttpBody::getBody(bool chunked){
+const string HttpData::HttpBody::getBody(const bool chunked){
 	// Создаем чанк
 	string result;
 	// Если это чанкование
@@ -793,14 +814,14 @@ const string HttpBody::getBody(bool chunked){
  * getRawBody Метод получения тела данных в чистом виде
  * @return данные тела запроса
  */
-const string HttpBody::getRawBody(){
+const string HttpData::HttpBody::getRawBody(){
 	// Выводим результат
 	return this->rody;
 }
 /**
  * getChunks Метод получения списка чанков
  */
-vector <HttpBody::Chunk> HttpBody::getChunks(){
+vector <HttpData::HttpBody::Chunk> HttpData::HttpBody::getChunks(){
 	// Выводим результат
 	return this->chunks;
 }
@@ -811,7 +832,7 @@ vector <HttpBody::Chunk> HttpBody::getChunks(){
  * @param intGzip  активация режима внутреннего сжатия
  * @param extGzip  активация режима внешнего сжатия
  */
-HttpBody::HttpBody(const size_t maxSize, const u_int compress, bool intGzip, bool extGzip){
+HttpData::HttpBody::HttpBody(const size_t maxSize, const u_int compress, const bool intGzip, const bool extGzip){
 	// Очищаем все данные
 	clear();
 	// Запоминаем размер чанка
@@ -825,283 +846,11 @@ HttpBody::HttpBody(const size_t maxSize, const u_int compress, bool intGzip, boo
 /**
  * ~HttpBody Деструктор
  */
-HttpBody::~HttpBody(){
+HttpData::HttpBody::~HttpBody(){
 	// Очищаем все данные
 	clear();
 	// Удаляем объект чанков
 	vector <Chunk> ().swap(this->chunks);
-}
-/**
- * clear Метод очистки данных
- */
-void HttpQuery::clear(){
-	// Очищаем все переменные
-	this->code		= 0;
-	this->offset	= 0;
-	this->result.clear();
-}
-/**
- * data Метод получения данных запроса
- * @return данные запроса
- */
-const char * HttpQuery::data(){
-	// Выводим данные http запроса
-	return (!this->result.empty() ? this->result.data() : "");
-}
-/**
- * size Метод получения размера
- * @return данные размера
- */
-const size_t HttpQuery::size(){
-	// Выводим размер http запроса
-	return this->result.size();
-}
-/**
- * empty Метод определяет наличие данных
- * @return проверка о наличи данных
- */
-bool HttpQuery::empty(){
-	// Выводим существования данных http запроса
-	return this->result.empty();
-}
-/**
- * init Метод инициализации
- * @param code       код сообщения
- * @param mess       данные сообщения
- * @param entitybody вложенные данные
- */
-void HttpQuery::init(const short code, const string mess, vector <char> entitybody){
-	// Очищаем вектор
-	this->result.clear();
-	// Если строка существует
-	if(!mess.empty()){
-		// Устанавливаем код сообщения
-		this->code = code;
-		// Копируем в вектор сам запрос
-		this->result.assign(mess.begin(), mess.end());
-		// Если данные существуют
-		if(!entitybody.empty()){
-			// Копируем в результирующий вектор данные вложения
-			copy(entitybody.begin(), entitybody.end(), back_inserter(this->result));
-		}
-	}
-}
-/**
- * HttpQuery Конструктор
- * @param code       код сообщения
- * @param mess       данные сообщения
- * @param entitybody вложенные данные
- */
-HttpQuery::HttpQuery(const short code, const string mess, vector <char> entitybody){
-	// Выполняем инициализацию
-	init(code, mess, entitybody);
-}
-/**
- * ~HttpQuery Деструктор
- */
-HttpQuery::~HttpQuery(){
-	// Очищаем все переменные
-	this->code		= 0;
-	this->offset	= 0;
-	vector <char> ().swap(this->result);
-}
-/**
- * getHttpRequest Метод получения сформированного http запроса только с добавлением заголовков
- * @return сформированный http запрос
- */
-const string HttpData::getHttpRequest(){
-	// Определяем тип прокси
-	bool smart = (this->options & OPT_SMART);
-	// Определяем разрешено ли выводить название агента
-	bool agent = (this->options & OPT_AGENT);
-	// Формируем запрос
-	string request = (this->http + string("\r\n"));
-	// Тип подключения
-	string connection = getHeader("connection");
-	// Если заголовок не найден тогда устанавливаем по умолчанию
-	if(connection.empty()) connection = "close";
-	// Добавляем остальные заголовки
-	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
-		// Фильтруем заголовки
-		if((::toCase(it->head).compare("connection") != 0)
-		&& (::toCase(it->head).compare("proxy-authorization") != 0)
-		&& (!smart || (smart && (::toCase(it->head).compare("proxy-connection") != 0)))){
-			// Добавляем оставшиеся заголовки
-			request.append(it->head + string(": ") + it->value + string("\r\n"));
-		}
-	}
-	// Устанавливаем название прокси
-	if(agent) request.append(string("Proxy-Agent: ") + this->appName + string("/") + this->appVersion + string("\r\n"));
-	// Если это dumb прокси
-	if(!smart){
-		// Проверяем есть ли заголовок соединения прокси
-		string proxy_connection = getHeader("proxy-connection");
-		// Добавляем заголовок закрытия подключения
-		if(proxy_connection.empty()) request.append(string("Proxy-Connection: ") + connection + string("\r\n"));
-	// Если это smart прокси
-	} else {
-		// Получаем заголовок Proxy-Connection
-		string proxy_connection = getHeader("proxy-connection");
-		// Если постоянное соединение не установлено
-		if(!proxy_connection.empty()) connection = proxy_connection;
-	}
-	// Добавляем тип подключения
-	request.append(string("Connection: ") + connection + string("\r\n"));
-	// Запоминаем конец запроса
-	request.append(string("\r\n"));
-	// Выводим результат
-	return request;
-}
-/**
- * createHead Функция получения сформированного заголовка запроса
- */
-void HttpData::createHead(){
-	// Определяем тип прокси
-	bool smart = (this->options & OPT_SMART);
-	// Определяем разрешено ли сжатие
-	bool gzip = (this->options & OPT_GZIP);
-	// Определяем разрешено ли выводить название агента
-	bool agent = (this->options & OPT_AGENT);
-	// Определяем разрешено ли постоянное подключение
-	bool keepalive = (this->options & OPT_KEEPALIVE);
-	// Очищаем заголовок
-	this->request.clear();
-	// Создаем строку запроса
-	this->request.append(
-		::toCase(this->method, true)
-		+ string(" ") + this->path
-		+ string(" ") + string("HTTP/")
-		+ this->version + string("\r\n")
-	);
-	/*
-	// Устанавливаем заголовок Host:
-	this->request.append(
-		string("Host: ") + this->host
-		+ string(":") + this->port + string("\r\n")
-	);
-	*/
-	// Устанавливаем заголовок Host:
-	this->request.append(string("Host: ") + this->host + string("\r\n"));
-	// Получаем UserAgent
-	string useragent = getHeader("user-agent");
-	// Добавляем useragent
-	if(!useragent.empty()) this->request.append(string("User-Agent: ") + useragent + string("\r\n"));
-	// Добавляем остальные заголовки
-	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
-		// Фильтруем заголовки
-		if((::toCase(it->head).compare("host") != 0)
-		&& (::toCase(it->head).compare("user-agent") != 0)
-		&& (::toCase(it->head).compare("connection") != 0)
-		&& (::toCase(it->head).compare("proxy-authorization") != 0)
-		&& (gzip || (!gzip && (::toCase(it->head).compare("accept-encoding") != 0)))
-		&& (!smart || (smart && (::toCase(it->head).compare("proxy-connection") != 0)))){
-			// Добавляем оставшиеся заголовки
-			this->request.append(it->head + string(": ") + it->value + string("\r\n"));
-		}
-	}
-	// Устанавливаем название прокси
-	if(agent) this->request.append(string("Proxy-Agent: ") + this->appName + string("/") + this->appVersion + string("\r\n"));
-	// Если постоянное подключение запрещено
-	if(!keepalive) setHeader("Connection", "close");
-	// Получаем параметры подключения
-	string connection = getHeader("connection");
-	// Добавляем заголовок connection
-	if(!connection.empty()){
-		// Устанавливаем заголовок подключения
-		this->request.append(string("Connection: ") + connection + string("\r\n"));
-		// Если это dumb прокси
-		if(!smart){
-			// Проверяем есть ли заголовок соединения прокси
-			string pc = getHeader("proxy-connection");
-			// Добавляем заголовок закрытия подключения
-			if(pc.empty()) this->request.append(string("Proxy-Connection: ") + connection + string("\r\n"));
-		}
-	}
-	// Запоминаем конец запроса
-	this->request.append(string("\r\n"));
-}
-/**
- * getConnection Функция извлечения данных подключения
- * @param  str строка запроса
- * @return     объект с данными запроса
- */
-HttpData::Connect HttpData::getConnection(string str){
-	// Полученные данные подключения
-	Connect data;
-	// Результат работы регулярного выражения
-	smatch match;
-	// Устанавливаем правило регулярного выражения
-	regex ep("\\b([A-Za-z]+):\\/{2}", regex::ECMAScript | regex::icase);
-	// Выполняем поиск протокола
-	regex_search(str, match, ep);
-	// Если протокол найден
-	if(!match.empty()) data.protocol = ::toCase(match[1].str());
-	// Устанавливаем правило для поиска
-	regex eh(
-		// Стандартная запись домена anyks.com
-		"\\b([\\w\\.\\-]+\\.[\\w\\-]+|"
-		// Стандартная запись IPv4 127.0.0.1
-		"\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|"
-		// Стандартная запись IPv6 [2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d]
-		"\\[[\\w\\:]+\\])(?:\\:(\\d+))?",
-		regex::ECMAScript | regex::icase
-	);
-	// Выполняем поиск домена и порта
-	regex_search(str, match, eh);
-	// Если протокол найден
-	if(!match.empty()){
-		// Запоминаем хост
-		data.host = ::toCase(match[1].str());
-		// Если порт найден, тогда запоминаем его
-		if(match.size() == 3) data.port = match[2].str();
-	}
-	// Устанавливаем номер порта в зависимости от типа протокола
-	if(data.port.empty() && ((data.protocol.compare("https") == 0)
-	|| (this->method.compare("connect") == 0))) data.port = "443";
-	// Если просто порт не существует
-	else if(data.port.empty()) data.port = "80";
-	// Если протокол не существует
-	if(data.protocol.empty()){
-		// Устанавливаем версию протокола в зависимости от порта
-		if(data.port.compare("443") == 0) data.protocol = "https";
-		// Если это не защищенное подключение значит это http подключение
-		else data.protocol = "http";
-	}
-	// Выводим результат
-	return data;
-}
-/**
- * clear Метод очистки структуры
- */
-void HttpData::clear(){
-	// Обнуляем размер
-	this->length = 0;
-	// Обнуляем статус запроса
-	this->status = 0;
-	// Устанавливаем что режим сжатия отключен
-	this->intGzip = false;
-	this->extGzip = false;
-	// Устанавливаем что заголовки не заполнены
-	this->fullHeaders = false;
-	// Очищаем строки
-	this->query.clear();
-	this->http.clear();
-	this->auth.clear();
-	this->method.clear();
-	this->path.clear();
-	this->protocol.clear();
-	this->version.clear();
-	this->host.clear();
-	this->port.clear();
-	this->login.clear();
-	this->password.clear();
-	this->request.clear();
-	// Очищаем тело вложений
-	this->entitybody.clear();
-	// Очищаем карту заголовков
-	this->headers.clear();
-	// Очищаем тело
-	this->body.clear();
 }
 /**
  * genDataConnect Метод генерации данных для подключения
@@ -1214,14 +963,260 @@ void HttpData::genDataConnect(){
 			}
 		}
 	}
-	// Генерируем параметры для запроса
-	createHead();
+}
+/**
+ * createRequest Функция создания ответа сервера
+ * @param index индекс в массиве ответа
+ */
+void HttpData::createRequest(const u_short index){
+	// Если индекс верный
+	if(index < this->response.size()){
+		// Устанавливаем статус
+		setStatus(this->response[index].code);
+		// Очищаем тело вложений
+		this->body.clear();
+		// Формируем запрос
+		this->http = (
+			string("HTTP/1.1 ")
+			+ to_string(this->response[index].code)
+			+ string(" ") + this->response[index].text
+		);
+		// Добавляем запрос в заголовки
+		string headers = (this->http + "\r\n");
+		// Добавляем заголовки
+		headers.append(this->response[index].headers);
+		// Создаем заголовки
+		this->headers.create(headers.c_str());
+		// Если тело существует
+		if(!this->response[index].body.empty()){
+			// Создаем тело
+			this->body.addData(
+				this->response[index].body.c_str(),
+				this->response[index].body.size(),
+				this->response[index].body.size()
+			);
+		}
+	}
+}
+/**
+ * createHeadResponse Функция получения сформированного заголовков ответа
+ * @return собранные заголовки ответа
+ */
+const string HttpData::createHeadResponse(){
+	// Определяем тип прокси
+	bool smart = (this->options & OPT_SMART);
+	// Определяем разрешено ли выводить название агента
+	bool agent = (this->options & OPT_AGENT);
+	// Замена заголовка Via
+	bool via = false;
+	// Формируем запрос
+	string response = (this->http + string("\r\n"));
+	// Тип подключения
+	string connection = getHeader("connection");
+	// Если заголовок не найден тогда устанавливаем по умолчанию
+	// if(connection.empty()) connection = "close";
+	// Добавляем остальные заголовки
+	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
+		// Определяем заголовок
+		string head = it->head;
+		// Определяем значение
+		string value = it->value;
+		// Фильтруем заголовки
+		if(agent && (::toCase(head).compare("via") == 0)){
+			// Добавляем стандартный заголовок проксирования
+			value = (this->version + string(" ")
+			+ this->appName + string(" (") + string(APP_NAME)
+			+ string("/") + this->appVersion + string("), ") + value);
+			// Запоминаем что заменили заголовок
+			via = true;
+		}
+		// Если указанные заголовки не найдены
+		if((::toCase(head).compare("connection") != 0)
+		&& (::toCase(head).compare("proxy-authorization") != 0)
+		&& (!smart || (smart && (::toCase(head).compare("proxy-connection") != 0)))){
+			// Добавляем оставшиеся заголовки
+			response.append(head + string(": ") + value + string("\r\n"));
+		}
+	}
+	// Устанавливаем название прокси
+	if(agent){
+		// Добавляем название агента
+		response.append(string("Proxy-Agent: ") + this->appName + string(" (")
+		+ string(APP_NAME) + string("/") + this->appVersion + string(")\r\n"));
+		// Добавляем стандартный заголовок проксирования
+		if(!via) response.append(string("Via: ") + this->version + string(" ")
+		+ this->appName + string(" (") + string(APP_NAME)
+		+ string("/") + this->appVersion + string(")\r\n"));
+	}
+	// Если это dumb прокси
+	if(!smart){
+		// Проверяем есть ли заголовок соединения прокси
+		string proxy_connection = getHeader("proxy-connection");
+		// Добавляем заголовок закрытия подключения
+		if(proxy_connection.empty()) response.append(string("Proxy-Connection: ") + connection + string("\r\n"));
+	// Если это smart прокси
+	} else {
+		// Получаем заголовок Proxy-Connection
+		string proxy_connection = getHeader("proxy-connection");
+		// Если постоянное соединение не установлено
+		if(!proxy_connection.empty()) connection = proxy_connection;
+	}
+	// Добавляем тип подключения
+	if(!connection.empty()) response.append(string("Connection: ") + connection + string("\r\n"));
+	// Запоминаем конец запроса
+	response.append(string("\r\n"));
+	// Выводим результат
+	return response;
+}
+/**
+ * createHeadRequest Функция получения сформированного заголовков запроса
+ * @return собранные заголовки ответа
+ */
+const string HttpData::createHeadRequest(){
+	// Определяем тип прокси
+	bool smart = (this->options & OPT_SMART);
+	// Определяем разрешено ли сжатие
+	bool gzip = (this->options & OPT_GZIP);
+	// Определяем разрешено ли выводить название агента
+	bool agent = (this->options & OPT_AGENT);
+	// Определяем разрешено ли постоянное подключение
+	bool keepalive = (this->options & OPT_KEEPALIVE);
+	// Замена заголовка Via
+	bool via = false;
+	// Создаем строку запроса
+	string request = (
+		::toCase(this->method, true)
+		+ string(" ") + this->path
+		+ string(" ") + string("HTTP/")
+		+ this->version + string("\r\n")
+	);
+	/*
+	// Устанавливаем заголовок Host:
+	request.append(
+		string("Host: ") + this->host
+		+ string(":") + this->port + string("\r\n")
+	);
+	*/
+	// Устанавливаем заголовок Host:
+	request.append(string("Host: ") + this->host + string("\r\n"));
+	// Получаем UserAgent
+	string useragent = getHeader("user-agent");
+	// Добавляем useragent
+	if(!useragent.empty()) request.append(string("User-Agent: ") + useragent + string("\r\n"));
+	// Добавляем остальные заголовки
+	for(auto it = this->headers.cbegin(); it != this->headers.cend(); ++it){
+		// Определяем заголовок
+		string head = it->head;
+		// Определяем значение
+		string value = it->value;
+		// Фильтруем заголовки
+		if(agent && (::toCase(head).compare("via") == 0)){
+			// Добавляем стандартный заголовок проксирования
+			value = (this->version + string(" ")
+			+ this->appName + string(" (") + string(APP_NAME)
+			+ string("/") + this->appVersion + string("), ") + value);
+			// Запоминаем что заменили заголовок
+			via = true;
+		}
+		// Фильтруем заголовки
+		if((::toCase(head).compare("host") != 0)
+		&& (::toCase(head).compare("user-agent") != 0)
+		&& (::toCase(head).compare("connection") != 0)
+		&& (::toCase(head).compare("proxy-authorization") != 0)
+		&& (gzip || (!gzip && (::toCase(head).compare("accept-encoding") != 0)))
+		&& (!smart || (smart && (::toCase(head).compare("proxy-connection") != 0)))){
+			// Добавляем оставшиеся заголовки
+			request.append(head + string(": ") + value + string("\r\n"));
+		}
+	}
+	// Устанавливаем название прокси
+	if(agent){
+		// Добавляем название агента
+		request.append(string("Proxy-Agent: ") + this->appName + string(" (")
+		+ string(APP_NAME) + string("/") + this->appVersion + string(")\r\n"));
+		// Добавляем стандартный заголовок проксирования
+		if(!via) request.append(string("Via: ") + this->version + string(" ")
+		+ this->appName + string(" (") + string(APP_NAME)
+		+ string("/") + this->appVersion + string(")\r\n"));
+	}
+	// Если постоянное подключение запрещено
+	if(!keepalive) setHeader("Connection", "close");
+	// Получаем параметры подключения
+	string connection = getHeader("connection");
+	// Добавляем заголовок connection
+	if(!connection.empty()){
+		// Устанавливаем заголовок подключения
+		request.append(string("Connection: ") + connection + string("\r\n"));
+		// Если это dumb прокси
+		if(!smart){
+			// Проверяем есть ли заголовок соединения прокси
+			string pc = getHeader("proxy-connection");
+			// Добавляем заголовок закрытия подключения
+			if(pc.empty()) request.append(string("Proxy-Connection: ") + connection + string("\r\n"));
+		}
+	}
+	// Запоминаем конец запроса
+	request.append(string("\r\n"));
+	// Выводим результат
+	return request;
+}
+/**
+ * getConnection Функция извлечения данных подключения
+ * @param  str строка запроса
+ * @return     объект с данными запроса
+ */
+HttpData::Connect HttpData::getConnection(const string str){
+	// Полученные данные подключения
+	Connect data;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Копируем параметры запроса
+	string query = str;
+	// Устанавливаем правило регулярного выражения
+	regex ep("\\b([A-Za-z]+):\\/{2}", regex::ECMAScript | regex::icase);
+	// Выполняем поиск протокола
+	regex_search(query, match, ep);
+	// Если протокол найден
+	if(!match.empty()) data.protocol = ::toCase(match[1].str());
+	// Устанавливаем правило для поиска
+	regex eh(
+		// Стандартная запись домена anyks.com
+		"\\b([\\w\\.\\-]+\\.[\\w\\-]+|"
+		// Стандартная запись IPv4 127.0.0.1
+		"\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|"
+		// Стандартная запись IPv6 [2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d]
+		"\\[[\\w\\:]+\\])(?:\\:(\\d+))?",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск домена и порта
+	regex_search(str, match, eh);
+	// Если протокол найден
+	if(!match.empty()){
+		// Запоминаем хост
+		data.host = ::toCase(match[1].str());
+		// Если порт найден, тогда запоминаем его
+		if(match.size() == 3) data.port = match[2].str();
+	}
+	// Устанавливаем номер порта в зависимости от типа протокола
+	if(data.port.empty() && ((data.protocol.compare("https") == 0)
+	|| (this->method.compare("connect") == 0))) data.port = "443";
+	// Если просто порт не существует
+	else if(data.port.empty()) data.port = "80";
+	// Если протокол не существует
+	if(data.protocol.empty()){
+		// Устанавливаем версию протокола в зависимости от порта
+		if(data.port.compare("443") == 0) data.protocol = "https";
+		// Если это не защищенное подключение значит это http подключение
+		else data.protocol = "http";
+	}
+	// Выводим результат
+	return data;
 }
 /**
  * isIntGzip Метод проверки активации режима сжатия
  * @return результат проверки
  */
-bool HttpData::isIntGzip(){
+const bool HttpData::isIntGzip(){
 	// Сообщаем активирован ли режим сжатия
 	return this->intGzip;
 }
@@ -1229,7 +1224,7 @@ bool HttpData::isIntGzip(){
  * isExtGzip Метод проверки активации режима внешнего сжатия
  * @return результат проверки
  */
-bool HttpData::isExtGzip(){
+const bool HttpData::isExtGzip(){
 	// Сообщаем активирован ли режим сжатия
 	return this->extGzip;
 }
@@ -1237,7 +1232,7 @@ bool HttpData::isExtGzip(){
  * isUpgrade Метод проверки желания сервера сменить протокол
  * @return результат проверки
  */
-bool HttpData::isUpgrade(){
+const bool HttpData::isUpgrade(){
 	// Сообщаем является ли запрос, желанием смены протокола
 	return (!getHeader("upgrade").empty()
 	&& (::toCase(getHeader("connection")).find("upgrade") != string::npos));
@@ -1246,7 +1241,7 @@ bool HttpData::isUpgrade(){
  * isConnect Метод проверяет является ли метод, методом connect
  * @return результат проверки на метод connect
  */
-bool HttpData::isConnect(){
+const bool HttpData::isConnect(){
 	// Сообщаем является ли метод, методом connect
 	return (this->method.compare("connect") == 0);
 }
@@ -1254,7 +1249,7 @@ bool HttpData::isConnect(){
  * isClose Метод проверяет должно ли быть закрыто подключение
  * @return результат проверки на закрытие подключения
  */
-bool HttpData::isClose(){
+const bool HttpData::isClose(){
 	// Сообщаем должно ли быть закрыто подключение
 	return (::toCase(getHeader("connection")).find("close") != string::npos);
 }
@@ -1262,7 +1257,7 @@ bool HttpData::isClose(){
  * isHttps Метод проверяет является ли подключение защищенным
  * @return результат проверки на защищенное подключение
  */
-bool HttpData::isHttps(){
+const bool HttpData::isHttps(){
 	// Сообщаем является ли продключение защищенным
 	return (this->protocol.compare("https") == 0);
 }
@@ -1270,7 +1265,7 @@ bool HttpData::isHttps(){
  * isAlive Метод определения нужно ли держать соединение для прокси
  * @return результат проверки
  */
-bool HttpData::isAlive(){
+const bool HttpData::isAlive(){
 	// Получаем тип подключения
 	string connection = ::toCase(getHeader("connection"));
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
@@ -1281,19 +1276,73 @@ bool HttpData::isAlive(){
 	} else return (connection.find("keep-alive") != string::npos);
 }
 /**
- * getFullHeaders Метод получения данных о заполненности заголовков
+ * isEmpty Если данные не созданы
+ * @return результат проверки
  */
-bool HttpData::getFullHeaders(){
-	// Выводим данные о заполненности заголовков
-	return this->fullHeaders;
+const bool HttpData::isEmpty(){
+	// Выводим данные о существовании заголовков
+	return this->headers.empty();
 }
 /**
- * size Метод получения размера запроса
- * @return размер запроса
+ * isEndHeaders Метод получения данных о заполненности заголовков
  */
-const size_t HttpData::size(){
-	// Выводим размер запроса
-	return this->length;
+const bool HttpData::isEndHeaders(){
+	// Выводим данные о заполненности заголовков
+	return this->headers.isEnd();
+}
+/**
+ * isEndBody Метод определения заполненности тела ответа данными
+ * @return результат проверки
+ */
+const bool HttpData::isEndBody(){
+	// Выводим результат проверки на заполненность тела ответа
+	return this->body.isEnd();
+}
+/**
+ * getBodySize Метод получения размера тела http данных
+ * @return размер тела данных
+ */
+const size_t HttpData::getBodySize(){
+	// Выводим размер данных
+	return this->body.size();
+}
+/**
+ * getRawBodySize Метод получения размера тела http данных в чистом виде
+ * @return размер тела данных
+ */
+const size_t HttpData::getRawBodySize(){
+	// Выводим размер блока данных в чистом виде
+	return this->body.getRawBody().size();
+}
+/**
+ * setEntitybody Метод добавления данных вложения
+ * @param buffer буфер с данными вложения
+ * @param size   размер буфера
+ * @return       количество добавленных данных
+ */
+const size_t HttpData::setEntitybody(const char * buffer, const size_t size){
+	// Если данные переданы
+	if(size && isEndHeaders()){
+		// Размер вложений
+		u_int length = 0;
+		// Проверяем есть ли размер вложений
+		string cl = getHeader("content-length");
+		// Определяем размер вложений
+		if(!cl.empty() && ::isNumber(cl)) length = ::atoi(cl.c_str());
+		// Если вложения не найдены
+		else {
+			// Проверяем есть ли чанкование
+			string ch = getHeader("transfer-encoding");
+			// Если это чанкование
+			if(!ch.empty() && (ch.find("chunked") != string::npos)) length = 2;
+			// Если это не автоотключение тогда копируем данные так как они есть
+			else if(isClose()) length = 1;
+		}
+		// Добавляем данные тела
+		return this->body.addData(buffer, size, length);
+	}
+	// Сообщаем что данные добавлены полностью
+	return size;
 }
 /**
  * getPort Метод получения порта запроса
@@ -1392,36 +1441,36 @@ const string HttpData::getUseragent(){
 	return getHeader("user-agent");
 }
 /**
- * getQuery Метод получения буфера запроса
- * @return буфер запроса
+ * getHeader Метод извлекает данные заголовка по его ключу
+ * @param  key ключ заголовка
+ * @return     строка с данными заголовка
  */
-const string HttpData::getQuery(){
-	// Выводим значение переменной
-	return this->query;
+const string HttpData::getHeader(const string key){
+	// Выводим данные заголовков
+	return this->headers.getHeader(key).value;
 }
 /**
  * getResponseHeaders Метод получения заголовков http ответа
  * @return сформированные заголовки ответа
  */
 const string HttpData::getResponseHeaders(){
-	// Получаем данные запроса
-	return this->getHttpRequest();
+	// Получаем данные ответа
+	return createHeadResponse();
 }
 /**
- * getHeader Метод извлекает данные заголовка по его ключу
- * @param  key ключ заголовка
- * @return     строка с данными заголовка
+ * getRequestHeaders Метод получения заголовков http запроса
+ * @return сформированные заголовки запроса
  */
-const string HttpData::getHeader(string key){
-	// Выводим данные заголовков
-	return this->headers.getHeader(key).value;
+const string HttpData::getRequestHeaders(){
+	// Получаем данные запроса
+	return createHeadRequest();
 }
 /**
- * getResponseBody Метод получения данных тела http запроса
+ * getBody Метод получения данных тела http
  * @param  chunked метод чанкование
  * @return         строка с данными тела
  */
-const string HttpData::getResponseBody(bool chunked){
+const string HttpData::getBody(const bool chunked){
 	// Данные тела
 	string body;
 	// Если данные тела получены
@@ -1432,18 +1481,16 @@ const string HttpData::getResponseBody(bool chunked){
 		// Если это чанкование
 		if(chunked){
 			// Удаляем из заголовков, заголовок размера
-			this->rmHeader("content-length");
+			rmHeader("content-length");
 			// Устанавливаем заголовок что данные в виде чанков
-			this->setHeader("Transfer-Encoding", "chunked");
+			setHeader("Transfer-Encoding", "chunked");
 		// Если это извлечение данных конкретного размера
 		} else {
 			// Удаляем из заголовков, заголовок передачи данных чанками
-			this->rmHeader("transfer-encoding");
+			rmHeader("transfer-encoding");
 			// Устанавливаем размер входящих данных
-			this->setHeader("Content-Length", to_string(this->body.size()));
+			setHeader("Content-Length", to_string(this->body.size()));
 		}
-		// Выполняем генерацию объекта заголовков
-		createHead();
 		// Запоминаем результат
 		body = this->body.getBody(chunked);
 	}
@@ -1455,26 +1502,51 @@ const string HttpData::getResponseBody(bool chunked){
  * @param  chunked метод чанкование
  * @return строка с данными тела
  */
-const string HttpData::getResponseData(bool chunked){
+const string HttpData::getResponseData(const bool chunked){
 	// Результирующий объект данных
 	string result;
-	// Если данные тела получены
-	if(isEndBody()){
-		// Получаем данные тела
-		string body = getResponseBody(chunked);
-		// Получаем данные заголовков
-		string headers = getResponseHeaders();
+	// Получаем данные тела
+	string body = getBody(chunked);
+	// Получаем данные заголовков
+	string headers = getResponseHeaders();
+	// Если заголовки и тело существуют
+	if(!headers.empty()){
 		// Выполняем добавление заголовков в результат
 		result.append(headers);
 		// Копируем данные тела
-		result.append(body);
+		if(!body.empty() && isEndBody()) result.append(body);
+		// Если тело существует но заполненно не полностью, очищаем вывод данных
+		else if(!body.empty()) result.clear();
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getRequestData Метод получения http данных запроса
+ * @return строка с данными тела
+ */
+const string HttpData::getRequestData(){
+	// Результирующий объект данных
+	string result;
+	// Получаем данные тела
+	string body = getBody(false);
+	// Получаем данные заголовков
+	string headers = getRequestHeaders();
+	// Если заголовки и тело существуют
+	if(!headers.empty()){
+		// Выполняем добавление заголовков в результат
+		result.append(headers);
+		// Копируем данные тела
+		if(!body.empty() && isEndBody()) result.append(body);
+		// Если тело существует но заполненно не полностью, очищаем вывод данных
+		else if(!body.empty()) result.clear();
 	}
 	// Выводим результат
 	return result;
 }
 /**
  * getRawResponseData Метод получения http данных ответа в чистом виде
- * @return строка с данными тела
+ * @return строка с данными ответа
  */
 const string HttpData::getRawResponseData(){
 	// Результирующая строка данных
@@ -1484,11 +1556,9 @@ const string HttpData::getRawResponseData(){
 		// Получаем данные тела
 		string body = this->body.getRawBody();
 		// Удаляем из заголовков, заголовок передачи данных чанками
-		this->rmHeader("transfer-encoding");
+		rmHeader("transfer-encoding");
 		// Устанавливаем размер входящих данных
-		this->setHeader("Content-Length", to_string(body.size()));
-		// Выполняем генерацию объекта заголовков
-		createHead();
+		setHeader("Content-Length", to_string(body.size()));
 		// Получаем данные заголовков
 		string headers = getResponseHeaders();
 		// Ищем заголовок gzip
@@ -1500,107 +1570,82 @@ const string HttpData::getRawResponseData(){
 		// Если заголовок найден
 		if(pos != string::npos) headers.replace(pos, 8, "ETag: ");
 		// Если заголовки и тело существуют
-		if(!headers.empty() && !body.empty()){
+		if(!headers.empty()){
 			// Выполняем добавление заголовков в результат
 			result.append(headers);
 			// Копируем данные тела
-			result.append(body);
+			if(!body.empty()) result.append(body);
 		}
 	}
 	// Выводим результат
 	return result;
 }
 /**
- * getBodySize Метод получения размера тела http данных
- * @return размер тела данных
+ * getRawRequestData Метод получения http данных запроса в чистом виде
+ * @return строка с данными запроса
  */
-const size_t HttpData::getBodySize(){
-	// Выводим размер данных
-	return this->body.size();
-}
-/**
- * getRawBodySize Метод получения размера тела http данных в чистом виде
- * @return размер тела данных
- */
-const size_t HttpData::getRawBodySize(){
-	// Выводим размер блока данных в чистом виде
-	return this->body.getRawBody().size();
-}
-/**
- * setBodyData Метод добавления данных тела
- * @param  buffer буфер с данными
- * @param  size   размер передаваемых данных
- * @param  length тип данных (0 - по умолчанию, 1 - чанки, все остальные - по размеру)
- * @return        количество обработанных байт
- */
-const size_t HttpData::setBodyData(const char * buffer, const size_t size, size_t length){
-	// Выполняем добавление данных тела
-	return this->body.addData(buffer, size, length);
-}
-/**
- * setEntitybody Метод добавления данных вложения
- * @param buffer буфер с данными вложения
- * @param size   размер буфера
- */
-bool HttpData::setEntitybody(const char * buffer, size_t size){
-	// Если данные в объекте существуют
-	if(this->length){
-		// Размер вложений
-		u_int body_size = 0;
-		// Проверяем есть ли размер вложений
-		string cl = getHeader("content-length");
-		// Если найден размер вложений
-		// Определяем размер вложений
-		if(!cl.empty() && ::isNumber(cl)) body_size = (::atoi(cl.c_str()) + this->length);
-		// Если вложения не найдены
-		else {
-			// Проверяем есть ли чанкование
-			string ch = getHeader("transfer-encoding");
-			// Если это чанкование
-			if(!ch.empty() && (ch.find("chunked") != string::npos)){
-				// Выполняем поиск подстроки
-				const char * pch = strstr(buffer + this->length, "0\r\n\r\n");
-				// Если конец передачи данных мы нашли
-				// Определяем размер вложений
-				if(pch) body_size = ((pch - buffer) - this->length + 5);
-				// Если конец не найден
-				else {
-					// Ищем дальше
-					pch = strstr(buffer + this->length, "0\r\n");
-					// Если конец передачи данных мы нашли
-					// Определяем размер вложений
-					if(pch) body_size = ((pch - buffer) - this->length + 3);
-				}
-			// Сообщаем что мы закончили
-			} else return true;
-		}
-		// Если данные вложений есть тогда устанавливаем их и выходим
-		if(body_size <= size){
-			// Извлекаем указанные данные
-			this->entitybody.assign(buffer + this->length, buffer + body_size);
-			// Увеличиваем максимальный размер данных
-			this->length += body_size;
-			// Сообщаем что мы закончили
-			return true;
+const string HttpData::getRawRequestData(){
+	// Результирующая строка данных
+	string result;
+	// Если данные тела получены
+	if(isEndBody()){
+		// Получаем данные тела
+		string body = this->body.getRawBody();
+		// Удаляем из заголовков, заголовок передачи данных чанками
+		rmHeader("transfer-encoding");
+		// Устанавливаем размер входящих данных
+		setHeader("Content-Length", to_string(body.size()));
+		// Получаем данные заголовков
+		string headers = getRequestHeaders();
+		// Ищем заголовок gzip
+		size_t pos = headers.find("Content-Encoding: gzip\r\n");
+		// Если заголовок найден
+		if(pos != string::npos) headers.replace(pos, 24, "");
+		// Ищем заголовок etag
+		pos = headers.find("ETag: W/");
+		// Если заголовок найден
+		if(pos != string::npos) headers.replace(pos, 8, "ETag: ");
+		// Если заголовки и тело существуют
+		if(!headers.empty()){
+			// Выполняем добавление заголовков в результат
+			result.append(headers);
+			// Копируем данные тела
+			if(!body.empty()) result.append(body);
 		}
 	}
-	// Сообщаем что ничего не найдено
-	return false;
+	// Выводим результат
+	return result;
 }
 /**
- * isEndBody Метод определения заполненности тела ответа данными
- * @return результат проверки
+ * clear Метод очистки структуры
  */
-bool HttpData::isEndBody(){
-	// Выводим результат проверки на заполненность тела ответа
-	return this->body.isEnd();
+void HttpData::clear(){
+	// Обнуляем статус запроса
+	this->status = 0;
+	// Устанавливаем что режим сжатия отключен
+	this->intGzip = false;
+	this->extGzip = false;
+	this->http.clear();
+	this->auth.clear();
+	this->method.clear();
+	this->path.clear();
+	this->protocol.clear();
+	this->version.clear();
+	this->host.clear();
+	this->port.clear();
+	this->login.clear();
+	this->password.clear();
+	// Очищаем карту заголовков
+	this->headers.clear();
+	// Очищаем тело
+	this->body.clear();
 }
 /**
  * initBody Метод инициализации объекта тела
  * @param chunk максимальный размер чанка в байтах
  * @param level тип сжатия
  */
-void HttpData::initBody(size_t chunk, int level){
+void HttpData::initBody(const size_t chunk, const int level){
 	// Выполняем создание объекта body
 	HttpBody body = HttpBody(chunk, level, this->intGzip, this->extGzip);
 	// Запоминаем строку body
@@ -1612,12 +1657,7 @@ void HttpData::initBody(size_t chunk, int level){
  */
 void HttpData::rmHeader(const string key){
 	// Если параметры пришли верные
-	if(!key.empty()){
-		// Удаляем заголовок
-		this->headers.remove(key);
-		// Выполняем генерацию результирующего запроса
-		createHead();
-	}
+	if(!key.empty()) this->headers.remove(key);
 }
 /**
  * unsetGzip Метод снятия режима сжатия gzip
@@ -1644,7 +1684,7 @@ void HttpData::unsetGzip(){
  * @param intGzip активация внутреннего режима сжатия
  * @param extGzip активация внешнего режима сжатия
  */
-void HttpData::setGzip(bool intGzip, bool extGzip){
+void HttpData::setGzip(const bool intGzip, const bool extGzip){
 	// Если один из режимов активирован
 	if(intGzip || extGzip){
 		// Получаем данные заголовка etag
@@ -1680,19 +1720,15 @@ void HttpData::setHeader(const string key, const string value){
 	if(!key.empty() && !value.empty()){
 		// Устанавливаем заголовок
 		this->headers.append(key, value);
-		// Выполняем генерацию результирующего запроса
-		createHead();
 	}
 }
 /**
  * setOptions Метод установки настроек прокси сервера
  * @param options данные для установки
  */
-void HttpData::setOptions(u_short options){
+void HttpData::setOptions(const u_short options){
 	// Запоминаем данные
 	this->options = options;
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setMethod Метод установки метода запроса
@@ -1701,8 +1737,6 @@ void HttpData::setOptions(u_short options){
 void HttpData::setMethod(const string str){
 	// Запоминаем данные
 	this->method = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setHost Метод установки хоста запроса
@@ -1711,18 +1745,22 @@ void HttpData::setMethod(const string str){
 void HttpData::setHost(const string str){
 	// Запоминаем данные
 	this->host = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setPort Метод установки порта запроса
  * @param number номер порта для установки
  */
-void HttpData::setPort(u_int number){
+void HttpData::setPort(const u_int number){
 	// Запоминаем данные
 	this->port = to_string(number);
-	// Выполняем генерацию результирующего запроса
-	createHead();
+}
+/**
+ * setStatus Метод установки статуса запроса
+ * @param number номер статуса для установки
+ */
+void HttpData::setStatus(const u_int number){
+	// Запоминаем данные
+	this->status = number;
 }
 /**
  * setPath Метод установки пути запроса
@@ -1731,8 +1769,6 @@ void HttpData::setPort(u_int number){
 void HttpData::setPath(const string str){
 	// Запоминаем данные
 	this->path = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setProtocol Метод установки протокола запроса
@@ -1741,20 +1777,16 @@ void HttpData::setPath(const string str){
 void HttpData::setProtocol(const string str){
 	// Запоминаем данные
 	this->protocol = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setVersion Метод установки версии протокола запроса
  * @param number номер версии протокола
  */
-void HttpData::setVersion(float number){
+void HttpData::setVersion(const float number){
 	// Запоминаем данные
 	this->version = to_string(number);
 	// Если это всего один символ тогда дописываем ноль
 	if(this->version.length() == 1) this->version += ".0";
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setAuth Метод установки метода авторизации запроса
@@ -1763,8 +1795,6 @@ void HttpData::setVersion(float number){
 void HttpData::setAuth(const string str){
 	// Запоминаем данные
 	this->auth = str;
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setUseragent Метод установки юзерагента запроса
@@ -1773,8 +1803,6 @@ void HttpData::setAuth(const string str){
 void HttpData::setUseragent(const string str){
 	// Запоминаем данные
 	setHeader("User-Agent", str);
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * setClose Метод установки принудительного отключения после запроса
@@ -1782,8 +1810,6 @@ void HttpData::setUseragent(const string str){
 void HttpData::setClose(){
 	// Запоминаем данные
 	setHeader("Connection", "close");
-	// Выполняем генерацию результирующего запроса
-	createHead();
 }
 /**
  * addHeader Метод добавления нового заголовка
@@ -1815,8 +1841,6 @@ void HttpData::addHeader(const char * buffer){
 				string val = match[6].str();
 				// Добавляем новый заголовок
 				this->headers.append(key, val);
-				// Запоминаем первые символы
-				this->query.append(key + string(": ") + val + "\r\n");
 				// Если сжатие активировано
 				if((::toCase(key).compare("content-encoding") == 0)
 				&& (val.find("gzip") != string::npos)) this->extGzip = true;
@@ -1834,105 +1858,52 @@ void HttpData::addHeader(const char * buffer){
 				this->version = version;
 				// Запоминаем статус запроса
 				this->status = ::atoi(match[4].str().c_str());
-				// Запоминаем первые символы
-				this->query = (this->http + "\r\n");
 			}
-			// Получаем длину массива заголовков
-			this->length = this->query.length();
 		}
 	// Если данные пришли пустые значит они существуют и это завершение заголовков
-	} else if(buffer) {
-		// Устанавливаем завершающие символы запроса
-		this->query += "\r\n";
-		// Получаем длину массива заголовков
-		this->length = this->query.length();
-		// Запоминаем что заголовки заполены полностью
-		this->fullHeaders = true;
-	}
+	} else if(buffer) this->headers.setEnd();
 }
 /**
- * createRequest Функция создания ответа сервера
- * @param  index   индекс в массиве ответа
- * @param  request номер ответа
- * @return         объект с данными ответа
+ * brokenRequest Метод генерации ответа (неудачного отправленного запроса)
  */
-HttpQuery HttpData::createRequest(u_short index, u_short request){
-	// Устанавливаем дефолтное название прокси
-	string defname = "ProxyAnyks/1.0";
-	// Определяем позицию дефолтного названия
-	size_t pos = this->html[index].find(defname);
-	// Результирующая строка
-	string result;
-	// Если это домен
-	if(pos != string::npos){
-		// Заменяем дефолтное название на указанное
-		result = this->html[index]
-		.replace(pos, defname.length(), this->appName + string("/") + this->appVersion);
-	}
-	// Выводим шаблон сообщения о неудачном отправленном запросе
-	result = this->html[index];
-	// Данные для вывода
-	HttpQuery data(request, result);
-	// Выводим результат
-	return data;
+void HttpData::brokenRequest(){
+	// Устанавливаем тело с данными
+	createRequest(9);
 }
 /**
- * brokenRequest Метод получения ответа (неудачного отправленного запроса)
- * @return ответ в формате html
+ * faultConnect Метод генерации ответа (неудачного подключения к удаленному серверу)
  */
-HttpQuery HttpData::brokenRequest(){
-	// Выводим результат
-	return createRequest(9, 501);
+void HttpData::faultConnect(){
+	// Устанавливаем тело с данными
+	createRequest(6);
 }
 /**
- * faultConnect Метод получения ответа (неудачного подключения к удаленному серверу)
- * @return ответ в формате html
+ * pageNotFound Метод генерации ответа (страница не найдена)
  */
-HttpQuery HttpData::faultConnect(){
-	// Выводим результат
-	return createRequest(6, 502);
+void HttpData::pageNotFound(){
+	// Устанавливаем тело с данными
+	createRequest(4);
 }
 /**
- * pageNotFound Метод получения ответа (страница не найдена)
- * @return ответ в формате html
+ * faultAuth Метод генерации ответа (неудачной авторизации)
  */
-HttpQuery HttpData::pageNotFound(){
-	// Выводим результат
-	return createRequest(4, 404);
+void HttpData::faultAuth(){
+	// Устанавливаем тело с данными
+	createRequest(5);
 }
 /**
- * faultAuth Метод получения ответа (неудачной авторизации)
- * @return ответ в формате html
+ * requiredAuth Метод генерации ответа (запроса ввода логина и пароля)
  */
-HttpQuery HttpData::faultAuth(){
-	// Выводим результат
-	return createRequest(5, 403);
+void HttpData::requiredAuth(){
+	// Устанавливаем тело с данными
+	createRequest(2);
 }
 /**
- * requiredAuth Метод получения ответа (запроса ввода логина и пароля)
- * @return ответ в формате html
+ * authSuccess Метод генерации ответа (подтверждения авторизации)
  */
-HttpQuery HttpData::requiredAuth(){
-	// Выводим результат
-	return createRequest(2, 407);
-}
-/**
- * authSuccess Метод получения ответа (подтверждения авторизации)
- * @return ответ в формате html
- */
-HttpQuery HttpData::authSuccess(){
-	// Выводим результат
-	return createRequest(0, 200);
-}
-/**
- * getRequest Метод получения сформированного http запроса
- * @return сформированный http запрос
- */
-HttpQuery HttpData::getRequest(){
-	// Данные для вывода
-	HttpQuery data(200, this->request, this->entitybody);
-	// Выводим результат
-	return data;
+void HttpData::authSuccess(){
+	// Устанавливаем тело с данными
+	createRequest(0);
 }
 /**
  * init Метод инициализации класса
@@ -1979,14 +1950,8 @@ void HttpData::init(const string str, const string name, const string version, c
 			this->http = ::trim(this->http);
 			// Запоминаем статус запроса
 			this->status = ::atoi(match[4].str().c_str());
-			// Запоминаем первые символы
-			this->query = match[0].str();
 			// Создаем объект с заголовками
-			this->headers.create(this->query.c_str());
-			// Получаем длину массива заголовков
-			this->length = this->query.length();
-			// Запоминаем что заголовки заполнены полностью
-			this->fullHeaders = true;
+			this->headers.create(match[0].str().c_str());
 		}
 		// Генерируем данные подключения
 		genDataConnect();
@@ -2022,15 +1987,13 @@ HttpData::HttpData(const string name, const u_short options){
 HttpData::~HttpData(){
 	// Очищаем полученные данные
 	clear();
-	// Очищаем память выделенную для вектора
-	vector <char> ().swap(this->entitybody);
 }
 /**
  * isHttp Метод проверки на то http это или нет
  * @param  buffer буфер входящих данных
  * @return        результат проверки
  */
-bool Http::isHttp(const string buffer){
+const bool Http::isHttp(const string buffer){
 	// Если буфер существует
 	if(!buffer.empty()){
 		// Создаем новый буфер
@@ -2051,9 +2014,8 @@ bool Http::isHttp(const string buffer){
  * parse Функция извлечения данных из буфера
  * @param buffer буфер с входящими запросами
  * @param size   размер входящих данных
- * @param flag   обрабатывать весь блок данных
  */
-size_t Http::parse(const char * buffer, size_t size, bool flag){
+const size_t Http::parse(const char * buffer, const size_t size){
 	// Определяем максимальный размер данных
 	size_t maxsize = 0;
 	// Результат работы регулярного выражения
@@ -2075,29 +2037,27 @@ size_t Http::parse(const char * buffer, size_t size, bool flag){
 		// Запоминаем первые символы
 		string badchars = match[1].str();
 		// Увеличиваем значение общих найденных символов
-		maxsize += badchars.length();
+		maxsize += badchars.size();
 		// Выполняем парсинг http запроса
 		HttpData httpData;
+		// Получаем данные заголовков
+		string headers = match[2].str();
+		// Добавляем размер заголовков
+		maxsize += headers.size();
 		// Выполняем инициализацию объекта
-		httpData.init(match[2].str(), this->name, this->version, this->options);
+		httpData.init(headers, this->name, this->version, this->options);
 		// Добавляем вложенные данные
-		if(httpData.setEntitybody(buffer, size)){
+		size_t sizeBody = httpData.setEntitybody(buffer + maxsize, size - maxsize);
+		// Если размер данных тела не получен
+		if(!sizeBody || httpData.isEndBody()){
 			// Добавляем в массив объект подключения
 			this->httpData.push_back(httpData);
-			// Увеличиваем общий размер
-			maxsize += httpData.size();
-			// Следующий размер данных
-			size_t nsize = strlen(buffer + maxsize);
-			// Если есть еще данные
-			if(flag && (nsize >= 34) && (nsize <= (size - maxsize))){
-				// Выполняем интерпретацию следующей порции данных
-				return parse(buffer + maxsize, size - maxsize, flag);
-			// Выводим размер так как он есть
-			} else return maxsize;
 		}
+		// Увеличиваем общее количество обработанных байт
+		maxsize += sizeBody;
 	}
 	// Сообщаем что ничего не найдено
-	return 0;
+	return maxsize;
 }
 /**
  * modify Функция модифицирования ответных данных
@@ -2111,7 +2071,7 @@ void Http::modify(vector <char> &data){
 	// Выполняем инициализацию объекта
 	httpQuery.init(headers, this->name, this->version, this->options);
 	// Если данные распарсены
-	if(httpQuery.size()){
+	if(httpQuery.isEndHeaders()){
 		// Если завершение заголовка найдено
 		u_int pos = (strstr(headers, "\r\n\r\n") - headers) + 4;
 		// Получаем данные запроса
