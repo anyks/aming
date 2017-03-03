@@ -1279,18 +1279,15 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			}
 			// Если все данные получены
 			if(http->httpResponse.isEndHeaders()){
-				// Если размер данных меньше 1KB и подключение не постоянное, тогда активируем отправку одним разом
-				if(!http->client.alive){
-					// Получаем статус запроса
-					const u_int status = http->httpResponse.getStatus();
-					// Если статус утвердительный
-					if(((status > 99) && (status < 200))
-					|| ((status != 204) && (status != 205))
-					|| (status > 300)){
-						// Активируем отдачу буферов целиком одним разом
-						socket_tcpcork(http->sockets.server, http->proxy->log);
-						socket_tcpcork(http->sockets.client, http->proxy->log);
-					}
+				// Получаем статус запроса
+				const u_int status = http->httpResponse.getStatus();
+				// Если статус утвердительный
+				if(((status > 99) && (status < 200))
+				|| ((status == 204) || (status == 205))
+				|| (status > 300)){
+					// Активируем отдачу буферов целиком одним разом
+					socket_tcpcork(http->sockets.server, http->proxy->log);
+					socket_tcpcork(http->sockets.client, http->proxy->log);
 				}
 				// Проверяем есть ли размер вложений
 				string cl = http->httpResponse.getHeader("content-length");
