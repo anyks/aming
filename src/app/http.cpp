@@ -516,6 +516,9 @@ void BufferHttpProxy::sendServer(){
 	else this->setTimeout(TM_SERVER, false, true);
 	// Формируем запрос на сервер
 	this->client.request = this->httpRequest.getRequestData();
+
+	cout << " ++++++++++++++++++++++ " << this->client.request << endl;
+
 	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
 	this->sleep(this->client.request.size(), false);
 	// Отправляем серверу сообщение

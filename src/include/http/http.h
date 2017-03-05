@@ -272,7 +272,6 @@ class HttpData {
 		 * Http Структура http данных
 		 */
 		struct Http {
-			short code;		// Код запроса
 			string text;	// Текст запроса
 			string headers;	// Заголовки
 			string body;	// Тело
@@ -286,136 +285,34 @@ class HttpData {
 			string protocol;	// Протокол
 		};
 		// Основные переменные класса
-		bool			intGzip;			// Активация внутреннего режима сжатия
-		bool			extGzip;			// Активация внешнего режима сжатия
-		u_short			options;			// Параметры прокси сервера
-		u_int			status;				// Статус код http запроса
-		string			appName;			// Название приложения
-		string			appVersion;			// Версия приложения
-		string			http;				// http запрос
-		string			auth;				// Тип авторизации
-		string			method;				// Метод запроса
-		string			path;				// Путь запроса
-		string			protocol;			// Протокол запроса
-		string			version;			// Версия протокола
-		string			host;				// Хост запроса
-		string			port;				// Порт запроса
-		string			login;				// Логин
-		string			password;			// Пароль
-		HttpBody		body;				// Тело http запроса
-		HttpHeaders		headers;			// Заголовки http запроса
-		// Шаблоны ответов
-		vector <Http> response = {
-			// Подключение разрешено [0]
-			{
-				200, "Connection established", "\r\n", ""
-			// Продолжить подключение [1]
-			},{
-				100, "Continue", "\r\n", ""
-			// Требуется авторизация в прокси [2]
-			},{
-				407, "Proxy Authentication Required",
-				"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>407 Proxy Authentication Required</title></head>\r\n"
-				"<body><h2>407 Proxy Authentication Required</h2>\r\n"
-				"<h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3>\r\n"
-				"</body></html>\r\n"
-			// Ошибка запроса [3]
-			},{
-				400, "Bad Request",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>400 Bad Request</title></head>\r\n"
-				"<body><h2>400 Bad Request</h2></body></html>\r\n"
-			// Страница не найдена [4]
-			},{
-				404, "Not Found",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>404 Not Found</title></head>\r\n"
-				"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n"
-			// Доступ закрыт [5]
-			},{
-				403, "Forbidden",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>403 Access Denied</title></head>\r\n"
-				"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n"
-			// Шлюз не доступен (хост не найден или ошибка подключения) [6]
-			},{
-				502, "Bad Gateway",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>502 Bad Gateway</title></head>\r\n"
-				"<body><h2>502 Bad Gateway</h2><h3>Host Not Found or connection failed</h3></body></html>\r\n"
-			// Сервис не доступен (вы исчерпали свой трафик) [7]
-			},{
-				503, "Service Unavailable",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>503 Service Unavailable</title></head>\r\n"
-				"<body><h2>503 Service Unavailable</h2><h3>You have exceeded your traffic limit</h3></body></html>\r\n"
-			// Сервис не доступен (обнаружена рекурсия) [8]
-			},{
-				503, "Service Unavailable",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>503 Service Unavailable</title></head>\r\n"
-				"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n"
-			// Сервис не доступен (Требуемое действие не поддерживается прокси сервером) [9]
-			},{
-				501, "Not Implemented",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>501 Not Implemented</title></head>\r\n"
-				"<body><h2>501 Not Implemented</h2><h3>Required action is not supported by proxy server</h3></body></html>\r\n"
-			// Сервис не доступен (Не удалось подключится к родительской прокси) [10]
-			},{
-				502, "Bad Gateway",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>502 Bad Gateway</title></head>\r\n"
-				"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n"
-			// Внутренняя ошибка [11]
-			},{
-				500, "Internal Error",
-				"Proxy-Connection: close\r\n"
-				"Connection: close\r\n"
-				"Content-type: text/html; charset=utf-8\r\n"
-				"\r\n",
-				"<html><head><title>500 Internal Error</title></head>\r\n"
-				"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
-			}
-		};
+		bool				intGzip;	// Активация внутреннего режима сжатия
+		bool				extGzip;	// Активация внешнего режима сжатия
+		u_short				options;	// Параметры прокси сервера
+		u_int				status;		// Статус код http запроса
+		string				appName;	// Название приложения
+		string				appVersion;	// Версия приложения
+		string				http;		// http запрос
+		string				auth;		// Тип авторизации
+		string				method;		// Метод запроса
+		string				path;		// Путь запроса
+		string				protocol;	// Протокол запроса
+		string				version;	// Версия протокола
+		string				host;		// Хост запроса
+		string				port;		// Порт запроса
+		string				login;		// Логин
+		string				password;	// Пароль
+		HttpBody			body;		// Тело http запроса
+		HttpHeaders			headers;	// Заголовки http запроса
+		map <u_short, Http>	response;	// Шаблоны ответов
 		/**
 		 * genDataConnect Метод генерации данных для подключения
 		 */
 		void genDataConnect();
 		/**
 		 * createRequest Функция создания ответа сервера
-		 * @param index индекс в массиве ответа
+		 * @param code код ответа
 		 */
-		void createRequest(const u_short index);
+		void createRequest(const u_short code);
 		/**
 		 * createHeadResponse Функция получения сформированного заголовков ответа
 		 * @return собранные заголовки ответа

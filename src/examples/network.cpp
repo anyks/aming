@@ -1094,6 +1094,9 @@ int main(int len, char * buff[]){
 
 	cout << " ========== " << result << " == " << s << " == " << value << endl;
 
+
+	std::map mpt = {{"key"}, {"value"}};
+
 	/*
 	// Маска 1
 	NTdata mask1 = getMaskByString("255.255.0.0");

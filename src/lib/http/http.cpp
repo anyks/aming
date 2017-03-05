@@ -962,36 +962,35 @@ void HttpData::genDataConnect(){
 }
 /**
  * createRequest Функция создания ответа сервера
- * @param index индекс в массиве ответа
+ * @param code код ответа
  */
-void HttpData::createRequest(const u_short index){
-	// Если индекс верный
-	if(index < this->response.size()){
+void HttpData::createRequest(const u_short code){
+	// Если код существует
+	if(this->response.count(code)){
 		// Устанавливаем статус
-		setStatus(this->response[index].code);
+		setStatus(code);
 		// Очищаем тело вложений
 		this->body.clear();
 		// Устанавливаем версию протокола
 		this->version = "1.1";
 		// Формируем запрос
 		this->http = (
-			string("HTTP/") + this->version + string(" ")
-			+ to_string(this->response[index].code)
-			+ string(" ") + this->response[index].text
+			string("HTTP/") + this->version + string(" ") + to_string(code)
+			+ string(" ") + this->response[code].text
 		);
 		// Добавляем запрос в заголовки
 		string headers = (this->http + "\r\n");
 		// Добавляем заголовки
-		headers.append(this->response[index].headers);
+		headers.append(this->response[code].headers);
 		// Создаем заголовки
 		this->headers.create(headers.c_str());
 		// Если тело существует
-		if(!this->response[index].body.empty()){
+		if(!this->response[code].body.empty()){
 			// Создаем тело
 			this->body.addData(
-				this->response[index].body.c_str(),
-				this->response[index].body.size(),
-				this->response[index].body.size()
+				this->response[code].body.c_str(),
+				this->response[code].body.size(),
+				this->response[code].body.size()
 			);
 		}
 	}
@@ -1879,42 +1878,42 @@ void HttpData::addHeader(const char * buffer){
  */
 void HttpData::brokenRequest(){
 	// Устанавливаем тело с данными
-	createRequest(9);
+	createRequest(510);
 }
 /**
  * faultConnect Метод генерации ответа (неудачного подключения к удаленному серверу)
  */
 void HttpData::faultConnect(){
 	// Устанавливаем тело с данными
-	createRequest(6);
+	createRequest(502);
 }
 /**
  * pageNotFound Метод генерации ответа (страница не найдена)
  */
 void HttpData::pageNotFound(){
 	// Устанавливаем тело с данными
-	createRequest(4);
+	createRequest(404);
 }
 /**
  * faultAuth Метод генерации ответа (неудачной авторизации)
  */
 void HttpData::faultAuth(){
 	// Устанавливаем тело с данными
-	createRequest(5);
+	createRequest(403);
 }
 /**
  * requiredAuth Метод генерации ответа (запроса ввода логина и пароля)
  */
 void HttpData::requiredAuth(){
 	// Устанавливаем тело с данными
-	createRequest(2);
+	createRequest(407);
 }
 /**
  * authSuccess Метод генерации ответа (подтверждения авторизации)
  */
 void HttpData::authSuccess(){
 	// Устанавливаем тело с данными
-	createRequest(0);
+	createRequest(200);
 }
 /**
  * init Метод инициализации класса
@@ -1989,6 +1988,84 @@ void HttpData::create(const string name, const u_short options){
  * @param options опции http парсера
  */
 HttpData::HttpData(const string name, const u_short options){
+	// Создаем шаблоны ответов
+	this->response.insert(pair <u_short, Http> (100, {"Continue", "\r\n", ""}));
+	this->response.insert(pair <u_short, Http> (200, {"Connection established", "\r\n", ""}));
+	this->response.insert(pair <u_short, Http> (400, {
+		"Bad Request",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>400 Bad Request</title></head>\r\n"
+		"<body><h2>400 Bad Request</h2></body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (403, {
+		"Forbidden",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>403 Access Denied</title></head>\r\n"
+		"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (404, {
+		"Not Found",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>404 Not Found</title></head>\r\n"
+		"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (407, {
+		"Proxy Authentication Required",
+		"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>407 Proxy Authentication Required</title></head>\r\n"
+		"<body><h2>407 Proxy Authentication Required</h2>\r\n"
+		"<h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3>\r\n"
+		"</body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (500, {
+		"Internal Error",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>500 Internal Error</title></head>\r\n"
+		"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (502, {
+		"Bad Gateway",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>502 Bad Gateway</title></head>\r\n"
+		"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (503, {
+		"Service Unavailable",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>503 Service Unavailable</title></head>\r\n"
+		"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (510, {
+		"Not Extended",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>510 Not Extended</title></head>\r\n"
+		"<body><h2>510 Not Extended</h2><h3>Required action is not extended by proxy server</h3></body></html>\r\n"
+	}));
 	// Выполняем создание объекта
 	create(name, options);
 }
