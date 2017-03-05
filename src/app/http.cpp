@@ -429,6 +429,8 @@ void BufferHttpProxy::checkClose(){
 		this->httpResponse.setBodyEnd();
 		// Отсылаем данные клиенту
 		this->sendClient();
+		// Очищаем объект http данных
+		this->httpRequest.clear();
 		// Формируем лог данные
 		string log = (this->client.request + "\r\n\r\n");
 		// Дополняем лог данные, данными ответа
@@ -439,7 +441,7 @@ void BufferHttpProxy::checkClose(){
 	} else close();
 }
 /**
- * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
+ * sleep Метод установки сна потока на время необходимое для соблюдения скоростного ограничения сети
  * @param  size размер передаваемых данных
  * @param  type тип передаваемого сообщения (true - чтение, false - запись)
  * @return      время в секундах на которое следует задержать поток
@@ -455,7 +457,7 @@ void BufferHttpProxy::sleep(const size_t size, const bool type){
 		max = (max / float(this->activeConnects()));
 		// Если размер больше нуля то продолжаем
 		if((max > 0) && (size > max)) seconds = (size / max);
-		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+		// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 		this_thread::sleep_for(chrono::seconds(seconds));
 	}
 }
@@ -495,7 +497,10 @@ void BufferHttpProxy::sendClient(){
 	else this->setTimeout(TM_CLIENT, false, true);
 	// Запоминаем данные запроса
 	string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
-	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+	
+	cout << " ++++++++++++++++++++++++ " << response << endl;
+
+	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 	if(!this->httpResponse.isClose()) this->sleep(response.size(), false);
 	// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 	bufferevent_setwatermark(this->events.client, EV_WRITE, response.size(), 0);
@@ -517,9 +522,10 @@ void BufferHttpProxy::sendServer(){
 	// Формируем запрос на сервер
 	this->client.request = this->httpRequest.getRequestData();
 
-	cout << " ++++++++++++++++++++++ " << this->client.request << endl;
 
-	// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+	cout << " ====================== " << this->client.request << endl;
+
+	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 	this->sleep(this->client.request.size(), false);
 	// Отправляем серверу сообщение
 	bufferevent_write(this->events.server, this->client.request.data(), this->client.request.size());
@@ -1221,20 +1227,20 @@ void HttpProxy::send_http_data(void * ctx){
 						evbuffer_free(tmp);
 					// Если это удачно завершенный запрос и тело получено, отправляем данные клиенту
 					} else if(http->httpResponse.isEndBody()) http->sendClient();
-				}
-				// Если тело собрано то получаем данные тела для логов
-				if(http->httpResponse.isEndBody()){
-					// Формируем лог данные
-					string log = (http->client.request + "\r\n\r\n");
-					// Дополняем лог данные, данными ответа
-					log.append(http->httpResponse.getRawResponseData());
-					// Выполняем запись данные запроса в лог
-					http->proxy->log->write_data(http->client.ip, log);
-					// Очищаем объект http данных
-					http->httpRequest.clear();
-					// Если данные в массиве существуют тогда продолжаем загрузку
-					if(!http->parser.httpData.empty()
-					&& !http->httpResponse.isClose()) do_request(http);
+					// Если тело собрано то получаем данные тела для логов
+					if(http->httpResponse.isEndBody()){
+						// Формируем лог данные
+						string log = (http->client.request + "\r\n\r\n");
+						// Дополняем лог данные, данными ответа
+						log.append(http->httpResponse.getRawResponseData());
+						// Выполняем запись данные запроса в лог
+						http->proxy->log->write_data(http->client.ip, log);
+						// Очищаем объект http данных
+						http->httpRequest.clear();
+						// Если данные в массиве существуют тогда продолжаем загрузку
+						if(!http->parser.httpData.empty()
+						&& !http->httpResponse.isClose()) do_request(http);
+					}
 				}
 				// Удаляем данные из буфера
 				evbuffer_drain(input, size);
@@ -1263,7 +1269,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		http->setTimeout(TM_CLIENT, true, true);
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
-		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+		// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 		http->sleep(len, true);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
 		if(http->client.connect) evbuffer_add_buffer(output, input);
@@ -1496,7 +1502,7 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 		struct evbuffer * input = bufferevent_get_input(bev);
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
-		// Усыпляем поток на указанное время, чтобы соблюсти предел скорости
+		// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 		http->sleep(len, true);
 		// Если это метод connect
 		if(http->client.connect && (conn_enabled || http->client.https)){

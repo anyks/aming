@@ -82,16 +82,12 @@ char * INI::lskip(const char * s){
    or pointer to null at end of string if neither found. Inline comment must
    be prefixed by a whitespace character to register as a comment. */
 char * INI::findCharsOrComment(const char * s, const char * chars){
-#if INI_ALLOW_INLINE_COMMENTS
 	int was_space = 0;
 	while(*s && (!chars || !strchr(chars, *s))
 	&& !(was_space && strchr(INI_INLINE_COMMENT_PREFIXES, *s))){
 		was_space = isspace((unsigned char)(*s));
 		s++;
 	}
-#else
-	while(*s && (!chars || !strchr(chars, *s))) s++;
-#endif
 	return (char *) s;
 }
 
@@ -105,11 +101,7 @@ char * INI::strncpy0(char * dest, const char * src, size_t size){
 /* See documentation in header file. */
 int INI::iniParseStream(ini_reader reader, void * stream, ini_handler handler, void * user){
 	/* Uses a fair bit of stack (use heap instead if you need to) */
-#if INI_USE_STACK
-	char line[INI_MAX_LINE];
-#else
 	char * line;
-#endif
 	char section[MAX_SECTION] = "";
 	char prev_name[MAX_NAME] = "";
 
@@ -119,11 +111,8 @@ int INI::iniParseStream(ini_reader reader, void * stream, ini_handler handler, v
 	char * value;
 	int lineno = 0;
 	int error = 0;
-
-#if !INI_USE_STACK
 	line = new char[INI_MAX_LINE];
 	if(!line) return -2;
-#endif
 
 #if INI_HANDLER_LINENO
 #define HANDLER(u, s, n, v) handler(u, s, n, v, lineno)
@@ -146,13 +135,11 @@ int INI::iniParseStream(ini_reader reader, void * stream, ini_handler handler, v
 			/* Per Python configparser, allow both ; and # comments at the
 			   start of a line */
 		}
-#if INI_ALLOW_MULTILINE
 		else if((* prev_name) && ((* start) && (start > line))) {
 			/* Non-blank line with leading whitespace, treat as continuation
 			   of previous name's value (as per Python configparser). */
 			if(!HANDLER(user, section, prev_name, start) && !error) error = lineno;
 		}
-#endif
 		else if(* start == '[') {
 			/* A "[section]" line */
 			end = findCharsOrComment(start + 1, "]");
@@ -171,13 +158,10 @@ int INI::iniParseStream(ini_reader reader, void * stream, ini_handler handler, v
 				* end = '\0';
 				name = rstrip(start);
 				value = end + 1;
-#if INI_ALLOW_INLINE_COMMENTS
 				end = findCharsOrComment(value, NULL);
 				if(* end) * end = '\0';
-#endif
 				value = lskip(value);
 				rstrip(value);
-
 				/* Valid name[=:]value pair found, call handler */
 				strncpy0(prev_name, name, sizeof(prev_name));
 				if(!HANDLER(user, section, name, value) && !error) error = lineno;
@@ -190,9 +174,7 @@ int INI::iniParseStream(ini_reader reader, void * stream, ini_handler handler, v
 	if(error) break;
 #endif
 	}
-#if !INI_USE_STACK
 	delete [] line;
-#endif
 	return error;
 }
 

@@ -13,8 +13,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
-#include <stdlib.h>
+#include <iostream>
 #include <algorithm>
+#include <stdlib.h>
 
 /* Max params */
 #define MAX_SECTION 50
@@ -23,9 +24,7 @@
 /* Nonzero to allow multi-line value parsing, in the style of Python's
 	configparser. If allowed, ini_parse() will call the handler with the same
 	name for each subsequent line parsed. */
-#ifndef INI_ALLOW_MULTILINE
 #define INI_ALLOW_MULTILINE 1
-#endif
 
 /* Nonzero to allow a UTF-8 BOM sequence (0xEF 0xBB 0xBF) at the start of
 	the file. See http://code.google.com/p/inih/issues/detail?id=21 */
@@ -36,17 +35,8 @@
 /* Nonzero to allow inline comments (with valid inline comment characters
 	specified by INI_INLINE_COMMENT_PREFIXES). Set to 0 to turn off and match
 	Python 3.2+ configparser behaviour. */
-#ifndef INI_ALLOW_INLINE_COMMENTS
 #define INI_ALLOW_INLINE_COMMENTS 1
-#endif
-#ifndef INI_INLINE_COMMENT_PREFIXES
 #define INI_INLINE_COMMENT_PREFIXES ";"
-#endif
-
-/* Nonzero to use stack, zero to use heap (malloc/free). */
-#ifndef INI_USE_STACK
-#define INI_USE_STACK 1
-#endif
 
 /* Stop parsing on first error (default is to keep parsing). */
 #ifndef INI_STOP_ON_FIRST_ERROR
@@ -54,9 +44,7 @@
 #endif
 
 /* Maximum line length for any line in INI file. */
-#ifndef INI_MAX_LINE
-#define INI_MAX_LINE 200
-#endif
+#define INI_MAX_LINE 1024
 
 using namespace std;
 
