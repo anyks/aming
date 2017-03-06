@@ -395,7 +395,7 @@ void LogApp::welcome(){
 		const char * _gzipr = (OPT_PGZIP & (* this->config)->options ? "yes" : "no");
 		const char * _keepalive = (OPT_KEEPALIVE & (* this->config)->options ? "yes" : "no");
 		const char * _connect = (OPT_CONNECT & (* this->config)->options ? "yes" : "no");
-		const char * _setname = (OPT_AGENT & (* this->config)->options ? "yes" : "no");
+		const char * _hideagent = (OPT_AGENT & (* this->config)->options ? "yes" : "no");
 		const char * _deblock = (OPT_DEBLOCK & (* this->config)->options ? "yes" : "no");
 		const char * _debug = ((* this->config)->proxy.debug ? "yes" : "no");
 		const char * _daemon = ((* this->config)->proxy.daemon ? "yes" : "no");
@@ -475,7 +475,7 @@ void LogApp::welcome(){
 		"*   gzip transfer:        %s\n*   gzip response:        %s\n"
 		"*   all connects:         %s\n*   max connect:          %i\n"
 		"*   max sockets:          %i\n*   cache:                %s\n"
-		"*   setname:              %s\n*   bandlimin:            %s\n"
+		"*   hide agent:           %s\n*   bandlimin:            %s\n"
 		"*   deblock:              %s\n*   optimos:              %s\n"
 		"*   keep-alive:           %s\n*   reverse:              %s\n"
 		"*   forward:              %s\n*   transfer:             %s\n"
@@ -498,7 +498,7 @@ void LogApp::welcome(){
 			_daemon, _debug, _gzipt, _gzipr,
 			_allcon, (* this->config)->connects.max,
 			(* this->config)->connects.fds, _cache,
-			_setname, _bandlimin, _deblock,
+			_hideagent, _bandlimin, _deblock,
 			_optimos, _keepalive, _reverse,
 			_forward, _transfer, _connect,
 			proxytype.c_str(),

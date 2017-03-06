@@ -1003,7 +1003,7 @@ const string HttpData::createHeadResponse(){
 	// Определяем тип прокси
 	bool smart = (this->options & OPT_SMART);
 	// Определяем разрешено ли выводить название агента
-	bool agent = (this->options & OPT_AGENT);
+	bool agent = !(this->options & OPT_AGENT);
 	// Замена заголовка Via
 	bool via = false;
 	// Формируем запрос
@@ -1075,7 +1075,7 @@ const string HttpData::createHeadRequest(){
 	// Определяем разрешено ли сжатие
 	bool gzip = (this->options & OPT_GZIP);
 	// Определяем разрешено ли выводить название агента
-	bool agent = (this->options & OPT_AGENT);
+	bool agent = !(this->options & OPT_AGENT);
 	// Определяем разрешено ли постоянное подключение
 	bool keepalive = (this->options & OPT_KEEPALIVE);
 	// Определяем нужно ли попытаться обходить заблокированные сайты

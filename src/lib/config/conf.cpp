@@ -413,8 +413,8 @@ Config::Config(const string filename){
 	} else {
 		// Активируем разрешение connect прокси сервера
 		this->options = (ini.GetBoolean("proxy", "connect", true) ? OPT_CONNECT : OPT_NULL);
-		// Активируем вывод названия прокси сервера
-		this->options = (this->options | (ini.GetBoolean("proxy", "setname", true) ? OPT_AGENT : OPT_NULL));
+		// Активируем вывод или скрытие названия прокси сервера
+		this->options = (this->options | (ini.GetBoolean("proxy", "hideagent", false) ? OPT_AGENT : OPT_NULL));
 		// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
 		this->options = (this->options | (ini.GetBoolean("proxy", "deblock", false) ? OPT_DEBLOCK : OPT_NULL));
 		// Активируем разрешение сжатия данных методом gzip
