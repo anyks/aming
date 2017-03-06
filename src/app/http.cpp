@@ -542,9 +542,9 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	// Определяем тип подключения
 	switch(this->proxy->config->proxy.extIPv){
 		// Для протокола IPv4
-		case 4: this->dns = new DNSResolver(this->proxy->log, this->base, AF_INET, this->proxy->config->proxy.resolver);	break;
+		case 4: this->dns = new DNSResolver(this->proxy->log, this->base, AF_INET, this->proxy->config->ipv4.resolver);		break;
 		// Для протокола IPv6
-		case 6: this->dns = new DNSResolver(this->proxy->log, this->base, AF_INET6, this->proxy->config->proxy.resolver);	break;
+		case 6: this->dns = new DNSResolver(this->proxy->log, this->base, AF_INET6, this->proxy->config->ipv6.resolver);	break;
 	}
 }
 /**

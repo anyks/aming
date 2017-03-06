@@ -272,9 +272,7 @@ Config::Config(const string filename){
 			// Адрес хранения pid файла
 			PID_DIR,
 			// Адрес хранения конфигурационных файлов
-			CONFIG_DIR,
-			// Список dns серверов
-			PROXY_RESOLVER
+			CONFIG_DIR
 		};
 		// Заполняем структуру cache
 		this->cache = {
@@ -377,14 +375,18 @@ Config::Config(const string filename){
 			// Внешний интерфейс, через который будут уходить запросы от сервера
 			IPV4_EXTERNAL,
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-			IPV4_INTERNAL
+			IPV4_INTERNAL,
+			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
+			IPV4_RESOLVER
 		};
 		// Заполняем структуру ipv6
 		this->ipv6 = {
 			// Внешний интерфейс, через который будут уходить запросы от сервера
 			IPV6_EXTERNAL,
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-			IPV6_INTERNAL
+			IPV6_INTERNAL,
+			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
+			IPV6_RESOLVER
 		};
 		// Заполняем структуру timeouts
 		this->timeouts = {
@@ -469,11 +471,11 @@ Config::Config(const string filename){
 		proxy_intIPv = ((proxy_intIPv < 4) || (proxy_intIPv > 6) ? 4 : proxy_intIPv);
 		proxy_extIPv = ((proxy_extIPv < 4) || (proxy_extIPv > 6) ? 4 : proxy_extIPv);
 		// Массив dns серверов
-		vector <string> resolver = split(ini.Get("proxy", "resolver", ""), "|");
+		vector <string> resolver4 = split(ini.Get("ipv4", "resolver", ""), "|");
+		vector <string> resolver6 = split(ini.Get("ipv6", "resolver", ""), "|");
 		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
-		if(resolver.empty() && (proxy_extIPv == 6)) resolver = PROXY_RESOLVER6;
-		// Если ресолвер пустой и протокол версии 4
-		else if(resolver.empty()) resolver = PROXY_RESOLVER;
+		if(resolver4.empty()) resolver4 = IPV4_RESOLVER;
+		if(resolver6.empty()) resolver6 = IPV6_RESOLVER;
 		// Массив версий http протоколов
 		vector <string> gvhttp = split(ini.Get("gzip", "vhttp", ""), "|");
 		// Если версии не указаны тогда устанавливаем значение по умолчанию
@@ -519,9 +521,7 @@ Config::Config(const string filename){
 			// Адрес хранения pid файла
 			ini.Get("proxy", "piddir", PID_DIR),
 			// Адрес хранения конфигурационных файлов
-			ini.Get("proxy", "confdir", CONFIG_DIR),
-			// Список dns серверов
-			resolver
+			ini.Get("proxy", "confdir", CONFIG_DIR)
 		};
 		// Заполняем структуру gzip
 		this->gzip = {
@@ -624,14 +624,18 @@ Config::Config(const string filename){
 			// Внешний интерфейс, через который будут уходить запросы от сервера
 			ini.Get("ipv4", "external", IPV4_EXTERNAL),
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-			ini.Get("ipv4", "internal", IPV4_INTERNAL)
+			ini.Get("ipv4", "internal", IPV4_INTERNAL),
+			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
+			resolver4
 		};
 		// Заполняем структуру ipv6
 		this->ipv6 = {
 			// Внешний интерфейс, через который будут уходить запросы от сервера
 			ini.Get("ipv6", "external", IPV6_EXTERNAL),
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-			ini.Get("ipv6", "internal", IPV6_INTERNAL)
+			ini.Get("ipv6", "internal", IPV6_INTERNAL),
+			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
+			resolver6
 		};
 		// Заполняем структуру timeouts
 		this->timeouts = {

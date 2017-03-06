@@ -54,8 +54,6 @@
 #define PROXY_HTTP_PORT 8080
 #define PROXY_SOCKS5_PORT 1080
 #define PROXY_REDIRECT_PORT 1180
-#define PROXY_RESOLVER {"8.8.8.8", "8.8.4.4"}
-#define PROXY_RESOLVER6 {"2001:4860:4860::8888", "2001:4860:4860::8844"}
 
 // Параметры модуля кеширования
 #define CACHE_DNS true
@@ -89,10 +87,12 @@
 // Модуль IPv4
 #define IPV4_EXTERNAL "0.0.0.0"
 #define IPV4_INTERNAL "127.0.0.1"
+#define IPV4_RESOLVER {"8.8.8.8", "8.8.4.4"}
 
 // Модуль IPv6
 #define IPV6_EXTERNAL "::0"
 #define IPV6_INTERNAL "::1"
+#define IPV6_RESOLVER {"2001:4860:4860::8888", "2001:4860:4860::8844"}
 
 // Размеры буферов клиента
 #define BUFFER_WRITE_SIZE "auto"
@@ -177,15 +177,17 @@ class Config {
 		 * Ipv4 Подключение по IPv4
 		 */
 		struct Ipv4 {
-			string external;	// Внешний интерфейс, через который будут уходить запросы от сервера
-			string internal;	// IP адрес интерфейса на котором будут приниматься запросы от клиентов
+			string external;			// Внешний интерфейс, через который будут уходить запросы от сервера
+			string internal;			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
+			vector <string> resolver;	// Массив со списком dns серверов
 		};
 		/**
 		 * Ipv6 Подключение по IPv6
 		 */
 		struct Ipv6 {
-			string external;	// Внешний интерфейс, через который будут уходить запросы от сервера
-			string internal;	// IP адрес интерфейса на котором будут приниматься запросы от клиентов
+			string external;			// Внешний интерфейс, через который будут уходить запросы от сервера
+			string internal;			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
+			vector <string> resolver;	// Массив со списком dns серверов
 		};
 		/**
 		 * Keepalive Параметры постоянного подключения
@@ -279,7 +281,6 @@ class Config {
 			string name;				// Название сервиса
 			string piddir;				// Адрес хранения pid файла
 			string confdir;				// Адрес хранения конфигурационных файлов
-			vector <string> resolver;	// Массив со списком dns серверов
 		};
 		// Адрес конфигурационного файла
 		string filename;
