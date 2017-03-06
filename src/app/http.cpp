@@ -41,7 +41,7 @@ void ConnectClients::Client::add(void * ctx){
 		// Запоминаем ключ клиента
 		this->key = (http->proxy->config->connects.key ? http->client.mac : http->client.ip);
 		// Запоминаем максимально-возможное количество подключений
-		this->max = http->proxy->config->connects.max;
+		this->max = http->proxy->config->connects.connect;
 		// Создаем поток
 		std::thread thr(&HttpProxy::connection, http);
 		// Выполняем активацию потока
@@ -1699,7 +1699,7 @@ const evutil_socket_t HttpProxy::create_server(){
 		return -1;
 	}
 	// Выполняем чтение сокета
-	if(listen(sock, this->server->config->connects.all) < 0){
+	if(listen(sock, this->server->config->connects.total) < 0){
 		// Выводим в консоль информацию
 		this->server->log->write(LOG_ERROR, 0, "[-] listen error");
 		// Выходим

@@ -361,12 +361,12 @@ Config::Config(const string filename){
 		this->connects = {
 			// Ключ по которому определяются подключения (ip = 0, mac = 1)
 			connect_key,
-			// Максимальное количество подключений (одного клиента к прокси серверу)
-			CONNECTS_MAX,
 			// Максимальное количество файловых дескрипторов
 			CONNECTS_FDS,
+			// Максимальное количество подключений (одного клиента к прокси серверу)
+			CONNECTS_CONNECT,
 			// Общее количество одновременных подключений к прокси серверу
-			CONNECTS_ALL,
+			CONNECTS_TOTAL,
 			// Максимальный размер скачиваемых данных в байтах
 			getBytes(CONNECTS_SIZE)
 		};
@@ -610,12 +610,12 @@ Config::Config(const string filename){
 		this->connects = {
 			// Ключ по которому определяются подключения (ip = 0, mac = 1)
 			connect_key,
-			// Максимальное количество подключений (одного клиента к прокси серверу)
-			(u_int) ini.GetInteger("connects", "max", CONNECTS_MAX),
 			// Максимальное количество файловых дескрипторов
 			(u_int) ini.GetInteger("connects", "fds", CONNECTS_FDS),
+			// Максимальное количество подключений (одного клиента к прокси серверу)
+			(u_int) ini.GetInteger("connects", "connect", CONNECTS_CONNECT),
 			// Общее количество одновременных подключений к прокси серверу
-			(int) ini.GetInteger("connects", "all", CONNECTS_ALL),
+			(int) ini.GetInteger("connects", "total", CONNECTS_TOTAL),
 			// Максимальный размер скачиваемых данных в байтах
 			getBytes(ini.Get("connects", "size", CONNECTS_SIZE))
 		};

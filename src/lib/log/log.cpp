@@ -405,7 +405,7 @@ void LogApp::welcome(){
 		const char * _optimos = ((* this->config)->proxy.optimos ? "yes" : "no");
 		const char * _bandlimin = ((* this->config)->firewall.bandlimin ? "yes" : "no");
 		const char * _cache = ((* this->config)->cache.response ? "yes" : "no");
-		const char * _allcon = ((* this->config)->connects.all > 0 ? to_string((* this->config)->connects.all).c_str() : "auto");
+		const char * _totalcon = ((* this->config)->connects.total > 0 ? to_string((* this->config)->connects.total).c_str() : "auto");
 		// Данные прокси сервера
 		string proxyname = APP_NAME, proxyver = APP_VERSION, proxytype, proxyskill;
 		// Внешний и внутренний адрес сервера
@@ -496,7 +496,7 @@ void LogApp::welcome(){
 			(* this->config)->proxy.user.c_str(),
 			(* this->config)->proxy.group.c_str(),
 			_daemon, _debug, _gzipt, _gzipr,
-			_allcon, (* this->config)->connects.max,
+			_totalcon, (* this->config)->connects.connect,
 			(* this->config)->connects.fds, _cache,
 			_hideagent, _bandlimin, _deblock,
 			_optimos, _keepalive, _reverse,
