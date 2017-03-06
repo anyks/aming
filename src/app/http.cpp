@@ -497,9 +497,6 @@ void BufferHttpProxy::sendClient(){
 	else this->setTimeout(TM_CLIENT, false, true);
 	// Запоминаем данные запроса
 	string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
-	
-	cout << " ++++++++++++++++++++++++ " << response << endl;
-
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 	if(!this->httpResponse.isClose()) this->sleep(response.size(), false);
 	// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
@@ -521,10 +518,6 @@ void BufferHttpProxy::sendServer(){
 	else this->setTimeout(TM_SERVER, false, true);
 	// Формируем запрос на сервер
 	this->client.request = this->httpRequest.getRequestData();
-
-
-	cout << " ====================== " << this->client.request << endl;
-
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 	this->sleep(this->client.request.size(), false);
 	// Отправляем серверу сообщение
