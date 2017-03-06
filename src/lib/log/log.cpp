@@ -377,8 +377,8 @@ void LogApp::write(u_short type, u_int sec, const char * message, ...){
 			// Устанавливаем конец строки
 			buffer[strlen(buffer)] = '\0';
 			// Выполняем вывод сообщений
-			if(this->type & TOLOG_FILES)	async(launch::async, &LogApp::write_to_file, type, buffer, this);
-			if(this->type & TOLOG_CONSOLE)	async(launch::async, &LogApp::write_to_console, type, buffer, this, sec);
+			if(this->filesEnabled && (this->type & TOLOG_FILES))		async(launch::async, &LogApp::write_to_file, type, buffer, this);
+			if(this->consoleEnabled && (this->type & TOLOG_CONSOLE))	async(launch::async, &LogApp::write_to_console, type, buffer, this, sec);
 		}
 		// Завершаем список аргументов
 		va_end(args);
@@ -395,13 +395,13 @@ void LogApp::welcome(){
 		const char * _gzipr = (OPT_PGZIP & (* this->config)->options ? "yes" : "no");
 		const char * _keepalive = (OPT_KEEPALIVE & (* this->config)->options ? "yes" : "no");
 		const char * _connect = (OPT_CONNECT & (* this->config)->options ? "yes" : "no");
-		const char * _headname = (OPT_AGENT & (* this->config)->options ? "yes" : "no");
+		const char * _setname = (OPT_AGENT & (* this->config)->options ? "yes" : "no");
+		const char * _deblock = (OPT_DEBLOCK & (* this->config)->options ? "yes" : "no");
 		const char * _debug = ((* this->config)->proxy.debug ? "yes" : "no");
 		const char * _daemon = ((* this->config)->proxy.daemon ? "yes" : "no");
 		const char * _reverse = ((* this->config)->proxy.reverse ? "yes" : "no");
 		const char * _forward = ((* this->config)->proxy.forward ? "yes" : "no");
 		const char * _transfer = ((* this->config)->proxy.transfer ? "yes" : "no");
-		const char * _deblock = ((* this->config)->proxy.deblock ? "yes" : "no");
 		const char * _optimos = ((* this->config)->proxy.optimos ? "yes" : "no");
 		const char * _bandlimin = ((* this->config)->firewall.bandlimin ? "yes" : "no");
 		const char * _cache = ((* this->config)->cache.response ? "yes" : "no");
@@ -475,7 +475,7 @@ void LogApp::welcome(){
 		"*   gzip transfer:        %s\n*   gzip response:        %s\n"
 		"*   all connects:         %s\n*   max connect:          %i\n"
 		"*   max sockets:          %i\n*   cache:                %s\n"
-		"*   headname:             %s\n*   bandlimin:            %s\n"
+		"*   setname:              %s\n*   bandlimin:            %s\n"
 		"*   deblock:              %s\n*   optimos:              %s\n"
 		"*   keep-alive:           %s\n*   reverse:              %s\n"
 		"*   forward:              %s\n*   transfer:             %s\n"
@@ -498,7 +498,7 @@ void LogApp::welcome(){
 			_daemon, _debug, _gzipt, _gzipr,
 			_allcon, (* this->config)->connects.max,
 			(* this->config)->connects.fds, _cache,
-			_headname, _bandlimin, _deblock,
+			_setname, _bandlimin, _deblock,
 			_optimos, _keepalive, _reverse,
 			_forward, _transfer, _connect,
 			proxytype.c_str(),
@@ -532,6 +532,10 @@ LogApp::LogApp(Config ** config, u_short type){
 		this->enabled = (* this->config)->logs.enabled;
 		// Запоминаем активирована ли возможность запись данных в лог
 		this->dataEnabled = (* this->config)->logs.data;
+		// Запоминаем активирована ли возможность записи логов в файлы
+		this->filesEnabled = (* this->config)->logs.files;
+		// Запоминаем активирована ли возможность вывода логов в консоль
+		this->consoleEnabled = (* this->config)->logs.console;
 		// Запоминаем размер файла лога, максимальный размер не может быть больше 100Мб
 		this->size = ((* this->config)->logs.size <= 104857600 ? (* this->config)->logs.size : 104857600);
 	}

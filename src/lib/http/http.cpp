@@ -1078,6 +1078,8 @@ const string HttpData::createHeadRequest(){
 	bool agent = (this->options & OPT_AGENT);
 	// Определяем разрешено ли постоянное подключение
 	bool keepalive = (this->options & OPT_KEEPALIVE);
+	// Определяем нужно ли попытаться обходить заблокированные сайты
+	bool deblock = (this->options & OPT_DEBLOCK);
 	// Замена заголовка Via
 	bool via = false;
 	// Создаем строку запроса
@@ -1087,15 +1089,15 @@ const string HttpData::createHeadRequest(){
 		+ string(" ") + string("HTTP/")
 		+ this->version + string("\r\n")
 	);
-	/*
-	// Устанавливаем заголовок Host:
-	request.append(
-		string("Host: ") + this->host
-		+ string(":") + this->port + string("\r\n")
-	);
-	*/
-	// Устанавливаем заголовок Host:
-	request.append(string("Host: ") + this->host + string("\r\n"));
+	// Если нужно попытаться обойти заблокированные сайты
+	if(deblock){
+		// Устанавливаем заголовок Host
+		request.append(
+			string("Host: ") + this->host
+			+ string(":") + this->port + string("\r\n")
+		);
+	// Устанавливаем заголовок Host
+	} else request.append(string("Host: ") + this->host + string("\r\n"));
 	// Получаем UserAgent
 	string useragent = getHeader("user-agent");
 	// Добавляем useragent

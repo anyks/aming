@@ -37,6 +37,7 @@
 #define OPT_KEEPALIVE 0x10	// Флаг разрешающий постоянное соединение
 #define OPT_LOG 0x20		// Флаг разрешающий логирование данных
 #define OPT_PGZIP 0x40		// Флаг разрешающий сжатие не сжатых данных
+#define OPT_DEBLOCK 0x80	// Флаг разрешающий обход блокировок
 
 // Параметры прокси сервера (http, socks5, redirect)
 #define PROXY_TYPE "http"
@@ -46,7 +47,6 @@
 #define PROXY_TRANSFER false
 #define PROXY_REVERSE false
 #define PROXY_FORWARD true
-#define PROXY_DEDLOCK false
 #define PROXY_OPTIMOS false
 #define PROXY_DEBUG false
 #define PROXY_DAEMON false
@@ -103,8 +103,9 @@
 #define TIMEOUTS_WRITE 15
 
 // Модуль логов
-#define LOGS_ENABLED true
+#define LOGS_ENABLED false
 #define LOGS_FILES true
+#define LOGS_CONSOLE true
 #define LOGS_DATA false
 #define LOGS_SIZE "1MB"
 #define LOGS_DIR "/var/log"
@@ -206,8 +207,9 @@ class Config {
 		 */
 		struct Logs {
 			bool files;		// Разрешить хранить логи в файлах
-			bool enabled;	// Разрешить ведение логов
+			bool console;	// Разрешить вывод логов в консоль
 			bool data;		// Разрешить ведение логов данных для обмена
+			bool enabled;	// Разрешить ведение логов
 			size_t size;	// Размер файла лога в Кб
 			string dir;		// Адрес каталога для хранения логов
 		};
@@ -271,7 +273,6 @@ class Config {
 			bool reverse;				// Обратный прокси (доступ из сети в локальную сеть)
 			bool transfer;				// Активация поддержки прокси листа
 			bool forward;				// Прямой прокси (доступ во внешнюю сеть)
-			bool deblock;				// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
 			bool optimos;				// Оптимизировать настройки операционной системы (нужен root доступ)
 			string user;				// Идентификатор группы пользователя под которым запускается прокси
 			string group;				// Идентификатор пользователя под которым запускается прокси

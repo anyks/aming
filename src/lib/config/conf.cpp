@@ -261,8 +261,6 @@ Config::Config(const string filename){
 			PROXY_TRANSFER,
 			// Прямой прокси (доступ во внешнюю сеть)
 			PROXY_FORWARD,
-			// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
-			PROXY_DEDLOCK,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			PROXY_OPTIMOS,
 			// Идентификатор группы пользователя под которым запускается прокси
@@ -336,10 +334,12 @@ Config::Config(const string filename){
 		this->logs = {
 			// Разрешить хранить логи в файлах
 			LOGS_FILES,
-			// Разрешить ведение логов
-			LOGS_ENABLED,
+			// Разрешить вывод логов в консоль
+			LOGS_CONSOLE,
 			// Разрешить ведение логов данных для обмена
 			LOGS_DATA,
+			// Разрешить ведение логов
+			LOGS_ENABLED,
 			// Размер файла лога
 			getBytes(LOGS_SIZE),
 			// Адрес хранения логов
@@ -414,7 +414,9 @@ Config::Config(const string filename){
 		// Активируем разрешение connect прокси сервера
 		this->options = (ini.GetBoolean("proxy", "connect", true) ? OPT_CONNECT : OPT_NULL);
 		// Активируем вывод названия прокси сервера
-		this->options = (this->options | (ini.GetBoolean("proxy", "headname", true) ? OPT_AGENT : OPT_NULL));
+		this->options = (this->options | (ini.GetBoolean("proxy", "setname", true) ? OPT_AGENT : OPT_NULL));
+		// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
+		this->options = (this->options | (ini.GetBoolean("proxy", "deblock", false) ? OPT_DEBLOCK : OPT_NULL));
 		// Активируем разрешение сжатия данных методом gzip
 		this->options = (this->options | (ini.GetBoolean("gzip", "transfer", true) ? OPT_GZIP : OPT_NULL));
 		// Активируем сжатие не сжатых данных
@@ -458,7 +460,7 @@ Config::Config(const string filename){
 			case 3: proxy_port = PROXY_REDIRECT_PORT;	break;
 		}
 		// Массив протоколов
-		vector <string> ipVx = split(ini.Get("proxy", "ipver", PROXY_IPV), "->");
+		vector <string> ipVx = split(ini.Get("proxy", "ipv", PROXY_IPV), "->");
 		// Запоминаем внешнюю версию интернет протокола
 		u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
 		// Запоминаем внутреннюю версию интернет протокола
@@ -506,8 +508,6 @@ Config::Config(const string filename){
 			ini.GetBoolean("proxy", "transfer", PROXY_TRANSFER),
 			// Прямой прокси (доступ во внешнюю сеть)
 			ini.GetBoolean("proxy", "forward", PROXY_FORWARD),
-			// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
-			ini.GetBoolean("proxy", "deblock", PROXY_DEDLOCK),
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			ini.GetBoolean("proxy", "optimos", PROXY_OPTIMOS),
 			// Идентификатор группы пользователя под которым запускается прокси
@@ -581,10 +581,12 @@ Config::Config(const string filename){
 		this->logs = {
 			// Разрешить хранить логи в файлах
 			ini.GetBoolean("logs", "files", LOGS_FILES),
-			// Разрешить ведение логов
-			ini.GetBoolean("logs", "enabled", LOGS_ENABLED),
+			// Разрешить вывод логов в консоль
+			ini.GetBoolean("logs", "console", LOGS_CONSOLE),
 			// Разрешить ведение логов данных для обмена
 			ini.GetBoolean("logs", "data", LOGS_DATA),
+			// Разрешить ведение логов
+			ini.GetBoolean("logs", "enabled", LOGS_ENABLED),
 			// Размер файла лога
 			getBytes(ini.Get("logs", "size", LOGS_SIZE)),
 			// Адрес хранения логов
