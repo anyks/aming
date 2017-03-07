@@ -521,7 +521,7 @@ Config::Config(const string filename){
 			// Адрес хранения pid файла
 			ini.Get("proxy", "piddir", PID_DIR),
 			// Адрес хранения конфигурационных файлов
-			ini.Get("proxy", "confdir", CONFIG_DIR)
+			ini.Get("proxy", "dir", CONFIG_DIR)
 		};
 		// Заполняем структуру gzip
 		this->gzip = {

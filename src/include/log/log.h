@@ -8,12 +8,13 @@
 #ifndef _LOG_ANYKS_
 #define _LOG_ANYKS_
 
-#include <iostream>
+#include <regex>
 #include <cstdio>
 #include <string>
 #include <thread>
 #include <future>
 #include <fstream>
+#include <iostream>
 #include <algorithm>
 #include <unistd.h>
 #include <time.h>
@@ -31,7 +32,8 @@ using namespace std;
 // Типы логов
 #define LOG_ERROR 1
 #define LOG_ACCESS 2
-#define LOG_MESSAGE 3
+#define LOG_WARNING 3
+#define LOG_MESSAGE 4
 
 // Типы хранилищь для логов
 #define TOLOG_CONSOLE 0x01
@@ -99,6 +101,13 @@ class LogApp {
 		 * @return      результат проверки
 		 */
 		bool isFileExist(const char * path);
+		/**
+		 * addToPath Метод формирования адреса из пути и названия файла
+		 * @param  path путь где хранится файл
+		 * @param  file название файла
+		 * @return      сформированный путь
+		 */
+		static const string addToPath(const string path, const string file);
 		/**
 		 * write_data_to_file Функция записи в лога полученных данных в файл
 		 * @param id   идентификатор записи

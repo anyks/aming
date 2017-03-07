@@ -1415,7 +1415,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 				http->sockets.client
 			);
 			// Формируем ответ клиенту, что домен не найден
-			http->httpResponse.faultConnect();
+			http->httpResponse.pageNotFound();
 		}
 		// Активируем отдачу буферов целиком одним разом
 		if(http->httpResponse.isClose()) socket_tcpcork(http->sockets.client, http->proxy->log);

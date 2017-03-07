@@ -129,6 +129,25 @@ bool LogApp::isFileExist(const char * path){
 	return (info.st_mode & S_IFMT) != 0;
 }
 /**
+ * addToPath Метод формирования адреса из пути и названия файла
+ * @param  path путь где хранится файл
+ * @param  file название файла
+ * @return      сформированный путь
+ */
+const string LogApp::addToPath(const string path, const string file){
+	// Результирующий адрес
+	string result;
+	// Если параметры переданы
+	if(!path.empty() && !file.empty()){
+		// Формируем регулярное выражение
+		regex pe("\\/+$"), fe("^[\\/\\.\\~]+");
+		// Формируем результирующий адрес
+		result = (regex_replace(path, pe, "") + string("/") + regex_replace(file, fe, ""));
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * write_data_to_file Функция записи в лога полученных данных в файл
  * @param id   идентификатор записи
  * @param data полученные данные
@@ -140,7 +159,9 @@ void LogApp::write_data_to_file(const string id, const string data, void * ctx){
 	// Если объект передан
 	if(log && log->dataEnabled){
 		// Адрес каталога для хранения логов
-		string path = ((* log->config)->logs.dir + string("/") + (* log->config)->proxy.name) + string("/data");
+		string path = addToPath((* log->config)->logs.dir, (* log->config)->proxy.name);
+		// Адрес каталога для хранения логов
+		path = addToPath(path, "data");
 		// Проверяем существует ли нужный нам каталог
 		if(!log->makePath(path.c_str())){
 			// Сообщаем что каталог не может быть создан
@@ -200,7 +221,7 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 	// Если объект передан
 	if(log){
 		// Адрес каталога для хранения логов
-		string path = ((* log->config)->logs.dir + string("/") + (* log->config)->proxy.name);
+		string path = addToPath((* log->config)->logs.dir, (* log->config)->proxy.name);
 		// Проверяем существует ли нужный нам каталог
 		if(!log->makePath(path.c_str())){
 			// Сообщаем что каталог не может быть создан
@@ -216,8 +237,10 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 			case 1: filename = (path + string("/") + "error.log"); break;
 			// Если это доступ
 			case 2: filename = (path + string("/") + "access.log"); break;
+			// Если это предупреждение
+			case 3: filename = (path + string("/") + "warning.log"); break;
 			// Если это сообщение
-			case 3: filename = (path + string("/") + "message.log"); break;
+			case 4: filename = (path + string("/") + "message.log"); break;
 		}
 		// Файловый дескриптор
 		FILE * file = NULL;
@@ -308,8 +331,10 @@ void LogApp::write_to_console(u_short type, const char * message, void * ctx, u_
 		case 1: str = "\x1B[31m\x1B[1mError\x1B[0m "; break;
 		// Если это доступ
 		case 2: str = "\x1B[32m\x1B[1mAccess\x1B[0m "; break;
+		// Если это предупреждение
+		case 3: str = "\x1B[33m\x1B[1mWarning\x1B[0m "; break;
 		// Если это сообщение
-		case 3: str = "\x1B[34m\x1B[1mMessage\x1B[0m "; break;
+		case 4: str = "\x1B[34m\x1B[1mMessage\x1B[0m "; break;
 	}
 	// Добавляем заголовок к сообщению
 	str += message;

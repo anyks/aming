@@ -2018,7 +2018,7 @@ HttpData::HttpData(const string name, const u_short options){
 		"Content-type: text/html; charset=utf-8\r\n"
 		"\r\n",
 		"<html><head><title>404 Not Found</title></head>\r\n"
-		"<body><h2>404 Not Found</h2><h3>File not found</body></html>\r\n"
+		"<body><h2>404 Not Found</h2><h3>Page not found</body></html>\r\n"
 	}));
 	this->response.insert(pair <u_short, Http> (407, {
 		"Proxy Authentication Required",
@@ -2048,7 +2048,7 @@ HttpData::HttpData(const string name, const u_short options){
 		"Content-type: text/html; charset=utf-8\r\n"
 		"\r\n",
 		"<html><head><title>502 Bad Gateway</title></head>\r\n"
-		"<body><h2>502 Bad Gateway</h2><h3>Failed to connect parent proxy</h3></body></html>\r\n"
+		"<body><h2>502 Bad Gateway</h2><h3>Failed to connect server</h3></body></html>\r\n"
 	}));
 	this->response.insert(pair <u_short, Http> (503, {
 		"Service Unavailable",
