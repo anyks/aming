@@ -128,7 +128,7 @@ class BufferHttpProxy {
 		 */
 		struct Server {
 			u_int	port	= 0;	// Порт
-			string	host	= "";	// Хост адрес
+			string	ip		= "";	// ip адрес сервера
 			string	mac		= "";	// Мак адрес
 		};
 		/**

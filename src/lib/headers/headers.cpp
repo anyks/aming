@@ -11,6 +11,97 @@
 using namespace std;
 
 /**
+ * get Метод получения правил клиента
+ * @param client     идентификатор клиента
+ * @param addGeneral добавлять в список общие правила
+ * @return           сформированный список правил
+ */
+vector <Headers::Params> Headers::get(const string client, bool addGeneral){
+	// Создаем вектор
+	vector <Params> rules;
+	// Если клиент передан
+	if(!client.empty()){
+		// Создаем объект сети
+		Network nwk;
+		// Получаем идентификатор пользователя
+		string userId = toCase(client);
+		// Получаем типы идентификаторов
+		u_short utype = checkTypeId(userId);
+		// Если это ip адреса то преобразуем их
+		// Для клиента
+		if(utype == 1)		userId	= nwk.setLowIp(userId);		// Если это IPv4
+		else if(utype == 2)	userId	= nwk.setLowIp6(userId);	// Если это IPv6
+		// Если правило для клиента найдено, удаляем
+		if(this->rules.count(userId) > 0){
+			// Получаем данные объекта
+			auto user = this->rules[userId];
+			// Добавляем в массив данные
+			rules.assign(user.begin(), user.end());
+			// Если общие правила найдены
+			if(addGeneral && (this->rules.count("*") > 0)){
+				// Получаем обище правила
+				auto general = this->rules["*"];
+				// Выполняем добавление общих правил
+				copy(general.begin(), general.end(), back_inserter(rules));
+			}
+		}
+	}
+	// Выводим результат
+	return rules;
+}
+/**
+ * add Метод добавления новых параметров фильтрации заголовков
+ * @param client идентификатор клиента
+ * @param params параметры фильтрации
+ */
+void Headers::add(const string client, Headers::Params params){
+	// Если клиент передан
+	if(!client.empty()){
+		// Создаем объект сети
+		Network nwk;
+		// Получаем идентификатор пользователя
+		string userId = toCase(client);
+		// Получаем типы идентификаторов
+		u_short utype = checkTypeId(userId);
+		// Если это ip адреса то преобразуем их
+		// Для клиента
+		if(utype == 1)		userId	= nwk.setLowIp(userId);		// Если это IPv4
+		else if(utype == 2)	userId	= nwk.setLowIp6(userId);	// Если это IPv6
+		// Если правило для клиента найдено
+		if(this->rules.count(userId) > 0){
+			// Добавляем параметры в список
+			this->rules[userId].push_back(params);
+		// Если правила для клиента не найдено
+		} else {
+			// Создаем вектор
+			vector <Params> rules = {params};
+			// Добавляем его в список
+			this->rules.insert(pair <const string, vector <Params>> (userId, rules));
+		}
+	}
+}
+/**
+ * rm Метод удаления параметров фильтрации заголовков
+ * @param client идентификатор клиента
+ */
+void Headers::rm(const string client){
+	// Если клиент передан
+	if(!client.empty()){
+		// Создаем объект сети
+		Network nwk;
+		// Получаем идентификатор пользователя
+		string userId = toCase(client);
+		// Получаем типы идентификаторов
+		u_short utype = checkTypeId(userId);
+		// Если это ip адреса то преобразуем их
+		// Для клиента
+		if(utype == 1)		userId	= nwk.setLowIp(userId);		// Если это IPv4
+		else if(utype == 2)	userId	= nwk.setLowIp6(userId);	// Если это IPv6
+		// Если правило для клиента найдено, удаляем
+		if(this->rules.count(userId) > 0) this->rules.erase(userId);
+	}
+}
+/**
  * read Метод чтения из файла параметров
  */
 void Headers::read(){
@@ -50,7 +141,8 @@ void Headers::read(){
 						regex e(
 							"(ADD|RM|\\*)(?:\\s+|\\t+)(IN|OUT|\\*)(?:\\s+|\\t+)([\\w\\.\\-\\@\\:]+|\\*)(?:\\s+|\\t+)"
 							"(OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT|\\*)(?:\\s+|\\t+)"
-							"([\\w\\.\\-\\@\\:]+|\\*)(?:\\s+|\\t+)([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)([^\\r\\n\\t]+)",
+							"([^\\s\\r\\n\\t]+)(?:\\s+|\\t+)([\\w\\.\\-\\@\\:]+|\\*)(?:\\s+|\\t+)"
+							"([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)([^\\r\\n\\t]+)",
 							regex::ECMAScript | regex::icase
 						);
 						// Выполняем извлечение данных
@@ -60,9 +152,9 @@ void Headers::read(){
 							// Создаем объект сети
 							Network nwk;
 							// Получаем идентификатор пользователя
-							string userId = match[3].str();
+							string userId = toCase(match[3].str());
 							// Получаем идентификатор сервера
-							string serverId = match[5].str();
+							string serverId = toCase(match[6].str());
 							// Получаем типы идентификаторов
 							u_short utype = checkTypeId(userId);
 							u_short stype = checkTypeId(serverId);
@@ -77,11 +169,11 @@ void Headers::read(){
 							Params params = {
 								utype, stype, toCase(match[1].str()),
 								toCase(match[2].str()), toCase(match[4].str()),
-								toCase(serverId), toCase(match[6].str()),
-								split(match[7].str(), "|")
+								match[5].str(), toCase(serverId),
+								toCase(match[7].str()), split(match[8].str(), "|")
 							};
 							// Добавляем полученные параметры в список
-							// add(userId, params);
+							add(userId, params);
 						}
 					}
 				}
@@ -92,6 +184,106 @@ void Headers::read(){
 		} else if(!filename.empty() && this->log){
 			// Выводим сообщение в лог, что файл не найден
 			this->log->write(LOG_WARNING, 0, "headers file (%s) is not found", filename.c_str());
+		}
+	}
+}
+/**
+ * modifyHeaders Метод модификации заголовков
+ * @param server идентификатор сервера
+ * @param rules  правила фильтрации
+ * @param http   блок с данными запроса или ответа
+ */
+void Headers::modifyHeaders(const string server, vector <Headers::Params> rules, HttpData & http){
+	// Если правила клиента существуют
+	if(!server.empty() && !rules.empty()){
+		// Направление трафика
+		bool routeIn = false, routeAll = false, action = false;
+		// Определяем метод запроса
+		const string method = http.getMethod();
+		// Определяем статус запроса
+		const u_int status = http.getStatus();
+		// Выполняем поиск указанного сервера
+		for(u_int i = 0; i < rules.size(); i++){
+			// Результат проверки фильтров
+			bool result = false;
+			// Определяем нужно ли учитывать направление трафика
+			if(rules[i].route.compare("*") == 0) routeAll = true;
+			else routeAll = false;
+			// Определяем направление трафика
+			if(rules[i].route.compare("in") == 0)		routeIn = true;
+			else if(rules[i].route.compare("out") == 0)	routeIn = false;
+			// Накладываем фильтр на направление трафика
+			if(routeAll || ((!status && !routeIn) || (status && routeIn))) result = true;
+			// Если фильтр сработал
+			if(result){
+				// Проверяем на соответствии метода запроса
+				if((rules[i].method.compare("*") != 0)
+				&& (rules[i].method.compare(method) != 0)) result = false;
+				// Если фильтр сработал
+				if(result){
+					// Если сервер указан конкретный
+					if(rules[i].server.compare("*") != 0){
+						// Определяем как надо искать сервер
+						switch(rules[i].stype){
+							// Если поиск идет по ip адресу
+							case 1:
+							case 2: if(rules[i].server.compare(server) != 0) result = false; break;
+							// Если поиск идет по домену
+							case 4: if(rules[i].server.compare(http.getHost()) != 0) result = false; break;
+							// Метод по умолчанию
+							default: result = false;
+						}
+					}
+					// Если фильтр сработал и это исходящий трафик, проверяем на путь запроса
+					if(result){
+						// Проверяем соответствует ли путь запроса
+						if((rules[i].path.compare("*") != 0)
+						&& (toCase(rules[i].path).compare(toCase(http.getPath())) != 0)) result = false;
+						// Если фильтр сработал и это исходящий трафик
+						if(result && (rules[i].regex.compare("*") != 0)){
+							// Проверяем на соответствие юзер-агента
+							// Результат работы регулярного выражения
+							smatch match;
+							// Устанавливаем правило регулярного выражения
+							regex e(rules[i].regex, regex::ECMAScript | regex::icase);
+							// Выполняем проверку
+							regex_search(http.getUseragent(), match, e);
+							// Выводим результат
+							result = !match.empty();
+						}
+					}
+				}
+			}
+			// Если фильтры сработали то выполняем модификацию
+			if(result){
+				// Определяем тип действия, удаление или добавление заголовков
+				if(rules[i].action.compare("add") == 0)		action = true;
+				else if(rules[i].action.compare("rm") == 0)	action = false;
+				// Переходим по всему массиву заголовков
+				for(size_t j = 0; j < rules[i].headers.size(); j++){
+					// Если нужно добавить заголовки
+					if(action){
+						// Результат работы регулярного выражения
+						smatch match;
+						// Устанавливаем правило регулярного выражения
+						regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
+						// Выполняем проверку
+						regex_search(rules[i].headers[j], match, e);
+						// Если данные найдены
+						if(!match.empty()) http.setHeader(match[1].str(), match[2].str());
+					// Если нужно удалить заголовки
+					} else {
+						// Результат работы регулярного выражения
+						smatch match;
+						// Устанавливаем правило регулярного выражения
+						regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
+						// Выполняем проверку
+						regex_search(rules[i].headers[j], match, e);
+						// Если данные найдены
+						if(!match.empty()) http.rmHeader(match[1].str());
+					}
+				}
+			}
 		}
 	}
 }
@@ -423,6 +615,38 @@ bool Headers::isLogin(const string login){
 void Headers::clear(){
 	// Очищаем данные правил
 	this->rules.clear();
+}
+/**
+ * modify Метод модификации заголовков
+ * @param ip     ip адрес клиента
+ * @param mac    мак адрес клиента
+ * @param server адрес сервера
+ * @param http   блок с данными запроса или ответа
+ */
+void Headers::modify(const string ip, const string mac, const string server, HttpData & http){
+	// Если правило для клиента найдено
+	if(!ip.empty() && !mac.empty() && !server.empty()){
+		// Создаем объект сети
+		Network nwk;
+		// Получаем идентификатор сервера
+		string serverId = toCase(server);
+		// Получаем типы идентификаторов
+		u_short stype = checkTypeId(serverId);
+		// Если это ip адреса то преобразуем их
+		// Для сервера
+		if(stype == 1)		serverId	= nwk.setLowIp(serverId);	// Если это IPv4
+		else if(stype == 2)	serverId	= nwk.setLowIp6(serverId);	// Если это IPv6
+		// Получаем правила клиента по ip адресу
+		auto rules1 = get(ip, false);
+		// Получаем правила клиента по mac адресу
+		auto rules2 = get(mac, false);
+		// Получаем общие правила для клиента
+		auto rules3 = get("*", false);
+		// Выполняем модификацию заголовков
+		modifyHeaders(serverId, rules1, http);
+		modifyHeaders(serverId, rules2, http);
+		modifyHeaders(serverId, rules3, http);
+	}
 }
 /**
  * Headers Конструктор

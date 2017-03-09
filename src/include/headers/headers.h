@@ -39,7 +39,8 @@ class Headers {
 			string action;				// Экшен правила (add - добавление, rm - удаление)
 			string route;				// Направление данных (in - входящие данные, out - исходящие данные)
 			string method;				// Метод запроса (get, post, head ...)
-			string server;				// Идентификатор сервера
+			string path;				// Путь запроса на сервере
+			string server;				// Идентификатор сервера (ip адрес, домен)
 			string regex;				// Регулярное выражение проверки User-Agent
 			vector <string> headers;	// Массив заголовков
 		};
@@ -48,7 +49,14 @@ class Headers {
 		// Конфигурационные данные
 		Config ** config = NULL;
 		// Список правил
-		map <string, vector <Params>> rules;
+		map <const string, vector <Params>> rules;
+		/**
+		 * get Метод получения правил клиента
+		 * @param client     идентификатор клиента
+		 * @param addGeneral добавлять в список общие правила
+		 * @return           сформированный список правил
+		 */
+		vector <Params> get(const string client, bool addGeneral = true);
 		/**
 		 * add Метод добавления новых параметров фильтрации заголовков
 		 * @param client идентификатор клиента
@@ -64,6 +72,13 @@ class Headers {
 		 * read Метод чтения из файла параметров
 		 */
 		void read();
+		/**
+		 * modifyHeaders Метод модификации заголовков
+		 * @param server идентификатор сервера
+		 * @param rules  правила фильтрации
+		 * @param http   блок с данными запроса или ответа
+		 */
+		void modifyHeaders(const string server, vector <Params> rules, HttpData & http);
 		/**
 		 * toCase Функция перевода в указанный регистр
 		 * @param  str  строка для перевода в указанных регистр
@@ -196,11 +211,12 @@ class Headers {
 		void clear();
 		/**
 		 * modify Метод модификации заголовков
-		 * @param client идентификатор клиента
+		 * @param ip     ip адрес клиента
+		 * @param mac    мак адрес клиента
 		 * @param server адрес сервера
 		 * @param http   блок с данными запроса или ответа
 		 */
-		void modify(const string client, const string server, HttpData & http);
+		void modify(const string ip, const string mac, const string server, HttpData & http);
 		/**
 		 * Headers Конструктор
 		 * @param log    объект лога для вывода информации

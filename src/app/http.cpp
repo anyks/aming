@@ -495,6 +495,16 @@ void BufferHttpProxy::sendClient(){
 	if(!this->httpResponse.isClose()) this->setTimeout(TM_CLIENT, true, true);
 	// Если это завершение работы то устанавливаем таймер только на запись
 	else this->setTimeout(TM_CLIENT, false, true);
+	/** Данные установки необходимы для модификации заголовков НАЧАЛО **/
+	// Запоминаем метод который был в запросе
+	this->httpResponse.setMethod(this->httpRequest.getMethod());
+	// Запоминаем путь который был в запросе
+	this->httpResponse.setPath(this->httpRequest.getPath());
+	// Запоминаем домен который был в запросе
+	this->httpResponse.setHost(this->httpRequest.getHost());
+	// Выполняем модификацию заголовков
+	this->proxy->headers->modify(this->client.ip, this->client.mac, this->server.ip, this->httpResponse);
+	/** Данные установки необходимы для модификации заголовков КОНЕЦ **/
 	// Запоминаем данные запроса
 	string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
@@ -516,6 +526,8 @@ void BufferHttpProxy::sendServer(){
 		this->setTimeout(TM_SERVER, true, true);
 	// Устанавливаем таймаут только на запись
 	else this->setTimeout(TM_SERVER, false, true);
+	// Выполняем модификацию заголовков
+	this->proxy->headers->modify(this->client.ip, this->client.mac, this->server.ip, this->httpRequest);
 	// Формируем запрос на сервер
 	this->client.request = this->httpRequest.getRequestData();
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
@@ -949,7 +961,7 @@ const int HttpProxy::connect_server(void * ctx){
 					// Устанавливаем адрес для локальго подключения
 					client4_addr.sin_addr.s_addr = * ((unsigned long *) client->h_addr);
 					// Устанавливаем адрес для удаленного подключения
-					server4_addr.sin_addr.s_addr = inet_addr(http->server.host.c_str());
+					server4_addr.sin_addr.s_addr = inet_addr(http->server.ip.c_str());
 					// Обнуляем серверную структуру
 					bzero(&server4_addr.sin_zero, sizeof(server4_addr.sin_zero));
 					// Запоминаем размер структуры
@@ -969,7 +981,7 @@ const int HttpProxy::connect_server(void * ctx){
 					bindhost = http->proxy->config->ipv6.external;
 					// Получаем данные хоста удаленного сервера по его названию
 					struct hostent * client	= gethostbyname2(bindhost.c_str(), AF_INET6);
-					struct hostent * server	= gethostbyname2(http->server.host.c_str(), AF_INET6);
+					struct hostent * server	= gethostbyname2(http->server.ip.c_str(), AF_INET6);
 					// Указываем адрес прокси сервера
 					inet_ntop(AF_INET6, (struct in_addr *) client->h_addr, host_client, sizeof(host_client));
 					inet_ntop(AF_INET6, (struct in_addr *) server->h_addr, host_server, sizeof(host_server));
@@ -1005,7 +1017,7 @@ const int HttpProxy::connect_server(void * ctx){
 				http->proxy->log->write(
 					LOG_ERROR, 0,
 					"creating socket to server = %s, port = %d, client = %s",
-					http->server.host.c_str(),
+					http->server.ip.c_str(),
 					http->server.port,
 					http->client.ip.c_str()
 				);
@@ -1055,7 +1067,7 @@ const int HttpProxy::connect_server(void * ctx){
 				http->proxy->log->write(
 					LOG_ERROR, 0,
 					"connecting to server = %s, port = %d, client = %s",
-					http->server.host.c_str(),
+					http->server.ip.c_str(),
 					http->server.port,
 					http->client.ip.c_str()
 				);
@@ -1068,7 +1080,7 @@ const int HttpProxy::connect_server(void * ctx){
 				"connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 				http->client.ip.c_str(),
 				http->httpRequest.getHost().c_str(),
-				http->server.host.c_str(),
+				http->server.ip.c_str(),
 				http->server.port,
 				http->server.mac.c_str(),
 				http->httpRequest.getMethod().c_str(),
@@ -1086,7 +1098,7 @@ const int HttpProxy::connect_server(void * ctx){
 				"last connect client [%s] to host = %s [%s:%d], mac = %s, method = %s, path = %s, useragent = %s, socket = %d",
 				http->client.ip.c_str(),
 				http->httpRequest.getHost().c_str(),
-				http->server.host.c_str(),
+				http->server.ip.c_str(),
 				http->server.port,
 				http->server.mac.c_str(),
 				http->httpRequest.getMethod().c_str(),
@@ -1127,7 +1139,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, const short events, void * ct
 					http->client.ip.c_str(),
 					http->client.useragent.c_str(),
 					current_fd,
-					http->server.host.c_str(),
+					http->server.ip.c_str(),
 					http->server.port
 				);
 			}
@@ -1147,7 +1159,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, const short events, void * ct
 					LOG_ACCESS, 0,
 					"closing client [%s] from server [%s:%d], socket = %d",
 					http->client.ip.c_str(),
-					http->server.host.c_str(),
+					http->server.ip.c_str(),
 					http->server.port,
 					current_fd
 				);
@@ -1159,7 +1171,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, const short events, void * ct
 				http->proxy->log->write(
 					LOG_ACCESS, 0,
 					"closing server [%s:%d] from client [%s], socket = %d",
-					http->server.host.c_str(),
+					http->server.ip.c_str(),
 					http->server.port,
 					http->client.ip.c_str(),
 					current_fd
@@ -1360,11 +1372,11 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					u_int port = http->httpRequest.getPort();
 					// Если хост и порт сервера не совпадают тогда очищаем данные
 					if(http->events.server
-					&& ((http->server.host.compare(ip) != 0)
+					&& ((http->server.ip.compare(ip) != 0)
 					|| (http->server.port != port))) http->closeServer();
 					// Запоминаем хост и порт сервера
-					http->server.host = ip;
-					http->server.port = port;
+					http->server.ip		= ip;
+					http->server.port	= port;
 					// Заполняем структуру клиента
 					http->client.alive		= http->httpRequest.isAlive();
 					http->client.https		= http->httpRequest.isHttps();
