@@ -1,0 +1,16 @@
+# КОНФИГУРАЦИОННЫЙ ФАЙЛ УПРАВЛЕНИЯ ЗАГОЛОВКАМИ ANYKS
+#
+#	автор:				Юрий Николаевич Лобарев
+#	skype:				efrantick
+#	телефон:			+7(920)672-33-22
+#	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
+#
+# Конфигурационный фал управления заголовками
+# Параметр (*) - обозначает для всех возможных вариантов
+#
+#
+# action  route    user    method  server    regex  headers
+
+  rm      out    127.0.0.1  get  vipmake.com  ^msie$  Accept-Language
+  rm      in     127.0.0.1  get  vipmake.com  *       Link
+  add     *      *          *    vipmake.com  *       Anyks: Proxy | Rembo: Server
