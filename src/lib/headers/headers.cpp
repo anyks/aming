@@ -28,14 +28,145 @@ void Headers::read(){
 		&& isFileExist(filename.c_str())){
 			// Устанавливаем права на файл лога
 			setOwner(filename.c_str());
-
-
+			// Строка чтения из файла
+			string filedata;
+			// Открываем файл на чтение
+			ifstream file(filename.c_str());
+			// Если файл открыт
+			if(file.is_open()){
+				// Считываем до тех пор пока все удачно
+				while(file.good()){
+					// Считываем строку из файла
+					getline(file, filedata);
+					// Ищем комментарий
+					size_t pos = filedata.find("#");
+					// Если комментарий найден, вырезаем его из строки
+					if(pos != string::npos) filedata = filedata.replace(pos, filedata.length() - pos, "");
+					// Если строка существует
+					if(!filedata.empty()){
+						// Результат работы регулярного выражения
+						smatch match;
+						// Создаем регулярное выражение
+						regex e(
+							"(ADD|RM|\\*)(?:\\s+|\\t+)(IN|OUT|\\*)(?:\\s+|\\t+)([\\w\\.\\-\\@\\:]+|\\*)(?:\\s+|\\t+)"
+							"(OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT|\\*)(?:\\s+|\\t+)"
+							"([\\w\\.\\-\\@\\:]+|\\*)(?:\\s+|\\t+)([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)([^\\r\\n\\t]+)",
+							regex::ECMAScript | regex::icase
+						);
+						// Выполняем извлечение данных
+						regex_search(filedata, match, e);
+						// Если данные найдены
+						if(!match.empty()){
+							// Создаем объект сети
+							Network nwk;
+							// Получаем идентификатор пользователя
+							string userId = match[3].str();
+							// Получаем идентификатор сервера
+							string serverId = match[5].str();
+							// Получаем типы идентификаторов
+							u_short utype = checkTypeId(userId);
+							u_short stype = checkTypeId(serverId);
+							// Если это ip адреса то преобразуем их
+							// Для клиента
+							if(utype == 1)		userId		= nwk.setLowIp(userId);		// Если это IPv4
+							else if(utype == 2)	userId		= nwk.setLowIp6(userId);	// Если это IPv6
+							// Для сервера
+							if(stype == 1)		serverId	= nwk.setLowIp(serverId);	// Если это IPv4
+							else if(stype == 2)	serverId	= nwk.setLowIp6(serverId);	// Если это IPv6
+							// Формируем объект
+							Params params = {
+								utype, stype, toCase(match[1].str()),
+								toCase(match[2].str()), toCase(match[4].str()),
+								toCase(serverId), toCase(match[6].str()),
+								split(match[7].str(), "|")
+							};
+							// Добавляем полученные параметры в список
+							// add(userId, params);
+						}
+					}
+				}
+				// Закрываем файл
+				file.close();
+			}
 		// Выводим сообщение в лог
 		} else if(!filename.empty() && this->log){
 			// Выводим сообщение в лог, что файл не найден
 			this->log->write(LOG_WARNING, 0, "headers file (%s) is not found", filename.c_str());
 		}
 	}
+}
+/**
+ * toCase Функция перевода в указанный регистр
+ * @param  str  строка для перевода в указанных регистр
+ * @param  flag флаг указания типа регистра
+ * @return      результирующая строка
+ */
+const string Headers::toCase(string str, bool flag){
+	// Переводим в указанный регистр
+	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
+	// Выводим результат
+	return str;
+}
+/**
+ * rtrim Функция усечения указанных символов с правой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & Headers::rtrim(string &str, const char * t){
+	str.erase(str.find_last_not_of(t) + 1);
+	return str;
+}
+/**
+ * ltrim Функция усечения указанных символов с левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & Headers::ltrim(string &str, const char * t){
+	str.erase(0, str.find_first_not_of(t));
+	return str;
+}
+/**
+ * trim Функция усечения указанных символов с правой и левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & Headers::trim(string &str, const char * t){
+	return ltrim(rtrim(str, t), t);
+}
+/**
+ * split Метод разбива строки на составляющие
+ * @param  str   исходная строка
+ * @param  delim разделитель
+ * @return       массив составляющих строки
+ */
+vector <string> Headers::split(const string str, const string delim){
+	// Результат данных
+	vector <string> result;
+	// Если строка передана
+	if(!str.empty()){
+		string data;
+		string::size_type i = 0;
+		string::size_type j = str.find(delim);
+		u_int len = delim.length();
+		// Выполняем разбиение строк
+		while(j != string::npos){
+			data = str.substr(i, j - i);
+			result.push_back(trim(data));
+			i = ++j + (len - 1);
+			j = str.find(delim, j);
+			if(j == string::npos){
+				data = str.substr(i, str.length());
+				result.push_back(trim(data));
+			}
+		}
+		// Если данные не существуют то устанавливаем строку по умолчанию
+		if(result.empty()) result.push_back(str);
+	}
+	// Выводим результат
+	return result;
 }
 /**
  * addToPath Метод формирования адреса из пути и названия файла
@@ -55,16 +186,6 @@ const string Headers::addToPath(const string path, const string file){
 	}
 	// Выводим результат
 	return result;
-}
-/**
- * is_number Функция проверки является ли строка числом
- * @param  str строка для проверки
- * @return     результат проверки
- */
-bool Headers::isNumber(const string &str){
-	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
-		return !isdigit(c);
-	}) == str.end();
 }
 /**
  * getUid Функция вывода идентификатора пользователя
@@ -125,6 +246,37 @@ void Headers::setOwner(const char * path){
 	else gid = getGid((* this->config)->proxy.group.c_str());
 	// Устанавливаем права на каталог
 	chown(path, uid, gid);
+}
+/**
+ * checkTypeId Метод определения типа идентификатора
+ * @param  str строка идентификатора для определения типа
+ * @return     тип идентификатора
+ */
+u_short Headers::checkTypeId(const string str){
+	// Создаем объект сети
+	Network nwk;
+	// Тип идентификатора по умолчанию
+	u_short type = 0;
+	// Проверяем тип идентификатора, на то является ли он IPv4
+	if(isIpV4(nwk.setLowIp(str))) type = 1;
+	// Проверяем тип идентификатора, на то является ли он IPv6
+	else if(isIpV6(nwk.setLowIp6(str))) type = 2;
+	// Проверяем тип идентификатора, на то является ли он MAC адресом
+	else if(isMac(str)) type = 3;
+	// Проверяем тип идентификатора, на то является ли он доменом
+	else if(isDomain(str)) type = 4;
+	// Выводим результат
+	return type;
+}
+/**
+ * is_number Функция проверки является ли строка числом
+ * @param  str строка для проверки
+ * @return     результат проверки
+ */
+bool Headers::isNumber(const string &str){
+	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
+		return !isdigit(c);
+	}) == str.end();
 }
 /**
  * isDirExist Функция проверки существования каталога
@@ -284,4 +436,6 @@ Headers::Headers(LogApp * log, Config ** config){
 	this->log = log;
 	// Запоминаем параметры конфига
 	this->config = config;
+	// Выполняем чтение файла конфигурации
+	read();
 }

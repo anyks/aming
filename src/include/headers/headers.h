@@ -12,11 +12,13 @@
 #include <regex>
 #include <string>
 #include <vector>
+#include <fstream>
 #include <iostream>
 #include <pwd.h>
 #include <grp.h>
 #include <stdlib.h>
 #include <sys/file.h>
+#include "nwk/nwk.h"
 #include "log/log.h"
 #include "http/http.h"
 
@@ -32,12 +34,14 @@ class Headers {
 		 * Структура параметров заголовков
 		 */
 		struct Params {
-			string action;
-			string route;
-			string method;
-			string server;
-			string regex;
-			vector <string> headers;
+			u_short utype;				// Тип идентификатора пользователя (0 - не определен, 1 - IPv4, 2 - PIv6, 3 - MAC, 4 - Домен)
+			u_short stype;				// Тип идентификатора сервера (0 - не определен, 1 - IPv4, 2 - PIv6, 3 - MAC, 4 - Домен)
+			string action;				// Экшен правила (add - добавление, rm - удаление)
+			string route;				// Направление данных (in - входящие данные, out - исходящие данные)
+			string method;				// Метод запроса (get, post, head ...)
+			string server;				// Идентификатор сервера
+			string regex;				// Регулярное выражение проверки User-Agent
+			vector <string> headers;	// Массив заголовков
 		};
 		// Объект лога
 		LogApp * log = NULL;
@@ -61,18 +65,47 @@ class Headers {
 		 */
 		void read();
 		/**
+		 * toCase Функция перевода в указанный регистр
+		 * @param  str  строка для перевода в указанных регистр
+		 * @param  flag флаг указания типа регистра
+		 * @return      результирующая строка
+		 */
+		const string toCase(string str, bool flag = false);
+		/**
+		 * rtrim Функция усечения указанных символов с правой стороны строки
+		 * @param  str строка для усечения
+		 * @param  t   список символов для усечения
+		 * @return     результирующая строка
+		 */
+		string & rtrim(string &str, const char * t = " \t\n\r\f\v");
+		/**
+		 * ltrim Функция усечения указанных символов с левой стороны строки
+		 * @param  str строка для усечения
+		 * @param  t   список символов для усечения
+		 * @return     результирующая строка
+		 */
+		string & ltrim(string &str, const char * t = " \t\n\r\f\v");
+		/**
+		 * trim Функция усечения указанных символов с правой и левой стороны строки
+		 * @param  str строка для усечения
+		 * @param  t   список символов для усечения
+		 * @return     результирующая строка
+		 */
+		string & trim(string &str, const char * t = " \t\n\r\f\v");
+		/**
+		 * split Метод разбива строки на составляющие
+		 * @param  str   исходная строка
+		 * @param  delim разделитель
+		 * @return       массив составляющих строки
+		 */
+		vector <string> split(const string str, const string delim);
+		/**
 		 * addToPath Метод формирования адреса из пути и названия файла
 		 * @param  path путь где хранится файл
 		 * @param  file название файла
 		 * @return      сформированный путь
 		 */
 		const string addToPath(const string path, const string file);
-		/**
-		 * is_number Функция проверки является ли строка числом
-		 * @param  str строка для проверки
-		 * @return     результат проверки
-		 */
-		bool isNumber(const string &str);
 		/**
 		 * getUid Функция вывода идентификатора пользователя
 		 * @param  name имя пользователя
@@ -90,6 +123,18 @@ class Headers {
 		 * @param path путь к файлу или каталогу для установки владельца
 		 */
 		void setOwner(const char * path);
+		/**
+		 * checkTypeId Метод определения типа идентификатора
+		 * @param  str строка идентификатора для определения типа
+		 * @return     тип идентификатора
+		 */
+		u_short checkTypeId(const string str);
+		/**
+		 * is_number Функция проверки является ли строка числом
+		 * @param  str строка для проверки
+		 * @return     результат проверки
+		 */
+		bool isNumber(const string &str);
 		/**
 		 * isDirExist Функция проверки существования каталога
 		 * @param  path адрес каталога

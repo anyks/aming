@@ -127,16 +127,19 @@ System::System(string configfile){
 	this->configfile = configfile;
 	// Создаем объект конфигурации
 	this->config = new Config(this->configfile);
-	// Создаем модуль лога
+	// Инициализируем модуль логов
 	this->log = new LogApp(&this->config, TOLOG_FILES | TOLOG_CONSOLE);
-	// Устанавливаем настройки операционной системы
+	// Инициализируем модуль настроек операционной системы
 	this->os = new Os(this->log, &this->config);
+	// Инициализируем модуль управления заголовками
+	this->headers = new Headers(this->log, &this->config);
 }
 /**
  * ~System Деструктор
  */
 System::~System(){
 	// Удаляем созданные ранее объекты
+	delete this->headers;
 	delete this->os;
 	delete this->log;
 	delete this->config;

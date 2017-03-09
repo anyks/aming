@@ -183,6 +183,11 @@ class Network {
 		 */
 		void setZerroToStrIp(string &str);
 		/**
+		 * rmZerroToStrIp Функция удаляем указанное количестов нулей из строки
+		 * @param str строка из которой нужно удалить нули
+		 */
+		void rmZerroToStrIp(string &str);
+		/**
 		 * checkMask Метод проверки на соответствии маски
 		 * @param  ip   блок с данными ip адреса
 		 * @param  mask блок с данными маски сети
@@ -288,6 +293,18 @@ class Network {
 		 * @return    параметры подключения
 		 */
 		NKdata getNetwork(string str);
+		/**
+		 * setLowIp4 Функция восстановления IPv4 адреса
+		 * @param  ip адрес интернет протокола версии 4
+		 * @return    восстановленный вид ip адреса
+		 */
+		const string setLowIp(const string ip);
+		/**
+		 * getLowIp Функция упрощения IPv4 адреса
+		 * @param  ip адрес интернет протокола версии 4
+		 * @return    упрощенный вид ip адреса
+		 */
+		const string getLowIp(const string ip);
 		/**
 		 * imposePrefix6 Метод наложения префикса
 		 * @param  ip6    адрес интернет протокола версии 6

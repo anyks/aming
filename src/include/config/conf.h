@@ -290,7 +290,7 @@ class Config {
 		 * @param  flag флаг указания типа регистра
 		 * @return      результирующая строка
 		 */
-		string toCase(string str, bool flag = false);
+		const string toCase(string str, bool flag = false);
 		/**
 		 * rtrim Функция усечения указанных символов с правой стороны строки
 		 * @param  str строка для усечения

@@ -104,6 +104,21 @@ void Network::setZerroToStrIp(string &str){
 	}
 }
 /**
+ * rmZerroToStrIp Функция удаляем указанное количестов нулей из строки
+ * @param str строка из которой нужно удалить нули
+ */
+void Network::rmZerroToStrIp(string &str){
+	// Корректируем количество цифр
+	if(!str.empty()){
+		// Копируем строку
+		const string octet = str;
+		// Формируем регулярное выражение
+		regex e("^0{1,2}([0-9]{1,2})$");
+		// Выполняем удаление лишних нулей
+		str = regex_replace(octet, e, "$1");
+	}
+}
+/**
  * getMaskByString Функция получения маски из строки обозначения маски
  * @param  value строка с обозначением маски
  * @return       объект с данными маски
@@ -375,6 +390,72 @@ NKdata Network::getNetwork(string str){
 	}
 	// Выводим результат
 	return result;
+}
+/**
+ * setLowIp4 Функция восстановления IPv4 адреса
+ * @param  ip адрес интернет протокола версии 4
+ * @return    восстановленный вид ip адреса
+ */
+const string Network::setLowIp(const string ip){
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск ip адреса
+	regex_search(ip, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Получаем символы
+		string pir_1 = match[1].str();
+		string pir_2 = match[2].str();
+		string pir_3 = match[3].str();
+		string pir_4 = match[4].str();
+		// Корректируем количество цифр
+		setZerroToStrIp(pir_1);
+		setZerroToStrIp(pir_2);
+		setZerroToStrIp(pir_3);
+		setZerroToStrIp(pir_4);
+		// Формируем ip адрес
+		return (pir_1 + string(".") + pir_2 + string(".") + pir_3 + string(".") + pir_4);
+	}
+	// Выводим результат
+	return ip;
+}
+/**
+ * getLowIp Функция упрощения IPv4 адреса
+ * @param  ip адрес интернет протокола версии 4
+ * @return    упрощенный вид ip адреса
+ */
+const string Network::getLowIp(const string ip){
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск ip адреса
+	regex_search(ip, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Получаем символы
+		string pir_1 = match[1].str();
+		string pir_2 = match[2].str();
+		string pir_3 = match[3].str();
+		string pir_4 = match[4].str();
+		// Корректируем количество цифр
+		rmZerroToStrIp(pir_1);
+		rmZerroToStrIp(pir_2);
+		rmZerroToStrIp(pir_3);
+		rmZerroToStrIp(pir_4);
+		// Формируем ip адрес
+		return (pir_1 + string(".") + pir_2 + string(".") + pir_3 + string(".") + pir_4);
+	}
+	// Выводим результат
+	return ip;
 }
 /**
  * getLow1Ip6 Функция упрощения IPv6 адреса первого порядка

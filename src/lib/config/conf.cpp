@@ -16,7 +16,7 @@ using namespace std;
  * @param  flag флаг указания типа регистра
  * @return      результирующая строка
  */
-string Config::toCase(string str, bool flag){
+const string Config::toCase(string str, bool flag){
 	// Переводим в указанный регистр
 	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
 	// Выводим результат

@@ -16,6 +16,7 @@
 #include "os/os.h"
 #include "log/log.h"
 #include "config/conf.h"
+#include "headers/headers.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -49,6 +50,8 @@ class System {
 		Config * config = NULL;
 		// Объект взаимодействия с ОС
 		Os * os = NULL;
+		// Объект управления заголовками
+		Headers * headers = NULL;
 		/**
 		 * clearMsgPids Метод очистки процесса передачи данных пидов между воркерами
 		 */
