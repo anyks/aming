@@ -31,6 +31,13 @@ using namespace std;
 class Headers {
 	private:
 		/**
+		 * IsNot Структура результата проверки на инверсию
+		 */
+		struct IsNot {
+			bool inv;	// Результат проверки
+			string str;	// Строка в чистом виде
+		};
+		/**
 		 * Структура параметров заголовков
 		 */
 		struct Params {
@@ -38,10 +45,10 @@ class Headers {
 			u_short stype;				// Тип идентификатора сервера (0 - не определен, 1 - IPv4, 2 - PIv6, 3 - MAC, 4 - Домен)
 			string action;				// Экшен правила (add - добавление, rm - удаление)
 			string route;				// Направление данных (in - входящие данные, out - исходящие данные)
-			string method;				// Метод запроса (get, post, head ...)
-			string path;				// Путь запроса на сервере
 			string server;				// Идентификатор сервера (ip адрес, домен)
+			string path;				// Путь запроса на сервере
 			string regex;				// Регулярное выражение проверки User-Agent
+			vector <string> methods;	// Массив методов запросов (get, post, head ...)
 			vector <string> headers;	// Массив заголовков
 		};
 		// Объект лога
@@ -121,6 +128,12 @@ class Headers {
 		 * @return      сформированный путь
 		 */
 		const string addToPath(const string path, const string file);
+		/**
+		 * isNot Метод проверки на инверсию
+		 * @param  str строка для проверки
+		 * @return     результат проверки
+		 */
+		IsNot isNot(const string str);
 		/**
 		 * getUid Функция вывода идентификатора пользователя
 		 * @param  name имя пользователя

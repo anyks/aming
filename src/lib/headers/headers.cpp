@@ -23,8 +23,10 @@ vector <Headers::Params> Headers::get(const string client, bool addGeneral){
 	if(!client.empty()){
 		// Создаем объект сети
 		Network nwk;
+		// Выполняем проверку на инверсию
+		auto check = isNot(client);
 		// Получаем идентификатор пользователя
-		string userId = toCase(client);
+		string userId = toCase(check.str);
 		// Получаем типы идентификаторов
 		u_short utype = checkTypeId(userId);
 		// Если это ip адреса то преобразуем их
@@ -32,18 +34,25 @@ vector <Headers::Params> Headers::get(const string client, bool addGeneral){
 		if(utype == 1)		userId	= nwk.setLowIp(userId);		// Если это IPv4
 		else if(utype == 2)	userId	= nwk.setLowIp6(userId);	// Если это IPv6
 		// Если правило для клиента найдено, удаляем
-		if(this->rules.count(userId) > 0){
+		if(!check.inv && (this->rules.count(userId) > 0)){
 			// Получаем данные объекта
 			auto user = this->rules[userId];
 			// Добавляем в массив данные
 			rules.assign(user.begin(), user.end());
-			// Если общие правила найдены
-			if(addGeneral && (this->rules.count("*") > 0)){
-				// Получаем обище правила
-				auto general = this->rules["*"];
-				// Выполняем добавление общих правил
-				copy(general.begin(), general.end(), back_inserter(rules));
+		// Если это инверсия то перебираем все что есть кроме звездочек
+		} else if(check.inv) {
+			// Выполняем перебор всех правил
+			for(map <const string, vector <Params>>::iterator it = this->rules.begin(); it != this->rules.end(); ++it){
+				// Если это не звездочки
+				if(it->first.compare("*") != 0) copy(it->second.begin(), it->second.end(), back_inserter(rules));
 			}
+		}
+		// Если общие правила найдены
+		if(addGeneral && (this->rules.count("*") > 0)){
+			// Получаем обище правила
+			auto general = this->rules["*"];
+			// Выполняем добавление общих правил
+			copy(general.begin(), general.end(), back_inserter(rules));
 		}
 	}
 	// Выводим результат
@@ -139,10 +148,22 @@ void Headers::read(){
 						smatch match;
 						// Создаем регулярное выражение
 						regex e(
-							"(ADD|RM|\\*)(?:\\s+|\\t+)(IN|OUT|\\*)(?:\\s+|\\t+)([\\w\\.\\-\\@\\:]+|\\*)(?:\\s+|\\t+)"
-							"(OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT|\\*)(?:\\s+|\\t+)"
-							"([^\\s\\r\\n\\t]+)(?:\\s+|\\t+)([\\w\\.\\-\\@\\:]+|\\*)(?:\\s+|\\t+)"
-							"([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)([^\\r\\n\\t]+)",
+							// Action
+							"(ADD|RM|\\*)(?:\\s+|\\t+)"
+							// Route
+							"(IN|OUT|\\*)(?:\\s+|\\t+)"
+							// User
+							"([\\w\\.\\-\\@\\:\\!]+|\\*)(?:\\s+|\\t+)"
+							// Method
+							"([A-Za-z\\s\\|\\!]+|\\*)(?:\\s+|\\t+)"
+							// Path
+							"([^\\s\\r\\n\\t]+)(?:\\s+|\\t+)"
+							// Server
+							"([\\w\\.\\-\\@\\:\\!]+|\\*)(?:\\s+|\\t+)"
+							// Regex
+							"([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)"
+							// Headers
+							"([^\\r\\n\\t]+)",
 							regex::ECMAScript | regex::icase
 						);
 						// Выполняем извлечение данных
@@ -167,11 +188,29 @@ void Headers::read(){
 							else if(stype == 2)	serverId	= nwk.setLowIp6(serverId);	// Если это IPv6
 							// Формируем объект
 							Params params = {
-								utype, stype, toCase(match[1].str()),
-								toCase(match[2].str()), toCase(match[4].str()),
-								match[5].str(), toCase(serverId),
-								toCase(match[7].str()), split(match[8].str(), "|")
+								// Тип идентификатора клиента
+								utype,
+								// Тип идентификатора сервера
+								stype,
+								// Метод запроса
+								toCase(match[1].str()),
+								// Направление трафика
+								toCase(match[2].str()),
+								// Данные сервера
+								toCase(serverId),
+								// Путь запроса
+								match[5].str(),
+								// Регулярные выражения
+								match[7].str(),
+								// Методы
+								split(toCase(match[4].str()), "|"),
+								// Заголовки
+								split(match[8].str(), "|")
 							};
+
+							printf("================= utype = %i, stype = %d, action = %s, route = %s, server = %s, regex = %s, methods = %s, path = %s, headers = %s\r\n\r\n", params.utype, params.stype, params.action.c_str(), params.route.c_str(), params.server.c_str(), params.regex.c_str(), toCase(match[4].str()).c_str(), params.path.c_str(), match[8].str().c_str());
+
+
 							// Добавляем полученные параметры в список
 							add(userId, params);
 						}
@@ -216,29 +255,83 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 			if(routeAll || ((!status && !routeIn) || (status && routeIn))) result = true;
 			// Если фильтр сработал
 			if(result){
-				// Проверяем на соответствии метода запроса
-				if((rules[i].method.compare("*") != 0)
-				&& (rules[i].method.compare(method) != 0)) result = false;
+				// Переходим по всем методам запросов
+				for(u_int j = 0; j < rules[i].methods.size(); j++){
+					// Выполняем проверку на инверсию
+					auto check = isNot(rules[i].methods[j]);
+					// Если это инверсия
+					if(check.inv){
+						// Если это инверсия и метод совпал тогда запрещаем дальнейшие действия и выходим из цикла
+						if(check.str.compare(method) == 0){
+							// Запоминаем что все не удачно
+							result = false;
+							// Выходим из цикла
+							break;
+						// Иначе разрешаем работу
+						} else result = true;
+					// Если это не инверсия
+					} else {
+						// Если это звездочка или не инверсия и метод найден, тогда разрешаем дальнейшие действия и выходим
+						if((check.str.compare("*") == 0)
+						|| (check.str.compare(method) == 0)){
+							// Запоминаем что все удачно
+							result = true;
+							// Выходим из цикла
+							break;
+						// Запрещаем дальнейшие действия
+						} else result = false;
+					}
+				}
 				// Если фильтр сработал
 				if(result){
 					// Если сервер указан конкретный
 					if(rules[i].server.compare("*") != 0){
-						// Определяем как надо искать сервер
-						switch(rules[i].stype){
-							// Если поиск идет по ip адресу
-							case 1:
-							case 2: if(rules[i].server.compare(server) != 0) result = false; break;
-							// Если поиск идет по домену
-							case 4: if(rules[i].server.compare(http.getHost()) != 0) result = false; break;
-							// Метод по умолчанию
-							default: result = false;
+						// Выполняем проверку на инверсию
+						auto check = isNot(rules[i].server);
+						// Если это инверсия
+						if(check.inv){
+							// Определяем как надо искать сервер
+							switch(rules[i].stype){
+								// Если поиск идет по ip адресу
+								case 1:
+								case 2: if(check.str.compare(server) == 0) result = false; break;
+								// Если поиск идет по домену
+								case 4: if(toCase(check.str).compare(toCase(http.getHost())) == 0) result = false; break;
+								// Метод по умолчанию
+								default: result = false;
+							}
+						// Если это не инверсия
+						} else {
+							// Определяем как надо искать сервер
+							switch(rules[i].stype){
+								// Если поиск идет по ip адресу
+								case 1:
+								case 2: if(check.str.compare(server) != 0) result = false; break;
+								// Если поиск идет по домену
+								case 4: if(toCase(check.str).compare(toCase(http.getHost())) != 0) result = false; break;
+								// Метод по умолчанию
+								default: result = false;
+							}
 						}
 					}
 					// Если фильтр сработал и это исходящий трафик, проверяем на путь запроса
 					if(result){
-						// Проверяем соответствует ли путь запроса
-						if((rules[i].path.compare("*") != 0)
-						&& (toCase(rules[i].path).compare(toCase(http.getPath())) != 0)) result = false;
+						// Если путь указан конкретный
+						if(rules[i].path.compare("*") != 0){
+							// Выполняем проверку на инверсию
+							auto check = isNot(rules[i].path);
+							// Если это инверсия, и адрес запроса совпадает, запрещаем дальнейшие действия
+							if(check.inv){
+								// Проверяем совпадает ли адрес
+								if(toCase(check.str)
+								.compare(toCase(http.getPath())) == 0) result = false;
+							// Если это не инверсия, и адрес запроса совпадает, тогда разрешаем дальнейшие действия
+							} else {
+								// Проверяем совпадает ли адрес
+								if(toCase(check.str)
+								.compare(toCase(http.getPath())) != 0) result = false;
+							}
+						}
 						// Если фильтр сработал и это исходящий трафик
 						if(result && (rules[i].regex.compare("*") != 0)){
 							// Проверяем на соответствие юзер-агента
@@ -260,7 +353,7 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 				if(rules[i].action.compare("add") == 0)		action = true;
 				else if(rules[i].action.compare("rm") == 0)	action = false;
 				// Переходим по всему массиву заголовков
-				for(size_t j = 0; j < rules[i].headers.size(); j++){
+				for(u_int j = 0; j < rules[i].headers.size(); j++){
 					// Если нужно добавить заголовки
 					if(action){
 						// Результат работы регулярного выражения
@@ -337,25 +430,29 @@ string & Headers::trim(string &str, const char * t){
 vector <string> Headers::split(const string str, const string delim){
 	// Результат данных
 	vector <string> result;
+	// Создаем новую строку
+	string value = str;
+	// Убираем пробелы в строке
+	value = trim(value);
 	// Если строка передана
-	if(!str.empty()){
+	if(!value.empty()){
 		string data;
 		string::size_type i = 0;
-		string::size_type j = str.find(delim);
+		string::size_type j = value.find(delim);
 		u_int len = delim.length();
 		// Выполняем разбиение строк
 		while(j != string::npos){
-			data = str.substr(i, j - i);
+			data = value.substr(i, j - i);
 			result.push_back(trim(data));
 			i = ++j + (len - 1);
-			j = str.find(delim, j);
+			j = value.find(delim, j);
 			if(j == string::npos){
-				data = str.substr(i, str.length());
+				data = value.substr(i, value.length());
 				result.push_back(trim(data));
 			}
 		}
 		// Если данные не существуют то устанавливаем строку по умолчанию
-		if(result.empty()) result.push_back(str);
+		if(result.empty()) result.push_back(value);
 	}
 	// Выводим результат
 	return result;
@@ -378,6 +475,17 @@ const string Headers::addToPath(const string path, const string file){
 	}
 	// Выводим результат
 	return result;
+}
+/**
+ * isNot Метод проверки на инверсию
+ * @param  str строка для проверки
+ * @return     результат проверки
+ */
+Headers::IsNot Headers::isNot(const string str){
+	// Результат проверки
+	bool result = str[0] == '!';
+	// Выполняем проверку на первый символ
+	return {result, (result ? str.substr(1, str.length() - 1) : str)};
 }
 /**
  * getUid Функция вывода идентификатора пользователя

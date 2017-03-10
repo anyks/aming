@@ -8,10 +8,11 @@
 # Конфигурационный фал управления заголовками
 # Параметр (*) - обозначает для всех возможных вариантов
 # Фильтрация по User-Agent с помощью регулярных выражений, возможна только для исходящих запросов
+# К параметрам: user, method, path, server - можно применять инверсию (!)
 #
-# action  route    user    method  path   server    regex  headers
+# action  route    user        method      path   server      regex             headers
 
-  rm      out    127.0.0.1  get     /     vipmake.com  mozilla\/\d\.\d  Accept-Encoding
-  rm      in     127.0.0.1  get     *     vipmake.com  *       Link | Via | X-Generator | Server | X-Drupal-Cache | X-Frame-Options | X-Powered-By | X-UA-Compatible
-  add     in     *          *       *     *            *       Server: Anyks/1.0
-  add     *      *          *       *     *  		   *       Anyks: Proxy | Rembo: Server
+  rm      out    127.0.0.1  get | post     /     vipmake.com  mozilla\/\d\.\d  Accept-Encoding
+  rm      in     127.0.0.1  !connect       *     vipmake.com  *                Link | Via | X-Generator | Server | X-Drupal-Cache | X-Frame-Options | X-Powered-By | X-UA-Compatible
+  add     in     *          *              *     *            *                Server: Anyks/1.0
+  add     *      *          *              *     *  		  *                Anyks: Proxy | Rembo: server
