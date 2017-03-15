@@ -210,7 +210,7 @@ void Cache::readDomain(const string domain, DataDNS * data){
 	// Добавляем основной путь
 	dir = addToPath(dir, getPathDomain(domain));
 	// Создаем адрес для хранения файла
-	const string filename = addToPath(dir, "domain");
+	const string filename = addToPath(dir, "data");
 	// Проверяем на существование адреса
 	if(!filename.empty() && isFileExist(filename.c_str())){
 		// Открываем файл на чтение
@@ -238,7 +238,7 @@ void Cache::writeDomain(const string domain, DataDNS data){
 	// Добавляем основной путь
 	dir = addToPath(dir, getPathDomain(domain));
 	// Создаем адрес для хранения файла
-	const string filename = addToPath(dir, "domain");
+	const string filename = addToPath(dir, "data");
 	// Проверяем на существование адреса
 	if(!filename.empty()){
 		// Проверяем существует ли нужный нам каталог
