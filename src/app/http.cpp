@@ -1828,6 +1828,8 @@ HttpProxy::HttpProxy(System * proxy){
 		evutil_socket_t socket = create_server();
 		// Если сокет существует
 		if(socket > -1){
+			// Очищаем кэш dns запросов
+			this->server->cache->rmAddDomains();
 			// Если режим отладки не включен
 			if(!this->server->config->proxy.debug){
 				// Определяем максимальное количество потоков

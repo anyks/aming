@@ -291,6 +291,61 @@ void Cache::mkdir(const char * path){
 	::mkdir(tmp, S_IRWXU);
 }
 /**
+ * rmdir Метод удаления каталога и всего содержимого
+ * @param  path путь до каталога
+ * @return      количество дочерних элементов
+ */
+int Cache::rmdir(const char * path){
+	// Открываем указанный каталог
+	DIR * d = opendir(path);
+	// Получаем длину адреса
+	size_t path_len = strlen(path);
+	// Количество дочерних элементов
+	int r = -1;
+	// Если каталог открыт
+	if(d){
+		// Создаем указатель на содержимое каталога
+		struct dirent * p;
+		// Устанавливаем количество дочерних элементов
+		r = 0;
+		// Выполняем чтение содержимого каталога
+		while(!r && (p = readdir(d))){
+			// Количество найденных элементов
+			int r2 = -1;
+			// Пропускаем названия текущие "." и внешние "..", так как идет рекурсия
+			if(!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) continue;
+			// Получаем размер дочернего каталога
+			size_t len = path_len + strlen(p->d_name) + 2;
+			// Создаем буфер данных
+			char * buf = new char [(const size_t) len];
+			// Если память выделена
+			if(buf){
+				// Создаем структуру буфера статистики
+				struct stat statbuf;
+				// Копируем в буфер название дочернего элемента
+				snprintf(buf, len, "%s/%s", path, p->d_name);
+				// Если статистика извлечена
+				if(!stat(buf, &statbuf)){
+					// Если дочерний элемент является дирректорией
+					if(S_ISDIR(statbuf.st_mode)) r2 = rmdir(buf);
+					// Если дочерний элемент является файлом то удаляем его
+					else r2 = ::unlink(buf);
+				}
+				// Освобождаем выделенную ранее память
+				delete [] buf;
+			}
+			// Запоминаем количество дочерних элементов
+			r = r2;
+		}
+		// Закрываем открытый каталог
+		closedir(d);
+	}
+	// Удаляем последний каталог
+	if(!r) r = ::rmdir(path);
+	// Выводим результат
+	return r;
+}
+/**
  * makePath Функция создания каталога для хранения логов
  * @param  path адрес для каталога
  * @return      результат создания каталога
@@ -457,6 +512,31 @@ void Cache::setDomain(const string domain, const string ip){
 		// Выполняем запись домена в кэш
 		writeDomain(domain, data);
 	}
+}
+/**
+ * rmDomain Метод удаления домена из кэша
+ * @param domain название домена
+ */
+void Cache::rmDomain(const string domain){
+	// Получаем данные каталога где хранится кэш
+	string dir = (* this->config)->cache.dir;
+	// Получаем имя файла
+	dir = addToPath(dir, "dns");
+	// Добавляем основной путь
+	dir = addToPath(dir, getPathDomain(domain));
+	// Проверяем на существование адреса, если существует то удаляем
+	if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
+}
+/**
+ * rmAddDomains Метод удаления всех доменов из кэша
+ */
+void Cache::rmAddDomains(){
+	// Получаем данные каталога где хранится кэш
+	string dir = (* this->config)->cache.dir;
+	// Получаем имя файла
+	dir = addToPath(dir, "dns");
+	// Проверяем на существование адреса, если существует то удаляем
+	if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
 }
 /**
  * Cache Конструктор

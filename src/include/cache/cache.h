@@ -17,6 +17,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <sys/file.h>
 #include "config/conf.h"
 #include "nwk/nwk.h"
@@ -125,6 +126,11 @@ class Cache {
 		 */
 		void mkdir(const char * path);
 		/**
+		 * rmdir Метод удаления каталога и всего содержимого
+		 * @param path путь до каталога
+		 */
+		int rmdir(const char * path);
+		/**
 		 * makePath Функция создания каталога для хранения логов
 		 * @param  path адрес для каталога
 		 * @return      результат создания каталога
@@ -179,6 +185,15 @@ class Cache {
 		 * @param  ip     ip адрес домена
 		 */
 		void setDomain(const string domain, const string ip);
+		/**
+		 * rmDomain Метод удаления домена из кэша
+		 * @param domain название домена
+		 */
+		void rmDomain(const string domain);
+		/**
+		 * rmAddDomains Метод удаления всех доменов из кэша
+		 */
+		void rmAddDomains();
 		/**
 		 * Cache Конструктор
 		 * @param log    объект лога для вывода информации
