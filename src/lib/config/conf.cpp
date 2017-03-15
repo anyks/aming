@@ -121,7 +121,7 @@ long Config::getSizeBuffer(const string str){
 	// Выполняем поиск протокола
 	regex_search(str, match, e);
 	// Если данные найдены
-	if(!match.empty() && (match.size() == 3)){
+	if(!match.empty()){
 		// Запоминаем параметры
 		string param = match[2].str();
 		// Размерность скорости
@@ -161,7 +161,7 @@ size_t Config::getBytes(const string str){
 	// Выполняем поиск протокола
 	regex_search(str, match, e);
 	// Если данные найдены
-	if(!match.empty() && (match.size() == 3)){
+	if(!match.empty()){
 		// Запоминаем параметры
 		string param = match[2].str();
 		// Размерность скорости
@@ -178,6 +178,48 @@ size_t Config::getBytes(const string str){
 		else if(param.compare("MB") == 0) dimension = (isbite ? 1000000 : 1048576);
 		// Если это размерность в гигабитах
 		else if(param.compare("GB") == 0) dimension = (isbite ? 1000000000 : 1073741824);
+		// Размер буфера по умолчанию
+		size = (long) value;
+		// Если скорость установлена тогда расчитываем размер буфера
+		if(value > -1) size = (value * dimension);
+	}
+	// Выводим результат
+	return size;
+}
+/**
+ * getSeconds Функция получения размера в секундах из строки
+ * @param  str строка обозначения размерности
+ * @return     размер в секундах
+ */
+size_t Config::getSeconds(const string str){
+	// Размер буфера в байтах
+	size_t size = 0;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([\\d\\.\\,]+)(s|m|h|d|M|y)", regex::ECMAScript);
+	// Выполняем поиск протокола
+	regex_search(str, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Запоминаем параметры
+		string param = match[2].str();
+		// Размерность времени
+		double dimension = 1;
+		// Получаем значение размерности
+		double value = ::atof(match[1].str().c_str());
+		// Если это секунды
+		if(param.compare("s") == 0) dimension = 1;
+		// Если это размерность в минутах
+		else if(param.compare("m") == 0) dimension = 60;
+		// Если это размерность в часах
+		else if(param.compare("h") == 0) dimension = 3600;
+		// Если это размерность в днях
+		else if(param.compare("d") == 0) dimension = 86400;
+		// Если это размерность в месяцах
+		else if(param.compare("М") == 0) dimension = 2592000;
+		// Если это размерность в годах
+		else if(param.compare("y") == 0) dimension = 31104000;
 		// Размер буфера по умолчанию
 		size = (long) value;
 		// Если скорость установлена тогда расчитываем размер буфера
@@ -280,6 +322,8 @@ Config::Config(const string filename){
 			CACHE_DNS,
 			// Кеширование часто-запрашиваемых страниц
 			CACHE_RESPONSE,
+			// Время жизни dns кэша в секундах
+			(time_t) getSeconds(CACHE_DTTL),
 			// Каталог хранения кеш файлов
 			CACHE_DIR
 		};
@@ -548,6 +592,8 @@ Config::Config(const string filename){
 			ini.GetBoolean("cache", "dns", CACHE_DNS),
 			// Кеширование часто-запрашиваемых страниц
 			ini.GetBoolean("cache", "response", CACHE_RESPONSE),
+			// Время жизни dns кэша в секундах
+			(time_t) getSeconds(ini.Get("cache", "dttl", CACHE_DTTL)),
 			// Каталог хранения кеш файлов
 			ini.Get("cache", "dir", CACHE_DIR)
 		};

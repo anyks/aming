@@ -22,6 +22,7 @@
 #include <event2/util.h>
 #include <event2/event.h>
 #include "log/log.h"
+#include "cache/cache.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -42,6 +43,7 @@ class DNSResolver {
 			void * ctx;		// указатель на объект передаваемый пользователем
 			string domain;	// название искомого домена
 			LogApp * log;	// Объект ведения логов
+			Cache * cache;	// Объект управления кэшем
 		};
 		// Мютекс для захвата потока
 		mutex mtx;
@@ -49,6 +51,8 @@ class DNSResolver {
 		int family;
 		// Объект ведения логов
 		LogApp * log = NULL;
+		// Объект управления кэшем
+		Cache * cache = NULL;
 		// База событий
 		struct event_base * base = NULL;
 		// База dns
@@ -102,11 +106,12 @@ class DNSResolver {
 		/**
 		 * DNSResolver Конструктор
 		 * @param log     объект ведения логов
+		 * @param cache   объект кэша
 		 * @param base    база данных событий
 		 * @param family  тип интернет протокола IPv4 или IPv6
 		 * @param servers массив dns серверов
 		 */
-		DNSResolver(LogApp * log = NULL, struct event_base * base = NULL, int family = AF_INET, vector <string> servers = {});
+		DNSResolver(LogApp * log = NULL, Cache * cache = NULL, struct event_base * base = NULL, int family = AF_INET, vector <string> servers = {});
 		/**
 		 * ~DNSResolver Деструктор
 		 */

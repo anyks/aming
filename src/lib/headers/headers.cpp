@@ -207,10 +207,6 @@ void Headers::read(){
 								// Заголовки
 								split(match[8].str(), "|")
 							};
-
-							printf("================= utype = %i, stype = %d, action = %s, route = %s, server = %s, regex = %s, methods = %s, path = %s, headers = %s\r\n\r\n", params.utype, params.stype, params.action.c_str(), params.route.c_str(), params.server.c_str(), params.regex.c_str(), toCase(match[4].str()).c_str(), params.path.c_str(), match[8].str().c_str());
-
-
 							// Добавляем полученные параметры в список
 							add(userId, params);
 						}

@@ -131,6 +131,8 @@ System::System(string configfile){
 	this->log = new LogApp(&this->config, TOLOG_FILES | TOLOG_CONSOLE);
 	// Инициализируем модуль настроек операционной системы
 	this->os = new Os(this->log, &this->config);
+	// Инициализируем модуль кеша
+	this->cache = new Cache(this->log, &this->config);
 	// Инициализируем модуль управления заголовками
 	this->headers = new Headers(this->log, &this->config);
 }
@@ -140,6 +142,7 @@ System::System(string configfile){
 System::~System(){
 	// Удаляем созданные ранее объекты
 	delete this->headers;
+	delete this->cache;
 	delete this->os;
 	delete this->log;
 	delete this->config;

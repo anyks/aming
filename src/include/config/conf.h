@@ -58,6 +58,7 @@
 // Параметры модуля кеширования
 #define CACHE_DNS true
 #define CACHE_RESPONSE false
+#define CACHE_DTTL "1d"
 #define CACHE_DIR "/var/cache"
 
 // Адреса конфигурационных файлов
@@ -249,6 +250,7 @@ class Config {
 		struct Cache {
 			bool dns;		// Кеширование dns запросов
 			bool response;	// Кеширование часто-запрашиваемых страниц
+			time_t dttl;	// Время жизни dns кэша в секундах
 			string dir;		// Каталог хранения кеш файлов
 		};
 		/**
@@ -331,6 +333,12 @@ class Config {
 		 * @return     размер в байтах
 		 */
 		size_t getBytes(const string str);
+		/**
+		 * getSeconds Функция получения размера в секундах из строки
+		 * @param  str строка обозначения размерности
+		 * @return     размер в секундах
+		 */
+		size_t getSeconds(const string str);
 		/**
 		 * isFileExist Функция проверки существования файла
 		 * @param  path адрес каталога

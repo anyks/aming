@@ -81,6 +81,36 @@ void LogApp::setOwner(const char * path){
 	chown(path, uid, gid);
 }
 /**
+ * mkdir Метод рекурсивного создания каталогов
+ * @param path адрес каталогов
+ */
+void LogApp::mkdir(const char * path){
+	// Буфер с названием каталога
+	char tmp[256];
+	// Указатель на сепаратор
+	char * p = NULL;
+	// Копируем переданный адрес в буфер
+	snprintf(tmp, sizeof(tmp), "%s", path);
+	// Определяем размер адреса
+	size_t len = strlen(tmp);
+	// Если последний символ является сепаратором тогда удаляем его
+	if(tmp[len - 1] == '/') tmp[len - 1] = 0;
+	// Переходим по всем символам
+	for(p = tmp + 1; * p; p++){
+		// Если найден сепаратор
+		if(* p == '/'){
+			// Сбрасываем указатель
+			* p = 0;
+			// Создаем каталог
+			::mkdir(tmp, S_IRWXU);
+			// Запоминаем сепаратор
+			* p = '/';
+		}
+	}
+	// Создаем последний каталог
+	::mkdir(tmp, S_IRWXU);
+}
+/**
  * makePath Функция создания каталога для хранения логов
  * @param  path адрес для каталога
  * @return      результат создания каталога
@@ -88,16 +118,12 @@ void LogApp::setOwner(const char * path){
 bool LogApp::makePath(const char * path){
 	// Проверяем существует ли нужный нам каталог
 	if(!isDirExist(path)){
-		// Устанавливаем параметры каталога
-		mode_t mode = 0755;
 		// Создаем каталог
-		if(mkdir(path, mode) == 0){
-			// Устанавливаем права на каталог
-			setOwner(path);
-			// Сообщаем что все удачно
-			return true;
-		// Если каталог не создан тогда сообщаем об ошибке
-		} else return false;
+		mkdir(path);
+		// Устанавливаем права на каталог
+		setOwner(path);
+		// Сообщаем что все удачно
+		return true;
 	}
 	// Сообщаем что все создано удачно
 	return true;

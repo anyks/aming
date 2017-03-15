@@ -554,9 +554,21 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	// Определяем тип подключения
 	switch(this->proxy->config->proxy.extIPv){
 		// Для протокола IPv4
-		case 4: this->dns = new DNSResolver(this->proxy->log, this->base, AF_INET, this->proxy->config->ipv4.resolver);		break;
+		case 4: this->dns = new DNSResolver(
+			this->proxy->log,
+			this->proxy->cache,
+			this->base,
+			AF_INET,
+			this->proxy->config->ipv4.resolver
+		); break;
 		// Для протокола IPv6
-		case 6: this->dns = new DNSResolver(this->proxy->log, this->base, AF_INET6, this->proxy->config->ipv6.resolver);	break;
+		case 6: this->dns = new DNSResolver(
+			this->proxy->log,
+			this->proxy->cache,
+			this->base,
+			AF_INET6,
+			this->proxy->config->ipv6.resolver
+		); break;
 	}
 }
 /**
@@ -1057,10 +1069,10 @@ const int HttpProxy::connect_server(void * ctx){
 			bufferevent_setwatermark(http->events.server, EV_READ | EV_WRITE, 1, 0);
 			// Устанавливаем коллбеки
 			bufferevent_setcb(http->events.server, &HttpProxy::read_server_cb, NULL, &HttpProxy::event_cb, http);
-			// Активируем буферы событий на чтение и запись
-			bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
 			// Очищаем буферы событий при завершении работы
 			bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
+			// Активируем буферы событий на чтение и запись
+			bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
 			// Выполняем подключение к удаленному серверу, если подключение не выполненно то сообщаем об этом
 			if(bufferevent_socket_connect(http->events.server, sot, sotlen) < 0){
 				// Выводим в лог сообщение
@@ -1560,10 +1572,10 @@ void HttpProxy::connection(void * ctx){
 		bufferevent_setwatermark(http->events.client, EV_READ | EV_WRITE, 5, 0);
 		// Устанавливаем коллбеки
 		bufferevent_setcb(http->events.client, &HttpProxy::read_client_cb, &HttpProxy::write_client_cb, &HttpProxy::event_cb, http);
-		// Активируем буферы событий на чтение и запись
-		bufferevent_enable(http->events.client, EV_READ | EV_WRITE);
 		// Очищаем буферы событий при завершении работы
 		bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
+		// Активируем буферы событий на чтение и запись
+		bufferevent_enable(http->events.client, EV_READ | EV_WRITE);
 		// Активируем перебор базы событий
 		event_base_dispatch(http->base);
 		// Удаляем объект подключения
@@ -1600,7 +1612,7 @@ void HttpProxy::accept_cb(const evutil_socket_t fd, const short event, void * ct
 				// Определяем разрешено ли подключение к прокси серверу
 				socket = accept(fd, reinterpret_cast <struct sockaddr *> (&client), &len);
 				// Если сокет не создан тогда выходим
-				if(socket < 1) return;
+				if(socket < 0) return;
 				// Получаем данные подключившегося клиента
 				ip = get_ip(AF_INET, &client);
 				// Получаем данные мак адреса клиента
@@ -1615,7 +1627,7 @@ void HttpProxy::accept_cb(const evutil_socket_t fd, const short event, void * ct
 				// Определяем разрешено ли подключение к прокси серверу
 				socket = accept(fd, reinterpret_cast <struct sockaddr *> (&client), &len);
 				// Если сокет не создан тогда выходим
-				if(socket < 1) return;
+				if(socket < 0) return;
 				// Получаем данные подключившегося клиента
 				ip = get_ip(AF_INET6, &client);
 				// Получаем данные мак адреса клиента
@@ -1730,7 +1742,7 @@ void HttpProxy::run_server(const evutil_socket_t fd, void * ctx){
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если объект прокси сервера существует
 	if(proxy){
-		// Успыляем поток на 500 милисекунд
+		// Погружаем поток в сон на 500 милисекунд
 		this_thread::sleep_for(chrono::milliseconds(500));
 		// Выводим в консоль информацию
 		proxy->server->log->write(LOG_MESSAGE, 0, "[+] start service: pid = %i, socket = %i", getpid(), fd);

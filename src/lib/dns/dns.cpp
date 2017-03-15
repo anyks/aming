@@ -76,6 +76,8 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 			// Выводим только первый элемент
 			} else ip = ips[0];
 		}
+		// Записываем данные в кэш
+		domainData->cache->setDomain(domainData->domain, ip);
 		// Выводим готовый результат
 		domainData->fn(ip, domainData->ctx);
 		// Удаляем передаваемый объект
@@ -99,34 +101,43 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 		regex_search(domain, match, e);
 		// Если данные найдены
 		if(match.empty()){
-			// Структура запроса
-			struct evutil_addrinfo hints;
-			// Заполняем структуру запроса нулями
-			memset(&hints, 0, sizeof(hints));
-			// Устанавливаем тип подключения
-			hints.ai_family = AF_UNSPEC;
-			// Устанавливаем флаг подключения что это канонническое имя
-			hints.ai_flags = EVUTIL_AI_CANONNAME;
-			// Устанавливаем что это потоковый сокет
-			hints.ai_socktype = SOCK_STREAM;
-			// Устанавливаем что это tcp подключение
-			hints.ai_protocol = IPPROTO_TCP;
-			// Создаем объект домен
-			DomainData * domainData = new DomainData;
-			// Устанавливаем функцию обратного вызова
-			domainData->fn = fn;
-			// Запоминаем указатель на объект пользователя
-			domainData->ctx = ctx;
-			// Запоминаем название искомого домена
-			domainData->domain = domain;
-			// Запоминаем объект лога
-			domainData->log = this->log;
-			// Устанавливаем тип протокола интернета
-			domainData->family = this->family;
-			// Выполняем dns запрос
-			struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
-			// Выводим в лог сообщение
-			if((req == NULL) && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
+			// Запрашиваем данные домена из кэша
+			string ip = this->cache->getDomain(domain);
+			// Если ip адрес найден тогда выводим результат
+			if(!ip.empty()) fn(ip, ctx);
+			// Если адрес не найден то запрашиваем его с ресолвера
+			else {
+				// Структура запроса
+				struct evutil_addrinfo hints;
+				// Заполняем структуру запроса нулями
+				memset(&hints, 0, sizeof(hints));
+				// Устанавливаем тип подключения
+				hints.ai_family = AF_UNSPEC;
+				// Устанавливаем флаг подключения что это канонническое имя
+				hints.ai_flags = EVUTIL_AI_CANONNAME;
+				// Устанавливаем что это потоковый сокет
+				hints.ai_socktype = SOCK_STREAM;
+				// Устанавливаем что это tcp подключение
+				hints.ai_protocol = IPPROTO_TCP;
+				// Создаем объект домен
+				DomainData * domainData = new DomainData;
+				// Устанавливаем функцию обратного вызова
+				domainData->fn = fn;
+				// Запоминаем указатель на объект пользователя
+				domainData->ctx = ctx;
+				// Запоминаем название искомого домена
+				domainData->domain = domain;
+				// Запоминаем объект лога
+				domainData->log = this->log;
+				// Запоминаем объект управления кэшем
+				domainData->cache = this->cache;
+				// Устанавливаем тип протокола интернета
+				domainData->family = this->family;
+				// Выполняем dns запрос
+				struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
+				// Выводим в лог сообщение
+				if((req == NULL) && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
+			}
 		// Если передан домен то возвращаем его
 		} else fn(domain, ctx);
 	}
@@ -211,13 +222,16 @@ void DNSResolver::setNameServers(vector <string> servers){
 /**
  * DNSResolver Конструктор
  * @param log     объект ведения логов
+ * @param cache   объект кэша
  * @param base    база данных событий
  * @param family  тип интернет протокола IPv4 или IPv6
  * @param servers массив dns серверов
  */
-DNSResolver::DNSResolver(LogApp * log, struct event_base * base, int family, vector <string> servers){
+DNSResolver::DNSResolver(LogApp * log, Cache * cache, struct event_base * base, int family, vector <string> servers){
 	// Запоминаем объект лога
 	this->log = log;
+	// Запоминаем объект кэша
+	this->cache = cache;
 	// Создаем базу данных событий
 	this->base = base;
 	// Запоминаем тип интернет протокола

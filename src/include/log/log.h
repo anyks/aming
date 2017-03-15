@@ -84,6 +84,11 @@ class LogApp {
 		 */
 		void setOwner(const char * path);
 		/**
+		 * mkdir Метод рекурсивного создания каталогов
+		 * @param path адрес каталогов
+		 */
+		void mkdir(const char * path);
+		/**
 		 * makePath Функция создания каталога для хранения логов
 		 * @param  path адрес для каталога
 		 * @return      результат создания каталога

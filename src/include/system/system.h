@@ -16,6 +16,7 @@
 #include "os/os.h"
 #include "log/log.h"
 #include "config/conf.h"
+#include "cache/cache.h"
 #include "headers/headers.h"
 
 // Устанавливаем область видимости
@@ -50,6 +51,8 @@ class System {
 		Config * config = NULL;
 		// Объект взаимодействия с ОС
 		Os * os = NULL;
+		// Объект управления кэшем
+		Cache * cache = NULL;
 		// Объект управления заголовками
 		Headers * headers = NULL;
 		/**
