@@ -562,76 +562,73 @@ const bool Cache::checkEnabledCache(HttpData & http){
 	// Результат проверки
 	bool result = false;
 	// Если кэширование разрешено
-	if(this->config->cache.response){
-		// Если заголовки существуют
-		if(http.isEndHeaders()){
-			// Генерируем текущую дату
-			time_t seconds = time(NULL), expires = 0;
-			// Определяем время жизни
-			const string ag = http.getHeader("age");
-			// Получаем данные etag
-			const string et = http.getHeader("etag");
-			// Получаем заголовок pragma
-			const string pr = http.getHeader("pragma");
-			// Получаем дату смерти кэша
-			const string ex = http.getHeader("expires");
-			// Получаем заголовок контроль кэша
-			const string cc = http.getHeader("cache-control");
-			// Получаем дату последней модификации
-			const string lm = http.getHeader("last-modified");
-			// Определяем время жизни кэша
-			if(!ex.empty()) expires = strToTime(ex.c_str());
-			// Если прагма запрещает кэш то отключаем его
-			if(!pr.empty() && (pr.find("no-cache") != string::npos)) result = false;
-			// Если время для жизни кэша еще есть то разрешаем кэширование
-			if(seconds < expires) result = true;
-			// Запрещаем кэш если время жизни уже истекло
-			else result = false;
-			// Если установлен etag или дата последней модификации значит разрешаем кэширование
-			if(!et.empty() || !lm.empty() || !ag.empty()) result = true;
-			// Если управление кэшем существует
-			if(!cc.empty()){
-				// Получаем параметры кэша
-				auto control = split(cc, ",");
-				// Переходим по всему массиву
-				for(u_int i = 0; i < control.size(); i++){
-					// Получаем строку кэша
-					const string cache = control[i];
-					// Директивы управление кэшем
-					bool ccPublic		= (cache.compare("public") == 0);
-					bool ccPrivate		= (cache.compare("private") == 0);
-					bool ccNoCache		= (cache.compare("no-cache") == 0);
-					bool ccNoStore		= (cache.compare("no-store") == 0);
-					bool ccMaxAge		= (cache.compare("s-maxage") == 0);
-					bool ccRevalidate	= (cache.compare("proxy-revalidate") == 0);
-					// Определяем тип заголовка
-					if(ccNoCache || ccRevalidate){
-						// Если etag существует
-						if(!et.empty()) result = true;
-						else result = false;
-					// Если время жизни найдено, то определяем его
-					} else if(ccMaxAge){
-						// Возраст жизни кэша
-						size_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
-						// Извлекачем значение времени
-						size_t pos = cache.find("s-maxage=");
-						// Если позиция найдена тогда извлекаем контент
-						if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
-						// Если возраст больше нуля и это публичное кэширование тогда разрешаем
-						if(age && ccPublic) result = true;
-						else {
-							// Запрещаем кэширование
-							result = false;
-							// Выходим из цикла
-							break;
-						}
-					// Если кэширование запрещено тогда запрещаем
-					} else if(ccNoStore || ccPrivate){
+	if(this->config->cache.response && http.isEndHeaders()){
+		// Генерируем текущую дату
+		time_t date = time(NULL), expires = 0;
+		// Определяем время жизни
+		const string ag = http.getHeader("age");
+		// Получаем данные etag
+		const string et = http.getHeader("etag");
+		// Получаем заголовок pragma
+		const string pr = http.getHeader("pragma");
+		// Получаем дату смерти кэша
+		const string ex = http.getHeader("expires");
+		// Получаем заголовок контроль кэша
+		const string cc = http.getHeader("cache-control");
+		// Получаем дату последней модификации
+		const string lm = http.getHeader("last-modified");
+		// Определяем время жизни кэша
+		if(!ex.empty()) expires = strToTime(ex.c_str());
+		// Если прагма запрещает кэш то отключаем его
+		if(!pr.empty() && (pr.find("no-cache") != string::npos)) result = false;
+		// Если время для жизни кэша еще есть то разрешаем кэширование
+		if(date < expires) result = true;
+		// Запрещаем кэш если время жизни уже истекло
+		else result = false;
+		// Если установлен etag или дата последней модификации значит разрешаем кэширование
+		if(!et.empty() || !lm.empty() || !ag.empty()) result = true;
+		// Если управление кэшем существует
+		if(!cc.empty()){
+			// Получаем параметры кэша
+			auto control = split(cc, ",");
+			// Переходим по всему массиву
+			for(u_int i = 0; i < control.size(); i++){
+				// Получаем строку кэша
+				const string cache = control[i];
+				// Директивы управление кэшем
+				bool ccPrivate		= (cache.compare("private") == 0);
+				bool ccNoCache		= (cache.compare("no-cache") == 0);
+				bool ccNoStore		= (cache.compare("no-store") == 0);
+				bool ccMaxAge		= (cache.compare("s-maxage") == 0);
+				bool ccRevalidate	= (cache.compare("proxy-revalidate") == 0);
+				// Определяем тип заголовка
+				if(ccNoCache || ccRevalidate){
+					// Если etag существует
+					if(!et.empty() || !lm.empty()) result = true;
+					else result = false;
+				// Если время жизни найдено, то определяем его
+				} else if(ccMaxAge){
+					// Возраст жизни кэша
+					size_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
+					// Извлекачем значение времени
+					size_t pos = cache.find("s-maxage=");
+					// Если позиция найдена тогда извлекаем контент
+					if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
+					// Если возраст больше нуля и это публичное кэширование тогда разрешаем
+					if(age && (cc.find("public") != string::npos)) result = true;
+					// Если это приватный кэш тогда запрещаем кэширование
+					else if(cc.find("private") != string::npos) {
 						// Запрещаем кэширование
 						result = false;
 						// Выходим из цикла
 						break;
 					}
+				// Если кэширование запрещено тогда запрещаем
+				} else if(ccNoStore || ccPrivate){
+					// Запрещаем кэширование
+					result = false;
+					// Выходим из цикла
+					break;
 				}
 			}
 		}
@@ -717,10 +714,21 @@ Cache::ResultData Cache::getCache(HttpData & http){
 				// Запоминаем etag
 				result.etag = data.etag;
 				// Запоминаем дату последней модификации
-				result.modified = timeToStr(data.modified);
-			}
+				if(data.modified) result.modified = timeToStr(data.modified);
+			// Удаляем кэш, если он безнадежно устарел
+			} else rmCache(http);
 			// Если кэш не устарел, копируем данные кэша
-			if(check) result.http = data.http;
+			if(check && !data.rvalid) result.http = data.http;
+			// Если данные получены а остальных данных нет тогда удаляем кэш
+			if(!result.empty
+			&& result.etag.empty()
+			&& result.modified.empty()
+			&& !result.http.isEndHeaders()){
+				// Сообщаем что ничего не найдено
+				result.empty = true;
+				// Удаляем кэш
+				rmCache(http);
+			}
 		}
 	}
 	// Выводим результат
@@ -824,7 +832,7 @@ void Cache::setCache(HttpData & http){
 			// Получаем дату последней модификации
 			const string lm = http.getHeader("last-modified");
 			// Обязательная валидация данных
-			bool validate = false;
+			bool rvalid = false;
 			// Возраст жизни кэша
 			time_t expires = 0, modified = 0, date = time(NULL);
 			// Возраст жизни кэша
@@ -842,7 +850,7 @@ void Cache::setCache(HttpData & http){
 					// Получаем строку кэша
 					const string cache = control[i];
 					// Если нужно проводить обязательную валидацию данных
-					if(cache.compare("proxy-revalidate") == 0) validate = true;
+					if(cache.compare("proxy-rervalid") == 0) rvalid = true;
 					// Если время жизни найдено, то определяем его
 					else if(cache.compare("s-maxage") == 0){
 						// Извлекачем значение времени
@@ -853,7 +861,7 @@ void Cache::setCache(HttpData & http){
 				}
 			}
 			// Выполняем запись данных в кэш
-			writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, validate, et, http});
+			writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, rvalid, et, http});
 		}
 	}
 }

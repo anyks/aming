@@ -515,6 +515,8 @@ void BufferHttpProxy::sendClient(){
 	bufferevent_enable(this->events.client, EV_WRITE);
 	// Отправляем клиенту сообщение
 	bufferevent_write(this->events.client, response.data(), response.size());
+	// Добавляем данные в кэш
+	this->proxy->cache->setCache(this->httpResponse);
 }
 /**
  * sendServer Метод отправки данных на сервер
@@ -1394,6 +1396,13 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					http->client.https		= http->httpRequest.isHttps();
 					http->client.connect	= http->httpRequest.isConnect();
 					http->client.useragent	= http->httpRequest.getUseragent();
+					
+
+					// Добавляем данные в кэш
+					auto tt = http->proxy->cache->getCache(http->httpRequest);
+
+					if(!tt.empty) cout << " --------------------- " << tt.http.getResponseData() << endl;
+
 					// Выполняем подключение к удаленному серверу
 					int connect = connect_server(http);
 					// Если сокет существует
