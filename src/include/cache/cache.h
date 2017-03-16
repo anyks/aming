@@ -57,9 +57,9 @@ class Cache {
 		 * ResultData  Структура с данными полученными из файла кэша
 		 */
 		struct ResultData {
-			bool empty = true;	// Структура не заполнена
-			string modified;	// Дата модификации кэша
+			bool load;			// Данные получены
 			string etag;		// Etag кэша
+			string modified;	// Дата модификации кэша
 			HttpData http;		// Сами кэш данные
 		};
 		// Объект лога

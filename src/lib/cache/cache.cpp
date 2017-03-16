@@ -681,53 +681,60 @@ Cache::ResultData Cache::getCache(HttpData & http){
 	ResultData result;
 	// Если кэширование разрешено
 	if(this->config->cache.response && http.isEndHeaders()){
-		// Создаем объект кеша
-		DataCache data;
-		// Выполняем чтение данных из кэша
-		readCache(http.getHost(), http.getPath(), &data);
-		// Если заголовки получены
-		if(data.http.isEndHeaders()){
-			// Результат проверки валидности кэша
-			bool check = false;
-			// Получаем текущую дату
-			time_t date = time(NULL);
-			// Если дата жизни кэша указана
-			if(data.expires){
-				// Если дата смерти кэша меньше текущей даты
-				if(data.expires < date) check = false;
-				else check = true;
-			}
-			// Если время жизни файла указано
-			if(data.age){
-				// Дата модификации
-				time_t mdate = (data.modified ? data.modified : data.date);
-				// Проверяем устарел ли файл
-				if((mdate + data.age) < date) check = false;
-				else check = true;
-			}
-			// Если кэш устарел но указан eTag или дата последней модификации, или же кэш не устарел
-			if(check || (!check
-			&& (!data.etag.empty()
-			|| (data.modified < date)))){
-				// Помечаем что данные получены
-				result.empty = false;
-				// Запоминаем etag
-				result.etag = data.etag;
-				// Запоминаем дату последней модификации
-				if(data.modified) result.modified = timeToStr(data.modified);
-			// Удаляем кэш, если он безнадежно устарел
-			} else rmCache(http);
-			// Если кэш не устарел, копируем данные кэша
-			if(check && !data.rvalid) result.http = data.http;
-			// Если данные получены а остальных данных нет тогда удаляем кэш
-			if(!result.empty
-			&& result.etag.empty()
-			&& result.modified.empty()
-			&& !result.http.isEndHeaders()){
-				// Сообщаем что ничего не найдено
-				result.empty = true;
-				// Удаляем кэш
-				rmCache(http);
+		// Получаем данные if-none-match
+		const string inm = http.getHeader("if-none-match");
+		// Получаем данные if-modified-since
+		const string ims = http.getHeader("if-modified-since");
+		// Если какой-то из заголовков существует тогда не трогаем кэш, так как эти данные есть у клиента
+		if(inm.empty() && ims.empty()){
+			// Создаем объект кеша
+			DataCache data;
+			// Выполняем чтение данных из кэша
+			readCache(http.getHost(), http.getPath(), &data);
+			// Если заголовки получены
+			if(data.http.isEndHeaders()){
+				// Результат проверки валидности кэша
+				bool check = false;
+				// Получаем текущую дату
+				time_t date = time(NULL);
+				// Если дата жизни кэша указана
+				if(data.expires){
+					// Если дата смерти кэша меньше текущей даты
+					if(data.expires < date) check = false;
+					else check = true;
+				}
+				// Если время жизни файла указано
+				if(data.age){
+					// Дата модификации
+					time_t mdate = (data.modified ? data.modified : data.date);
+					// Проверяем устарел ли файл
+					if((mdate + data.age) < date) check = false;
+					else check = true;
+				}
+				// Если кэш устарел но указан eTag или дата последней модификации, или же кэш не устарел
+				if(check || (!check
+				&& (!data.etag.empty()
+				|| (data.modified < date)))){
+					// Помечаем что данные получены
+					result.load = true;
+					// Запоминаем etag
+					result.etag = data.etag;
+					// Запоминаем дату последней модификации
+					if(data.modified) result.modified = timeToStr(data.modified);
+				// Удаляем кэш, если он безнадежно устарел
+				} else rmCache(http);
+				// Если кэш не устарел, копируем данные кэша
+				if(check && !data.rvalid) result.http = data.http;
+				// Если данные получены а остальных данных нет тогда удаляем кэш
+				if(result.load
+				&& result.etag.empty()
+				&& result.modified.empty()
+				&& !result.http.isEndHeaders()){
+					// Сообщаем что ничего не найдено
+					result.load = false;
+					// Удаляем кэш
+					rmCache(http);
+				}
 			}
 		}
 	}

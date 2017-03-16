@@ -1399,9 +1399,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					
 
 					// Добавляем данные в кэш
-					auto tt = http->proxy->cache->getCache(http->httpRequest);
+					// auto tt = http->proxy->cache->getCache(http->httpRequest);
 
-					if(!tt.empty) cout << " --------------------- " << tt.http.getResponseData() << endl;
+					// if(tt.load) cout << " --------------------- " << tt.http.getResponseData() << endl;
 
 					// Выполняем подключение к удаленному серверу
 					int connect = connect_server(http);
