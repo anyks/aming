@@ -42,6 +42,23 @@ const string Cache::getPathDomain(const string domain){
 	return result;
 }
 /**
+ * timeToStr Метод преобразования timestamp в строку
+ * @param  date дата в timestamp
+ * @return      строка содержащая дату
+ */
+const string Cache::timeToStr(const time_t date){
+	// Создаем структуру времени
+	struct tm * tm = localtime(&date);
+	// Буфер с данными
+	char buf[255];
+	// Зануляем структуру
+	memset(tm, 0, sizeof(struct tm));
+	// Выполняем парсинг даты
+	strftime(buf, sizeof(buf), "%A, %d %b %Y %H:%M:%S %Z", tm);
+	// Выводим результат
+	return string(buf);
+}
+/**
  * toCase Функция перевода в указанный регистр
  * @param  str  строка для перевода в указанных регистр
  * @param  flag флаг указания типа регистра
@@ -142,7 +159,7 @@ const string Cache::addToPath(const string path, const string file){
  * @param  name имя пользователя
  * @return      полученный идентификатор пользователя
  */
-uid_t Cache::getUid(const char * name){
+const uid_t Cache::getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
@@ -160,7 +177,7 @@ uid_t Cache::getUid(const char * name){
  * @param  name название группы пользователя
  * @return      полученный идентификатор группы пользователя
  */
-gid_t Cache::getGid(const char * name){
+const gid_t Cache::getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
@@ -183,17 +200,17 @@ void Cache::setOwner(const char * path){
 	// Размер строкового типа данных
 	string::size_type sz;
 	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber((* this->config)->proxy.user))
+	if(isNumber(this->config->proxy.user))
 		// Получаем идентификатор пользователя
-		uid = stoi((* this->config)->proxy.user, &sz);
+		uid = stoi(this->config->proxy.user, &sz);
 	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid((* this->config)->proxy.user.c_str());
+	else uid = getUid(this->config->proxy.user.c_str());
 	// Если идентификатор группы пришел в виде числа
-	if(isNumber((* this->config)->proxy.group))
+	if(isNumber(this->config->proxy.group))
 		// Получаем идентификатор группы пользователя
-		gid = stoi((* this->config)->proxy.group, &sz);
+		gid = stoi(this->config->proxy.group, &sz);
 	// Если идентификатор группы пришел в виде названия
-	else gid = getGid((* this->config)->proxy.group.c_str());
+	else gid = getGid(this->config->proxy.group.c_str());
 	// Устанавливаем права на каталог
 	chown(path, uid, gid);
 }
@@ -203,26 +220,61 @@ void Cache::setOwner(const char * path){
  * @param data   указатель на данные домена
  */
 void Cache::readDomain(const string domain, DataDNS * data){
-	// Получаем данные каталога где хранится кэш
-	string dir = (* this->config)->cache.dir;
-	// Получаем имя файла
-	dir = addToPath(dir, "dns");
-	// Добавляем основной путь
-	dir = addToPath(dir, getPathDomain(domain));
-	// Создаем адрес для хранения файла
-	const string filename = addToPath(dir, "data");
-	// Проверяем на существование адреса
-	if(!filename.empty() && isFileExist(filename.c_str())){
-		// Открываем файл на чтение
-		FILE * file = fopen(filename.c_str(), "rb");
-		// Если файл открыт
-		if(file){
-			// Считываем из файла данные домена
-			fread(data, sizeof(DataDNS), 1, file);
-			// Закрываем файл
-			fclose(file);
-		// Выводим сообщение в лог
-		} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+	// Если кэширование разрешено
+	if(this->config->cache.dns){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "dns");
+		// Добавляем основной путь
+		dir = addToPath(dir, getPathDomain(domain));
+		// Создаем адрес для хранения файла
+		const string filename = addToPath(dir, "data");
+		// Проверяем на существование адреса
+		if(!filename.empty() && isFileExist(filename.c_str())){
+			// Открываем файл на чтение
+			FILE * file = fopen(filename.c_str(), "rb");
+			// Если файл открыт
+			if(file){
+				// Считываем из файла данные домена
+				fread(data, sizeof(DataDNS), 1, file);
+				// Закрываем файл
+				fclose(file);
+			// Выводим сообщение в лог
+			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+		}
+	}
+}
+/**
+ * readCache Метод чтения данных из файла кэша
+ * @param domain название домена
+ * @param name   название запроса
+ * @param data   данные запроса
+ */
+void Cache::readCache(const string domain, const string name, DataCache * data){
+	// Если кэширование разрешено
+	if(this->config->cache.response){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "cache");
+		// Добавляем основной путь
+		dir = addToPath(dir, getPathDomain(domain));
+		// Создаем адрес для хранения файла
+		const string filename = addToPath(dir, md5(name));
+		// Проверяем на существование адреса
+		if(!filename.empty() && isFileExist(filename.c_str())){
+			// Открываем файл на чтение
+			FILE * file = fopen(filename.c_str(), "rb");
+			// Если файл открыт
+			if(file){
+				// Считываем из файла данные домена
+				fread(data, sizeof(DataCache), 1, file);
+				// Закрываем файл
+				fclose(file);
+			// Выводим сообщение в лог
+			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+		}
 	}
 }
 /**
@@ -231,33 +283,75 @@ void Cache::readDomain(const string domain, DataDNS * data){
  * @param data   данные домена
  */
 void Cache::writeDomain(const string domain, DataDNS data){
-	// Получаем данные каталога где хранится кэш
-	string dir = (* this->config)->cache.dir;
-	// Получаем имя файла
-	dir = addToPath(dir, "dns");
-	// Добавляем основной путь
-	dir = addToPath(dir, getPathDomain(domain));
-	// Создаем адрес для хранения файла
-	const string filename = addToPath(dir, "data");
-	// Проверяем на существование адреса
-	if(!filename.empty()){
-		// Проверяем существует ли нужный нам каталог
-		if(!makePath(dir.c_str())){
-			// Выводим в лог информацию
-			this->log->write(LOG_ERROR, 0, "unable to create directory for dns cache file %s for domain %s", dir.c_str(), domain.c_str());
-			// Выходим
-			return;
+	// Если кэширование разрешено
+	if(this->config->cache.dns){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "dns");
+		// Добавляем основной путь
+		dir = addToPath(dir, getPathDomain(domain));
+		// Создаем адрес для хранения файла
+		const string filename = addToPath(dir, "data");
+		// Проверяем на существование адреса
+		if(!filename.empty()){
+			// Проверяем существует ли нужный нам каталог
+			if(!makePath(dir.c_str())){
+				// Выводим в лог информацию
+				this->log->write(LOG_ERROR, 0, "unable to create directory for dns cache file %s for domain %s", dir.c_str(), domain.c_str());
+				// Выходим
+				return;
+			}
+			// Открываем файл на запись
+			FILE * file = fopen(filename.c_str(), "wb");
+			// Если файл открыт
+			if(file){
+				// Записываем в файл данные домена
+				fwrite(&data, sizeof(DataDNS), 1, file);
+				// Закрываем файл
+				fclose(file);
+			// Выводим сообщение в лог
+			} else this->log->write(LOG_ERROR, 0, "cannot write dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
-		// Открываем файл на запись
-		FILE * file = fopen(filename.c_str(), "wb");
-		// Если файл открыт
-		if(file){
-			// Записываем в файл данные домена
-			fwrite(&data, sizeof(DataDNS), 1, file);
-			// Закрываем файл
-			fclose(file);
-		// Выводим сообщение в лог
-		} else this->log->write(LOG_ERROR, 0, "cannot write dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+	}
+}
+/**
+ * writeCache Метод записи данных кэша
+ * @param domain название домена
+ * @param name   название запроса
+ * @param data   данные запроса
+ */
+void Cache::writeCache(const string domain, const string name, DataCache data){
+	// Если кэширование разрешено
+	if(this->config->cache.response){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "cache");
+		// Добавляем основной путь
+		dir = addToPath(dir, getPathDomain(domain));
+		// Создаем адрес для хранения файла
+		const string filename = addToPath(dir, md5(name));
+		// Проверяем на существование адреса
+		if(!filename.empty()){
+			// Проверяем существует ли нужный нам каталог
+			if(!makePath(dir.c_str())){
+				// Выводим в лог информацию
+				this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), domain.c_str());
+				// Выходим
+				return;
+			}
+			// Открываем файл на запись
+			FILE * file = fopen(filename.c_str(), "wb");
+			// Если файл открыт
+			if(file){
+				// Записываем в файл данные домена
+				fwrite(&data, sizeof(DataCache), 1, file);
+				// Закрываем файл
+				fclose(file);
+			// Выводим сообщение в лог
+			} else this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), domain.c_str());
+		}
 	}
 }
 /**
@@ -295,7 +389,7 @@ void Cache::mkdir(const char * path){
  * @param  path путь до каталога
  * @return      количество дочерних элементов
  */
-int Cache::rmdir(const char * path){
+const int Cache::rmdir(const char * path){
 	// Открываем указанный каталог
 	DIR * d = opendir(path);
 	// Получаем длину адреса
@@ -346,11 +440,26 @@ int Cache::rmdir(const char * path){
 	return r;
 }
 /**
+ * strToTime Метод перевода строки в timestamp
+ * @param  date строка даты
+ * @return      timestamp
+ */
+const time_t Cache::strToTime(const char * date){
+	// Создаем структуру времени
+	struct tm tm;
+	// Зануляем структуру
+	memset(&tm, 0, sizeof(struct tm));
+	// Выполняем парсинг даты
+	strptime(date, "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	// Выводим результат
+	return mktime(&tm);
+}
+/**
  * makePath Функция создания каталога для хранения логов
  * @param  path адрес для каталога
  * @return      результат создания каталога
  */
-bool Cache::makePath(const char * path){
+const bool Cache::makePath(const char * path){
 	// Проверяем существует ли нужный нам каталог
 	if(!isDirExist(path)){
 		// Создаем каталог
@@ -368,7 +477,7 @@ bool Cache::makePath(const char * path){
  * @param  str строка для проверки
  * @return     результат проверки
  */
-bool Cache::isNumber(const string &str){
+const bool Cache::isNumber(const string &str){
 	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
 		return !isdigit(c);
 	}) == str.end();
@@ -378,7 +487,7 @@ bool Cache::isNumber(const string &str){
  * @param  path адрес каталога
  * @return      результат проверки
  */
-bool Cache::isDirExist(const char * path){
+const bool Cache::isDirExist(const char * path){
 	// Структура проверка статистики
 	struct stat info;
 	// Проверяем переданный нам адрес
@@ -391,7 +500,7 @@ bool Cache::isDirExist(const char * path){
  * @param  path адрес каталога
  * @return      результат проверки
  */
-bool Cache::isFileExist(const char * path){
+const bool Cache::isFileExist(const char * path){
 	// Структура проверка статистики
 	struct stat info;
 	// Проверяем переданный нам адрес
@@ -404,7 +513,7 @@ bool Cache::isFileExist(const char * path){
  * @param  domain строка названия домена для проверки
  * @return        результат проверки
  */
-bool Cache::isDomain(const string domain){
+const bool Cache::isDomain(const string domain){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -419,7 +528,7 @@ bool Cache::isDomain(const string domain){
  * @param  ip строка ip адреса для проверки
  * @return    результат проверки
  */
-bool Cache::isIpV4(const string ip){
+const bool Cache::isIpV4(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -434,7 +543,7 @@ bool Cache::isIpV4(const string ip){
  * @param  ip строка ip адреса для проверки
  * @return    результат проверки
  */
-bool Cache::isIpV6(const string ip){
+const bool Cache::isIpV6(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -445,6 +554,92 @@ bool Cache::isIpV6(const string ip){
 	return !match.empty();
 }
 /**
+ * checkEnabledCache Метод проверки, разрешено ли создавать кэш
+ * @param  http блок с данными запроса или ответа
+ * @return      результат проверки
+ */
+const bool Cache::checkEnabledCache(HttpData & http){
+	// Результат проверки
+	bool result = false;
+	// Если кэширование разрешено
+	if(this->config->cache.response){
+		// Если заголовки существуют
+		if(http.isEndHeaders()){
+			// Генерируем текущую дату
+			time_t seconds = time(NULL), expires = 0;
+			// Определяем время жизни
+			const string ag = http.getHeader("age");
+			// Получаем данные etag
+			const string et = http.getHeader("etag");
+			// Получаем заголовок pragma
+			const string pr = http.getHeader("pragma");
+			// Получаем дату смерти кэша
+			const string ex = http.getHeader("expires");
+			// Получаем заголовок контроль кэша
+			const string cc = http.getHeader("cache-control");
+			// Получаем дату последней модификации
+			const string lm = http.getHeader("last-modified");
+			// Определяем время жизни кэша
+			if(!ex.empty()) expires = strToTime(ex.c_str());
+			// Если прагма запрещает кэш то отключаем его
+			if(!pr.empty() && (pr.find("no-cache") != string::npos)) result = false;
+			// Если время для жизни кэша еще есть то разрешаем кэширование
+			if(seconds < expires) result = true;
+			// Запрещаем кэш если время жизни уже истекло
+			else result = false;
+			// Если установлен etag или дата последней модификации значит разрешаем кэширование
+			if(!et.empty() || !lm.empty() || !ag.empty()) result = true;
+			// Если управление кэшем существует
+			if(!cc.empty()){
+				// Получаем параметры кэша
+				auto control = split(cc, ",");
+				// Переходим по всему массиву
+				for(u_int i = 0; i < control.size(); i++){
+					// Получаем строку кэша
+					const string cache = control[i];
+					// Директивы управление кэшем
+					bool ccPublic		= (cache.compare("public") == 0);
+					bool ccPrivate		= (cache.compare("private") == 0);
+					bool ccNoCache		= (cache.compare("no-cache") == 0);
+					bool ccNoStore		= (cache.compare("no-store") == 0);
+					bool ccMaxAge		= (cache.compare("s-maxage") == 0);
+					bool ccRevalidate	= (cache.compare("proxy-revalidate") == 0);
+					// Определяем тип заголовка
+					if(ccNoCache || ccRevalidate){
+						// Если etag существует
+						if(!et.empty()) result = true;
+						else result = false;
+					// Если время жизни найдено, то определяем его
+					} else if(ccMaxAge){
+						// Возраст жизни кэша
+						size_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
+						// Извлекачем значение времени
+						size_t pos = cache.find("s-maxage=");
+						// Если позиция найдена тогда извлекаем контент
+						if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
+						// Если возраст больше нуля и это публичное кэширование тогда разрешаем
+						if(age && ccPublic) result = true;
+						else {
+							// Запрещаем кэширование
+							result = false;
+							// Выходим из цикла
+							break;
+						}
+					// Если кэширование запрещено тогда запрещаем
+					} else if(ccNoStore || ccPrivate){
+						// Запрещаем кэширование
+						result = false;
+						// Выходим из цикла
+						break;
+					}
+				}
+			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * getDomain Метод получения ip адреса домена
  * @param  domain название домена
  * @return        ip адрес домена
@@ -452,25 +647,80 @@ bool Cache::isIpV6(const string ip){
 const string Cache::getDomain(const string domain){
 	// Результат полученных данных
 	string result;
-	// Если данные домена переданы
-	if(!domain.empty() && isDomain(domain)){
-		// Создаем объект данных
-		DataDNS data;
-		// Считываем данные домена
-		readDomain(domain, &data);
-		// Получаем текущее количество секунд
-		time_t seconds = time(NULL);
-		// Если время жизни не истекло тогда отдаем результат
-		if((data.ttl + (* this->config)->cache.dttl) > seconds){
-			// Создаем объект сети
-			Network nwk;
-			// Определяем тип подключения
-			switch((* this->config)->proxy.extIPv){
-				// Для протокола IPv4
-				case 4: result = nwk.getLowIp(data.ipv4);	break;
-				// Для протокола IPv6
-				case 6: result = nwk.getLowIp6(data.ipv6);	break;
+	// Если кэширование разрешено
+	if(this->config->cache.dns){
+		// Если данные домена переданы
+		if(!domain.empty() && isDomain(domain)){
+			// Создаем объект данных
+			DataDNS data;
+			// Считываем данные домена
+			readDomain(domain, &data);
+			// Получаем текущее количество секунд
+			time_t seconds = time(NULL);
+			// Если время жизни не истекло тогда отдаем результат
+			if((data.ttl + this->config->cache.dttl) > seconds){
+				// Создаем объект сети
+				Network nwk;
+				// Определяем тип подключения
+				switch(this->config->proxy.extIPv){
+					// Для протокола IPv4
+					case 4: result = nwk.getLowIp(data.ipv4);	break;
+					// Для протокола IPv6
+					case 6: result = nwk.getLowIp6(data.ipv6);	break;
+				}
 			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getCache Метод получения данных кэша
+ * @param  http блок с данными запроса или ответа
+ * @return      объект с данными кэша
+ */
+Cache::ResultData Cache::getCache(HttpData & http){
+	// Создаем объект результата
+	ResultData result;
+	// Если кэширование разрешено
+	if(this->config->cache.response && http.isEndHeaders()){
+		// Создаем объект кеша
+		DataCache data;
+		// Выполняем чтение данных из кэша
+		readCache(http.getHost(), http.getPath(), &data);
+		// Если заголовки получены
+		if(data.http.isEndHeaders()){
+			// Результат проверки валидности кэша
+			bool check = false;
+			// Получаем текущую дату
+			time_t date = time(NULL);
+			// Если дата жизни кэша указана
+			if(data.expires){
+				// Если дата смерти кэша меньше текущей даты
+				if(data.expires < date) check = false;
+				else check = true;
+			}
+			// Если время жизни файла указано
+			if(data.age){
+				// Дата модификации
+				time_t mdate = (data.modified ? data.modified : data.date);
+				// Проверяем устарел ли файл
+				if((mdate + data.age) < date) check = false;
+				else check = true;
+			}
+			// Если кэш устарел но указан eTag или дата последней модификации, или же кэш не устарел
+			if(check || (!check
+			&& (!data.etag.empty()
+			|| (data.modified < date)))){
+				// Помечаем что данные получены
+				result.empty = false;
+				// Запоминаем etag
+				result.etag = data.etag;
+				// Запоминаем дату последней модификации
+				result.modified = timeToStr(data.modified);
+			}
+			// Если кэш не устарел, копируем данные кэша
+			if(check) result.http = data.http;
 		}
 	}
 	// Выводим результат
@@ -482,35 +732,38 @@ const string Cache::getDomain(const string domain){
  * @param  ip     ip адрес домена
  */
 void Cache::setDomain(const string domain, const string ip){
-	// Если данные домена и ip адреса переданы
-	if(!domain.empty() && !ip.empty() && isDomain(domain)){
-		// Создаем объект сети
-		Network nwk;
-		// Создаем объект данных
-		DataDNS data;
-		// Считываем данные домена
-		readDomain(domain, &data);
-		// Определяем тип подключения
-		switch((* this->config)->proxy.extIPv){
-			// Для протокола IPv4
-			case 4: {
-				// Создаем ip адрес
-				const string ipv4 = nwk.setLowIp(ip);
-				// Проверяем является ли адрес IPv4
-				if(isIpV4(ipv4)) data.ipv4 = ipv4;
-			} break;
-			// Для протокола IPv6
-			case 6: {
-				// Создаем ip адрес
-				const string ipv6 = nwk.setLowIp6(ip);
-				// Проверяем является ли адрес IPv6
-				if(isIpV6(ipv6)) data.ipv6 = ipv6;
-			} break;
+	// Если кэширование разрешено
+	if(this->config->cache.dns){
+		// Если данные домена и ip адреса переданы
+		if(!domain.empty() && !ip.empty() && isDomain(domain)){
+			// Создаем объект сети
+			Network nwk;
+			// Создаем объект данных
+			DataDNS data;
+			// Считываем данные домена
+			readDomain(domain, &data);
+			// Определяем тип подключения
+			switch(this->config->proxy.extIPv){
+				// Для протокола IPv4
+				case 4: {
+					// Создаем ip адрес
+					const string ipv4 = nwk.setLowIp(ip);
+					// Проверяем является ли адрес IPv4
+					if(isIpV4(ipv4)) data.ipv4 = ipv4;
+				} break;
+				// Для протокола IPv6
+				case 6: {
+					// Создаем ip адрес
+					const string ipv6 = nwk.setLowIp6(ip);
+					// Проверяем является ли адрес IPv6
+					if(isIpV6(ipv6)) data.ipv6 = ipv6;
+				} break;
+			}
+			// Определяем количество секунд
+			data.ttl = time(NULL);
+			// Выполняем запись домена в кэш
+			writeDomain(domain, data);
 		}
-		// Определяем количество секунд
-		data.ttl = time(NULL);
-		// Выполняем запись домена в кэш
-		writeDomain(domain, data);
 	}
 }
 /**
@@ -518,32 +771,129 @@ void Cache::setDomain(const string domain, const string ip){
  * @param domain название домена
  */
 void Cache::rmDomain(const string domain){
-	// Получаем данные каталога где хранится кэш
-	string dir = (* this->config)->cache.dir;
-	// Получаем имя файла
-	dir = addToPath(dir, "dns");
-	// Добавляем основной путь
-	dir = addToPath(dir, getPathDomain(domain));
-	// Проверяем на существование адреса, если существует то удаляем
-	if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
+	// Если кэширование разрешено
+	if(this->config->cache.dns){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "dns");
+		// Добавляем основной путь
+		dir = addToPath(dir, getPathDomain(domain));
+		// Проверяем на существование адреса, если существует то удаляем
+		if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
+	}
 }
 /**
- * rmAddDomains Метод удаления всех доменов из кэша
+ * rmAllDomains Метод удаления всех доменов из кэша
  */
-void Cache::rmAddDomains(){
-	// Получаем данные каталога где хранится кэш
-	string dir = (* this->config)->cache.dir;
-	// Получаем имя файла
-	dir = addToPath(dir, "dns");
-	// Проверяем на существование адреса, если существует то удаляем
-	if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
+void Cache::rmAllDomains(){
+	// Если кэширование разрешено
+	if(this->config->cache.dns){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "dns");
+		// Проверяем на существование адреса, если существует то удаляем
+		if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
+	}
+}
+/**
+ * setCache Метод сохранения кэша
+ * @param http блок с данными запроса или ответа
+ */
+void Cache::setCache(HttpData & http){
+	// Если кэширование разрешено
+	if(this->config->cache.response && http.isEndHeaders()){
+		// Определяем метод запроса
+		const string method = http.getMethod();
+		// Определяем метод запроса, разрешено только GET и POST
+		if(((method.compare("get") == 0)
+		|| (method.compare("post") == 0))
+		// Проверяем разрешено ли выполнять сохранение кэша
+		&& checkEnabledCache(http)){
+			// Определяем время жизни
+			const string ag = http.getHeader("age");
+			// Получаем данные etag
+			const string et = http.getHeader("etag");
+			// Получаем заголовок pragma
+			const string pr = http.getHeader("pragma");
+			// Получаем дату смерти кэша
+			const string ex = http.getHeader("expires");
+			// Получаем заголовок контроль кэша
+			const string cc = http.getHeader("cache-control");
+			// Получаем дату последней модификации
+			const string lm = http.getHeader("last-modified");
+			// Обязательная валидация данных
+			bool validate = false;
+			// Возраст жизни кэша
+			time_t expires = 0, modified = 0, date = time(NULL);
+			// Возраст жизни кэша
+			time_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
+			// Если дата модификации данных указана
+			if(!lm.empty()) modified = strToTime(lm.c_str());
+			// Если дата смерти кэша указана
+			if(!ex.empty()) expires = strToTime(ex.c_str());
+			// Если управление кэшем существует
+			if(!cc.empty()){
+				// Получаем параметры кэша
+				auto control = split(cc, ",");
+				// Переходим по всему массиву
+				for(u_int i = 0; i < control.size(); i++){
+					// Получаем строку кэша
+					const string cache = control[i];
+					// Если нужно проводить обязательную валидацию данных
+					if(cache.compare("proxy-revalidate") == 0) validate = true;
+					// Если время жизни найдено, то определяем его
+					else if(cache.compare("s-maxage") == 0){
+						// Извлекачем значение времени
+						size_t pos = cache.find("s-maxage=");
+						// Если позиция найдена тогда извлекаем контент
+						if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
+					}
+				}
+			}
+			// Выполняем запись данных в кэш
+			writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, validate, et, http});
+		}
+	}
+}
+/**
+ * rmCache Метод удаления кэша
+ * @param http блок с данными запроса или ответа
+ */
+void Cache::rmCache(HttpData & http){
+	// Если кэширование разрешено
+	if(this->config->cache.response && http.isEndHeaders()){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "cache");
+		// Добавляем основной путь
+		dir = addToPath(dir, getPathDomain(http.getHost()));
+		// Проверяем на существование адреса, если существует то удаляем
+		if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
+	}
+}
+/**
+ * rmAllCache Метод удаления кэша всех сайтов
+ */
+void Cache::rmAllCache(){
+	// Если кэширование разрешено
+	if(this->config->cache.response){
+		// Получаем данные каталога где хранится кэш
+		string dir = this->config->cache.dir;
+		// Получаем имя файла
+		dir = addToPath(dir, "cache");
+		// Проверяем на существование адреса, если существует то удаляем
+		if(!dir.empty() && isDirExist(dir.c_str())) rmdir(dir.c_str());
+	}
 }
 /**
  * Cache Конструктор
  * @param log    объект лога для вывода информации
  * @param config конфигурационные данные
  */
-Cache::Cache(LogApp * log, Config ** config){
+Cache::Cache(LogApp * log, Config * config){
 	// Запоминаем объект логов
 	this->log = log;
 	// Запоминаем параметры конфига

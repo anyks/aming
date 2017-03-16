@@ -55,7 +55,7 @@ class Headers {
 		// Объект лога
 		LogApp * log = NULL;
 		// Конфигурационные данные
-		Config ** config = NULL;
+		Config * config = NULL;
 		// Список правил
 		map <const string, vector <Params>> rules;
 		/**
@@ -236,7 +236,7 @@ class Headers {
 		 * @param log    объект лога для вывода информации
 		 * @param config конфигурационные данные
 		 */
-		Headers(LogApp * log = NULL, Config ** config = NULL);
+		Headers(LogApp * log = NULL, Config * config = NULL);
 };
 
 #endif // _HEADERS_ANYKS_

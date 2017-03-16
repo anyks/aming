@@ -117,7 +117,7 @@ void Headers::read(){
 	// Если конфигурационный файл существует
 	if(this->config){
 		// Получаем данные каталога где хранится файл с правилами
-		const string dir = (* this->config)->proxy.dir;
+		const string dir = this->config->proxy.dir;
 		// Получаем имя файла
 		const string filename = addToPath(dir, "headers");
 		// Проверяем на существование адреса
@@ -529,17 +529,17 @@ void Headers::setOwner(const char * path){
 	// Размер строкового типа данных
 	string::size_type sz;
 	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber((* this->config)->proxy.user))
+	if(isNumber(this->config->proxy.user))
 		// Получаем идентификатор пользователя
-		uid = stoi((* this->config)->proxy.user, &sz);
+		uid = stoi(this->config->proxy.user, &sz);
 	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid((* this->config)->proxy.user.c_str());
+	else uid = getUid(this->config->proxy.user.c_str());
 	// Если идентификатор группы пришел в виде числа
-	if(isNumber((* this->config)->proxy.group))
+	if(isNumber(this->config->proxy.group))
 		// Получаем идентификатор группы пользователя
-		gid = stoi((* this->config)->proxy.group, &sz);
+		gid = stoi(this->config->proxy.group, &sz);
 	// Если идентификатор группы пришел в виде названия
-	else gid = getGid((* this->config)->proxy.group.c_str());
+	else gid = getGid(this->config->proxy.group.c_str());
 	// Устанавливаем права на каталог
 	chown(path, uid, gid);
 }
@@ -757,7 +757,7 @@ void Headers::modify(const string ip, const string mac, const string server, Htt
  * @param log    объект лога для вывода информации
  * @param config конфигурационные данные
  */
-Headers::Headers(LogApp * log, Config ** config){
+Headers::Headers(LogApp * log, Config * config){
 	// Очищаем все параметры
 	clear();
 	// Запоминаем объект логов

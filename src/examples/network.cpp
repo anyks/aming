@@ -1,5 +1,6 @@
 // $ g++ -std=c++11 ./examples/network.cpp -o ./bin/network
 // $ ./bin/network
+#define _XOPEN_SOURCE
 
 #include <regex>
 #include <string>
@@ -8,6 +9,9 @@
 #include <sstream>
 #include <math.h>
 #include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 using namespace std;
 
@@ -1095,7 +1099,23 @@ int main(int len, char * buff[]){
 	cout << " ========== " << result << " == " << s << " == " << value << endl;
 
 
-	std::map mpt = {{"key"}, {"value"}};
+
+
+
+	// Работа с датами (перевод даты в "Wed, 15 Mar 2017 14:10:08 GMT")
+	struct tm tm;
+	char buf[255];
+
+	memset(&tm, 0, sizeof(struct tm));
+	strptime("Wed, 15 Mar 2017 14:10:08 GMT", "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	strftime(buf, sizeof(buf), "%A, %d %b %Y %H:%M:%S %Z", &tm);
+
+	time_t seconds = mktime(&tm);
+
+	cout << " ++++++++++++++ " << buf << " == " << seconds << endl;
+
+
+
 
 	/*
 	// Маска 1

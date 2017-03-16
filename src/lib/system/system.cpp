@@ -132,9 +132,9 @@ System::System(string configfile){
 	// Инициализируем модуль настроек операционной системы
 	this->os = new Os(this->log, &this->config);
 	// Инициализируем модуль кеша
-	this->cache = new Cache(this->log, &this->config);
+	this->cache = new Cache(this->log, this->config);
 	// Инициализируем модуль управления заголовками
-	this->headers = new Headers(this->log, &this->config);
+	this->headers = new Headers(this->log, this->config);
 }
 /**
  * ~System Деструктор

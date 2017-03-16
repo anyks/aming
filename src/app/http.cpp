@@ -1066,7 +1066,7 @@ const int HttpProxy::connect_server(void * ctx){
 			// Создаем буфер событий для сервера
 			http->events.server = bufferevent_socket_new(http->base, http->sockets.server, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 			// Устанавливаем водяной знак на 1 байт (чтобы считывать данные когда они действительно приходят)
-			bufferevent_setwatermark(http->events.server, EV_READ | EV_WRITE, 1, 0);
+			// bufferevent_setwatermark(http->events.server, EV_READ | EV_WRITE, 1, 0);
 			// Устанавливаем коллбеки
 			bufferevent_setcb(http->events.server, &HttpProxy::read_server_cb, NULL, &HttpProxy::event_cb, http);
 			// Очищаем буферы событий при завершении работы
@@ -1569,7 +1569,7 @@ void HttpProxy::connection(void * ctx){
 		// Устанавливаем таймер для клиента
 		http->setTimeout(TM_CLIENT, true);
 		// Устанавливаем водяной знак на 5 байт (чтобы считывать данные когда они действительно приходят)
-		bufferevent_setwatermark(http->events.client, EV_READ | EV_WRITE, 5, 0);
+		// bufferevent_setwatermark(http->events.client, EV_READ | EV_WRITE, 5, 0);
 		// Устанавливаем коллбеки
 		bufferevent_setcb(http->events.client, &HttpProxy::read_client_cb, &HttpProxy::write_client_cb, &HttpProxy::event_cb, http);
 		// Очищаем буферы событий при завершении работы
@@ -1828,8 +1828,10 @@ HttpProxy::HttpProxy(System * proxy){
 		evutil_socket_t socket = create_server();
 		// Если сокет существует
 		if(socket > -1){
+			// Очищаем весь кэш данных
+			this->server->cache->rmAllCache();
 			// Очищаем кэш dns запросов
-			this->server->cache->rmAddDomains();
+			this->server->cache->rmAllDomains();
 			// Если режим отладки не включен
 			if(!this->server->config->proxy.debug){
 				// Определяем максимальное количество потоков
