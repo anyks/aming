@@ -1115,7 +1115,14 @@ int main(int len, char * buff[]){
 	cout << " ++++++++++++++ " << buf << " == " << seconds << endl;
 
 
+	struct TT {
+		size_t size = 12;
+		char k[18] = "Hello World11±±";
+	};
 
+	TT t;
+
+	cout << " =========== " << sizeof(TT) << " == " << sizeof(t) << " == " << sizeof(t.k) << " == " << sizeof(t.size) << endl;
 
 	/*
 	// Маска 1

@@ -99,10 +99,10 @@ void replace(string &s, const string f, const string r){
  * @param delim разделитель
  * @param v     результирующий вектор
  */
-void HttpData::HttpHeaders::split(const string &str, const string delim, vector <string> &v){
+void split(const string &str, const string delim, vector <string> &v){
 	string::size_type i = 0;
 	string::size_type j = str.find(delim);
-	u_int len = delim.length();
+	size_t len = delim.length();
 	// Выполняем разбиение строк
 	while(j != string::npos){
 		v.push_back(str.substr(i, j - i));
@@ -112,24 +112,90 @@ void HttpData::HttpHeaders::split(const string &str, const string delim, vector 
 	}
 }
 /**
+ * getHeaders Метод получения заголовков
+ * @return сформированные заголовки
+ */
+const string HttpData::HttpHeaders::getHeaders(){
+	// Сформированные заголовки
+	string headers;
+	// Переходим по всем заголовкам и формируем общий результат
+	for(auto it = this->headers.begin(); it != this->headers.end(); it++){
+		// Формируем результат
+		headers.append(it->head + string(": ") + it->value + string("\r\n"));
+	}
+	// Добавляем конец заголовков
+	headers.append("\r\n");
+	// Выводим результат
+	return headers;
+}
+/**
  * getHeader Метод извлекает данные заголовка по его ключу
  * @param  key ключ заголовка
  * @return     строка с данными заголовка
  */
 HttpData::HttpHeaders::Header HttpData::HttpHeaders::getHeader(const string key){
-	// Копируем ключ
-	string val = key;
+	// Присваиваем значения строк
+	string ckey = key;
+	// Убираем пробелы
+	ckey = ::toCase(::trim(ckey));
 	// Переходим по всему массиву и ищем там нужный нам заголовок
-	for(u_int i = 0; i < this->headers.size(); i++){
+	for(auto it = this->headers.begin(); it != this->headers.end(); it++){
 		// Если заголовок найден
-		if(::toCase(this->headers[i].head)
-		.compare(::toCase(val)) == 0){
-			// Выводим результат
-			return this->headers[i];
-		}
+		if(::toCase(it->head).compare(ckey) == 0) return (* it);
 	}
 	// Сообщаем что ничего не найдено
 	return {"", ""};
+}
+/**
+ * getDump Метод создания дампа
+ * @return сформированный блок дампа
+ */
+const string HttpData::HttpHeaders::getDump(){
+	// Сформированные заголовки
+	string headers;
+	// Если заголовки собраны
+	if(isEnd()){
+		// Получаем количество заголовков
+		size_t size = this->headers.size();
+		// Переходим по всему фектору заголовков
+		for(size_t i = 0; i < size; i++){
+			// Добавляем заголовок
+			headers.append(this->headers[i].head + string("<-|params|->") + this->headers[i].value);
+			// Если это не последний элемент то добавляем разделитель
+			if(i < (size - 1)) headers.append("<-|heads|->");
+		}
+	}
+	// Выводим результат
+	return headers;
+}
+/**
+ * setDump Метод заливки дампа
+ * @param headers дамп заголовков
+ */
+void HttpData::HttpHeaders::setDump(const string headers){
+	// Если заголовки существуют
+	if(!headers.empty()){
+		// Выполняем очистку
+		clear();
+		// Выполняем разбивки на чанки
+		vector <string> data;
+		// Выполняем получение заголовков
+		split(headers, "<-|heads|->", data);
+		// Если данные существуют
+		if(!data.empty()){
+			// Переходим по всему массиву заголовков
+			for(auto it = data.begin(); it != data.end(); it++){
+				// Выполняем разбор заголовка
+				vector <string> header;
+				// Выполняем получение заголовка
+				split(* it, "<-|params|->", header);
+				// Добавляем заголовок в список
+				if(!header.empty()) append(* header.begin(), * (header.end() - 1));
+			}
+			// Запоминаем что все заголовки добавлены
+			setEnd();
+		}
+	}
 }
 /**
  * clear Метод очистки данных
@@ -148,14 +214,13 @@ void HttpData::HttpHeaders::remove(const string key){
 	// Присваиваем значения строк
 	string ckey = key;
 	// Убираем пробелы
-	ckey = ::trim(ckey);
+	ckey = ::toCase(::trim(ckey));
 	// Ищем такой ключ
-	for(size_t i = 0; i < this->headers.size(); i++){
+	for(auto it = this->headers.begin(); it != this->headers.end(); it++){
 		// Если найшли наш ключ
-		if(::toCase(this->headers[i].head)
-		.compare(::toCase(key)) == 0){
+		if(::toCase(it->head).compare(ckey) == 0){
 			// Удаляем указанный заголовок
-			this->headers.erase(this->headers.begin() + i);
+			this->headers.erase(it);
 			// Выходим из цикла
 			break;
 		}
@@ -217,18 +282,15 @@ const bool HttpData::HttpHeaders::create(const char * buffer){
 		// Если строки найдены
 		if(!strings.empty()){
 			// Переходим по всему массиву строк
-			for(u_int i = 1; i < strings.size(); i++){
+			for(auto it = strings.begin(); it != strings.end(); it++){
 				// Результат работы регулярного выражения
 				smatch match;
 				// Устанавливаем правило регулярного выражения
 				regex e("\\b([\\w\\-]+)\\s*\\:\\s*([\\s\\S]+)", regex::ECMAScript | regex::icase);
 				// Выполняем поиск протокола
-				regex_search(strings[i], match, e);
+				regex_search(* it, match, e);
 				// Если заголовок найден
-				if(!match.empty()){
-					// Добавляем данные заголовка
-					this->append(match[1].str(), match[2].str());
-				}
+				if(!match.empty()) this->append(match[1].str(), match[2].str());
 			}
 			// Запоминаем что заголовки сформированны
 			setEnd();
@@ -305,6 +367,24 @@ HttpData::HttpBody::Chunk & HttpData::HttpBody::Chunk::operator = (HttpData::Htt
 }
 */
 /**
+ * size Метод получения размера всех данных
+ * @return размер данных структуры
+ */
+size_t HttpData::HttpBody::Dump::size(){
+	// Полученный размер
+	size_t size = 0;
+	// Увеличиваем общий размер
+	size += sizeof(this->compress);
+	size += sizeof(this->maxSize);
+	size += sizeof(this->intGzip);
+	size += sizeof(this->extGzip);
+	size += this->body.size();
+	size += this->rody.size();
+	size += this->chunks.size();
+	// Выводим результат
+	return size;
+}
+/**
  * init Метод инициализации чанка
  * @param data данные для присваивания
  * @param size размер данных
@@ -344,7 +424,7 @@ const size_t HttpData::HttpBody::size(const bool chunked){
 	// Если это чанкование
 	if(chunked){
 		// Переходим по всем чанкам и считаем размеры
-		for(size_t i = 0; i < this->chunks.size(); i++) size += this->chunks[i].content.size();
+		for(auto it = this->chunks.begin(); it != this->chunks.end(); it++) size += it->content.size();
 	// Иначе просто считаем размер блока
 	} else size = this->body.size();
 	// Выводим результат
@@ -556,6 +636,50 @@ void HttpData::HttpBody::clear(){
 	// Очищаем тело
 	this->body.clear();
 	this->rody.clear();
+}
+/**
+ * setDump Метод заливки дампа
+ * @param body дамп тела
+ */
+void HttpData::HttpBody::setDump(HttpData::HttpBody::Dump body){
+	// Если размер указан
+	if(!body.rody.empty() && !body.body.empty()){
+		// Выполняем очистку
+		clear();
+		// Заполняем основные данные
+		this->body = body.body;
+		this->rody = body.rody;
+		this->maxSize = body.maxSize;
+		this->intGzip = body.intGzip;
+		this->extGzip = body.extGzip;
+		this->compress = body.compress;
+		// Выполняем разбивки на чанки
+		vector <string> chunks;
+		// Выполняем получение заголовков
+		split(body.chunks, "<-|chunks|->", chunks);
+		// Если данные существуют
+		if(!chunks.empty()){
+			// Переходим по всему массиву чанков
+			for(auto it = chunks.begin(); it != chunks.end(); it++){
+				// Создаем объект чанка
+				Chunk chunk;
+				// Составляющие чанка
+				vector <string> data;
+				// Выполняем получение чанка
+				split(* it, "<-|size|->", data);
+				// Если составляющие чанка найдены
+				if(!data.empty()){
+					// Заполняем структуру чанка
+					chunk.hsize		= data[0];
+					chunk.content	= data[1];
+					// Добавляем чанк в список
+					this->chunks.push_back(chunk);
+				}
+			}
+			// Запоминаем что все заголовки добавлены
+			setEnd();
+		}
+	}
 }
 /**
  * setMaxSize Метод установки размера чанков
@@ -786,21 +910,19 @@ const string HttpData::HttpBody::getBody(const bool chunked){
 	string result;
 	// Если это чанкование
 	if(chunked){
-		// Определяем количество чанков
-		size_t size = this->chunks.size();
 		// Переходим по всему массиву чанков
-		for(size_t i = 0; i < size; i++){
+		for(auto it = this->chunks.begin(); it != this->chunks.end(); it++){
 			// Формируем строку чанка
-			string chunksize = (this->chunks[i].hsize + "\r\n");
+			string chunksize = (it->hsize + "\r\n");
 			// Добавляем в массив данных, полученный размер чанка
 			result.append(chunksize);
 			// Добавляем в массив данных, данные чанка
-			result.append(this->chunks[i].content);
+			result.append(it->content);
 			// Добавляем завершающую строку
 			result.append("\r\n");
-			// Если это конец обработки, добавляем завершающие данные
-			if(i == (size - 1)) result.append("0\r\n\r\n");
 		}
+		// Добавляем завершающие данные
+		result.append("0\r\n\r\n");
 	// Выводим результат такой как он есть
 	} else result = this->body;
 	// Выводим результат
@@ -820,6 +942,41 @@ const string HttpData::HttpBody::getRawBody(){
 vector <HttpData::HttpBody::Chunk> HttpData::HttpBody::getChunks(){
 	// Выводим результат
 	return this->chunks;
+}
+/**
+ * getDump Метод создания дампа
+ * @return сформированный блок дампа
+ */
+HttpData::HttpBody::Dump HttpData::HttpBody::getDump(){
+	// Если все данные собраны
+	if(isEnd()){
+		// Создаем объект дампа
+		Dump dump;
+		// Строка с данными чанков
+		string chunks;
+		// Заполняем структуру дампа
+		dump.body = this->body;
+		dump.rody = this->rody;
+		dump.maxSize = this->maxSize;
+		dump.intGzip = this->intGzip;
+		dump.extGzip = this->extGzip;
+		dump.compress = this->compress;
+		// Получаем количество чанков
+		size_t size = this->chunks.size();
+		// Переходим по всему массиву чанков
+		for(size_t i = 0; i < size; i++){
+			// Добавляем чанк в список
+			chunks.append(this->chunks[i].hsize + string("<-|size|->") + this->chunks[i].content);
+			// Если это не конец тогда добавляем разделитель чанков
+			if(i < (size - 1)) chunks.append("<-|chunks|->");
+		}
+		// Запоминаем данные чанков
+		dump.chunks = chunks;
+		// Выводим результат
+		return dump;
+	}
+	// Выводим так как есть
+	return {};
 }
 /**
  * HttpBody Конструктор
@@ -847,6 +1004,35 @@ HttpData::HttpBody::~HttpBody(){
 	clear();
 	// Удаляем объект чанков
 	vector <Chunk> ().swap(this->chunks);
+}
+/**
+ * size Метод получения размера всех данных
+ * @return размер данных структуры
+ */
+size_t HttpData::Dump::size(){
+	// Итоговый размер данных
+	size_t size = 0;
+	// Выполняем расчет данных структуры
+	size += sizeof(this->intGzip);
+	size += sizeof(this->extGzip);
+	size += sizeof(this->status);
+	size += sizeof(this->options);
+	size += this->http.size();
+	size += this->auth.size();
+	size += this->path.size();
+	size += this->host.size();
+	size += this->port.size();
+	size += this->login.size();
+	size += this->method.size();
+	size += this->appName.size();
+	size += this->version.size();
+	size += this->headers.size();
+	size += this->protocol.size();
+	size += this->password.size();
+	size += this->appVersion.size();
+	size += this->body.size();
+	// Выводим результат
+	return size;
 }
 /**
  * genDataConnect Метод генерации данных для подключения
@@ -1323,7 +1509,7 @@ const size_t HttpData::setEntitybody(const char * buffer, const size_t size){
 	// Если данные переданы
 	if(size && isEndHeaders()){
 		// Размер вложений
-		u_int length = 0;
+		size_t length = 0;
 		// Проверяем есть ли размер вложений
 		string cl = getHeader("content-length");
 		// Определяем размер вложений
@@ -1627,6 +1813,70 @@ const string HttpData::getRawRequestData(){
 	}
 	// Выводим результат
 	return result;
+}
+/**
+ * getDump Метод создания дампа
+ * @return сформированный блок дампа
+ */
+HttpData::Dump HttpData::getDump(){
+	// Если данные получены
+	if(this->body.isEnd() && this->headers.isEnd()){
+		// Создаем объект дампа
+		Dump dump;
+		// Заполняем объект дампа данными
+		dump.http = this->http;
+		dump.auth = this->auth;
+		dump.path = this->path;
+		dump.host = this->host;
+		dump.port = this->port;
+		dump.login = this->login;
+		dump.status = this->status;
+		dump.method = this->method;
+		dump.intGzip = this->intGzip;
+		dump.extGzip = this->extGzip;
+		dump.options = this->options;
+		dump.appName = this->appName;
+		dump.version = this->version;
+		dump.protocol = this->protocol;
+		dump.password = this->password;
+		dump.appVersion = this->appVersion;
+		dump.body = this->body.getDump();
+		dump.headers = this->headers.getDump();
+		// Выводим результат
+		return dump;
+	}
+	// Выводим результат
+	return {};
+}
+/**
+ * setDump Метод заливки дампа
+ * @param data дамп http данных
+ */
+void HttpData::setDump(HttpData::Dump data){
+	// Если данные существуют
+	if(!data.headers.empty()){
+		// Очищаем блок данных
+		clear();
+		// Заполняем полученные данные
+		this->http = data.http;
+		this->auth = data.auth;
+		this->path = data.path;
+		this->host = data.host;
+		this->port = data.port;
+		this->login = data.login;
+		this->status = data.status;
+		this->method = data.method;
+		this->intGzip = data.intGzip;
+		this->extGzip = data.extGzip;
+		this->options = data.options;
+		this->appName = data.appName;
+		this->version = data.version;
+		this->protocol = data.protocol;
+		this->password = data.password;
+		this->appVersion = data.appVersion;
+		this->body.setDump(data.body);
+		this->headers.setDump(data.headers);
+	}
 }
 /**
  * clear Метод очистки структуры
@@ -2095,7 +2345,7 @@ const bool Http::isHttp(const string buffer){
 		// Устанавливаем завершающий символ
 		buf[3] = '\0';
 		// Переходим по всему массиву команд
-		for(int i = 0; i < 8; i++) if(::toCase(buf).compare(cmds[i]) == 0) return true;
+		for(u_short i = 0; i < 8; i++) if(::toCase(buf).compare(cmds[i]) == 0) return true;
 	}
 	// Сообщаем что это не http
 	return false;
@@ -2163,7 +2413,7 @@ void Http::modify(vector <char> &data){
 	// Если данные распарсены
 	if(httpQuery.isEndHeaders()){
 		// Если завершение заголовка найдено
-		u_int pos = (strstr(headers, "\r\n\r\n") - headers) + 4;
+		size_t pos = (strstr(headers, "\r\n\r\n") - headers) + 4;
 		// Получаем данные запроса
 		string last(data.data() + pos, data.size() - pos);
 		// Получаем данные заголовков

@@ -236,8 +236,47 @@ void Cache::readDomain(const string domain, DataDNS * data){
 			FILE * file = fopen(filename.c_str(), "rb");
 			// Если файл открыт
 			if(file){
+				// Данные ip адресов
+				char ipv4[256], ipv6[256];
+				// Зануляем буферы
+				memset(ipv4, 0, sizeof(ipv4));
+				memset(ipv6, 0, sizeof(ipv6));
+				// Время жизни кэша
+				size_t ttl = 0, size = 0, sizeIPv4 = 0, sizeIPv6 = 0;
+				// Считываем время жизни кэша
+				size += fread(&ttl, sizeof(ttl), 1, file);
+				// Перемещаемся на указанное количество байт
+				fseek(file, size, SEEK_SET);
+				// Считываем размер данных IPv4
+				size += fread(&sizeIPv4, sizeof(sizeIPv4), 1, file);
+				// Перемещаемся на указанное количество байт
+				fseek(file, size, SEEK_SET);
+				// Если размер IPv4 получен
+				if(sizeIPv4){
+					// Считываем данные IPv4
+					size += fread(ipv4, sizeIPv4, 1, file);
+					// Перемещаемся на указанное количество байт
+					fseek(file, size, SEEK_SET);
+				}
+				// Считываем размер данных IPv6
+				size += fread(&sizeIPv6, sizeof(sizeIPv6), 1, file);
+				// Если размер IPv6 получен
+				if(sizeIPv6){
+					// Перемещаемся на указанное количество байт
+					fseek(file, size, SEEK_SET);
+					// Считываем данные IPv6
+					size += fread(ipv6, sizeIPv6, 1, file);
+				}
+				// Запоминаем время жизни
+				// data->ttl = ttl;
+				// Запоминаем ip адреса
+				// data->ipv4.assign(ipv4, sizeIPv4);
+				// data->ipv6.assign(ipv6, sizeIPv6);
+
+				cout << " ============== ttl = " << ttl << " == ipv4 = " << ipv4 << " == ipv6 = " << ipv6 << " == size = " << size << endl;
+
 				// Считываем из файла данные домена
-				fread(data, sizeof(DataDNS), 1, file);
+				// fread(data, sizeof(DataDNS), 1, file);
 				// Закрываем файл
 				fclose(file);
 			// Выводим сообщение в лог
@@ -306,8 +345,38 @@ void Cache::writeDomain(const string domain, DataDNS data){
 			FILE * file = fopen(filename.c_str(), "wb");
 			// Если файл открыт
 			if(file){
+				// Время жизни кэша
+				size_t size = 0, wsize = 0;
+				// Записываем в файл данные время жизни кэша
+				size += fwrite(&data.ttl, sizeof(data.ttl), 1, file);
+				// Перемещаемся на указанное количество байт
+				fseek(file, size, SEEK_SET);
+				// Запоминаем размер записываемых данных
+				wsize = data.ipv4.size();
+				// Записываем в файл данные размера IPv4
+				size += fwrite(&wsize, sizeof(wsize), 1, file);
+				// Перемещаемся на указанное количество байт
+				fseek(file, size, SEEK_SET);
+				// Если данные для записи существуют
+				if(wsize){
+					// Записываем в файл данные IPv4
+					size += fwrite(data.ipv4.data(), wsize, 1, file);
+					// Перемещаемся на указанное количество байт
+					fseek(file, size, SEEK_SET);
+				}
+				// Запоминаем размер записи
+				wsize = data.ipv6.size();
+				// Записываем в файл данные размера IPv6
+				size += fwrite(&wsize, sizeof(wsize), 1, file);
+				// Если данные для записи существуют
+				if(wsize){
+					// Перемещаемся на указанное количество байт
+					fseek(file, size, SEEK_SET);
+					// Записываем в файл данные IPv6
+					fwrite(data.ipv6.data(), wsize, 1, file);
+				}
 				// Записываем в файл данные домена
-				fwrite(&data, sizeof(DataDNS), 1, file);
+				// fwrite(&data, sizeof(data), 1, file);
 				// Закрываем файл
 				fclose(file);
 			// Выводим сообщение в лог
@@ -345,8 +414,18 @@ void Cache::writeCache(const string domain, const string name, DataCache data){
 			FILE * file = fopen(filename.c_str(), "wb");
 			// Если файл открыт
 			if(file){
+				// Получаем размер данных
+				size_t size = 0;
+				// Считаем общий объем сохраняемых данных
+				size += sizeof(data.age);
+				size += sizeof(data.date);
+				size += sizeof(data.expires);
+				size += sizeof(data.modified);
+				size += sizeof(data.rvalid);
+				size += data.etag.size();
+				size += data.http.size();
 				// Записываем в файл данные домена
-				fwrite(&data, sizeof(DataCache), 1, file);
+				fwrite(&data, size, 1, file);
 				// Закрываем файл
 				fclose(file);
 			// Выводим сообщение в лог
@@ -692,7 +771,7 @@ Cache::ResultData Cache::getCache(HttpData & http){
 			// Выполняем чтение данных из кэша
 			readCache(http.getHost(), http.getPath(), &data);
 			// Если заголовки получены
-			if(data.http.isEndHeaders()){
+			if(!data.http.headers.empty()){
 				// Результат проверки валидности кэша
 				bool check = false;
 				// Получаем текущую дату
@@ -729,7 +808,7 @@ Cache::ResultData Cache::getCache(HttpData & http){
 				if(result.load
 				&& result.etag.empty()
 				&& result.modified.empty()
-				&& !result.http.isEndHeaders()){
+				&& !result.http.headers.empty()){
 					// Сообщаем что ничего не найдено
 					result.load = false;
 					// Удаляем кэш
@@ -868,7 +947,7 @@ void Cache::setCache(HttpData & http){
 				}
 			}
 			// Выполняем запись данных в кэш
-			writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, rvalid, et, http});
+			writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, rvalid, et, http.getDump()});
 		}
 	}
 }

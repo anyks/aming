@@ -49,20 +49,28 @@ class HttpData {
 				bool end = false;
 				// Заголовки http запроса
 				vector <Header> headers;
-				/**
-				 * split Функция разделения строк на составляющие
-				 * @param str   строка для поиска
-				 * @param delim разделитель
-				 * @param v     результирующий вектор
-				 */
-				void split(const string &str, const string delim, vector <string> &v);
 			public:
+				/**
+				 * getHeaders Метод получения заголовков
+				 * @return сформированные заголовки
+				 */
+				const string getHeaders();
 				/**
 				 * getHeader Метод извлекает данные заголовка по его ключу
 				 * @param  key ключ заголовка
 				 * @return     строка с данными заголовка
 				 */
-				HttpHeaders::Header getHeader(const string key);
+				Header getHeader(const string key);
+				/**
+				 * getDump Метод создания дампа
+				 * @return сформированный блок дампа
+				 */
+				const string getDump();
+				/**
+				 * setDump Метод заливки дампа
+				 * @param headers дамп заголовков
+				 */
+				void setDump(const string headers);
 				/**
 				 * clear Метод очистки данных
 				 */
@@ -121,15 +129,40 @@ class HttpData {
 		 * HttpBody Класс тела запроса
 		 */
 		class HttpBody {
+			public:
+				/**
+				 * Dump Структура дампа тела
+				 */
+				struct Dump {
+					// Активация режима внутреннего сжатия
+					bool intGzip;
+					// Активация режима внешнего сжатия
+					bool extGzip;
+					// Тип сжатия
+					u_int compress;
+					// Максимальный размер чанков в байтах
+					size_t maxSize;
+					// Данные тела
+					string body;
+					// Данные тела в чистом виде
+					string rody;
+					// Список чанков тела
+					string chunks;
+					/**
+					 * size Метод получения размера всех данных
+					 * @return размер данных структуры
+					 */
+					size_t size();
+				};
 			private:
 				/**
 				 * Chunk Структура чанков
 				 */
 				struct Chunk {
-					// Данные чанка
-					string content;
 					// Размер чанка в 16-й системе
 					string hsize = "0";
+					// Данные чанка
+					string content;
 					/**
 					 * operator = Оператор присваивания
 					 * @param chunk сторонний объект чанка
@@ -152,13 +185,13 @@ class HttpData {
 				// Тип сжатия
 				u_int compress;
 				// Максимальный размер чанков в байтах
-				size_t maxSize;
+				size_t maxSize = 0;
+				// Заполненность данных
+				bool end = false;
 				// Активация режима внутреннего сжатия
 				bool intGzip = false;
 				// Активация режима внешнего сжатия
 				bool extGzip = false;
-				// Заполненность данных
-				bool end = false;
 				// Данные тела
 				string body;
 				// Данные тела в чистом виде
@@ -195,6 +228,11 @@ class HttpData {
 				 * clear Метод сброса параметров
 				 */
 				void clear();
+				/**
+				 * setDump Метод заливки дампа
+				 * @param body дамп тела
+				 */
+				void setDump(Dump body);
 				/**
 				 * setMaxSize Метод установки размера чанков
 				 * @param size размер чанков в байтах
@@ -256,6 +294,11 @@ class HttpData {
 				 */
 				vector <Chunk> getChunks();
 				/**
+				 * getDump Метод создания дампа
+				 * @return сформированный блок дампа
+				 */
+				Dump getDump();
+				/**
 				 * HttpBody Конструктор
 				 * @param maxSize  максимальный размер каждого чанка (в байтах)
 				 * @param compress метод сжатия
@@ -268,6 +311,36 @@ class HttpData {
 				 */
 				~HttpBody();
 		};
+	public:
+		/**
+		 * Dump Структура дампа http данных
+		 */
+		struct Dump {
+			bool intGzip;			// Активация внутреннего режима сжатия
+			bool extGzip;			// Активация внешнего режима сжатия
+			u_int status;			// Статус код http запроса
+			u_short options;		// Параметры прокси сервера
+			string http;			// http запрос
+			string auth;			// Тип авторизации
+			string path;			// Путь запроса
+			string host;			// Хост запроса
+			string port;			// Порт запроса
+			string login;			// Логин
+			string method;			// Метод запроса
+			string appName;			// Название приложения
+			string version;			// Версия протокола
+			string headers;			// Дамп заголовков
+			string protocol;		// Протокол запроса
+			string password;		// Пароль
+			string appVersion;		// Версия приложения
+			HttpBody::Dump body;	// Дамп тела
+			/**
+			 * size Метод получения размера всех данных
+			 * @return размер данных структуры
+			 */
+			size_t size();
+		};
+	private:
 		/**
 		 * Http Структура http данных
 		 */
@@ -284,26 +357,32 @@ class HttpData {
 			string port;		// Порт
 			string protocol;	// Протокол
 		};
-		// Основные переменные класса
-		bool				intGzip;	// Активация внутреннего режима сжатия
-		bool				extGzip;	// Активация внешнего режима сжатия
-		u_short				options;	// Параметры прокси сервера
-		u_int				status;		// Статус код http запроса
-		string				appName;	// Название приложения
-		string				appVersion;	// Версия приложения
-		string				http;		// http запрос
-		string				auth;		// Тип авторизации
-		string				method;		// Метод запроса
-		string				path;		// Путь запроса
-		string				protocol;	// Протокол запроса
-		string				version;	// Версия протокола
-		string				host;		// Хост запроса
-		string				port;		// Порт запроса
-		string				login;		// Логин
-		string				password;	// Пароль
-		HttpBody			body;		// Тело http запроса
-		HttpHeaders			headers;	// Заголовки http запроса
-		map <u_short, Http>	response;	// Шаблоны ответов
+		// Параметры сжатия
+		bool intGzip;	// Активация внутреннего режима сжатия
+		bool extGzip;	// Активация внешнего режима сжатия
+		// Статус код http запроса
+		u_int status;
+		// Параметры прокси сервера
+		u_short options;
+		// Данные запроса
+		string http;		// http запрос
+		string auth;		// Тип авторизации
+		string path;		// Путь запроса
+		string host;		// Хост запроса
+		string port;		// Порт запроса
+		string login;		// Логин
+		string method;		// Метод запроса
+		string version;		// Версия протокола
+		string appName;		// Название приложения
+		string protocol;	// Протокол запроса
+		string password;	// Пароль
+		string appVersion;	// Версия приложения
+		// Тело http запроса
+		HttpBody body;
+		// Заголовки http запроса
+		HttpHeaders headers;
+		// Шаблоны ответов
+		map <u_short, Http> response;
 		/**
 		 * genDataConnect Метод генерации данных для подключения
 		 */
@@ -499,6 +578,16 @@ class HttpData {
 		 * @return строка с данными запроса
 		 */
 		const string getRawRequestData();
+		/**
+		 * getDump Метод создания дампа
+		 * @return сформированный блок дампа
+		 */
+		Dump getDump();
+		/**
+		 * setDump Метод заливки дампа
+		 * @param data дамп http данных
+		 */
+		void setDump(Dump data);
 		/**
 		 * clear Метод очистки структуры
 		 */
