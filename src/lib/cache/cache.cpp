@@ -221,7 +221,7 @@ void Cache::setOwner(const char * path){
  */
 void Cache::readDomain(const string domain, DataDNS * data){
 	// Если кэширование разрешено
-	if(this->config->cache.dns){
+	if(this->config->cache.dns && data){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
@@ -236,49 +236,47 @@ void Cache::readDomain(const string domain, DataDNS * data){
 			FILE * file = fopen(filename.c_str(), "rb");
 			// Если файл открыт
 			if(file){
+				// Создаем объект карты данных
+				CacheDNSMap map;
+				// Время жизни кэша
+				size_t ttl = 0;
 				// Данные ip адресов
 				char ipv4[256], ipv6[256];
 				// Зануляем буферы
 				memset(ipv4, 0, sizeof(ipv4));
 				memset(ipv6, 0, sizeof(ipv6));
-				// Время жизни кэша
-				size_t ttl = 0, size = 0, sizeIPv4 = 0, sizeIPv6 = 0;
-				// Считываем время жизни кэша
-				size += fread(&ttl, sizeof(ttl), 1, file);
-				// Перемещаемся на указанное количество байт
-				fseek(file, size, SEEK_SET);
-				// Считываем размер данных IPv4
-				size += fread(&sizeIPv4, sizeof(sizeIPv4), 1, file);
-				// Перемещаемся на указанное количество байт
-				fseek(file, size, SEEK_SET);
-				// Если размер IPv4 получен
-				if(sizeIPv4){
-					// Считываем данные IPv4
-					size += fread(ipv4, sizeIPv4, 1, file);
-					// Перемещаемся на указанное количество байт
-					fseek(file, size, SEEK_SET);
+				// Смещаем на начальную позицию
+				fseek(file, 0L, SEEK_SET);
+				// Считываем значение размеров
+				size_t size = fread(&map, sizeof(map), 1, file);
+				// Если данные прочитаны
+				if(size){
+					// Смещаем на следующую позицию
+					fseek(file, size - 1, SEEK_CUR);
+					// Считываем время жизни кэша ttl
+					size = fread(&ttl, map.ttl, 1, file);
+					// Если размер данных существует
+					if(map.ipv4){
+						// Смещаем на следующую позицию
+						fseek(file, size - 1, SEEK_CUR);
+						// Считываем адрес IPv4
+						size = fread(ipv4, map.ipv4, 1, file);
+					}
+					// Если размер данных существует
+					if(map.ipv6){
+						// Смещаем на следующую позицию
+						fseek(file, size - 1, SEEK_CUR);
+						// Считываем адрес IPv4
+						size = fread(ipv6, map.ipv6, 1, file);
+					}
 				}
-				// Считываем размер данных IPv6
-				size += fread(&sizeIPv6, sizeof(sizeIPv6), 1, file);
-				// Если размер IPv6 получен
-				if(sizeIPv6){
-					// Перемещаемся на указанное количество байт
-					fseek(file, size, SEEK_SET);
-					// Считываем данные IPv6
-					size += fread(ipv6, sizeIPv6, 1, file);
-				}
-				// Запоминаем время жизни
-				// data->ttl = ttl;
-				// Запоминаем ip адреса
-				// data->ipv4.assign(ipv4, sizeIPv4);
-				// data->ipv6.assign(ipv6, sizeIPv6);
-
-				cout << " ============== ttl = " << ttl << " == ipv4 = " << ipv4 << " == ipv6 = " << ipv6 << " == size = " << size << endl;
-
-				// Считываем из файла данные домена
-				// fread(data, sizeof(DataDNS), 1, file);
 				// Закрываем файл
 				fclose(file);
+				// Запоминаем полученные данные
+				data->ttl = ttl;
+				// Запоминаем данные IP адресов
+				data->ipv4.assign(ipv4, map.ipv4);
+				data->ipv6.assign(ipv6, map.ipv6);
 			// Выводим сообщение в лог
 			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
@@ -345,38 +343,31 @@ void Cache::writeDomain(const string domain, DataDNS data){
 			FILE * file = fopen(filename.c_str(), "wb");
 			// Если файл открыт
 			if(file){
-				// Время жизни кэша
-				size_t size = 0, wsize = 0;
-				// Записываем в файл данные время жизни кэша
-				size += fwrite(&data.ttl, sizeof(data.ttl), 1, file);
-				// Перемещаемся на указанное количество байт
-				fseek(file, size, SEEK_SET);
-				// Запоминаем размер записываемых данных
-				wsize = data.ipv4.size();
-				// Записываем в файл данные размера IPv4
-				size += fwrite(&wsize, sizeof(wsize), 1, file);
-				// Перемещаемся на указанное количество байт
-				fseek(file, size, SEEK_SET);
-				// Если данные для записи существуют
-				if(wsize){
-					// Записываем в файл данные IPv4
-					size += fwrite(data.ipv4.data(), wsize, 1, file);
-					// Перемещаемся на указанное количество байт
-					fseek(file, size, SEEK_SET);
+				// Создаем объект карты данных
+				CacheDNSMap map = {sizeof(data.ttl), data.ipv4.size(), data.ipv6.size()};
+				// Смещаем на начальную позицию
+				fseek(file, 0L, SEEK_SET);
+				// Выполняем запись карты размеров
+				if(fwrite(&map, sizeof(map), 1, file)){
+					// Смещаем значение записи на конец файла
+					fseek(file, 0L, SEEK_END);
+					// Выполняем запись времени жизни кэша
+					fwrite(&data.ttl, map.ttl, 1, file);
+					// Если данные ip адреса получены
+					if(!data.ipv4.empty()){
+						// Смещаем значение записи на конец файла
+						fseek(file, 0L, SEEK_END);
+						// Выполняем запись ip адреса
+						fwrite(data.ipv4.data(), map.ipv4, 1, file);
+					}
+					// Выполняем запись ip адреса
+					if(!data.ipv6.empty()){
+						// Смещаем значение записи на конец файла
+						fseek(file, 0L, SEEK_END);
+						// Выполняем запись ip адреса
+						fwrite(data.ipv6.data(), map.ipv6, 1, file);
+					}
 				}
-				// Запоминаем размер записи
-				wsize = data.ipv6.size();
-				// Записываем в файл данные размера IPv6
-				size += fwrite(&wsize, sizeof(wsize), 1, file);
-				// Если данные для записи существуют
-				if(wsize){
-					// Перемещаемся на указанное количество байт
-					fseek(file, size, SEEK_SET);
-					// Записываем в файл данные IPv6
-					fwrite(data.ipv6.data(), wsize, 1, file);
-				}
-				// Записываем в файл данные домена
-				// fwrite(&data, sizeof(data), 1, file);
 				// Закрываем файл
 				fclose(file);
 			// Выводим сообщение в лог
@@ -414,6 +405,8 @@ void Cache::writeCache(const string domain, const string name, DataCache data){
 			FILE * file = fopen(filename.c_str(), "wb");
 			// Если файл открыт
 			if(file){
+				
+				/*
 				// Получаем размер данных
 				size_t size = 0;
 				// Считаем общий объем сохраняемых данных
@@ -426,6 +419,7 @@ void Cache::writeCache(const string domain, const string name, DataCache data){
 				size += data.http.size();
 				// Записываем в файл данные домена
 				fwrite(&data, size, 1, file);
+				*/
 				// Закрываем файл
 				fclose(file);
 			// Выводим сообщение в лог
@@ -947,7 +941,7 @@ void Cache::setCache(HttpData & http){
 				}
 			}
 			// Выполняем запись данных в кэш
-			writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, rvalid, et, http.getDump()});
+			//writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, rvalid, et, http.getDump()});
 		}
 	}
 }

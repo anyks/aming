@@ -37,9 +37,17 @@ class Cache {
 		 * DataDNS Структура параметров домена кэша
 		 */
 		struct DataDNS {
-			time_t ttl;
-			string ipv4;
-			string ipv6;
+			time_t ttl;		// Время жизни кэша
+			string ipv4;	// Размер адреса IPv4
+			string ipv6;	// Размер адреса IPv6
+		};
+		/**
+		 * CacheDNSMap Карта размеров для кэша DNS
+		 */
+		struct CacheDNSMap {
+			size_t ttl;		// Размер времени жизни кэша
+			size_t ipv4;	// Размер адреса IPv4
+			size_t ipv6;	// Размер адреса IPV6
 		};
 		/**
 		 * Data Структура параметров кэша данных
@@ -51,7 +59,7 @@ class Cache {
 			time_t modified;		// Дата последней модификации
 			bool rvalid;			// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
 			string etag;			// Идентификатор ETag
-			HttpData::Dump http;	// Данные
+			HttpData::Dump http;	// Дамп http данных
 		};
 		/**
 		 * ResultData  Структура с данными полученными из файла кэша

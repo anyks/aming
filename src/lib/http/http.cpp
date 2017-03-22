@@ -367,24 +367,6 @@ HttpData::HttpBody::Chunk & HttpData::HttpBody::Chunk::operator = (HttpData::Htt
 }
 */
 /**
- * size Метод получения размера всех данных
- * @return размер данных структуры
- */
-size_t HttpData::HttpBody::Dump::size(){
-	// Полученный размер
-	size_t size = 0;
-	// Увеличиваем общий размер
-	size += sizeof(this->compress);
-	size += sizeof(this->maxSize);
-	size += sizeof(this->intGzip);
-	size += sizeof(this->extGzip);
-	size += this->body.size();
-	size += this->rody.size();
-	size += this->chunks.size();
-	// Выводим результат
-	return size;
-}
-/**
  * init Метод инициализации чанка
  * @param data данные для присваивания
  * @param size размер данных
@@ -445,7 +427,7 @@ const string HttpData::HttpBody::compress_gzip(const string &str){
 	// Заполняем его нулями
 	memset(&zs, 0, sizeof(zs));
 	// Если поток инициализировать не удалось, выходим
-	if(deflateInit2(&zs, this->compress, Z_DEFLATED, MOD_GZIP_ZLIB_WINDOWSIZE + 16, MOD_GZIP_ZLIB_CFACTOR, Z_DEFAULT_STRATEGY) == Z_OK){
+	if(deflateInit2(&zs, this->levelGzip, Z_DEFLATED, MOD_GZIP_ZLIB_WINDOWSIZE + 16, MOD_GZIP_ZLIB_CFACTOR, Z_DEFAULT_STRATEGY) == Z_OK){
 		// Заполняем входные данные буфера
 		zs.next_in = (Bytef *) str.data();
 		// Указываем размер входного буфера
@@ -542,7 +524,7 @@ const string HttpData::HttpBody::compressData(const char * buffer, const size_t 
 	 * const static int DEFAULT_COMPRESSION (2)
 	 */
 	// Если поток инициализировать не удалось, выходим
-	if(deflateInit(&zs, this->compress) == Z_OK){
+	if(deflateInit(&zs, this->levelGzip) == Z_OK){
 		// Максимальный размер выходного массива
 		size_t size_out = size;
 		// Создаем буфер с сжатыми данными
@@ -609,7 +591,7 @@ void HttpData::HttpBody::createChunk(const char * buffer, const size_t size){
 	// Выполняем создание чанков до тех пор пока данные существуют
 	while(copySize){
 		// Определяем размер копируемых данных
-		size_t size = (copySize < this->maxSize ? copySize : this->maxSize);
+		size_t size = (copySize < this->chunkSize ? copySize : this->chunkSize);
 		// Создаем массив с данными
 		vector <char> data(buffer + used, buffer + used + size);
 		// Создаем чанк
@@ -641,61 +623,32 @@ void HttpData::HttpBody::clear(){
  * setDump Метод заливки дампа
  * @param body дамп тела
  */
-void HttpData::HttpBody::setDump(HttpData::HttpBody::Dump body){
+void HttpData::HttpBody::setDump(const string body){
 	// Если размер указан
-	if(!body.rody.empty() && !body.body.empty()){
+	if(!body.empty()){
 		// Выполняем очистку
 		clear();
-		// Заполняем основные данные
-		this->body = body.body;
-		this->rody = body.rody;
-		this->maxSize = body.maxSize;
-		this->intGzip = body.intGzip;
-		this->extGzip = body.extGzip;
-		this->compress = body.compress;
-		// Выполняем разбивки на чанки
-		vector <string> chunks;
-		// Выполняем получение заголовков
-		split(body.chunks, "<-|chunks|->", chunks);
-		// Если данные существуют
-		if(!chunks.empty()){
-			// Переходим по всему массиву чанков
-			for(auto it = chunks.begin(); it != chunks.end(); it++){
-				// Создаем объект чанка
-				Chunk chunk;
-				// Составляющие чанка
-				vector <string> data;
-				// Выполняем получение чанка
-				split(* it, "<-|size|->", data);
-				// Если составляющие чанка найдены
-				if(!data.empty()){
-					// Заполняем структуру чанка
-					chunk.hsize		= data[0];
-					chunk.content	= data[1];
-					// Добавляем чанк в список
-					this->chunks.push_back(chunk);
-				}
-			}
-			// Запоминаем что все заголовки добавлены
-			setEnd();
-		}
+		// Добавляем данные тела
+		addData(body.c_str(), body.size(), body.size(), true);
+		// Запоминаем что все заголовки добавлены
+		setEnd();
 	}
 }
 /**
- * setMaxSize Метод установки размера чанков
+ * setChunkSize Метод установки размера чанков
  * @param size размер чанков в байтах
  */
-void HttpData::HttpBody::setMaxSize(const size_t size){
+void HttpData::HttpBody::setChunkSize(const size_t size){
 	// Устанавливаем максимальный размер чанков в байтах
-	this->maxSize = size;
+	this->chunkSize = size;
 }
 /**
- * setCompress Метод установки типа сжатия
- * @param compress тип сжатия
+ * setLevelGzip Метод установки уровня сжатия
+ * @param levelGzip уровень сжатия
  */
-void HttpData::HttpBody::setCompress(const u_int compress){
-	// Устанавливаем тип сжатия
-	this->compress = compress;
+void HttpData::HttpBody::setLevelGzip(const u_int levelGzip){
+	// Устанавливаем уровнь сжатия
+	this->levelGzip = levelGzip;
 }
 /**
  * setEnd Метод установки завершения передачи данных
@@ -745,6 +698,20 @@ const bool HttpData::HttpBody::isIntCompress(){
 const bool HttpData::HttpBody::isExtCompress(){
 	// Выводим результат проверки активации внешнего сжатия
 	return this->extGzip;
+}
+/**
+ * getLevelGzip Метод получения уровня сжатия
+ */
+const u_int HttpData::HttpBody::getLevelGzip(){
+	// Выводим метод получения уровня сжатия
+	return this->levelGzip;
+}
+/**
+ * getChunkSize Метод получения размера чанков
+ */
+const size_t HttpData::HttpBody::getChunkSize(){
+	// Выводим размер чанков
+	return this->chunkSize;
 }
 /**
  * addData Метод добавления данных тела
@@ -901,6 +868,18 @@ const size_t HttpData::HttpBody::addData(const char * buffer, const size_t size,
 	return readbytes;
 }
 /**
+ * getDump Метод создания дампа
+ * @return сформированный блок дампа
+ */
+const string HttpData::HttpBody::getDump(){
+	// Данные тела
+	string body;
+	// Если все данные собраны
+	if(isEnd()) body = this->rody;
+	// Выводим данные тела
+	return body;
+}
+/**
  * getBody Метод получения тела запроса
  * @param  chunked чанкованием
  * @return         данные тела запроса
@@ -944,54 +923,19 @@ vector <HttpData::HttpBody::Chunk> HttpData::HttpBody::getChunks(){
 	return this->chunks;
 }
 /**
- * getDump Метод создания дампа
- * @return сформированный блок дампа
- */
-HttpData::HttpBody::Dump HttpData::HttpBody::getDump(){
-	// Если все данные собраны
-	if(isEnd()){
-		// Создаем объект дампа
-		Dump dump;
-		// Строка с данными чанков
-		string chunks;
-		// Заполняем структуру дампа
-		dump.body = this->body;
-		dump.rody = this->rody;
-		dump.maxSize = this->maxSize;
-		dump.intGzip = this->intGzip;
-		dump.extGzip = this->extGzip;
-		dump.compress = this->compress;
-		// Получаем количество чанков
-		size_t size = this->chunks.size();
-		// Переходим по всему массиву чанков
-		for(size_t i = 0; i < size; i++){
-			// Добавляем чанк в список
-			chunks.append(this->chunks[i].hsize + string("<-|size|->") + this->chunks[i].content);
-			// Если это не конец тогда добавляем разделитель чанков
-			if(i < (size - 1)) chunks.append("<-|chunks|->");
-		}
-		// Запоминаем данные чанков
-		dump.chunks = chunks;
-		// Выводим результат
-		return dump;
-	}
-	// Выводим так как есть
-	return {};
-}
-/**
  * HttpBody Конструктор
- * @param maxSize  максимальный размер каждого чанка (в байтах)
- * @param compress метод сжатия
- * @param intGzip  активация режима внутреннего сжатия
- * @param extGzip  активация режима внешнего сжатия
+ * @param chunkSize  максимальный размер каждого чанка (в байтах)
+ * @param levelGzip  уровень сжатия
+ * @param intGzip    активация режима внутреннего сжатия
+ * @param extGzip    активация режима внешнего сжатия
  */
-HttpData::HttpBody::HttpBody(const size_t maxSize, const u_int compress, const bool intGzip, const bool extGzip){
+HttpData::HttpBody::HttpBody(const size_t chunkSize, const u_int levelGzip, const bool intGzip, const bool extGzip){
 	// Очищаем все данные
 	clear();
 	// Запоминаем размер чанка
-	this->maxSize = maxSize;
-	// Запоминаем метод сжатия
-	this->compress = compress;
+	this->chunkSize = chunkSize;
+	// Запоминаем уровень сжатия
+	this->levelGzip = levelGzip;
 	// Запоминаем режим сжатия
 	this->intGzip = intGzip;
 	this->extGzip = extGzip;
@@ -1004,35 +948,6 @@ HttpData::HttpBody::~HttpBody(){
 	clear();
 	// Удаляем объект чанков
 	vector <Chunk> ().swap(this->chunks);
-}
-/**
- * size Метод получения размера всех данных
- * @return размер данных структуры
- */
-size_t HttpData::Dump::size(){
-	// Итоговый размер данных
-	size_t size = 0;
-	// Выполняем расчет данных структуры
-	size += sizeof(this->intGzip);
-	size += sizeof(this->extGzip);
-	size += sizeof(this->status);
-	size += sizeof(this->options);
-	size += this->http.size();
-	size += this->auth.size();
-	size += this->path.size();
-	size += this->host.size();
-	size += this->port.size();
-	size += this->login.size();
-	size += this->method.size();
-	size += this->appName.size();
-	size += this->version.size();
-	size += this->headers.size();
-	size += this->protocol.size();
-	size += this->password.size();
-	size += this->appVersion.size();
-	size += this->body.size();
-	// Выводим результат
-	return size;
 }
 /**
  * genDataConnect Метод генерации данных для подключения
@@ -1829,11 +1744,10 @@ HttpData::Dump HttpData::getDump(){
 		dump.path = this->path;
 		dump.host = this->host;
 		dump.port = this->port;
+		dump.gzip = this->intGzip;
 		dump.login = this->login;
 		dump.status = this->status;
 		dump.method = this->method;
-		dump.intGzip = this->intGzip;
-		dump.extGzip = this->extGzip;
 		dump.options = this->options;
 		dump.appName = this->appName;
 		dump.version = this->version;
@@ -1841,6 +1755,8 @@ HttpData::Dump HttpData::getDump(){
 		dump.password = this->password;
 		dump.appVersion = this->appVersion;
 		dump.body = this->body.getDump();
+		dump.levelGzip = this->body.getLevelGzip();
+		dump.chunkSize = this->body.getChunkSize();
 		dump.headers = this->headers.getDump();
 		// Выводим результат
 		return dump;
@@ -1866,14 +1782,16 @@ void HttpData::setDump(HttpData::Dump data){
 		this->login = data.login;
 		this->status = data.status;
 		this->method = data.method;
-		this->intGzip = data.intGzip;
-		this->extGzip = data.extGzip;
+		this->intGzip = data.gzip;
 		this->options = data.options;
 		this->appName = data.appName;
 		this->version = data.version;
 		this->protocol = data.protocol;
 		this->password = data.password;
 		this->appVersion = data.appVersion;
+		// Выполняем инициализацию тела
+		initBody(data.chunkSize, data.levelGzip);
+		// Заливаем дампы
 		this->body.setDump(data.body);
 		this->headers.setDump(data.headers);
 	}

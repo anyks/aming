@@ -129,31 +129,6 @@ class HttpData {
 		 * HttpBody Класс тела запроса
 		 */
 		class HttpBody {
-			public:
-				/**
-				 * Dump Структура дампа тела
-				 */
-				struct Dump {
-					// Активация режима внутреннего сжатия
-					bool intGzip;
-					// Активация режима внешнего сжатия
-					bool extGzip;
-					// Тип сжатия
-					u_int compress;
-					// Максимальный размер чанков в байтах
-					size_t maxSize;
-					// Данные тела
-					string body;
-					// Данные тела в чистом виде
-					string rody;
-					// Список чанков тела
-					string chunks;
-					/**
-					 * size Метод получения размера всех данных
-					 * @return размер данных структуры
-					 */
-					size_t size();
-				};
 			private:
 				/**
 				 * Chunk Структура чанков
@@ -182,10 +157,10 @@ class HttpData {
 					 */
 					Chunk(const char * data = NULL, const size_t size = 0);
 				};
-				// Тип сжатия
-				u_int compress;
+				// Уровень сжатия
+				u_int levelGzip;
 				// Максимальный размер чанков в байтах
-				size_t maxSize = 0;
+				size_t chunkSize = 0;
 				// Заполненность данных
 				bool end = false;
 				// Активация режима внутреннего сжатия
@@ -232,17 +207,17 @@ class HttpData {
 				 * setDump Метод заливки дампа
 				 * @param body дамп тела
 				 */
-				void setDump(Dump body);
+				void setDump(const string body);
 				/**
-				 * setMaxSize Метод установки размера чанков
+				 * setChunkSize Метод установки размера чанков
 				 * @param size размер чанков в байтах
 				 */
-				void setMaxSize(const size_t size);
+				void setChunkSize(const size_t size);
 				/**
-				 * setCompress Метод установки типа сжатия
-				 * @param compress тип сжатия
+				 * setLevelGzip Метод установки уровня сжатия
+				 * @param levelGzip уровень сжатия
 				 */
-				void setCompress(const u_int compress);
+				void setLevelGzip(const u_int levelGzip);
 				/**
 				 * setEnd Метод установки завершения передачи данных
 				 * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
@@ -264,6 +239,14 @@ class HttpData {
 				 */
 				const bool isExtCompress();
 				/**
+				 * getLevelGzip Метод получения уровня сжатия
+				 */
+				const u_int getLevelGzip();
+				/**
+				 * getChunkSize Метод получения размера чанков
+				 */
+				const size_t getChunkSize();
+				/**
 				 * size Метод определения размера данных
 				 * @param  chunked чанкованием
 				 * @return         размер тела
@@ -278,6 +261,11 @@ class HttpData {
 				 * @return        количество обработанных байт
 				 */
 				const size_t addData(const char * buffer, const size_t size, const size_t length = 0, const bool strict = false);
+				/**
+				 * getDump Метод создания дампа
+				 * @return сформированный блок дампа
+				 */
+				const string getDump();
 				/**
 				 * getBody Метод получения тела запроса
 				 * @param  chunked чанкованием
@@ -294,18 +282,13 @@ class HttpData {
 				 */
 				vector <Chunk> getChunks();
 				/**
-				 * getDump Метод создания дампа
-				 * @return сформированный блок дампа
-				 */
-				Dump getDump();
-				/**
 				 * HttpBody Конструктор
-				 * @param maxSize  максимальный размер каждого чанка (в байтах)
-				 * @param compress метод сжатия
-				 * @param intGzip  активация режима внутреннего сжатия
-				 * @param extGzip  активация режима внешнего сжатия
+				 * @param chunkSize  максимальный размер каждого чанка (в байтах)
+				 * @param levelGzip  уровень сжатия
+				 * @param intGzip    активация режима внутреннего сжатия
+				 * @param extGzip    активация режима внешнего сжатия
 				 */
-				HttpBody(const size_t maxSize = 1024, const u_int compress = Z_DEFAULT_COMPRESSION, const bool intGzip = false, const bool extGzip = false);
+				HttpBody(const size_t chunkSize = 1024, const u_int levelGzip = Z_DEFAULT_COMPRESSION, const bool intGzip = false, const bool extGzip = false);
 				/**
 				 * ~HttpBody Деструктор
 				 */
@@ -316,29 +299,25 @@ class HttpData {
 		 * Dump Структура дампа http данных
 		 */
 		struct Dump {
-			bool intGzip;			// Активация внутреннего режима сжатия
-			bool extGzip;			// Активация внешнего режима сжатия
-			u_int status;			// Статус код http запроса
-			u_short options;		// Параметры прокси сервера
-			string http;			// http запрос
-			string auth;			// Тип авторизации
-			string path;			// Путь запроса
-			string host;			// Хост запроса
-			string port;			// Порт запроса
-			string login;			// Логин
-			string method;			// Метод запроса
-			string appName;			// Название приложения
-			string version;			// Версия протокола
-			string headers;			// Дамп заголовков
-			string protocol;		// Протокол запроса
-			string password;		// Пароль
-			string appVersion;		// Версия приложения
-			HttpBody::Dump body;	// Дамп тела
-			/**
-			 * size Метод получения размера всех данных
-			 * @return размер данных структуры
-			 */
-			size_t size();
+			bool gzip;			// Активация внутреннего режима сжатия
+			u_int status;		// Статус код http запроса
+			u_int levelGzip;	// Уровень сжатия тела данных
+			u_short options;	// Параметры прокси сервера
+			size_t chunkSize;	// Размер чанков тела данных
+			string http;		// http запрос
+			string auth;		// Тип авторизации
+			string path;		// Путь запроса
+			string host;		// Хост запроса
+			string port;		// Порт запроса
+			string body;		// Дамп тела
+			string login;		// Логин
+			string method;		// Метод запроса
+			string appName;		// Название приложения
+			string version;		// Версия протокола
+			string headers;		// Дамп заголовков
+			string protocol;	// Протокол запроса
+			string password;	// Пароль
+			string appVersion;	// Версия приложения
 		};
 	private:
 		/**
