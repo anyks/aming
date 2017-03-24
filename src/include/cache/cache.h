@@ -8,6 +8,9 @@
 #ifndef _CACHE_ANYKS_
 #define _CACHE_ANYKS_
 
+#include <fstream>
+#include <iostream>
+
 #include <map>
 #include <regex>
 #include <string>
@@ -34,32 +37,79 @@ using namespace std;
 class Cache {
 	private:
 		/**
-		 * DataDNS Структура параметров домена кэша
+		 * DataDNS Класс параметров домена кэша
 		 */
-		struct DataDNS {
-			time_t ttl;		// Время жизни кэша
-			string ipv4;	// Размер адреса IPv4
-			string ipv6;	// Размер адреса IPv6
-		};
-		/**
-		 * CacheDNSMap Карта размеров для кэша DNS
-		 */
-		struct CacheDNSMap {
-			size_t ttl;		// Размер времени жизни кэша
-			size_t ipv4;	// Размер адреса IPv4
-			size_t ipv6;	// Размер адреса IPV6
+		class DataDNS {
+			private:
+				/**
+				 * Структура размеров
+				 */
+				struct Map {
+					size_t ttl;
+					size_t ipv4;
+					size_t ipv6;
+				};
+				// Размер сырых данных
+				size_t sizeData = 0;
+				// Сырые данные
+				unsigned char * rawData = NULL;
+			public:
+				// Время жизни кэша
+				time_t ttl = 0;
+				// Размер адреса IPv4
+				string ipv4;
+				// Размер адреса IPv6
+				string ipv6;
+				/**
+				 * size Метод получения размеров сырых данных
+				 * @return размер сырых данных
+				 */
+				const size_t size();
+				/**
+				 * data Метод получения сырых данных
+				 * @return сырые данные
+				 */
+				const unsigned char * data();
+				/**
+				 * set Метод установки сырых данных
+				 * @param data сырые данные
+				 * @param size размер сырых данных
+				 */
+				void set(const unsigned char * data, size_t size);
+				/**
+				 * ~DataDNS Деструктор
+				 */
+				~DataDNS();
 		};
 		/**
 		 * Data Структура параметров кэша данных
 		 */
 		struct DataCache {
-			time_t age;				// Время жизни кэша
-			time_t date;			// Дата записи кэша прокси сервером
-			time_t expires;			// Дата смерти кэша
-			time_t modified;		// Дата последней модификации
-			bool rvalid;			// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
-			string etag;			// Идентификатор ETag
-			HttpData::Dump http;	// Дамп http данных
+			time_t age;			// Время жизни кэша
+			time_t date;		// Дата записи кэша прокси сервером
+			time_t expires;		// Дата смерти кэша
+			time_t modified;	// Дата последней модификации
+			u_int status;		// Статус код http запроса
+			u_int levelGzip;	// Уровень сжатия тела данных
+			u_short options;	// Параметры прокси сервера
+			size_t chunkSize;	// Размер чанков тела данных
+			bool gzip;			// Активация внутреннего режима сжатия
+			bool rvalid;		// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
+			string etag;		// Идентификатор ETag
+			string http;		// http запрос
+			string auth;		// Тип авторизации
+			string path;		// Путь запроса
+			string host;		// Хост запроса
+			string port;		// Порт запроса
+			string body;		// Дамп тела
+			string login;		// Логин
+			string method;		// Метод запроса
+			string appName;		// Название приложения
+			string version;		// Версия протокола
+			string headers;		// Дамп заголовков
+			string protocol;	// Протокол запроса
+			string password;	// Пароль
+			string appVersion;	// Версия приложения
 		};
 		/**
 		 * ResultData  Структура с данными полученными из файла кэша

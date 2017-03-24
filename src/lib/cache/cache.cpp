@@ -11,6 +11,137 @@
 using namespace std;
 
 /**
+ * size Метод получения размеров сырых данных
+ * @return размер сырых данных
+ */
+const size_t Cache::DataDNS::size(){
+	// Если размер данные не существует, выполняем генерацию данных
+	if(!this->sizeData) data();
+	// Выводим результат
+	return this->sizeData;
+}
+/**
+ * data Метод получения сырых данных
+ * @return сырые данные
+ */
+const unsigned char * Cache::DataDNS::data(){
+	// Если данные заполнены то очищаем их
+	if(this->rawData){
+		// Удаляем выделенные данные
+		delete [] this->rawData;
+		// Указываем что данные не иницализированны
+		this->rawData = NULL;
+		// Очищаем размерность
+		this->sizeData = 0;
+	}
+	// Если данные заполнены
+	if(this->ttl || !this->ipv4.empty() || !this->ipv6.empty()){
+		// Объект размерности данных
+		Map sizes = {sizeof(this->ttl), this->ipv4.size(), this->ipv6.size()};
+		// Получаем размер структуры
+		size_t size = sizeof(sizes);
+		// Выполняем расчет полного размера
+		this->sizeData = (size + sizes.ttl + sizes.ipv4 + sizes.ipv6);
+		// Выделяем динамически память
+		this->rawData = new unsigned char [this->sizeData];
+		// Получаем текущий итератор
+		unsigned char * it = this->rawData;
+		// Выполняем копирование карты размеров
+		memcpy(it, &sizes, size);
+		// Увеличиваем текущий итератор
+		it += size;
+		// Выполняем копирование времени жизни
+		memcpy(it, &this->ttl, sizes.ttl);
+		// Увеличиваем текущий итератор
+		it += sizes.ttl;
+		// Выполняем копирование данных адреса ipv4
+		memcpy(it, this->ipv4.data(), sizes.ipv4);
+		// Увеличиваем текущий итератор
+		it += sizes.ipv4;
+		// Выполняем копирование данных адреса ipv6
+		memcpy(it, this->ipv6.data(), sizes.ipv6);
+	}
+	// Выводим сформированные данные
+	return this->rawData;
+}
+/**
+ * set Метод установки сырых данных
+ * @param data сырые данные
+ * @param size размер сырых данных
+ */
+void Cache::DataDNS::set(const unsigned char * data, size_t size){
+	// Если данные существуют
+	if(size){
+		// Получаем размер структуры
+		size_t size_map = sizeof(Map);
+		// Если размер карты меньше общего размера
+		if(size_map < size){
+			// Размеры полученных данных
+			size_t size_it = size_map;
+			// Извлекаем данные карты размеров
+			for(size_t i = 0, j = 0; i < size_map; i += sizeof(size_t), j++){
+				// Размер полученных данных
+				size_t size_data;
+				// Извлекаем размер данных
+				memcpy(&size_data, data + i, sizeof(size_t));
+				// Если данные верные
+				if(size_data && ((size_data + size_it) <= size)){
+					// Определяем тип извлекаемых данных
+					switch(j){
+						// Если это время жизни
+						case 0: {
+							// Извлекаем данные
+							memcpy(&this->ttl, data + size_it, size_data);
+							// Определяем смещение
+							size_it += size_data;
+						} break;
+						// Если это адрес ipv4
+						case 1: {
+							// Выделяем динамически память
+							char * buffer = new char [size_data];
+							// Извлекаем данные адреса
+							memcpy(buffer, data + size_it, size_data);
+							// Запоминаем результат
+							this->ipv4.assign(buffer, size_data);
+							// Определяем смещение
+							size_it += size_data;
+							// Удаляем полученные данные
+							delete [] buffer;
+						} break;
+						// Если это адрес ipv6
+						case 2: {
+							// Выделяем динамически память
+							char * buffer = new char [size_data];
+							// Извлекаем данные адреса
+							memcpy(buffer, data + size_it, size_data);
+							// Запоминаем результат
+							this->ipv6.assign(buffer, size_data);
+							// Определяем смещение
+							size_it += size_data;
+							// Удаляем полученные данные
+							delete [] buffer;
+						} break;
+					}
+				}
+			}
+		}
+	}
+}
+/**
+ * ~DataDNS Деструктор
+ */
+Cache::DataDNS::~DataDNS(){
+	// Если буфер существует то удаляем его
+	if(this->rawData){
+		// Очищаем размер выделенных данных
+		this->sizeData = 0;
+		// Удаляем выделенную память
+		delete [] this->rawData;
+		// Обнуляем указатель
+		this->rawData = NULL;
+	}
+}
+/**
  * getPathDomain Метод создания пути из доменного имени
  * @param  domain название домена
  * @return        путь к файлу кэша
@@ -233,50 +364,25 @@ void Cache::readDomain(const string domain, DataDNS * data){
 		// Проверяем на существование адреса
 		if(!filename.empty() && isFileExist(filename.c_str())){
 			// Открываем файл на чтение
-			FILE * file = fopen(filename.c_str(), "rb");
+			ifstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
-			if(file){
-				// Создаем объект карты данных
-				CacheDNSMap map;
-				// Время жизни кэша
-				size_t ttl = 0;
-				// Данные ip адресов
-				char ipv4[256], ipv6[256];
-				// Зануляем буферы
-				memset(ipv4, 0, sizeof(ipv4));
-				memset(ipv6, 0, sizeof(ipv6));
-				// Смещаем на начальную позицию
-				fseek(file, 0L, SEEK_SET);
-				// Считываем значение размеров
-				size_t size = fread(&map, sizeof(map), 1, file);
-				// Если данные прочитаны
-				if(size){
-					// Смещаем на следующую позицию
-					fseek(file, size - 1, SEEK_CUR);
-					// Считываем время жизни кэша ttl
-					size = fread(&ttl, map.ttl, 1, file);
-					// Если размер данных существует
-					if(map.ipv4){
-						// Смещаем на следующую позицию
-						fseek(file, size - 1, SEEK_CUR);
-						// Считываем адрес IPv4
-						size = fread(ipv4, map.ipv4, 1, file);
-					}
-					// Если размер данных существует
-					if(map.ipv6){
-						// Смещаем на следующую позицию
-						fseek(file, size - 1, SEEK_CUR);
-						// Считываем адрес IPv4
-						size = fread(ipv6, map.ipv6, 1, file);
-					}
-				}
+			if(file.is_open()){
+				// Перемещаемся в конец файла
+				file.seekg(0, file.end);
+				// Определяем размер файла
+				size_t size = file.tellg();
+				// Перемещаемся в начало файла
+				file.seekg(0, file.beg);
+				// Создаем буфер данных
+				unsigned char * buffer = new unsigned char [size];
+				// Считываем до тех пор пока все удачно
+				while(file.good()) file.read((char *) buffer + file.tellg(), 60);
+				// Устанавливаем полученные данные
+				data->set(buffer, size);
+				// Удаляем выделенную память
+				delete [] buffer;
 				// Закрываем файл
-				fclose(file);
-				// Запоминаем полученные данные
-				data->ttl = ttl;
-				// Запоминаем данные IP адресов
-				data->ipv4.assign(ipv4, map.ipv4);
-				data->ipv6.assign(ipv6, map.ipv6);
+				file.close();
 			// Выводим сообщение в лог
 			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
@@ -301,16 +407,30 @@ void Cache::readCache(const string domain, const string name, DataCache * data){
 		const string filename = addToPath(dir, md5(name));
 		// Проверяем на существование адреса
 		if(!filename.empty() && isFileExist(filename.c_str())){
+			
+			ifstream input_file(filename.c_str(), ios::binary | ios::in | ios::ate);
+			// input_file.read((char *) data, sizeof(DataDNS));
+			while(input_file.read((char *) data, 1)){}
+			input_file.close();
+
+			/*
 			// Открываем файл на чтение
 			FILE * file = fopen(filename.c_str(), "rb");
 			// Если файл открыт
 			if(file){
+				// Перемещаемся в конец файла
+				fseek(file, 0L, SEEK_END);
+				// Определяем размер файла
+				size_t size = ftell(file);
+				// Перемещаемся в начало файла
+				fseek(file, 0L, SEEK_SET);
 				// Считываем из файла данные домена
-				fread(data, sizeof(DataCache), 1, file);
+				fread(data, size, 1, file);
 				// Закрываем файл
 				fclose(file);
 			// Выводим сообщение в лог
 			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+			*/
 		}
 	}
 }
@@ -339,37 +459,14 @@ void Cache::writeDomain(const string domain, DataDNS data){
 				// Выходим
 				return;
 			}
-			// Открываем файл на запись
-			FILE * file = fopen(filename.c_str(), "wb");
+			// Открываем файл на чтение
+			ofstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
-			if(file){
-				// Создаем объект карты данных
-				CacheDNSMap map = {sizeof(data.ttl), data.ipv4.size(), data.ipv6.size()};
-				// Смещаем на начальную позицию
-				fseek(file, 0L, SEEK_SET);
-				// Выполняем запись карты размеров
-				if(fwrite(&map, sizeof(map), 1, file)){
-					// Смещаем значение записи на конец файла
-					fseek(file, 0L, SEEK_END);
-					// Выполняем запись времени жизни кэша
-					fwrite(&data.ttl, map.ttl, 1, file);
-					// Если данные ip адреса получены
-					if(!data.ipv4.empty()){
-						// Смещаем значение записи на конец файла
-						fseek(file, 0L, SEEK_END);
-						// Выполняем запись ip адреса
-						fwrite(data.ipv4.data(), map.ipv4, 1, file);
-					}
-					// Выполняем запись ip адреса
-					if(!data.ipv6.empty()){
-						// Смещаем значение записи на конец файла
-						fseek(file, 0L, SEEK_END);
-						// Выполняем запись ip адреса
-						fwrite(data.ipv6.data(), map.ipv6, 1, file);
-					}
-				}
+			if(file.is_open()){
+				// Выполняем запись данных в файл
+				file.write((const char *) data.data(), data.size());
 				// Закрываем файл
-				fclose(file);
+				file.close();
 			// Выводим сообщение в лог
 			} else this->log->write(LOG_ERROR, 0, "cannot write dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
@@ -760,6 +857,7 @@ Cache::ResultData Cache::getCache(HttpData & http){
 		const string ims = http.getHeader("if-modified-since");
 		// Если какой-то из заголовков существует тогда не трогаем кэш, так как эти данные есть у клиента
 		if(inm.empty() && ims.empty()){
+			/*
 			// Создаем объект кеша
 			DataCache data;
 			// Выполняем чтение данных из кэша
@@ -809,6 +907,7 @@ Cache::ResultData Cache::getCache(HttpData & http){
 					rmCache(http);
 				}
 			}
+			*/
 		}
 	}
 	// Выводим результат
@@ -940,8 +1039,38 @@ void Cache::setCache(HttpData & http){
 					}
 				}
 			}
+			// Создаем объект кэша
+			DataCache cache;
+			// Получаем дамп данных
+			auto dump = http.getDump();
+			// Заполняем данные кэша
+			cache.age			= age;
+			cache.etag			= et;
+			cache.date			= date;
+			cache.rvalid		= rvalid;
+			cache.expires		= expires;
+			cache.modified		= modified;
+			cache.gzip			= dump.gzip;
+			cache.http			= dump.http;
+			cache.auth			= dump.auth;
+			cache.path			= dump.path;
+			cache.host			= dump.host;
+			cache.port			= dump.port;
+			cache.body			= dump.body;
+			cache.login			= dump.login;
+			cache.method		= dump.method;
+			cache.status		= dump.status;
+			cache.appName		= dump.appName;
+			cache.version		= dump.version;
+			cache.headers		= dump.headers;
+			cache.options		= dump.options;
+			cache.protocol		= dump.protocol;
+			cache.password		= dump.password;
+			cache.levelGzip		= dump.levelGzip;
+			cache.chunkSize		= dump.chunkSize;
+			cache.appVersion	= dump.appVersion;
 			// Выполняем запись данных в кэш
-			//writeCache(http.getHost(), http.getPath(), {age, date, expires, modified, rvalid, et, http.getDump()});
+			writeCache(http.getHost(), http.getPath(), cache);
 		}
 	}
 }

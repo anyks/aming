@@ -1114,15 +1114,27 @@ int main(int len, char * buff[]){
 
 	cout << " ++++++++++++++ " << buf << " == " << seconds << endl;
 
-
-	struct TT {
-		size_t size = 12;
-		char k[18] = "Hello World11±±";
+	struct DM {
+		size_t k;
+		size_t m;
+		size_t d;
+		size_t p = 18434353;
 	};
 
-	TT t;
+	DM dm;
+	dm.k = 77;
+	dm.m = 324;
+	dm.d = 1123;
 
-	cout << " =========== " << sizeof(TT) << " == " << sizeof(t) << " == " << sizeof(t.k) << " == " << sizeof(t.size) << endl;
+	unsigned char * raw_data = reinterpret_cast <unsigned char *> (&dm);
+
+	
+	for(size_t i = 0, k = 0; i < sizeof(DM); i += sizeof(size_t), k++){
+		size_t d;
+		memcpy(&d, raw_data + i, sizeof(size_t));
+		cout << "----------- " << k << " == " << d << endl;
+	}
+	
 
 	/*
 	// Маска 1
