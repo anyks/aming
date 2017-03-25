@@ -116,20 +116,6 @@ void ConnectClients::rm(const string key){
 	this->mtx.unlock();
 }
 /**
- * toCase Функция перевода в указанный регистр
- * @param  str  строка для перевода в указанных регистр
- * @param  flag флаг указания типа регистра
- * @return      результирующая строка
- */
-const string BufferHttpProxy::toCase(const string str, const bool flag){
-	// Копируем данные строки
-	string value = str;
-	// Переводим в указанный регистр
-	transform(value.begin(), value.end(), value.begin(), (flag ? ::toupper : ::tolower));
-	// Выводим результат
-	return value;
-}
-/**
  * free_socket Метод отключения сокета
  * @param fd ссылка на файловый дескриптор (сокет)
  */
@@ -623,7 +609,7 @@ const string HttpProxy::get_mac(void * ctx){
 	// Получаем данные адреса
 	struct sockaddr * s = reinterpret_cast <struct sockaddr *> (ctx);
 	// Получаем указатель на мак адрес
-	unsigned char * ptr = (unsigned char *) s->sa_data;
+	u_char * ptr = (u_char *) s->sa_data;
 	// Записываем в буфер данные мак адреса
 	sprintf(
 		buff, "%02X:%02X:%02X:%02X:%02X:%02X",

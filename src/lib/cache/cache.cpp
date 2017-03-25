@@ -24,7 +24,7 @@ const size_t Cache::DataDNS::size(){
  * data Метод получения сырых данных
  * @return сырые данные
  */
-const unsigned char * Cache::DataDNS::data(){
+const u_char * Cache::DataDNS::data(){
 	// Если данные заполнены то очищаем их
 	if(this->rawData){
 		// Удаляем выделенные данные
@@ -43,9 +43,9 @@ const unsigned char * Cache::DataDNS::data(){
 		// Выполняем расчет полного размера
 		this->sizeData = (size + sizes.ttl + sizes.ipv4 + sizes.ipv6);
 		// Выделяем динамически память
-		this->rawData = new unsigned char [this->sizeData];
+		this->rawData = new u_char [this->sizeData];
 		// Получаем текущий итератор
-		unsigned char * it = this->rawData;
+		u_char * it = this->rawData;
 		// Выполняем копирование карты размеров
 		memcpy(it, &sizes, size);
 		// Увеличиваем текущий итератор
@@ -69,7 +69,7 @@ const unsigned char * Cache::DataDNS::data(){
  * @param data сырые данные
  * @param size размер сырых данных
  */
-void Cache::DataDNS::set(const unsigned char * data, size_t size){
+void Cache::DataDNS::set(const u_char * data, size_t size){
 	// Если данные существуют
 	if(size){
 		// Получаем размер структуры
@@ -89,38 +89,11 @@ void Cache::DataDNS::set(const unsigned char * data, size_t size){
 					// Определяем тип извлекаемых данных
 					switch(j){
 						// Если это время жизни
-						case 0: {
-							// Извлекаем данные
-							memcpy(&this->ttl, data + size_it, size_data);
-							// Определяем смещение
-							size_it += size_data;
-						} break;
+						case 0: cpydata(data, size_data, size_it, &this->ttl); break;
 						// Если это адрес ipv4
-						case 1: {
-							// Выделяем динамически память
-							char * buffer = new char [size_data];
-							// Извлекаем данные адреса
-							memcpy(buffer, data + size_it, size_data);
-							// Запоминаем результат
-							this->ipv4.assign(buffer, size_data);
-							// Определяем смещение
-							size_it += size_data;
-							// Удаляем полученные данные
-							delete [] buffer;
-						} break;
+						case 1: cpydata(data, size_data, size_it, this->ipv4); break;
 						// Если это адрес ipv6
-						case 2: {
-							// Выделяем динамически память
-							char * buffer = new char [size_data];
-							// Извлекаем данные адреса
-							memcpy(buffer, data + size_it, size_data);
-							// Запоминаем результат
-							this->ipv6.assign(buffer, size_data);
-							// Определяем смещение
-							size_it += size_data;
-							// Удаляем полученные данные
-							delete [] buffer;
-						} break;
+						case 2: cpydata(data, size_data, size_it, this->ipv6); break;
 					}
 				}
 			}
@@ -188,83 +161,6 @@ const string Cache::timeToStr(const time_t date){
 	strftime(buf, sizeof(buf), "%A, %d %b %Y %H:%M:%S %Z", tm);
 	// Выводим результат
 	return string(buf);
-}
-/**
- * toCase Функция перевода в указанный регистр
- * @param  str  строка для перевода в указанных регистр
- * @param  flag флаг указания типа регистра
- * @return      результирующая строка
- */
-const string Cache::toCase(string str, bool flag){
-	// Переводим в указанный регистр
-	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
-	// Выводим результат
-	return str;
-}
-/**
- * rtrim Функция усечения указанных символов с правой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & Cache::rtrim(string &str, const char * t){
-	str.erase(str.find_last_not_of(t) + 1);
-	return str;
-}
-/**
- * ltrim Функция усечения указанных символов с левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & Cache::ltrim(string &str, const char * t){
-	str.erase(0, str.find_first_not_of(t));
-	return str;
-}
-/**
- * trim Функция усечения указанных символов с правой и левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & Cache::trim(string &str, const char * t){
-	return ltrim(rtrim(str, t), t);
-}
-/**
- * split Метод разбива строки на составляющие
- * @param  str   исходная строка
- * @param  delim разделитель
- * @return       массив составляющих строки
- */
-vector <string> Cache::split(const string str, const string delim){
-	// Результат данных
-	vector <string> result;
-	// Создаем новую строку
-	string value = str;
-	// Убираем пробелы в строке
-	value = trim(value);
-	// Если строка передана
-	if(!value.empty()){
-		string data;
-		string::size_type i = 0;
-		string::size_type j = value.find(delim);
-		u_int len = delim.length();
-		// Выполняем разбиение строк
-		while(j != string::npos){
-			data = value.substr(i, j - i);
-			result.push_back(trim(data));
-			i = ++j + (len - 1);
-			j = value.find(delim, j);
-			if(j == string::npos){
-				data = value.substr(i, value.length());
-				result.push_back(trim(data));
-			}
-		}
-		// Если данные не существуют то устанавливаем строку по умолчанию
-		if(result.empty()) result.push_back(value);
-	}
-	// Выводим результат
-	return result;
 }
 /**
  * addToPath Метод формирования адреса из пути и названия файла
@@ -374,7 +270,7 @@ void Cache::readDomain(const string domain, DataDNS * data){
 				// Перемещаемся в начало файла
 				file.seekg(0, file.beg);
 				// Создаем буфер данных
-				unsigned char * buffer = new unsigned char [size];
+				u_char * buffer = new u_char [size];
 				// Считываем до тех пор пока все удачно
 				while(file.good()) file.read((char *) buffer + file.tellg(), 60);
 				// Устанавливаем полученные данные
@@ -1039,6 +935,7 @@ void Cache::setCache(HttpData & http){
 					}
 				}
 			}
+			/*
 			// Создаем объект кэша
 			DataCache cache;
 			// Получаем дамп данных
@@ -1071,6 +968,7 @@ void Cache::setCache(HttpData & http){
 			cache.appVersion	= dump.appVersion;
 			// Выполняем запись данных в кэш
 			writeCache(http.getHost(), http.getPath(), cache);
+			*/
 		}
 	}
 }

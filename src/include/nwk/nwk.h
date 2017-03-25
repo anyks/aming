@@ -15,6 +15,7 @@
 #include <sstream>
 #include <math.h>
 #include <sys/types.h>
+#include "general/general.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -194,13 +195,6 @@ class Network {
 		 * @return      результат проверки
 		 */
 		bool checkMask(IPdata ip, IPdata mask);
-		/**
-		 * toCase Функция перевода в указанный регистр
-		 * @param  str  строка для перевода в указанных регистр
-		 * @param  flag флаг указания типа регистра
-		 * @return      результирующая строка
-		 */
-		const string toCase(string str, bool flag = false);
 		/**
 		 * getLow1Ip6 Функция упрощения IPv6 адреса первого порядка
 		 * @param  ip адрес интернет протокола версии 6

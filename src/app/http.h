@@ -30,6 +30,7 @@
 #include "nwk/nwk.h"
 #include "http/http.h"
 #include "system/system.h"
+#include "general/general.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -150,13 +151,6 @@ class BufferHttpProxy {
 			string	useragent	= "";		// userAgent клиента
 			string	request		= "";		// Данные запроса
 		};
-		/**
-		 * toCase Функция перевода в указанный регистр
-		 * @param  str  строка для перевода в указанных регистр
-		 * @param  flag флаг указания типа регистра
-		 * @return      результирующая строка
-		 */
-		const string toCase(const string str, const bool flag = false);
 		/**
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)

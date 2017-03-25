@@ -1011,6 +1011,10 @@ void f2 (int (* ff) (int), int a) {
 
 }
 
+void f3(void * ctx, size_t param){
+	memcpy(ctx, &param, sizeof(param));
+}
+
 
 int main(int len, char * buff[]){
 	
@@ -1135,6 +1139,20 @@ int main(int len, char * buff[]){
 		cout << "----------- " << k << " == " << d << endl;
 	}
 	
+	string data1 = "Hello World";
+
+	unsigned char * raw_data1 = reinterpret_cast <unsigned char *> (strdup(data1.data()));
+
+	string data2 = reinterpret_cast <char *> (raw_data1);
+
+	cout << " --------- " << data2 << endl;
+
+	size_t par = 13;
+
+	f3(&par, 22);
+
+	cout << " =========== " << par << endl;
+
 
 	/*
 	// Маска 1

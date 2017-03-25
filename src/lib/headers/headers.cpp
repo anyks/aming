@@ -377,83 +377,6 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 	}
 }
 /**
- * toCase Функция перевода в указанный регистр
- * @param  str  строка для перевода в указанных регистр
- * @param  flag флаг указания типа регистра
- * @return      результирующая строка
- */
-const string Headers::toCase(string str, bool flag){
-	// Переводим в указанный регистр
-	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
-	// Выводим результат
-	return str;
-}
-/**
- * rtrim Функция усечения указанных символов с правой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & Headers::rtrim(string &str, const char * t){
-	str.erase(str.find_last_not_of(t) + 1);
-	return str;
-}
-/**
- * ltrim Функция усечения указанных символов с левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & Headers::ltrim(string &str, const char * t){
-	str.erase(0, str.find_first_not_of(t));
-	return str;
-}
-/**
- * trim Функция усечения указанных символов с правой и левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & Headers::trim(string &str, const char * t){
-	return ltrim(rtrim(str, t), t);
-}
-/**
- * split Метод разбива строки на составляющие
- * @param  str   исходная строка
- * @param  delim разделитель
- * @return       массив составляющих строки
- */
-vector <string> Headers::split(const string str, const string delim){
-	// Результат данных
-	vector <string> result;
-	// Создаем новую строку
-	string value = str;
-	// Убираем пробелы в строке
-	value = trim(value);
-	// Если строка передана
-	if(!value.empty()){
-		string data;
-		string::size_type i = 0;
-		string::size_type j = value.find(delim);
-		u_int len = delim.length();
-		// Выполняем разбиение строк
-		while(j != string::npos){
-			data = value.substr(i, j - i);
-			result.push_back(trim(data));
-			i = ++j + (len - 1);
-			j = value.find(delim, j);
-			if(j == string::npos){
-				data = value.substr(i, value.length());
-				result.push_back(trim(data));
-			}
-		}
-		// Если данные не существуют то устанавливаем строку по умолчанию
-		if(result.empty()) result.push_back(value);
-	}
-	// Выводим результат
-	return result;
-}
-/**
  * addToPath Метод формирования адреса из пути и названия файла
  * @param  path путь где хранится файл
  * @param  file название файла
@@ -563,16 +486,6 @@ u_short Headers::checkTypeId(const string str){
 	else if(isDomain(str)) type = 4;
 	// Выводим результат
 	return type;
-}
-/**
- * is_number Функция проверки является ли строка числом
- * @param  str строка для проверки
- * @return     результат проверки
- */
-bool Headers::isNumber(const string &str){
-	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
-		return !isdigit(c);
-	}) == str.end();
 }
 /**
  * isDirExist Функция проверки существования каталога

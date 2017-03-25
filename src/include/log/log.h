@@ -25,6 +25,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include "config/conf.h"
+#include "general/general.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -60,12 +61,6 @@ class LogApp {
 		size_t size;
 		// Конфигурационные данные
 		Config ** config = NULL;
-		/**
-		 * is_number Функция проверки является ли строка числом
-		 * @param  str строка для проверки
-		 * @return     результат проверки
-		 */
-		bool isNumber(const string &str);
 		/**
 		 * getUid Функция вывода идентификатора пользователя
 		 * @param  name имя пользователя

@@ -11,16 +11,6 @@
 using namespace std;
 
 /**
- * is_number Функция проверки является ли строка числом
- * @param  str строка для проверки
- * @return     результат проверки
- */
-bool LogApp::isNumber(const string &str){
-	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
-		return !isdigit(c);
-	}) == str.end();
-}
-/**
  * getUid Функция вывода идентификатора пользователя
  * @param  name имя пользователя
  * @return      полученный идентификатор пользователя

@@ -63,18 +63,6 @@ IPdata::IPdata(){
 	for(u_int i = 0; i < 4; i++) this->ptr[i] = 256;
 }
 /**
- * toCase Функция перевода в указанный регистр
- * @param  str  строка для перевода в указанных регистр
- * @param  flag флаг указания типа регистра
- * @return      результирующая строка
- */
-const string Network::toCase(string str, bool flag){
-	// Переводим в указанный регистр
-	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
-	// Выводим результат
-	return str;
-}
-/**
  * getMaskByNumber Функция получения маски из цифровых обозначений
  * @param  value цифровое обозначение маски
  * @return       объект с данными маски

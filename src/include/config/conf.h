@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include "ini/ini.h"
+#include "general/general.h"
 
 // Данные приложения
 #define APP_NAME "ANYKS"
@@ -286,41 +287,6 @@ class Config {
 		};
 		// Адрес конфигурационного файла
 		string filename;
-		/**
-		 * toCase Функция перевода в указанный регистр
-		 * @param  str  строка для перевода в указанных регистр
-		 * @param  flag флаг указания типа регистра
-		 * @return      результирующая строка
-		 */
-		const string toCase(string str, bool flag = false);
-		/**
-		 * rtrim Функция усечения указанных символов с правой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & rtrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * ltrim Функция усечения указанных символов с левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & ltrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * trim Функция усечения указанных символов с правой и левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & trim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * split Метод разбива строки на составляющие
-		 * @param  str   исходная строка
-		 * @param  delim разделитель
-		 * @return       массив составляющих строки
-		 */
-		vector <string> split(const string str, const string delim);
 		/**
 		 * getSizeBuffer Функция получения размера буфера в байтах
 		 * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)

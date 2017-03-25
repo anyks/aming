@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include "base64/base64.h"
 #include "config/conf.h"
+#include "general/general.h"
 
 // Параметры сжатия gzip
 #define MOD_GZIP_ZLIB_WINDOWSIZE	15
@@ -47,6 +48,10 @@ class HttpData {
 				};
 				// Заполненность данных
 				bool end = false;
+				// Размер сырых данных
+				size_t sizeData = 0;
+				// Сырые данные
+				u_char * rawData = NULL;
 				// Заголовки http запроса
 				vector <Header> headers;
 			public:
@@ -62,15 +67,16 @@ class HttpData {
 				 */
 				Header getHeader(const string key);
 				/**
-				 * getDump Метод создания дампа
-				 * @return сформированный блок дампа
+				 * data Метод получения сырых данных
+				 * @return сырые данные
 				 */
-				const string getDump();
+				const u_char * data();
 				/**
-				 * setDump Метод заливки дампа
-				 * @param headers дамп заголовков
+				 * set Метод установки сырых данных
+				 * @param data сырые данные
+				 * @param size размер сырых данных
 				 */
-				void setDump(const string headers);
+				void set(const u_char * data, size_t size);
 				/**
 				 * clear Метод очистки данных
 				 */
@@ -106,10 +112,15 @@ class HttpData {
 				 */
 				const bool empty();
 				/**
-				 * size Метод получения размера
-				 * @return данные размера
+				 * size Метод получения размеров сырых данных
+				 * @return размер сырых данных
 				 */
 				const size_t size();
+				/**
+				 * getHeadersSize Метод получения размера
+				 * @return данные размера
+				 */
+				const size_t getHeadersSize();
 				/**
 				 * cbegin Метод получения начального итератора
 				 * @return начальный итератор
@@ -157,16 +168,29 @@ class HttpData {
 					 */
 					Chunk(const char * data = NULL, const size_t size = 0);
 				};
+				/**
+				 * Структура размеров
+				 */
+				struct Map {
+					size_t intGzip;
+					size_t levelGzip;
+					size_t chunkSize;
+					size_t data;
+				};
 				// Уровень сжатия
 				u_int levelGzip;
 				// Максимальный размер чанков в байтах
 				size_t chunkSize = 0;
+				// Размер сырых данных
+				size_t sizeData = 0;
 				// Заполненность данных
 				bool end = false;
 				// Активация режима внутреннего сжатия
 				bool intGzip = false;
 				// Активация режима внешнего сжатия
 				bool extGzip = false;
+				// Сырые данные
+				u_char * rawData = NULL;
 				// Данные тела
 				string body;
 				// Данные тела в чистом виде
@@ -204,11 +228,6 @@ class HttpData {
 				 */
 				void clear();
 				/**
-				 * setDump Метод заливки дампа
-				 * @param body дамп тела
-				 */
-				void setDump(const string body);
-				/**
 				 * setChunkSize Метод установки размера чанков
 				 * @param size размер чанков в байтах
 				 */
@@ -223,6 +242,12 @@ class HttpData {
 				 * (активируется при отключении сервера от прокси, все это нужно для протокола HTTP1.0 при Connection = close)
 				 */
 				void setEnd();
+				/**
+				 * set Метод установки сырых данных
+				 * @param data сырые данные
+				 * @param size размер сырых данных
+				 */
+				void set(const u_char * data, size_t size);
 				/**
 				 * isEnd Метод проверки завершения формирования тела
 				 * @return результат проверки
@@ -247,11 +272,16 @@ class HttpData {
 				 */
 				const size_t getChunkSize();
 				/**
-				 * size Метод определения размера данных
+				 * getBodySize Метод определения размера данных
 				 * @param  chunked чанкованием
 				 * @return         размер тела
 				 */
-				const size_t size(const bool chunked = false);
+				const size_t getBodySize(const bool chunked = false);
+				/**
+				 * size Метод получения размеров сырых данных
+				 * @return размер сырых данных
+				 */
+				const size_t size();
 				/**
 				 * addData Метод добавления данных тела
 				 * @param  buffer буфер с данными
@@ -262,10 +292,10 @@ class HttpData {
 				 */
 				const size_t addData(const char * buffer, const size_t size, const size_t length = 0, const bool strict = false);
 				/**
-				 * getDump Метод создания дампа
-				 * @return сформированный блок дампа
+				 * data Метод получения сырых данных
+				 * @return сырые данные
 				 */
-				const string getDump();
+				const u_char * data();
 				/**
 				 * getBody Метод получения тела запроса
 				 * @param  chunked чанкованием
@@ -294,32 +324,28 @@ class HttpData {
 				 */
 				~HttpBody();
 		};
-	public:
+	private:
 		/**
-		 * Dump Структура дампа http данных
+		 * Dump Структура дампа
 		 */
 		struct Dump {
-			bool gzip;			// Активация внутреннего режима сжатия
-			u_int status;		// Статус код http запроса
-			u_int levelGzip;	// Уровень сжатия тела данных
-			u_short options;	// Параметры прокси сервера
-			size_t chunkSize;	// Размер чанков тела данных
-			string http;		// http запрос
-			string auth;		// Тип авторизации
-			string path;		// Путь запроса
-			string host;		// Хост запроса
-			string port;		// Порт запроса
-			string body;		// Дамп тела
-			string login;		// Логин
-			string method;		// Метод запроса
-			string appName;		// Название приложения
-			string version;		// Версия протокола
-			string headers;		// Дамп заголовков
-			string protocol;	// Протокол запроса
-			string password;	// Пароль
-			string appVersion;	// Версия приложения
+			size_t status;		// Статус код http запроса
+			size_t options;		// Параметры прокси сервера
+			size_t http;		// http запрос
+			size_t auth;		// Тип авторизации
+			size_t path;		// Путь запроса
+			size_t host;		// Хост запроса
+			size_t port;		// Порт запроса
+			size_t login;		// Логин
+			size_t method;		// Метод запроса
+			size_t appName;		// Название приложения
+			size_t version;		// Версия протокола
+			size_t protocol;	// Протокол запроса
+			size_t password;	// Пароль
+			size_t appVersion;	// Версия приложения
+			size_t headers;		// Дамп заголовков
+			size_t body;		// Дамп тела
 		};
-	private:
 		/**
 		 * Http Структура http данных
 		 */
@@ -343,6 +369,10 @@ class HttpData {
 		u_int status;
 		// Параметры прокси сервера
 		u_short options;
+		// Размер сырых данных
+		size_t sizeData = 0;
+		// Сырые данные
+		u_char * rawData = NULL;
 		// Данные запроса
 		string http;		// http запрос
 		string auth;		// Тип авторизации
@@ -455,6 +485,11 @@ class HttpData {
 		 */
 		const size_t setEntitybody(const char * buffer, const size_t size);
 		/**
+		 * size Метод получения размеров дампа
+		 * @return размер дампа
+		 */
+		const size_t size();
+		/**
 		 * getPort Метод получения порта запроса
 		 * @return порт удаленного ресурса
 		 */
@@ -558,15 +593,16 @@ class HttpData {
 		 */
 		const string getRawRequestData();
 		/**
-		 * getDump Метод создания дампа
+		 * data Метод создания дампа
 		 * @return сформированный блок дампа
 		 */
-		Dump getDump();
+		const u_char * data();
 		/**
-		 * setDump Метод заливки дампа
-		 * @param data дамп http данных
+		 * set Метод заливки дампа
+		 * @param data сырые данные
+		 * @param size размер сырых данных
 		 */
-		void setDump(Dump data);
+		void set(const u_char * data, size_t size);
 		/**
 		 * clear Метод очистки структуры
 		 */

@@ -22,6 +22,7 @@
 #include "nwk/nwk.h"
 #include "log/log.h"
 #include "http/http.h"
+#include "general/general.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -88,41 +89,6 @@ class Headers {
 		 */
 		void modifyHeaders(const string server, vector <Params> rules, HttpData & http);
 		/**
-		 * toCase Функция перевода в указанный регистр
-		 * @param  str  строка для перевода в указанных регистр
-		 * @param  flag флаг указания типа регистра
-		 * @return      результирующая строка
-		 */
-		const string toCase(string str, bool flag = false);
-		/**
-		 * rtrim Функция усечения указанных символов с правой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & rtrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * ltrim Функция усечения указанных символов с левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & ltrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * trim Функция усечения указанных символов с правой и левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & trim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * split Метод разбива строки на составляющие
-		 * @param  str   исходная строка
-		 * @param  delim разделитель
-		 * @return       массив составляющих строки
-		 */
-		vector <string> split(const string str, const string delim);
-		/**
 		 * addToPath Метод формирования адреса из пути и названия файла
 		 * @param  path путь где хранится файл
 		 * @param  file название файла
@@ -158,12 +124,6 @@ class Headers {
 		 * @return     тип идентификатора
 		 */
 		u_short checkTypeId(const string str);
-		/**
-		 * is_number Функция проверки является ли строка числом
-		 * @param  str строка для проверки
-		 * @return     результат проверки
-		 */
-		bool isNumber(const string &str);
 		/**
 		 * isDirExist Функция проверки существования каталога
 		 * @param  path адрес каталога

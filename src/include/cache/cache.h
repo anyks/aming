@@ -8,9 +8,6 @@
 #ifndef _CACHE_ANYKS_
 #define _CACHE_ANYKS_
 
-#include <fstream>
-#include <iostream>
-
 #include <map>
 #include <regex>
 #include <string>
@@ -27,6 +24,7 @@
 #include "nwk/nwk.h"
 #include "log/log.h"
 #include "http/http.h"
+#include "general/general.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -52,7 +50,7 @@ class Cache {
 				// Размер сырых данных
 				size_t sizeData = 0;
 				// Сырые данные
-				unsigned char * rawData = NULL;
+				u_char * rawData = NULL;
 			public:
 				// Время жизни кэша
 				time_t ttl = 0;
@@ -69,13 +67,13 @@ class Cache {
 				 * data Метод получения сырых данных
 				 * @return сырые данные
 				 */
-				const unsigned char * data();
+				const u_char * data();
 				/**
 				 * set Метод установки сырых данных
 				 * @param data сырые данные
 				 * @param size размер сырых данных
 				 */
-				void set(const unsigned char * data, size_t size);
+				void set(const u_char * data, size_t size);
 				/**
 				 * ~DataDNS Деструктор
 				 */
@@ -85,40 +83,24 @@ class Cache {
 		 * Data Структура параметров кэша данных
 		 */
 		struct DataCache {
-			time_t age;			// Время жизни кэша
-			time_t date;		// Дата записи кэша прокси сервером
-			time_t expires;		// Дата смерти кэша
-			time_t modified;	// Дата последней модификации
-			u_int status;		// Статус код http запроса
-			u_int levelGzip;	// Уровень сжатия тела данных
-			u_short options;	// Параметры прокси сервера
-			size_t chunkSize;	// Размер чанков тела данных
-			bool gzip;			// Активация внутреннего режима сжатия
-			bool rvalid;		// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
-			string etag;		// Идентификатор ETag
-			string http;		// http запрос
-			string auth;		// Тип авторизации
-			string path;		// Путь запроса
-			string host;		// Хост запроса
-			string port;		// Порт запроса
-			string body;		// Дамп тела
-			string login;		// Логин
-			string method;		// Метод запроса
-			string appName;		// Название приложения
-			string version;		// Версия протокола
-			string headers;		// Дамп заголовков
-			string protocol;	// Протокол запроса
-			string password;	// Пароль
-			string appVersion;	// Версия приложения
+			time_t age;				// Время жизни кэша
+			time_t date;			// Дата записи кэша прокси сервером
+			time_t expires;			// Дата смерти кэша
+			time_t modified;		// Дата последней модификации
+			size_t size;			// Размер сырых данных
+			bool rvalid;			// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
+			string etag;			// Идентификатор ETag
+			u_char * data = NULL;	// Сырые данные
 		};
 		/**
 		 * ResultData  Структура с данными полученными из файла кэша
 		 */
 		struct ResultData {
 			bool load;				// Данные получены
+			size_t size;			// Размер сырых данных
 			string etag;			// Etag кэша
 			string modified;		// Дата модификации кэша
-			HttpData::Dump http;	// Сами кэш данные
+			u_char * data = NULL;	// Сырые данные
 		};
 		// Объект лога
 		LogApp * log = NULL;
@@ -136,41 +118,6 @@ class Cache {
 		 * @return      строка содержащая дату
 		 */
 		const string timeToStr(const time_t date);
-		/**
-		 * toCase Функция перевода в указанный регистр
-		 * @param  str  строка для перевода в указанных регистр
-		 * @param  flag флаг указания типа регистра
-		 * @return      результирующая строка
-		 */
-		const string toCase(string str, bool flag = false);
-		/**
-		 * rtrim Функция усечения указанных символов с правой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & rtrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * ltrim Функция усечения указанных символов с левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & ltrim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * trim Функция усечения указанных символов с правой и левой стороны строки
-		 * @param  str строка для усечения
-		 * @param  t   список символов для усечения
-		 * @return     результирующая строка
-		 */
-		string & trim(string &str, const char * t = " \t\n\r\f\v");
-		/**
-		 * split Метод разбива строки на составляющие
-		 * @param  str   исходная строка
-		 * @param  delim разделитель
-		 * @return       массив составляющих строки
-		 */
-		vector <string> split(const string str, const string delim);
 		/**
 		 * addToPath Метод формирования адреса из пути и названия файла
 		 * @param  path путь где хранится файл

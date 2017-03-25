@@ -20,6 +20,7 @@
 #include <sys/resource.h>
 #include "log/log.h"
 #include "config/conf.h"
+#include "general/general.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -72,12 +73,6 @@ class Os {
 		 * @return результат установки лимитов дампов ядра
 		 */
 		bool enableCoreDumps();
-		/**
-		 * isNumber Функция проверки является ли строка числом
-		 * @param  str строка для проверки
-		 * @return     результат проверки
-		 */
-		bool isNumber(const string &str);
 		/**
 		 * getUid Функция вывода идентификатора пользователя
 		 * @param  name имя пользователя
