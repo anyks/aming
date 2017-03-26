@@ -265,13 +265,13 @@ const string Cache::getPathDomain(const string domain){
  */
 const string Cache::timeToStr(const time_t date){
 	// Создаем структуру времени
-	struct tm * tm = localtime(&date);
+	struct tm * tm = gmtime(&date);
 	// Буфер с данными
 	char buf[255];
-	// Зануляем структуру
-	memset(tm, 0, sizeof(struct tm));
+	// Зануляем буфер
+	memset(buf, 0, sizeof(buf));
 	// Выполняем парсинг даты
-	strftime(buf, sizeof(buf), "%A, %d %b %Y %H:%M:%S %Z", tm);
+	strftime(buf, sizeof(buf), "%a, %d %b %Y %X %Z", tm);
 	// Выводим результат
 	return string(buf);
 }
@@ -614,7 +614,7 @@ const time_t Cache::strToTime(const char * date){
 	// Зануляем структуру
 	memset(&tm, 0, sizeof(struct tm));
 	// Выполняем парсинг даты
-	strptime(date, "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	strptime(date, "%a, %d %b %Y %X %Z", &tm);
 	// Выводим результат
 	return mktime(&tm);
 }

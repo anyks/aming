@@ -1111,12 +1111,23 @@ int main(int len, char * buff[]){
 	char buf[255];
 
 	memset(&tm, 0, sizeof(struct tm));
-	strptime("Wed, 15 Mar 2017 14:10:08 GMT", "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	strptime("Wed, 15 Mar 2017 14:10:08 GMT", "%a, %d %b %Y %X %Z", &tm);
 	strftime(buf, sizeof(buf), "%A, %d %b %Y %H:%M:%S %Z", &tm);
 
 	time_t seconds = mktime(&tm);
 
-	cout << " ++++++++++++++ " << buf << " == " << seconds << endl;
+	cout << " ++++++++++++++1 " << buf << " == " << seconds << endl;
+
+	//__time64_t ss;
+	// time64_t dd;
+
+	char buf2[255];
+	memset(buf2, 0, sizeof(buf2));
+	struct tm * now_tm = gmtime(&seconds);
+	strftime(buf2, sizeof(buf), "%a, %d %b %Y %X %OZ", now_tm);
+
+	cout << " ++++++++++++++2 " << buf2 << endl;
+
 
 	struct DM {
 		size_t k;
