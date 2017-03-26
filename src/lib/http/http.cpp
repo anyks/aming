@@ -55,7 +55,7 @@ const u_char * HttpData::HttpHeaders::data(){
 		// Сформированные заголовки
 		string headers;
 		// Получаем количество заголовков
-		size_t size = getHeadersSize();
+		const size_t size = getHeadersSize();
 		// Переходим по всему фектору заголовков
 		for(size_t i = 0; i < size; i++){
 			// Добавляем заголовок
@@ -63,13 +63,11 @@ const u_char * HttpData::HttpHeaders::data(){
 			// Если это не последний элемент то добавляем разделитель
 			if(i < (size - 1)) headers.append("<-|heads|->");
 		}
-		// Запоминаем размер данных
-		this->sizeData = headers.size();
-		// Преобразуем данные в сырые
-		this->rawData = reinterpret_cast <u_char *> (strdup(headers.data()));
+		// Заполняем контейнер данными
+		this->raw.assign(headers.begin(), headers.end());
 	}
 	// Выводим результат
-	return this->rawData;
+	return this->raw.data();
 }
 /**
  * set Метод установки сырых данных
@@ -111,6 +109,8 @@ void HttpData::HttpHeaders::set(const u_char * data, size_t size){
 void HttpData::HttpHeaders::clear(){
 	// Запоминаем что заголовки не заполнены
 	this->end = false;
+	// Очищаем сырые данные
+	this->raw.clear();
 	// Очищаем данные http заголовков
 	this->headers.clear();
 }
@@ -231,9 +231,9 @@ const bool HttpData::HttpHeaders::empty(){
  */
 const size_t HttpData::HttpHeaders::size(){
 	// Если размер данные не существует, выполняем генерацию данных
-	if(!this->sizeData) data();
+	if(this->raw.empty()) data();
 	// Выводим результат
-	return this->sizeData;
+	return this->raw.size();
 }
 /**
  * getHeadersSize Метод получения размера
@@ -263,6 +263,10 @@ vector <HttpData::HttpHeaders::Header>::const_iterator HttpData::HttpHeaders::ce
  * ~HttpHeaders Деструктор
  */
 HttpData::HttpHeaders::~HttpHeaders(){
+	// Очищаем структуры
+	clear();
+	// Удаляем сырые данные
+	vector <u_char> ().swap(this->raw);
 	// Удаляем данные http заголовков
 	vector <Header> ().swap(this->headers);
 }
@@ -336,9 +340,9 @@ const size_t HttpData::HttpBody::getBodySize(const bool chunked){
  */
 const size_t HttpData::HttpBody::size(){
 	// Если размер данные не существует, выполняем генерацию данных
-	if(!this->sizeData) data();
+	if(this->raw.empty()) data();
 	// Выводим результат
-	return this->sizeData;
+	return this->raw.size();
 }
 /**
  * compress_gzip Метод сжатия данных методом GZIP
@@ -546,6 +550,8 @@ void HttpData::HttpBody::clear(){
 	// Очищаем тело
 	this->body.clear();
 	this->rody.clear();
+	// Очищаем сырые данные
+	this->raw.clear();
 }
 /**
  * set Метод установки сырых данных
@@ -587,8 +593,6 @@ void HttpData::HttpBody::set(const u_char * data, size_t size){
 							memcpy(buffer, data + size_it, size_data);
 							// Добавляем данные тела
 							addData(buffer, size_data, size_data, true);
-							// Запоминаем что все заголовки добавлены
-							setEnd();
 							// Определяем смещение
 							size_it += size_data;
 							// Удаляем полученные данные
@@ -838,15 +842,6 @@ const size_t HttpData::HttpBody::addData(const char * buffer, const size_t size,
  * @return сырые данные
  */
 const u_char * HttpData::HttpBody::data(){
-	// Если данные заполнены то очищаем их
-	if(this->rawData){
-		// Удаляем выделенные данные
-		delete [] this->rawData;
-		// Указываем что данные не иницализированны
-		this->rawData = NULL;
-		// Очищаем размерность
-		this->sizeData = 0;
-	}
 	// Если данные заполнены
 	if(isEnd()){
 		// Объект размерности данных
@@ -857,34 +852,28 @@ const u_char * HttpData::HttpBody::data(){
 			this->rody.size()
 		};
 		// Получаем размер структуры
-		size_t size = sizeof(sizes);
-		// Выполняем расчет полного размера
-		this->sizeData = (size + sizes.intGzip + sizes.levelGzip + sizes.data);
-		// Выделяем динамически память
-		this->rawData = new u_char [this->sizeData];
-		// Получаем текущий итератор
-		u_char * it = this->rawData;
+		const size_t size = sizeof(sizes);
+		// Получаем данные карты размеров
+		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
 		// Выполняем копирование карты размеров
-		memcpy(it, &sizes, size);
-		// Увеличиваем текущий итератор
-		it += size;
+		copy(map, map + size, back_inserter(this->raw));
+		// Получаем данные активации сжатия
+		const u_char * intGzip = reinterpret_cast <const u_char *> (&this->intGzip);
 		// Выполняем копирование активацию сжатия
-		memcpy(it, &this->intGzip, sizes.intGzip);
-		// Увеличиваем текущий итератор
-		it += sizes.intGzip;
+		copy(intGzip, intGzip + sizes.intGzip, back_inserter(this->raw));
+		// Получаем данные уровня сжатия
+		const u_char * levelGzip = reinterpret_cast <const u_char *> (&this->levelGzip);
 		// Выполняем копирование данных уровня сжатия
-		memcpy(it, &this->levelGzip, sizes.levelGzip);
-		// Увеличиваем текущий итератор
-		it += sizes.levelGzip;
+		copy(levelGzip, levelGzip + sizes.levelGzip, back_inserter(this->raw));
+		// Получаем данные размера чанков
+		const u_char * chunkSize = reinterpret_cast <const u_char *> (&this->chunkSize);
 		// Выполняем копирование данных размера чанков
-		memcpy(it, &this->chunkSize, sizes.chunkSize);
-		// Увеличиваем текущий итератор
-		it += sizes.chunkSize;
+		copy(chunkSize, chunkSize + sizes.chunkSize, back_inserter(this->raw));
 		// Выполняем копирование данных тела
-		memcpy(it, this->rody.data(), sizes.data);
+		copy(this->rody.begin(), this->rody.end(), back_inserter(this->raw));
 	}
 	// Выводим сформированные данные
-	return this->rawData;
+	return this->raw.data();
 }
 /**
  * getBody Метод получения тела запроса
@@ -953,15 +942,8 @@ HttpData::HttpBody::HttpBody(const size_t chunkSize, const u_int levelGzip, cons
 HttpData::HttpBody::~HttpBody(){
 	// Очищаем все данные
 	clear();
-	// Если буфер существует то удаляем его
-	if(this->rawData){
-		// Очищаем размер выделенных данных
-		this->sizeData = 0;
-		// Удаляем выделенную память
-		delete [] this->rawData;
-		// Обнуляем указатель
-		this->rawData = NULL;
-	}
+	// Удаляем сырые данные
+	vector <u_char> ().swap(this->raw);
 	// Удаляем объект чанков
 	vector <Chunk> ().swap(this->chunks);
 }
@@ -1479,9 +1461,9 @@ const size_t HttpData::setEntitybody(const char * buffer, const size_t size){
  */
 const size_t HttpData::size(){
 	// Если размер данные не существует, выполняем генерацию данных
-	if(!this->sizeData) data();
+	if(this->raw.empty()) data();
 	// Выводим результат
-	return this->sizeData;
+	return this->raw.size();
 }
 /**
  * getPort Метод получения порта запроса
@@ -1760,17 +1742,8 @@ const string HttpData::getRawRequestData(){
  * @return сформированный блок дампа
  */
 const u_char * HttpData::data(){
-	// Если данные заполнены то очищаем их
-	if(this->rawData){
-		// Удаляем выделенные данные
-		delete [] this->rawData;
-		// Указываем что данные не иницализированны
-		this->rawData = NULL;
-		// Очищаем размерность
-		this->sizeData = 0;
-	}
 	// Если данные получены
-	if(this->body.isEnd() && this->headers.isEnd()){
+	if(isEndBody() && isEndHeaders()){
 		// Объект размерности данных
 		Dump sizes = {
 			sizeof(this->status),
@@ -1791,91 +1764,54 @@ const u_char * HttpData::data(){
 			this->body.size()
 		};
 		// Получаем размер структуры
-		size_t size = sizeof(sizes);
-		// Преобразуем полученную структуру в сырые данные
-		u_char * data = reinterpret_cast <u_char *> (&sizes);
-		// Переходим по всей структуре
-		for(size_t i = 0; i < size; i += sizeof(size_t)){
-			// Размер полученных данных
-			size_t size_data;
-			// Извлекаем размер данных
-			memcpy(&size_data, data + i, sizeof(size_t));
-			// Выполняем расчет полного размера
-			this->sizeData += size_data;
-		}
-		// Выделяем динамически память
-		this->rawData = new u_char [this->sizeData];
-		// Получаем текущий итератор
-		u_char * it = this->rawData;
+		const size_t size = sizeof(sizes);
+		// Получаем данные карты размеров
+		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
 		// Выполняем копирование карты размеров
-		memcpy(it, &sizes, size);
-		// Увеличиваем текущий итератор
-		it += size;
+		copy(map, map + size, back_inserter(this->raw));
+		// Получаем данные статуса
+		const u_char * status = reinterpret_cast <const u_char *> (&this->status);
 		// Выполняем копирование статуса
-		memcpy(it, &this->status, sizes.status);
-		// Увеличиваем текущий итератор
-		it += sizes.status;
+		copy(status, status + sizes.status, back_inserter(this->raw));
+		// Получаем данные настроек
+		const u_char * options = reinterpret_cast <const u_char *> (&this->options);
 		// Выполняем копирование данных настроек
-		memcpy(it, &this->options, sizes.options);
-		// Увеличиваем текущий итератор
-		it += sizes.options;
+		copy(options, options + sizes.options, back_inserter(this->raw));
 		// Выполняем копирование данных http запроса
-		memcpy(it, this->http.data(), sizes.http);
-		// Увеличиваем текущий итератор
-		it += sizes.http;
+		copy(this->http.begin(), this->http.end(), back_inserter(this->raw));
 		// Выполняем копирование данных типа авторизации
-		memcpy(it, this->auth.data(), sizes.auth);
-		// Увеличиваем текущий итератор
-		it += sizes.auth;
+		copy(this->auth.begin(), this->auth.end(), back_inserter(this->raw));
 		// Выполняем копирование данных пути запроса
-		memcpy(it, this->path.data(), sizes.path);
-		// Увеличиваем текущий итератор
-		it += sizes.path;
+		copy(this->path.begin(), this->path.end(), back_inserter(this->raw));
 		// Выполняем копирование данных хоста
-		memcpy(it, this->host.data(), sizes.host);
-		// Увеличиваем текущий итератор
-		it += sizes.host;
+		copy(this->host.begin(), this->host.end(), back_inserter(this->raw));
 		// Выполняем копирование данных порта
-		memcpy(it, this->port.data(), sizes.port);
-		// Увеличиваем текущий итератор
-		it += sizes.port;
+		copy(this->port.begin(), this->port.end(), back_inserter(this->raw));
 		// Выполняем копирование данных логина
-		memcpy(it, this->login.data(), sizes.login);
-		// Увеличиваем текущий итератор
-		it += sizes.login;
+		copy(this->login.begin(), this->login.end(), back_inserter(this->raw));
 		// Выполняем копирование данных метода запроса
-		memcpy(it, this->method.data(), sizes.method);
-		// Увеличиваем текущий итератор
-		it += sizes.method;
+		copy(this->method.begin(), this->method.end(), back_inserter(this->raw));
 		// Выполняем копирование данных названия приложения
-		memcpy(it, this->appName.data(), sizes.appName);
-		// Увеличиваем текущий итератор
-		it += sizes.appName;
+		copy(this->appName.begin(), this->appName.end(), back_inserter(this->raw));
 		// Выполняем копирование данных версии протокола
-		memcpy(it, this->version.data(), sizes.version);
-		// Увеличиваем текущий итератор
-		it += sizes.version;
+		copy(this->version.begin(), this->version.end(), back_inserter(this->raw));
 		// Выполняем копирование данных протокола
-		memcpy(it, this->protocol.data(), sizes.protocol);
-		// Увеличиваем текущий итератор
-		it += sizes.protocol;
+		copy(this->protocol.begin(), this->protocol.end(), back_inserter(this->raw));
 		// Выполняем копирование данных пароля
-		memcpy(it, this->password.data(), sizes.password);
-		// Увеличиваем текущий итератор
-		it += sizes.password;
+		copy(this->password.begin(), this->password.end(), back_inserter(this->raw));
 		// Выполняем копирование данных версии приложения
-		memcpy(it, this->appVersion.data(), sizes.appVersion);
-		// Увеличиваем текущий итератор
-		it += sizes.appVersion;
+		copy(this->appVersion.begin(), this->appVersion.end(), back_inserter(this->raw));
+		// Получаем данные заголовков
+		const u_char * headers = this->headers.data();
 		// Выполняем копирование данных заголовков
-		memcpy(it, this->headers.data(), sizes.headers);
-		// Увеличиваем текущий итератор
-		it += sizes.headers;
+		copy(headers, headers + sizes.headers, back_inserter(this->raw));
+		// Получаем данные тела
+		const u_char * body = this->body.data();
 		// Выполняем копирование данных тела
-		memcpy(it, this->body.data(), sizes.body);
+		copy(body, body + sizes.body, back_inserter(this->raw));
 	}
 	// Выводим сформированные данные
-	return this->rawData;
+	return this->raw.data();
 }
 /**
  * set Метод установки сырых данных
@@ -1986,6 +1922,8 @@ void HttpData::clear(){
 	this->headers.clear();
 	// Очищаем тело
 	this->body.clear();
+	// Очищаем сырые данные
+	this->raw.clear();
 }
 /**
  * initBody Метод инициализации объекта тела
@@ -2412,15 +2350,8 @@ HttpData::HttpData(const string name, const u_short options){
 HttpData::~HttpData(){
 	// Очищаем полученные данные
 	clear();
-	// Если буфер существует то удаляем его
-	if(this->rawData){
-		// Очищаем размер выделенных данных
-		this->sizeData = 0;
-		// Удаляем выделенную память
-		delete [] this->rawData;
-		// Обнуляем указатель
-		this->rawData = NULL;
-	}
+	// Очищаем память выделенную для вектора
+	vector <u_char> ().swap(this->raw);
 }
 /**
  * isHttp Метод проверки на то http это или нет

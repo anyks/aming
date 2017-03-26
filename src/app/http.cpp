@@ -423,6 +423,8 @@ void BufferHttpProxy::checkClose(){
 		log.append(this->httpResponse.getRawResponseData());
 		// Выполняем запись данные запроса в лог
 		this->proxy->log->write_data(this->client.ip, log);
+		// Добавляем данные в кэш
+		this->proxy->cache->setCache(this->httpResponse);
 	// Выполняем отключение
 	} else close();
 }
@@ -501,8 +503,6 @@ void BufferHttpProxy::sendClient(){
 	bufferevent_enable(this->events.client, EV_WRITE);
 	// Отправляем клиенту сообщение
 	bufferevent_write(this->events.client, response.data(), response.size());
-	// Добавляем данные в кэш
-	this->proxy->cache->setCache(this->httpResponse);
 }
 /**
  * sendServer Метод отправки данных на сервер
@@ -1220,7 +1220,7 @@ void HttpProxy::send_http_data(void * ctx){
 			} else {
 				// И если это не автоотключение от сервера, так как эти данные будут отправлены при событии отключения
 				if(!http->httpResponse.isClose()){
-					// Если это не режим сжатия, тогда отправляем заголовок
+					// Если это не режим сжатия, тогда отправляем результат
 					if(!http->httpResponse.isIntGzip()){
 						// Создаем буфер для исходящих данных
 						struct evbuffer * tmp = evbuffer_new();
@@ -1240,6 +1240,8 @@ void HttpProxy::send_http_data(void * ctx){
 						log.append(http->httpResponse.getRawResponseData());
 						// Выполняем запись данные запроса в лог
 						http->proxy->log->write_data(http->client.ip, log);
+						// Добавляем данные в кэш
+						http->proxy->cache->setCache(http->httpResponse);
 						// Очищаем объект http данных
 						http->httpRequest.clear();
 						// Если данные в массиве существуют тогда продолжаем загрузку
@@ -1383,11 +1385,21 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					http->client.connect	= http->httpRequest.isConnect();
 					http->client.useragent	= http->httpRequest.getUseragent();
 					
-
-					// Добавляем данные в кэш
-					// auto tt = http->proxy->cache->getCache(http->httpRequest);
-
-					// if(tt.load) cout << " --------------------- " << tt.http.getResponseData() << endl;
+					// Извлекаем данные из кэша
+					auto cache = http->proxy->cache->getCache(http->httpRequest);
+					// Если данные в кэше существуют
+					if(!cache.empty()){
+						// Если это чистые данные
+						if(!cache.http.empty()){
+							// Добавляем данные из кэша
+							http->httpResponse.set(cache.http.data(), cache.http.size());
+							// Отправляем ответ клиенту
+							http->sendClient();
+							// Выходим из функции
+							return;
+						// Если нужна ревалидация
+						} else cout << " =============== HEAD QUERY =============== " << endl;
+					}
 
 					// Выполняем подключение к удаленному серверу
 					int connect = connect_server(http);

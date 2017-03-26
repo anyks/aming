@@ -48,10 +48,8 @@ class HttpData {
 				};
 				// Заполненность данных
 				bool end = false;
-				// Размер сырых данных
-				size_t sizeData = 0;
 				// Сырые данные
-				u_char * rawData = NULL;
+				vector <u_char> raw;
 				// Заголовки http запроса
 				vector <Header> headers;
 			public:
@@ -181,20 +179,18 @@ class HttpData {
 				u_int levelGzip;
 				// Максимальный размер чанков в байтах
 				size_t chunkSize = 0;
-				// Размер сырых данных
-				size_t sizeData = 0;
 				// Заполненность данных
 				bool end = false;
 				// Активация режима внутреннего сжатия
 				bool intGzip = false;
 				// Активация режима внешнего сжатия
 				bool extGzip = false;
-				// Сырые данные
-				u_char * rawData = NULL;
 				// Данные тела
 				string body;
 				// Данные тела в чистом виде
 				string rody;
+				// Сырые данные
+				vector <u_char> raw;
 				// Массив чанков
 				vector <Chunk> chunks;
 				/**
@@ -369,10 +365,8 @@ class HttpData {
 		u_int status;
 		// Параметры прокси сервера
 		u_short options;
-		// Размер сырых данных
-		size_t sizeData = 0;
 		// Сырые данные
-		u_char * rawData = NULL;
+		vector <u_char> raw;
 		// Данные запроса
 		string http;		// http запрос
 		string auth;		// Тип авторизации

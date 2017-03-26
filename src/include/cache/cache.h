@@ -47,10 +47,8 @@ class Cache {
 					size_t ipv4;
 					size_t ipv6;
 				};
-				// Размер сырых данных
-				size_t sizeData = 0;
 				// Сырые данные
-				u_char * rawData = NULL;
+				vector <u_char> raw;
 			public:
 				// Время жизни кэша
 				time_t ttl = 0;
@@ -80,27 +78,68 @@ class Cache {
 				~DataDNS();
 		};
 		/**
-		 * Data Структура параметров кэша данных
+		 * Data Класс параметров кэша данных
 		 */
-		struct DataCache {
-			time_t age;				// Время жизни кэша
-			time_t date;			// Дата записи кэша прокси сервером
-			time_t expires;			// Дата смерти кэша
-			time_t modified;		// Дата последней модификации
-			size_t size;			// Размер сырых данных
-			bool rvalid;			// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
-			string etag;			// Идентификатор ETag
-			u_char * data = NULL;	// Сырые данные
+		class DataCache {
+			private:
+				/**
+				 * Структура размеров
+				 */
+				struct Map {
+					size_t age;
+					size_t date;
+					size_t expires;
+					size_t modified;
+					size_t rvalid;
+					size_t etag;
+					size_t cache;
+				};
+				// Сырые данные
+				vector <u_char> raw;
+			public:
+				time_t age;				// Время жизни кэша
+				time_t date;			// Дата записи кэша прокси сервером
+				time_t expires;			// Дата смерти кэша
+				time_t modified;		// Дата последней модификации
+				bool rvalid;			// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
+				string etag;			// Идентификатор ETag
+				vector <u_char> http;	// Данные кэша
+				/**
+				 * size Метод получения размеров сырых данных
+				 * @return размер сырых данных
+				 */
+				const size_t size();
+				/**
+				 * data Метод получения сырых данных
+				 * @return сырые данные
+				 */
+				const u_char * data();
+				/**
+				 * set Метод установки сырых данных
+				 * @param data сырые данные
+				 * @param size размер сырых данных
+				 */
+				void set(const u_char * data, size_t size);
+				/**
+				 * ~DataCache Деструктор
+				 */
+				~DataCache();
 		};
 		/**
 		 * ResultData  Структура с данными полученными из файла кэша
 		 */
 		struct ResultData {
-			bool load;				// Данные получены
-			size_t size;			// Размер сырых данных
-			string etag;			// Etag кэша
-			string modified;		// Дата модификации кэша
-			u_char * data = NULL;	// Сырые данные
+			// Etag кэша
+			string etag;
+			// Дата модификации кэша
+			string modified;
+			// Данные кэша
+			vector <u_char> http;
+			/**
+			 * empty Метод проверки статуса загрузки данных
+			 * @return результат проверки
+			 */
+			bool empty();
 		};
 		// Объект лога
 		LogApp * log = NULL;

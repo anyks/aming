@@ -16,53 +16,36 @@ using namespace std;
  */
 const size_t Cache::DataDNS::size(){
 	// Если размер данные не существует, выполняем генерацию данных
-	if(!this->sizeData) data();
+	if(this->raw.empty()) data();
 	// Выводим результат
-	return this->sizeData;
+	return this->raw.size();
 }
 /**
  * data Метод получения сырых данных
  * @return сырые данные
  */
 const u_char * Cache::DataDNS::data(){
-	// Если данные заполнены то очищаем их
-	if(this->rawData){
-		// Удаляем выделенные данные
-		delete [] this->rawData;
-		// Указываем что данные не иницализированны
-		this->rawData = NULL;
-		// Очищаем размерность
-		this->sizeData = 0;
-	}
 	// Если данные заполнены
 	if(this->ttl || !this->ipv4.empty() || !this->ipv6.empty()){
 		// Объект размерности данных
 		Map sizes = {sizeof(this->ttl), this->ipv4.size(), this->ipv6.size()};
 		// Получаем размер структуры
-		size_t size = sizeof(sizes);
-		// Выполняем расчет полного размера
-		this->sizeData = (size + sizes.ttl + sizes.ipv4 + sizes.ipv6);
-		// Выделяем динамически память
-		this->rawData = new u_char [this->sizeData];
-		// Получаем текущий итератор
-		u_char * it = this->rawData;
+		const size_t size = sizeof(sizes);
+		// Получаем данные карты размеров
+		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
 		// Выполняем копирование карты размеров
-		memcpy(it, &sizes, size);
-		// Увеличиваем текущий итератор
-		it += size;
+		copy(map, map + size, back_inserter(this->raw));
+		// Получаем данные времени жизни
+		const u_char * ttl = reinterpret_cast <const u_char *> (&this->ttl);
 		// Выполняем копирование времени жизни
-		memcpy(it, &this->ttl, sizes.ttl);
-		// Увеличиваем текущий итератор
-		it += sizes.ttl;
+		copy(ttl, ttl + sizes.ttl, back_inserter(this->raw));
 		// Выполняем копирование данных адреса ipv4
-		memcpy(it, this->ipv4.data(), sizes.ipv4);
-		// Увеличиваем текущий итератор
-		it += sizes.ipv4;
+		copy(this->ipv4.begin(), this->ipv4.end(), back_inserter(this->raw));
 		// Выполняем копирование данных адреса ipv6
-		memcpy(it, this->ipv6.data(), sizes.ipv6);
+		copy(this->ipv6.begin(), this->ipv6.end(), back_inserter(this->raw));
 	}
 	// Выводим сформированные данные
-	return this->rawData;
+	return this->raw.data();
 }
 /**
  * set Метод установки сырых данных
@@ -104,15 +87,145 @@ void Cache::DataDNS::set(const u_char * data, size_t size){
  * ~DataDNS Деструктор
  */
 Cache::DataDNS::~DataDNS(){
-	// Если буфер существует то удаляем его
-	if(this->rawData){
-		// Очищаем размер выделенных данных
-		this->sizeData = 0;
-		// Удаляем выделенную память
-		delete [] this->rawData;
-		// Обнуляем указатель
-		this->rawData = NULL;
+	// Очищаем полученные данные
+	this->raw.clear();
+	// Очищаем память выделенную для вектора
+	vector <u_char> ().swap(this->raw);
+}
+/**
+ * size Метод получения размеров сырых данных
+ * @return размер сырых данных
+ */
+const size_t Cache::DataCache::size(){
+	// Если размер данные не существует, выполняем генерацию данных
+	if(this->raw.empty()) data();
+	// Выводим результат
+	return this->raw.size();
+}
+/**
+ * data Метод получения сырых данных
+ * @return сырые данные
+ */
+const u_char * Cache::DataCache::data(){
+	// Если данные заполнены
+	if(!this->http.empty()){
+		// Объект размерности данных
+		Map sizes = {
+			sizeof(this->age),
+			sizeof(this->date),
+			sizeof(this->expires),
+			sizeof(this->modified),
+			sizeof(this->rvalid),
+			this->etag.size(),
+			this->http.size()
+		};
+		// Получаем размер структуры
+		const size_t size = sizeof(sizes);
+		// Получаем данные карты размеров
+		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
+		// Выполняем копирование карты размеров
+		copy(map, map + size, back_inserter(this->raw));
+		// Получаем данные времени жизни
+		const u_char * age = reinterpret_cast <const u_char *> (&this->age);
+		// Выполняем копирование времени жизни
+		copy(age, age + sizes.age, back_inserter(this->raw));
+		// Получаем данные даты создания кэша
+		const u_char * date = reinterpret_cast <const u_char *> (&this->date);
+		// Выполняем копирование данных даты создания кэша
+		copy(date, date + sizes.date, back_inserter(this->raw));
+		// Получаем данные периода жизни кэша
+		const u_char * expires = reinterpret_cast <const u_char *> (&this->expires);
+		// Выполняем копирование данных периода жизни кэша
+		copy(expires, expires + sizes.expires, back_inserter(this->raw));
+		// Получаем данные периода даты модификации кэша
+		const u_char * modified = reinterpret_cast <const u_char *> (&this->modified);
+		// Выполняем копирование данных даты модификации кэша
+		copy(modified, modified + sizes.modified, back_inserter(this->raw));
+		// Получаем данные ревалидации кэша
+		const u_char * rvalid = reinterpret_cast <const u_char *> (&this->rvalid);
+		// Выполняем копирование данных ревалидации кэша
+		copy(rvalid, rvalid + sizes.rvalid, back_inserter(this->raw));
+		// Выполняем копирование данных тегда ETag
+		copy(this->etag.begin(), this->etag.end(), back_inserter(this->raw));
+		// Получаем данные кэша
+		const u_char * cache = this->http.data();
+		// Выполняем копирование данных кэша
+		copy(cache, cache + sizes.cache, back_inserter(this->raw));
 	}
+	// Выводим сформированные данные
+	return this->raw.data();
+}
+/**
+ * set Метод установки сырых данных
+ * @param data сырые данные
+ * @param size размер сырых данных
+ */
+void Cache::DataCache::set(const u_char * data, size_t size){
+	// Если данные существуют
+	if(size){
+		// Получаем размер структуры
+		size_t size_map = sizeof(Map);
+		// Если размер карты меньше общего размера
+		if(size_map < size){
+			// Размеры полученных данных
+			size_t size_it = size_map;
+			// Извлекаем данные карты размеров
+			for(size_t i = 0, j = 0; i < size_map; i += sizeof(size_t), j++){
+				// Размер полученных данных
+				size_t size_data;
+				// Извлекаем размер данных
+				memcpy(&size_data, data + i, sizeof(size_t));
+				// Если данные верные
+				if(size_data && ((size_data + size_it) <= size)){
+					// Определяем тип извлекаемых данных
+					switch(j){
+						// Если это время жизни
+						case 0: cpydata(data, size_data, size_it, &this->age); break;
+						// Если это дата записи кэша прокси сервером
+						case 1: cpydata(data, size_data, size_it, &this->date); break;
+						// Если это дата смерти кэша
+						case 2: cpydata(data, size_data, size_it, &this->expires); break;
+						// Если это дата последней модификации
+						case 3: cpydata(data, size_data, size_it, &this->modified); break;
+						// Если это обязательная ревалидация
+						case 4: cpydata(data, size_data, size_it, &this->rvalid); break;
+						// Если это идентификатор ETag
+						case 5: cpydata(data, size_data, size_it, this->etag); break;
+						// Если это данные кэша
+						case 6: {
+							// Выделяем динамически память
+							u_char * buffer = new u_char [size_data];
+							// Извлекаем данные адреса
+							memcpy(buffer, data + size_it, size_data);
+							// Запоминаем результат
+							this->http.assign(buffer, buffer + size_data);
+							// Определяем смещение
+							size_it += size_data;
+							// Удаляем полученные данные
+							delete [] buffer;
+						} break;
+					}
+				}
+			}
+		}
+	}
+}
+/**
+ * ~DataCache Деструктор
+ */
+Cache::DataCache::~DataCache(){
+	// Очищаем полученные данные
+	this->raw.clear();
+	// Очищаем память выделенную для вектора
+	vector <u_char> ().swap(this->raw);
+}
+/**
+ * empty Метод проверки статуса загрузки данных
+ * @return результат проверки
+ */
+bool Cache::ResultData::empty(){
+	// Если данные не пустные, выводим результат
+	return (this->etag.empty() && this->modified.empty() && this->http.empty());
 }
 /**
  * getPathDomain Метод создания пути из доменного имени
@@ -266,7 +379,7 @@ void Cache::readDomain(const string domain, DataDNS * data){
 				// Перемещаемся в конец файла
 				file.seekg(0, file.end);
 				// Определяем размер файла
-				size_t size = file.tellg();
+				const size_t size = file.tellg();
 				// Перемещаемся в начало файла
 				file.seekg(0, file.beg);
 				// Создаем буфер данных
@@ -303,30 +416,28 @@ void Cache::readCache(const string domain, const string name, DataCache * data){
 		const string filename = addToPath(dir, md5(name));
 		// Проверяем на существование адреса
 		if(!filename.empty() && isFileExist(filename.c_str())){
-			
-			ifstream input_file(filename.c_str(), ios::binary | ios::in | ios::ate);
-			// input_file.read((char *) data, sizeof(DataDNS));
-			while(input_file.read((char *) data, 1)){}
-			input_file.close();
-
-			/*
 			// Открываем файл на чтение
-			FILE * file = fopen(filename.c_str(), "rb");
+			ifstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
-			if(file){
+			if(file.is_open()){
 				// Перемещаемся в конец файла
-				fseek(file, 0L, SEEK_END);
+				file.seekg(0, file.end);
 				// Определяем размер файла
-				size_t size = ftell(file);
+				const size_t size = file.tellg();
 				// Перемещаемся в начало файла
-				fseek(file, 0L, SEEK_SET);
-				// Считываем из файла данные домена
-				fread(data, size, 1, file);
+				file.seekg(0, file.beg);
+				// Создаем буфер данных
+				u_char * buffer = new u_char [size];
+				// Считываем до тех пор пока все удачно
+				while(file.good()) file.read((char *) buffer + file.tellg(), 60);
+				// Устанавливаем полученные данные
+				data->set(buffer, size);
+				// Удаляем выделенную память
+				delete [] buffer;
 				// Закрываем файл
-				fclose(file);
+				file.close();
 			// Выводим сообщение в лог
 			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
-			*/
 		}
 	}
 }
@@ -394,27 +505,14 @@ void Cache::writeCache(const string domain, const string name, DataCache data){
 				// Выходим
 				return;
 			}
-			// Открываем файл на запись
-			FILE * file = fopen(filename.c_str(), "wb");
+			// Открываем файл на чтение
+			ofstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
-			if(file){
-				
-				/*
-				// Получаем размер данных
-				size_t size = 0;
-				// Считаем общий объем сохраняемых данных
-				size += sizeof(data.age);
-				size += sizeof(data.date);
-				size += sizeof(data.expires);
-				size += sizeof(data.modified);
-				size += sizeof(data.rvalid);
-				size += data.etag.size();
-				size += data.http.size();
-				// Записываем в файл данные домена
-				fwrite(&data, size, 1, file);
-				*/
+			if(file.is_open()){
+				// Выполняем запись данных в файл
+				file.write((const char *) data.data(), data.size());
 				// Закрываем файл
-				fclose(file);
+				file.close();
 			// Выводим сообщение в лог
 			} else this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
@@ -475,9 +573,9 @@ const int Cache::rmdir(const char * path){
 			// Пропускаем названия текущие "." и внешние "..", так как идет рекурсия
 			if(!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) continue;
 			// Получаем размер дочернего каталога
-			size_t len = path_len + strlen(p->d_name) + 2;
+			const size_t len = path_len + strlen(p->d_name) + 2;
 			// Создаем буфер данных
-			char * buf = new char [(const size_t) len];
+			char * buf = new char [len];
 			// Если память выделена
 			if(buf){
 				// Создаем структуру буфера статистики
@@ -491,9 +589,9 @@ const int Cache::rmdir(const char * path){
 					// Если дочерний элемент является файлом то удаляем его
 					else r2 = ::unlink(buf);
 				}
-				// Освобождаем выделенную ранее память
-				delete [] buf;
 			}
+			// Освобождаем выделенную ранее память
+			delete [] buf;
 			// Запоминаем количество дочерних элементов
 			r = r2;
 		}
@@ -753,57 +851,47 @@ Cache::ResultData Cache::getCache(HttpData & http){
 		const string ims = http.getHeader("if-modified-since");
 		// Если какой-то из заголовков существует тогда не трогаем кэш, так как эти данные есть у клиента
 		if(inm.empty() && ims.empty()){
-			/*
 			// Создаем объект кеша
-			DataCache data;
+			DataCache cache;
 			// Выполняем чтение данных из кэша
-			readCache(http.getHost(), http.getPath(), &data);
+			readCache(http.getHost(), http.getPath(), &cache);
 			// Если заголовки получены
-			if(!data.http.headers.empty()){
+			if(!cache.http.empty()){
 				// Результат проверки валидности кэша
 				bool check = false;
 				// Получаем текущую дату
 				time_t date = time(NULL);
 				// Если дата жизни кэша указана
-				if(data.expires){
+				if(cache.expires){
 					// Если дата смерти кэша меньше текущей даты
-					if(data.expires < date) check = false;
+					if(cache.expires < date) check = false;
 					else check = true;
 				}
 				// Если время жизни файла указано
-				if(data.age){
+				if(cache.age){
 					// Дата модификации
-					time_t mdate = (data.modified ? data.modified : data.date);
+					time_t mdate = (cache.modified ? cache.modified : cache.date);
 					// Проверяем устарел ли файл
-					if((mdate + data.age) < date) check = false;
+					if((mdate + cache.age) < date) check = false;
 					else check = true;
 				}
 				// Если кэш устарел но указан eTag или дата последней модификации, или же кэш не устарел
 				if(check || (!check
-				&& (!data.etag.empty()
-				|| (data.modified < date)))){
-					// Помечаем что данные получены
-					result.load = true;
+				&& (!cache.etag.empty()
+				|| (cache.modified < date)))){
 					// Запоминаем etag
-					result.etag = data.etag;
+					result.etag = cache.etag;
 					// Запоминаем дату последней модификации
-					if(data.modified) result.modified = timeToStr(data.modified);
+					if(cache.modified) result.modified = timeToStr(cache.modified);
 				// Удаляем кэш, если он безнадежно устарел
 				} else rmCache(http);
 				// Если кэш не устарел, копируем данные кэша
-				if(check && !data.rvalid) result.http = data.http;
+				if(check && !cache.rvalid) result.http.assign(cache.http.begin(), cache.http.end());
 				// Если данные получены а остальных данных нет тогда удаляем кэш
-				if(result.load
-				&& result.etag.empty()
+				if(result.etag.empty()
 				&& result.modified.empty()
-				&& !result.http.headers.empty()){
-					// Сообщаем что ничего не найдено
-					result.load = false;
-					// Удаляем кэш
-					rmCache(http);
-				}
+				&& result.http.empty()) rmCache(http);
 			}
-			*/
 		}
 	}
 	// Выводим результат
@@ -935,40 +1023,20 @@ void Cache::setCache(HttpData & http){
 					}
 				}
 			}
-			/*
 			// Создаем объект кэша
 			DataCache cache;
 			// Получаем дамп данных
-			auto dump = http.getDump();
+			const u_char * dump = http.data();
 			// Заполняем данные кэша
-			cache.age			= age;
-			cache.etag			= et;
-			cache.date			= date;
-			cache.rvalid		= rvalid;
-			cache.expires		= expires;
-			cache.modified		= modified;
-			cache.gzip			= dump.gzip;
-			cache.http			= dump.http;
-			cache.auth			= dump.auth;
-			cache.path			= dump.path;
-			cache.host			= dump.host;
-			cache.port			= dump.port;
-			cache.body			= dump.body;
-			cache.login			= dump.login;
-			cache.method		= dump.method;
-			cache.status		= dump.status;
-			cache.appName		= dump.appName;
-			cache.version		= dump.version;
-			cache.headers		= dump.headers;
-			cache.options		= dump.options;
-			cache.protocol		= dump.protocol;
-			cache.password		= dump.password;
-			cache.levelGzip		= dump.levelGzip;
-			cache.chunkSize		= dump.chunkSize;
-			cache.appVersion	= dump.appVersion;
+			cache.age		= age;
+			cache.etag		= et;
+			cache.date		= date;
+			cache.rvalid	= rvalid;
+			cache.expires	= expires;
+			cache.modified	= modified;
+			cache.http.assign(dump, dump + http.size());
 			// Выполняем запись данных в кэш
-			writeCache(http.getHost(), http.getPath(), cache);
-			*/
+			if(!cache.http.empty()) writeCache(http.getHost(), http.getPath(), cache);
 		}
 	}
 }
