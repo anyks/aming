@@ -880,18 +880,18 @@ Cache::ResultData Cache::getCache(HttpData & http){
 				&& (!cache.etag.empty()
 				|| (cache.modified < date)))){
 					// Запоминаем etag
-					result.etag = cache.etag;
+					if(!cache.etag.empty()) result.etag = cache.etag;
 					// Запоминаем дату последней модификации
 					if(cache.modified) result.modified = timeToStr(cache.modified);
-				// Удаляем кэш, если он безнадежно устарел
-				} else rmCache(http);
+				}
 				// Если кэш не устарел, копируем данные кэша
 				if(check && !cache.rvalid) result.http.assign(cache.http.begin(), cache.http.end());
 				// Если данные получены а остальных данных нет тогда удаляем кэш
 				if(result.etag.empty()
 				&& result.modified.empty()
 				&& result.http.empty()) rmCache(http);
-			}
+			// Удаляем файл если данных в нем нет
+			} else rmCache(http);
 		}
 	}
 	// Выводим результат
@@ -986,8 +986,6 @@ void Cache::setCache(HttpData & http){
 			const string ag = http.getHeader("age");
 			// Получаем данные etag
 			const string et = http.getHeader("etag");
-			// Получаем заголовок pragma
-			const string pr = http.getHeader("pragma");
 			// Получаем дату смерти кэша
 			const string ex = http.getHeader("expires");
 			// Получаем заголовок контроль кэша
