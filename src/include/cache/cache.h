@@ -129,17 +129,14 @@ class Cache {
 		 * ResultData  Структура с данными полученными из файла кэша
 		 */
 		struct ResultData {
+			// Обязательная ревалидация
+			bool rvalid;
 			// Etag кэша
 			string etag;
 			// Дата модификации кэша
 			string modified;
 			// Данные кэша
 			vector <u_char> http;
-			/**
-			 * empty Метод проверки статуса загрузки данных
-			 * @return результат проверки
-			 */
-			bool empty();
 		};
 		// Объект лога
 		LogApp * log = NULL;

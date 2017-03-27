@@ -186,6 +186,8 @@ class BufferHttpProxy {
 		DNSResolver * dns = NULL;
 		// База событий
 		struct event_base * base = NULL;
+		// Данные кэша
+		vector <u_char> cache;
 		// Коллбек для удаления текущего подключения
 		function <void (void)> remove;
 		// Коллбек для проверки на доступность подключений

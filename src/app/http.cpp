@@ -232,9 +232,9 @@ void BufferHttpProxy::setCompress(){
 			// Устанавливаем правило регулярного выражения
 			regex e(this->proxy->config->gzip.regex, regex::ECMAScript | regex::icase);
 			// Получаем версию протокола
-			for(u_int i = 0; i < this->proxy->config->gzip.vhttp.size(); i++){
+			for(auto it = this->proxy->config->gzip.vhttp.begin(); it != this->proxy->config->gzip.vhttp.end(); it++){
 				// Поверяем на соответствие версии
-				if(this->httpResponse.getVersion() == float(::atof(this->proxy->config->gzip.vhttp[i].c_str()))){
+				if(this->httpResponse.getVersion() == float(::atof(it->c_str()))){
 					// Запоминаем что протокол проверку прошел
 					gzip = true;
 					// Выходим
@@ -245,10 +245,9 @@ void BufferHttpProxy::setCompress(){
 			// Если сжатие разрешено
 			if(gzip){
 				// Проверяем на тип данных
-				for(u_int i = 0; i < this->proxy->config->gzip.types.size(); i++){
+				for(auto it = this->proxy->config->gzip.types.begin(); it != this->proxy->config->gzip.types.end(); it++){
 					// Выполняем проверку на тип данных
-					if((this->proxy->config->gzip.types[i].compare("*") == 0)
-					|| (cmime.find(this->proxy->config->gzip.types[i]) != string::npos)){
+					if((it->compare("*") == 0) || (cmime.find(* it) != string::npos)){
 						// Запоминаем что протокол проверку прошел
 						gzip = true;
 						// Выходим
@@ -262,9 +261,9 @@ void BufferHttpProxy::setCompress(){
 					// Запрещаем сжатие
 					gzip = false;
 					// Переходим по всем параметрам
-					for(u_int i = 0; i < this->proxy->config->gzip.proxied.size(); i++){
+					for(auto it = this->proxy->config->gzip.proxied.begin(); it != this->proxy->config->gzip.proxied.end(); it++){
 						// Получаем параметр
-						const string param = this->proxy->config->gzip.proxied[i];
+						const string param = * it;
 						// Запрещаем сжатие для всех проксированных запросов, игнорируя остальные параметры;
 						if(param.compare("off") == 0){
 							// Запрещаем сжатие
@@ -479,6 +478,8 @@ void BufferHttpProxy::setTimeout(const u_short type, const bool read, const bool
  * sendClient Метод отправки данных на клиент
  */
 void BufferHttpProxy::sendClient(){
+	// Очищаем кэш
+	this->cache.clear();
 	// Если это код разрешающий коннект, устанавливаем таймер для клиента
 	if(!this->httpResponse.isClose()) this->setTimeout(TM_CLIENT, true, true);
 	// Если это завершение работы то устанавливаем таймер только на запись
@@ -568,7 +569,7 @@ BufferHttpProxy::~BufferHttpProxy(){
 	// Удаляем dns сервер
 	delete this->dns;
 	// Очищаем объект базы событий
-	event_base_free(this->base);
+	event_base_free(this->base); // +++++++++++++++++++++++++ Здесь был КРАШ
 	// Освобождаем мютекс
 	this->mtx.unlock();
 }
@@ -1305,6 +1306,16 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					socket_tcpcork(http->sockets.server, http->proxy->log);
 					socket_tcpcork(http->sockets.client, http->proxy->log);
 				}
+				// Если данные соответствуют данным из кэша
+				if((status == 304) && !http->cache.empty()
+				&& (http->httpRequest.getMethod().compare("head") == 0)){
+					// Добавляем данные из кэша
+					http->httpResponse.set(http->cache.data(), http->cache.size());
+					// Отправляем ответ клиенту
+					http->sendClient();
+					// Выходим из функции
+					return;
+				}
 				// Проверяем есть ли размер вложений
 				string cl = http->httpResponse.getHeader("content-length");
 				// Получаем размер данных превысил разрешенный предел
@@ -1384,23 +1395,32 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					http->client.https		= http->httpRequest.isHttps();
 					http->client.connect	= http->httpRequest.isConnect();
 					http->client.useragent	= http->httpRequest.getUseragent();
-					
 					// Извлекаем данные из кэша
 					auto cache = http->proxy->cache->getCache(http->httpRequest);
 					// Если данные в кэше существуют
-					if(!cache.empty()){
-						// Если это чистые данные
-						if(!cache.http.empty()){
+					if(!cache.http.empty()){
+						// Если ревалидация не нужна
+						if(!cache.rvalid){
 							// Добавляем данные из кэша
 							http->httpResponse.set(cache.http.data(), cache.http.size());
 							// Отправляем ответ клиенту
 							http->sendClient();
 							// Выходим из функции
 							return;
-						// Если нужна ревалидация
-						} else cout << " =============== HEAD QUERY =============== " << endl;
+						// Если нужна ревалидация и заголовков от браузера на проверку кэша нет
+						} else if(http->httpRequest.getHeader("if-modified-since").empty()
+						&& http->httpRequest.getHeader("if-none-match").empty()) {
+							// Выполняем добавление новых заголовков
+							// Добавляем заголовок Etag
+							if(!cache.etag.empty()) http->httpRequest.setHeader("If-None-Match", cache.etag);
+							// Добавляем дату последней модификации
+							if(!cache.modified.empty()) http->httpRequest.setHeader("If-Modified-Since", cache.modified);
+							// Добавляем метод HEAD
+							http->httpRequest.setMethod("head");
+							// Запоминаем данные кэша
+							http->cache.assign(cache.http.begin(), cache.http.end());
+						}
 					}
-
 					// Выполняем подключение к удаленному серверу
 					int connect = connect_server(http);
 					// Если сокет существует

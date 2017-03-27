@@ -220,14 +220,6 @@ Cache::DataCache::~DataCache(){
 	vector <u_char> ().swap(this->raw);
 }
 /**
- * empty Метод проверки статуса загрузки данных
- * @return результат проверки
- */
-bool Cache::ResultData::empty(){
-	// Если данные не пустные, выводим результат
-	return (this->etag.empty() && this->modified.empty() && this->http.empty());
-}
-/**
  * getPathDomain Метод создания пути из доменного имени
  * @param  domain название домена
  * @return        путь к файлу кэша
@@ -756,9 +748,9 @@ const bool Cache::checkEnabledCache(HttpData & http){
 			// Получаем параметры кэша
 			auto control = split(cc, ",");
 			// Переходим по всему массиву
-			for(u_int i = 0; i < control.size(); i++){
+			for(auto it = control.begin(); it != control.end(); it++){
 				// Получаем строку кэша
-				const string cache = control[i];
+				const string cache = * it;
 				// Директивы управление кэшем
 				bool ccPrivate		= (cache.compare("private") == 0);
 				bool ccNoCache		= (cache.compare("no-cache") == 0);
@@ -885,7 +877,14 @@ Cache::ResultData Cache::getCache(HttpData & http){
 					if(cache.modified) result.modified = timeToStr(cache.modified);
 				}
 				// Если кэш не устарел, копируем данные кэша
-				if(check && !cache.rvalid) result.http.assign(cache.http.begin(), cache.http.end());
+				if(check || !result.modified.empty() || !result.etag.empty()){
+					// Указываем что данные нужно ревалидировать
+					result.rvalid = cache.rvalid;
+					// Если ревалидация не указана и проверку не прошли
+					if(!check && !result.rvalid) result.rvalid = true;
+					// Запоминаем данные из кэша
+					result.http.assign(cache.http.begin(), cache.http.end());
+				}
 				// Если данные получены а остальных данных нет тогда удаляем кэш
 				if(result.etag.empty()
 				&& result.modified.empty()
@@ -1007,9 +1006,9 @@ void Cache::setCache(HttpData & http){
 				// Получаем параметры кэша
 				auto control = split(cc, ",");
 				// Переходим по всему массиву
-				for(u_int i = 0; i < control.size(); i++){
+				for(auto it = control.begin(); it != control.end(); it++){
 					// Получаем строку кэша
-					const string cache = control[i];
+					const string cache = * it;
 					// Если нужно проводить обязательную валидацию данных
 					if(cache.compare("proxy-rervalid") == 0) rvalid = true;
 					// Если время жизни найдено, то определяем его
