@@ -745,8 +745,6 @@ const bool Cache::checkEnabledCache(HttpData & http){
 		if(cdate < expires) result = true;
 		// Запрещаем кэш если время жизни уже истекло
 		else result = false;
-		// Если установлен etag или дата последней модификации значит разрешаем кэширование
-		if(!et.empty() || !lm.empty() || !ag.empty()) result = true;
 		// Если управление кэшем существует
 		if(!cc.empty()){
 			// Получаем параметры кэша
@@ -775,13 +773,15 @@ const bool Cache::checkEnabledCache(HttpData & http){
 					// Возраст жизни кэша
 					size_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
 					// Извлекачем значение времени
-					size_t pos = (ccsMaxAge ? cache.find("s-maxage=") : (ccMaxAge ? cache.find("max-age=") : string::npos));
+					const size_t pos = cache.find("=");
 					// Если позиция найдена тогда извлекаем контент
-					if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
+					if(pos != string::npos) age = ::atoi(cache.substr(pos + 1, cache.length() - (pos + 1)).c_str());
 					// Если возраст больше нуля и это публичное кэширование тогда разрешаем
 					if(!age || (sdate && ((sdate + age) < cdate))) result = false;
 					else result = true;
 				}
+				// Если установлен etag или дата последней модификации значит разрешаем кэширование
+				if(!et.empty() || !lm.empty()) result = true;
 			}
 		}
 	}
@@ -1005,18 +1005,13 @@ void Cache::setCache(HttpData & http){
 					if((cache.compare("no-cache") == 0)
 					|| (cache.compare("proxy-revalidate") == 0)) valid = true;
 					// Проверяем время жизни
-					else {
-						// Выполняем поиск времени жизни для CDN
-						size_t pos = cache.find("s-maxage=");
+					else if((cache.find("s-maxage") != string::npos)
+					|| ((cache.find("max-age") != string::npos)
+					&& (cc.find("s-maxage") == string::npos))){
+						// Извлекачем значение времени
+						size_t pos = cache.find("=");
 						// Если позиция найдена тогда извлекаем контент
-						if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
-						// Если время жизни не найдено
-						else {
-							// Извлекачем значение времени
-							pos = cache.find("max-age=");
-							// Если позиция найдена тогда извлекаем контент
-							if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
-						}
+						if(pos != string::npos) age = ::atoi(cache.substr(pos + 1, cache.length() - (pos + 1)).c_str());
 					}
 				}
 			}
