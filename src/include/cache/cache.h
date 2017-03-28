@@ -90,7 +90,7 @@ class Cache {
 					size_t date;
 					size_t expires;
 					size_t modified;
-					size_t rvalid;
+					size_t valid;
 					size_t etag;
 					size_t cache;
 				};
@@ -101,7 +101,7 @@ class Cache {
 				time_t date;			// Дата записи кэша прокси сервером
 				time_t expires;			// Дата смерти кэша
 				time_t modified;		// Дата последней модификации
-				bool rvalid;			// Обязательная ревалидация (в случае установки такого заголовка, необходимо всегда обновлять контент как только время жизни истекло и игнорируя остальные правила)
+				bool valid;				// Обязательная ревалидация
 				string etag;			// Идентификатор ETag
 				vector <u_char> http;	// Данные кэша
 				/**
@@ -130,7 +130,7 @@ class Cache {
 		 */
 		struct ResultData {
 			// Обязательная ревалидация
-			bool rvalid;
+			bool valid;
 			// Etag кэша
 			string etag;
 			// Дата модификации кэша

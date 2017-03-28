@@ -1399,7 +1399,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					// Если данные в кэше существуют
 					if(!cache.http.empty()){
 						// Если ревалидация не нужна
-						if(!cache.rvalid){
+						if(!cache.valid){
 							// Добавляем данные из кэша
 							http->httpResponse.set(cache.http.data(), cache.http.size());
 							// Отправляем ответ клиенту

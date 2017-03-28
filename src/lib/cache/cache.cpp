@@ -115,7 +115,7 @@ const u_char * Cache::DataCache::data(){
 			sizeof(this->date),
 			sizeof(this->expires),
 			sizeof(this->modified),
-			sizeof(this->rvalid),
+			sizeof(this->valid),
 			this->etag.size(),
 			this->http.size()
 		};
@@ -142,9 +142,9 @@ const u_char * Cache::DataCache::data(){
 		// Выполняем копирование данных даты модификации кэша
 		copy(modified, modified + sizes.modified, back_inserter(this->raw));
 		// Получаем данные ревалидации кэша
-		const u_char * rvalid = reinterpret_cast <const u_char *> (&this->rvalid);
+		const u_char * valid = reinterpret_cast <const u_char *> (&this->valid);
 		// Выполняем копирование данных ревалидации кэша
-		copy(rvalid, rvalid + sizes.rvalid, back_inserter(this->raw));
+		copy(valid, valid + sizes.valid, back_inserter(this->raw));
 		// Выполняем копирование данных тегда ETag
 		copy(this->etag.begin(), this->etag.end(), back_inserter(this->raw));
 		// Получаем данные кэша
@@ -188,7 +188,7 @@ void Cache::DataCache::set(const u_char * data, size_t size){
 						// Если это дата последней модификации
 						case 3: cpydata(data, size_data, size_it, &this->modified); break;
 						// Если это обязательная ревалидация
-						case 4: cpydata(data, size_data, size_it, &this->rvalid); break;
+						case 4: cpydata(data, size_data, size_it, &this->valid); break;
 						// Если это идентификатор ETag
 						case 5: cpydata(data, size_data, size_it, this->etag); break;
 						// Если это данные кэша
@@ -870,9 +870,9 @@ Cache::ResultData Cache::getCache(HttpData & http){
 					// Запоминаем дату последней модификации
 					if(cache.modified) result.modified = timeToStr(cache.modified);
 					// Указываем что данные нужно ревалидировать
-					result.rvalid = cache.rvalid;
+					result.valid = cache.valid;
 					// Если ревалидация не указана и проверку не прошли
-					if(!check && !result.rvalid) result.rvalid = true;
+					if(!check && !result.valid) result.valid = true;
 					// Запоминаем данные из кэша
 					result.http.assign(cache.http.begin(), cache.http.end());
 				// Если данные получены а остальных данных нет тогда удаляем кэш
@@ -982,7 +982,7 @@ void Cache::setCache(HttpData & http){
 			// Получаем дату последней модификации
 			const string lm = http.getHeader("last-modified");
 			// Обязательная валидация данных
-			bool rvalid = false;
+			bool valid = false;
 			// Возраст жизни кэша
 			time_t expires = 0, modified = 0, date = time(NULL);
 			// Возраст жизни кэша
@@ -1003,7 +1003,7 @@ void Cache::setCache(HttpData & http){
 					const string cache = * it;
 					// Если нужно проводить обязательную валидацию данных
 					if((cache.compare("no-cache") == 0)
-					|| (cache.compare("proxy-rervalid") == 0)) rvalid = true;
+					|| (cache.compare("proxy-revalidate") == 0)) valid = true;
 					// Проверяем время жизни
 					else {
 						// Выполняем поиск времени жизни для CDN
@@ -1028,7 +1028,7 @@ void Cache::setCache(HttpData & http){
 			cache.age		= age;
 			cache.etag		= et;
 			cache.date		= date;
-			cache.rvalid	= rvalid;
+			cache.valid		= valid;
 			cache.expires	= expires;
 			cache.modified	= modified;
 			cache.http.assign(dump, dump + http.size());
