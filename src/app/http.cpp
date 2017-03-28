@@ -1298,6 +1298,15 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			if(http->httpResponse.isEndHeaders()){
 				// Получаем статус запроса
 				const u_int status = http->httpResponse.getStatus();
+				// Если данные соответствуют данным из кэша
+				if((status == 304) && !http->cache.empty()){
+					// Добавляем данные из кэша
+					http->httpResponse.set(http->cache.data(), http->cache.size());
+					// Отправляем ответ клиенту
+					http->sendClient();
+					// Выходим из функции
+					return;
+				}
 				// Если статус утвердительный
 				if(((status > 99) && (status < 200))
 				|| ((status == 204) || (status == 205))
@@ -1305,16 +1314,6 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					// Активируем отдачу буферов целиком одним разом
 					socket_tcpcork(http->sockets.server, http->proxy->log);
 					socket_tcpcork(http->sockets.client, http->proxy->log);
-				}
-				// Если данные соответствуют данным из кэша
-				if((status == 304) && !http->cache.empty()
-				&& (http->httpRequest.getMethod().compare("head") == 0)){
-					// Добавляем данные из кэша
-					http->httpResponse.set(http->cache.data(), http->cache.size());
-					// Отправляем ответ клиенту
-					http->sendClient();
-					// Выходим из функции
-					return;
 				}
 				// Проверяем есть ли размер вложений
 				string cl = http->httpResponse.getHeader("content-length");
@@ -1407,16 +1406,13 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							http->sendClient();
 							// Выходим из функции
 							return;
-						// Если нужна ревалидация и заголовков от браузера на проверку кэша нет
-						} else if(http->httpRequest.getHeader("if-modified-since").empty()
-						&& http->httpRequest.getHeader("if-none-match").empty()) {
+						// Если нужна ревалидация
+						} else {
 							// Выполняем добавление новых заголовков
 							// Добавляем заголовок Etag
 							if(!cache.etag.empty()) http->httpRequest.setHeader("If-None-Match", cache.etag);
 							// Добавляем дату последней модификации
 							if(!cache.modified.empty()) http->httpRequest.setHeader("If-Modified-Since", cache.modified);
-							// Добавляем метод HEAD
-							http->httpRequest.setMethod("head");
 							// Запоминаем данные кэша
 							http->cache.assign(cache.http.begin(), cache.http.end());
 						}

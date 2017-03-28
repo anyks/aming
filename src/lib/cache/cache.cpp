@@ -720,7 +720,9 @@ const bool Cache::checkEnabledCache(HttpData & http){
 	// Если кэширование разрешено
 	if(this->config->cache.response && http.isEndHeaders()){
 		// Генерируем текущую дату
-		time_t date = time(NULL), expires = 0;
+		time_t cdate = time(NULL), sdate = 0, expires = 0;
+		// Определяем дату сервера
+		const string dt = http.getHeader("date");
 		// Определяем время жизни
 		const string ag = http.getHeader("age");
 		// Получаем данные etag
@@ -733,12 +735,14 @@ const bool Cache::checkEnabledCache(HttpData & http){
 		const string cc = http.getHeader("cache-control");
 		// Получаем дату последней модификации
 		const string lm = http.getHeader("last-modified");
+		// Определяем дату сервера
+		if(!dt.empty()) sdate = strToTime(dt.c_str());
 		// Определяем время жизни кэша
 		if(!ex.empty()) expires = strToTime(ex.c_str());
 		// Если прагма запрещает кэш то отключаем его
 		if(!pr.empty() && (pr.find("no-cache") != string::npos)) result = false;
 		// Если время для жизни кэша еще есть то разрешаем кэширование
-		if(date < expires) result = true;
+		if(cdate < expires) result = true;
 		// Запрещаем кэш если время жизни уже истекло
 		else result = false;
 		// Если установлен etag или дата последней модификации значит разрешаем кэширование
@@ -752,39 +756,31 @@ const bool Cache::checkEnabledCache(HttpData & http){
 				// Получаем строку кэша
 				const string cache = * it;
 				// Директивы управление кэшем
-				bool ccPrivate		= (cache.compare("private") == 0);
-				bool ccNoCache		= (cache.compare("no-cache") == 0);
-				bool ccNoStore		= (cache.compare("no-store") == 0);
-				bool ccMaxAge		= (cache.compare("s-maxage") == 0);
-				bool ccRevalidate	= (cache.compare("proxy-revalidate") == 0);
+				bool ccPrivate		= (cache.find("private") != string::npos);
+				bool ccNoCache		= (cache.find("no-cache") != string::npos);
+				bool ccNoStore		= (cache.find("no-store") != string::npos);
+				bool ccMaxAge		= (cache.find("max-age") != string::npos);
+				bool ccsMaxAge		= (cache.find("s-maxage") != string::npos);
+				bool ccRevalidate	= (cache.find("proxy-revalidate") != string::npos);
+				// Если кэширование запрещено тогда запрещаем
+				if(ccNoStore || ccPrivate) result = false;
 				// Определяем тип заголовка
-				if(ccNoCache || ccRevalidate){
+				else if(ccNoCache || ccRevalidate){
 					// Если etag существует
 					if(!et.empty() || !lm.empty()) result = true;
+					// Запрещаем кэширование
 					else result = false;
 				// Если время жизни найдено, то определяем его
-				} else if(ccMaxAge){
+				} else if(ccMaxAge || ccsMaxAge){
 					// Возраст жизни кэша
 					size_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
 					// Извлекачем значение времени
-					size_t pos = cache.find("s-maxage=");
+					size_t pos = (ccsMaxAge ? cache.find("s-maxage=") : (ccMaxAge ? cache.find("max-age=") : string::npos));
 					// Если позиция найдена тогда извлекаем контент
 					if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
 					// Если возраст больше нуля и это публичное кэширование тогда разрешаем
-					if(age && (cc.find("public") != string::npos)) result = true;
-					// Если это приватный кэш тогда запрещаем кэширование
-					else if(cc.find("private") != string::npos) {
-						// Запрещаем кэширование
-						result = false;
-						// Выходим из цикла
-						break;
-					}
-				// Если кэширование запрещено тогда запрещаем
-				} else if(ccNoStore || ccPrivate){
-					// Запрещаем кэширование
-					result = false;
-					// Выходим из цикла
-					break;
+					if(!age || (sdate && ((sdate + age) < cdate))) result = false;
+					else result = true;
 				}
 			}
 		}
@@ -868,27 +864,19 @@ Cache::ResultData Cache::getCache(HttpData & http){
 					else check = true;
 				}
 				// Если кэш устарел но указан eTag или дата последней модификации, или же кэш не устарел
-				if(check || (!check
-				&& (!cache.etag.empty()
-				|| (cache.modified < date)))){
+				if(check || !cache.etag.empty() || (cache.modified < date)){
 					// Запоминаем etag
 					if(!cache.etag.empty()) result.etag = cache.etag;
 					// Запоминаем дату последней модификации
 					if(cache.modified) result.modified = timeToStr(cache.modified);
-				}
-				// Если кэш не устарел, копируем данные кэша
-				if(check || !result.modified.empty() || !result.etag.empty()){
 					// Указываем что данные нужно ревалидировать
 					result.rvalid = cache.rvalid;
 					// Если ревалидация не указана и проверку не прошли
 					if(!check && !result.rvalid) result.rvalid = true;
 					// Запоминаем данные из кэша
 					result.http.assign(cache.http.begin(), cache.http.end());
-				}
 				// Если данные получены а остальных данных нет тогда удаляем кэш
-				if(result.etag.empty()
-				&& result.modified.empty()
-				&& result.http.empty()) rmCache(http);
+				} else rmCache(http);
 			// Удаляем файл если данных в нем нет
 			} else rmCache(http);
 		}
@@ -981,6 +969,8 @@ void Cache::setCache(HttpData & http){
 		|| (method.compare("post") == 0))
 		// Проверяем разрешено ли выполнять сохранение кэша
 		&& checkEnabledCache(http)){
+			// Извлекаем значение даты сервера
+			const string dt = http.getHeader("date");
 			// Определяем время жизни
 			const string ag = http.getHeader("age");
 			// Получаем данные etag
@@ -997,6 +987,8 @@ void Cache::setCache(HttpData & http){
 			time_t expires = 0, modified = 0, date = time(NULL);
 			// Возраст жизни кэша
 			time_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
+			// Если дата сервера установлена
+			if(!dt.empty()) date = strToTime(dt.c_str());
 			// Если дата модификации данных указана
 			if(!lm.empty()) modified = strToTime(lm.c_str());
 			// Если дата смерти кэша указана
@@ -1010,13 +1002,21 @@ void Cache::setCache(HttpData & http){
 					// Получаем строку кэша
 					const string cache = * it;
 					// Если нужно проводить обязательную валидацию данных
-					if(cache.compare("proxy-rervalid") == 0) rvalid = true;
-					// Если время жизни найдено, то определяем его
-					else if(cache.compare("s-maxage") == 0){
-						// Извлекачем значение времени
+					if((cache.compare("no-cache") == 0)
+					|| (cache.compare("proxy-rervalid") == 0)) rvalid = true;
+					// Проверяем время жизни
+					else {
+						// Выполняем поиск времени жизни для CDN
 						size_t pos = cache.find("s-maxage=");
 						// Если позиция найдена тогда извлекаем контент
 						if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
+						// Если время жизни не найдено
+						else {
+							// Извлекачем значение времени
+							pos = cache.find("max-age=");
+							// Если позиция найдена тогда извлекаем контент
+							if(pos != string::npos) age = ::atoi(cache.substr(pos, cache.length() - pos).c_str());
+						}
 					}
 				}
 			}
