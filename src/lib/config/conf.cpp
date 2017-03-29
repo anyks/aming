@@ -387,7 +387,7 @@ Config::Config(const string filename){
 		// Активируем разрешение connect прокси сервера
 		this->options = (ini.GetBoolean("proxy", "connect", true) ? OPT_CONNECT : OPT_NULL);
 		// Активируем вывод или скрытие названия прокси сервера
-		this->options = (this->options | (ini.GetBoolean("proxy", "hideagent", false) ? OPT_AGENT : OPT_NULL));
+		this->options = (this->options | (ini.GetBoolean("proxy", "agent", true) ? OPT_AGENT : OPT_NULL));
 		// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
 		this->options = (this->options | (ini.GetBoolean("proxy", "deblock", false) ? OPT_DEBLOCK : OPT_NULL));
 		// Активируем разрешение сжатия данных методом gzip
@@ -518,7 +518,7 @@ Config::Config(const string filename){
 			// Кеширование dns запросов
 			ini.GetBoolean("cache", "dns", CACHE_DNS),
 			// Кеширование часто-запрашиваемых страниц
-			ini.GetBoolean("cache", "response", CACHE_RESPONSE),
+			ini.GetBoolean("cache", "dat", CACHE_RESPONSE),
 			// Время жизни dns кэша в секундах
 			(time_t) getSeconds(ini.Get("cache", "dttl", CACHE_DTTL)),
 			// Каталог хранения кеш файлов
