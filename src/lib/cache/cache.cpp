@@ -884,7 +884,7 @@ Cache::ResultData Cache::getCache(HttpData & http){
 				// Если данные получены а остальных данных нет тогда удаляем кэш
 				} else rmCache(http);
 			// Удаляем файл если данных в нем нет
-			} else rmCache(http);
+			}// else rmCache(http);
 		}
 	}
 	// Выводим результат

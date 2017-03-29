@@ -25,6 +25,7 @@
 #define MOD_GZIP_ZLIB_WINDOWSIZE	15
 #define MOD_GZIP_ZLIB_CFACTOR		9
 #define MOD_GZIP_ZLIB_BSIZE			8096
+#define MOD_GZIP_ZLIB_CHUNK			1024
 
 // Устанавливаем пространство имен
 using namespace std;
@@ -165,15 +166,6 @@ class HttpData {
 					 * @param size размер данных
 					 */
 					Chunk(const char * data = NULL, const size_t size = 0);
-				};
-				/**
-				 * Структура размеров
-				 */
-				struct Map {
-					size_t intGzip;
-					size_t levelGzip;
-					size_t chunkSize;
-					size_t data;
 				};
 				// Уровень сжатия
 				u_int levelGzip;
@@ -325,7 +317,6 @@ class HttpData {
 		 * Dump Структура дампа
 		 */
 		struct Dump {
-			size_t intGzip;		// Активация внутреннего режима сжатия
 			size_t status;		// Статус код http запроса
 			size_t options;		// Параметры прокси сервера
 			size_t http;		// http запрос
@@ -359,6 +350,19 @@ class HttpData {
 			string port;		// Порт
 			string protocol;	// Протокол
 		};
+		/**
+		 * Gzip Параметры сжатия данных на уровне прокси сервера
+		 */
+		struct Gzip {
+			bool vary;					// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
+			int level;					// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
+			long length;				// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
+			size_t chunk;				// Максимальный размер чанка в байтах
+			string regex;				// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
+			vector <string> vhttp;		// Версия http протокола
+			vector <string> proxied;	// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
+			vector <string> types;		// Разрешает сжатие ответа методом gzip для указанных MIME-типов
+		};
 		// Параметры сжатия
 		bool intGzip;	// Активация внутреннего режима сжатия
 		bool extGzip;	// Активация внешнего режима сжатия
@@ -385,6 +389,8 @@ class HttpData {
 		HttpBody body;
 		// Заголовки http запроса
 		HttpHeaders headers;
+		// Параметры GZip
+		Gzip * gzipParams = NULL;
 		// Шаблоны ответов
 		map <u_short, Http> response;
 		/**
@@ -462,6 +468,12 @@ class HttpData {
 		 * @return результат проверки
 		 */
 		const bool isEndBody();
+		/**
+		 * compressIsAllowed Метод проверки активации режима сжатия данных на уровне прокси сервера
+		 * @param  userAgent агент браузера если существует
+		 * @return           результат проверки
+		 */
+		const bool compressIsAllowed(const string userAgent = "");
 		/**
 		 * getBodySize Метод получения размера тела http данных
 		 * @return размер тела данных
@@ -604,10 +616,8 @@ class HttpData {
 		void clear();
 		/**
 		 * initBody Метод инициализации объекта тела
-		 * @param chunk максимальный размер чанка в байтах
-		 * @param level тип сжатия
 		 */
-		void initBody(const size_t chunk = 1024, const int level = Z_DEFAULT_COMPRESSION);
+		void initBody();
 		/**
 		 * rmHeader Метод удаления заголовка
 		 * @param key название заголовка
@@ -633,6 +643,11 @@ class HttpData {
 		 * @param value значение
 		 */
 		void setHeader(const string key, const string value);
+		/**
+		 * setGzipParams Метод установки параметров сжатия gzip
+		 * @param params параметры сжатия
+		 */
+		void setGzipParams(void * params = NULL);
 		/**
 		 * setOptions Метод установки настроек прокси сервера
 		 * @param options данные для установки

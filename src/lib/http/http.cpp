@@ -565,46 +565,26 @@ void HttpData::HttpBody::clear(){
 void HttpData::HttpBody::set(const u_char * data, size_t size){
 	// Если данные существуют
 	if(size){
-		// Получаем размер структуры
-		size_t size_map = sizeof(Map);
-		// Если размер карты меньше общего размера
-		if(size_map < size){
+		// Размер полученных данных
+		size_t size_data;
+		// Извлекаем размер данных
+		memcpy(&size_data, data, sizeof(size_t));
+		// Запоминаем старое значение внутреннего сжатия
+		bool intGzip = this->intGzip;
+		// Если размер тела существует
+		if(size_data){
 			// Выполняем очистку
 			clear();
-			// Размеры полученных данных
-			size_t size_it = size_map;
-			// Извлекаем данные карты размеров
-			for(size_t i = 0, j = 0; i < size_map; i += sizeof(size_t), j++){
-				// Размер полученных данных
-				size_t size_data;
-				// Извлекаем размер данных
-				memcpy(&size_data, data + i, sizeof(size_t));
-				// Если данные верные
-				if(size_data && ((size_data + size_it) <= size)){
-					// Определяем тип извлекаемых данных
-					switch(j){
-						// Если это активация внутреннего сжатия
-						case 0: cpydata(data, size_data, size_it, &this->intGzip); break;
-						// Если это уровень сжатия
-						case 1: cpydata(data, size_data, size_it, &this->levelGzip); break;
-						// Если это размер чанков
-						case 2: cpydata(data, size_data, size_it, &this->chunkSize); break;
-						// Если это данные тела
-						case 3: {
-							// Выделяем динамически память
-							char * buffer = new char [size_data];
-							// Извлекаем данные адреса
-							memcpy(buffer, data + size_it, size_data);
-							// Добавляем данные тела
-							addData(buffer, size_data, size_data, true);
-							// Определяем смещение
-							size_it += size_data;
-							// Удаляем полученные данные
-							delete [] buffer;
-						} break;
-					}
-				}
-			}
+			// Возвращаем значение внутреннего сжатия
+			this->intGzip = intGzip;
+			// Выделяем динамически память
+			char * buffer = new char [size_data];
+			// Извлекаем данные адреса
+			memcpy(buffer, data + sizeof(size_data), size_data);
+			// Добавляем данные тела
+			addData(buffer, size_data, size_data, true);
+			// Удаляем полученные данные
+			delete [] buffer;
 		}
 	}
 }
@@ -848,31 +828,12 @@ const size_t HttpData::HttpBody::addData(const char * buffer, const size_t size,
 const u_char * HttpData::HttpBody::data(){
 	// Если данные заполнены
 	if(isEnd()){
-		// Объект размерности данных
-		Map sizes = {
-			sizeof(this->intGzip),
-			sizeof(this->levelGzip),
-			sizeof(this->chunkSize),
-			this->rody.size()
-		};
 		// Получаем размер структуры
-		const size_t size = sizeof(sizes);
+		const size_t size = this->rody.size();
 		// Получаем данные карты размеров
-		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
+		const u_char * map = reinterpret_cast <const u_char *> (&size);
 		// Выполняем копирование карты размеров
-		copy(map, map + size, back_inserter(this->raw));
-		// Получаем данные активации сжатия
-		const u_char * intGzip = reinterpret_cast <const u_char *> (&this->intGzip);
-		// Выполняем копирование активацию сжатия
-		copy(intGzip, intGzip + sizes.intGzip, back_inserter(this->raw));
-		// Получаем данные уровня сжатия
-		const u_char * levelGzip = reinterpret_cast <const u_char *> (&this->levelGzip);
-		// Выполняем копирование данных уровня сжатия
-		copy(levelGzip, levelGzip + sizes.levelGzip, back_inserter(this->raw));
-		// Получаем данные размера чанков
-		const u_char * chunkSize = reinterpret_cast <const u_char *> (&this->chunkSize);
-		// Выполняем копирование данных размера чанков
-		copy(chunkSize, chunkSize + sizes.chunkSize, back_inserter(this->raw));
+		copy(map, map + sizeof(size), back_inserter(this->raw));
 		// Выполняем копирование данных тела
 		copy(this->rody.begin(), this->rody.end(), back_inserter(this->raw));
 	}
@@ -1401,6 +1362,200 @@ const bool HttpData::isEndBody(){
 	return this->body.isEnd();
 }
 /**
+ * compressIsAllowed Метод проверки активации режима сжатия данных на уровне прокси сервера
+ * @param  userAgent агент браузера если существует
+ * @return           результат проверки
+ */
+const bool HttpData::compressIsAllowed(const string userAgent){
+	// Флаг установки режима сжатия
+	bool gzip = false;
+	// Если контент пришел не сжатым а сжатие требуется
+	if(this->gzipParams
+	&& (this->options & OPT_PGZIP)
+	&& isEndHeaders()
+	&& getHeader("content-encoding").empty()){
+		// Если это режим сжатия, тогда отправляем завершающие данные
+		if(!isIntGzip()){
+			// Получаем размер тела
+			string clength = getHeader("content-length");
+			// Получаем тип данных чанкованием
+			string chunked = getHeader("transfer-encoding");
+			// Получаем размер контента
+			size_t contentLength = (!clength.empty() ? ::atoi(clength.c_str()) : 0);
+			// Если размер контента не найден тогда проверяем на чанкование
+			if(!contentLength && (!chunked.empty() && (chunked.find("chunked") != string::npos))) contentLength = 2;
+			// Если размер контента не найден но это закрытие подключения
+			else if(!contentLength && isClose()) contentLength = 1;
+			// Если размер контента не найден тогда выходим
+			if(!contentLength) return gzip;
+			// Флаг установки режима сжатия
+			gzip = true;
+			// Результат работы регулярного выражения
+			smatch match;
+			// Получаем наличие заголовка Via
+			string via = getHeader("via");
+			// Получаем тип файла
+			string cmime = getHeader("content-type");
+			// Устанавливаем правило регулярного выражения
+			regex e(this->gzipParams->regex, regex::ECMAScript | regex::icase);
+			// Получаем версию протокола
+			for(auto it = this->gzipParams->vhttp.begin(); it != this->gzipParams->vhttp.end(); it++){
+				// Поверяем на соответствие версии
+				if(getVersion() == float(::atof(it->c_str()))){
+					// Запоминаем что протокол проверку прошел
+					gzip = true;
+					// Выходим
+					break;
+				// Запрещаем сжатие
+				} else gzip = false;
+			}
+			// Если сжатие разрешено
+			if(gzip){
+				// Проверяем на тип данных
+				for(auto it = this->gzipParams->types.begin(); it != this->gzipParams->types.end(); it++){
+					// Выполняем проверку на тип данных
+					if((it->compare("*") == 0) || (cmime.find(* it) != string::npos)){
+						// Запоминаем что протокол проверку прошел
+						gzip = true;
+						// Выходим
+						break;
+					// Запрещаем сжатие
+					} else gzip = false;
+				}
+				// Если сжатие разрешено
+				if(gzip && !via.empty()){
+					// Readme: http://nginx.org/ru/docs/http/ngx_http_gzip_module.html
+					// Запрещаем сжатие
+					gzip = false;
+					// Переходим по всем параметрам
+					for(auto it = this->gzipParams->proxied.begin(); it != this->gzipParams->proxied.end(); it++){
+						// Получаем параметр
+						const string param = * it;
+						// Запрещаем сжатие для всех проксированных запросов, игнорируя остальные параметры;
+						if(param.compare("off") == 0){
+							// Запрещаем сжатие
+							gzip = false;
+							// Выходим
+							break;
+						// Разрешаем сжатие для всех проксированных запросов;
+						} else if(param.compare("any") == 0) {
+							// Разрешаем сжатие
+							gzip = true;
+							// Выходим
+							break;
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Expires” со значением, запрещающим кэширование;
+						} else if(param.compare("expired") == 0) {
+							// Получаем наличие заголовка Expires
+							if(!getHeader("expires").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “no-cache”;
+						} else if(param.compare("no-cache") == 0) {
+							// Получаем наличие заголовка Cache-Control
+							string cc = getHeader("cache-control");
+							// Если заголовок существует
+							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “no-store”;
+						} else if(param.compare("no-store") == 0) {
+							// Получаем наличие заголовка Cache-Control
+							string cc = getHeader("cache-control");
+							// Если заголовок существует
+							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “private”;
+						} else if(param.compare("private") == 0) {
+							// Получаем наличие заголовка Cache-Control
+							string cc = getHeader("cache-control");
+							// Если заголовок существует
+							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа нет поля “Last-Modified”;
+						} else if(param.compare("no_last_modified") == 0) {
+							// Получаем наличие заголовка Last-Modified
+							if(getHeader("last-modified").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке ответа нет поля “ETag”;
+						} else if(param.compare("no_etag") == 0) {
+							// Получаем наличие заголовка ETag
+							if(getHeader("etag").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						// Разрешаем сжатие, если в заголовке запроса есть поле “Authorization”;
+						} else if(param.compare("auth") == 0) {
+							// Получаем наличие заголовка Authorization
+							if(!getHeader("authorization").empty()) gzip = true;
+							// Если проверка не пройдена
+							else {
+								// Запрещаем сжатие
+								gzip = false;
+								// Выходим
+								break;
+							}
+						}
+					}
+				}
+				// Проверяем есть ли размер
+				if(gzip && contentLength){
+					// Проверяем соответствует ли размер
+					if(this->gzipParams->length > contentLength) gzip = false;
+				}
+				// Если сжатие разрешено
+				if(gzip && !userAgent.empty()){
+					// Выполняем проверку
+					regex_search(userAgent, match, e);
+					// Если проверка не пройдена тогда запрещаем сжатие
+					if(!match.empty()) gzip = false;
+				}
+				// Если запрещено выводить заголовок Vary
+				if(gzip && this->gzipParams->vary){
+					// Считываем заголовок
+					string vary = getHeader("vary");
+					// Проверяем наличие
+					if(!vary.empty() && (toCase(vary)
+					.find("accept-encoding") != string::npos)) rmHeader("vary");
+				}
+			}
+		}
+	}
+	// Выводим результат работы метода
+	return gzip;
+}
+/**
  * getBodySize Метод получения размера тела http данных
  * @return размер тела данных
  */
@@ -1750,7 +1905,6 @@ const u_char * HttpData::data(){
 	if(isEndBody() && isEndHeaders()){
 		// Объект размерности данных
 		Dump sizes = {
-			sizeof(this->intGzip),
 			sizeof(this->status),
 			sizeof(this->options),
 			this->http.size(),
@@ -1774,10 +1928,6 @@ const u_char * HttpData::data(){
 		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
 		// Выполняем копирование карты размеров
 		copy(map, map + size, back_inserter(this->raw));
-		// Получаем данные внутреннего сжатия
-		const u_char * gzip = reinterpret_cast <const u_char *> (&this->intGzip);
-		// Выполняем копирование значение внутреннего сжатия
-		copy(gzip, gzip + sizes.intGzip, back_inserter(this->raw));
 		// Получаем данные статуса
 		const u_char * status = reinterpret_cast <const u_char *> (&this->status);
 		// Выполняем копирование статуса
@@ -1848,38 +1998,36 @@ void HttpData::set(const u_char * data, size_t size){
 				if(size_data && ((size_data + size_it) <= size)){
 					// Определяем тип извлекаемых данных
 					switch(j){
-						// Если это внутреннее сжатие
-						case 0: cpydata(data, size_data, size_it, &this->intGzip); break;
 						// Если это статус запроса
-						case 1: cpydata(data, size_data, size_it, &this->status); break;
+						case 0: cpydata(data, size_data, size_it, &this->status); break;
 						// Если это настройки
-						case 2: cpydata(data, size_data, size_it, &this->options); break;
+						case 1: cpydata(data, size_data, size_it, &this->options); break;
 						// Если это http запрос
-						case 3: cpydata(data, size_data, size_it, this->http); break;
+						case 2: cpydata(data, size_data, size_it, this->http); break;
 						// Если это тип авторизации
-						case 4: cpydata(data, size_data, size_it, this->auth); break;
+						case 3: cpydata(data, size_data, size_it, this->auth); break;
 						// Если это путь запроса
-						case 5: cpydata(data, size_data, size_it, this->path); break;
+						case 4: cpydata(data, size_data, size_it, this->path); break;
 						// Если это хост запроса
-						case 6: cpydata(data, size_data, size_it, this->host); break;
+						case 5: cpydata(data, size_data, size_it, this->host); break;
 						// Если это порт запроса
-						case 7: cpydata(data, size_data, size_it, this->port); break;
+						case 6: cpydata(data, size_data, size_it, this->port); break;
 						// Если это логин пользователя
-						case 8: cpydata(data, size_data, size_it, this->login); break;
+						case 7: cpydata(data, size_data, size_it, this->login); break;
 						// Если это метод запроса
-						case 9: cpydata(data, size_data, size_it, this->method); break;
+						case 8: cpydata(data, size_data, size_it, this->method); break;
 						// Если это название приложения
-						case 10: cpydata(data, size_data, size_it, this->appName); break;
+						case 9: cpydata(data, size_data, size_it, this->appName); break;
 						// Если это версия протокола
-						case 11: cpydata(data, size_data, size_it, this->version); break;
+						case 10: cpydata(data, size_data, size_it, this->version); break;
 						// Если это протокол запроса
-						case 12: cpydata(data, size_data, size_it, this->protocol); break;
+						case 11: cpydata(data, size_data, size_it, this->protocol); break;
 						// Если это пароль пользователя
-						case 13: cpydata(data, size_data, size_it, this->password); break;
+						case 12: cpydata(data, size_data, size_it, this->password); break;
 						// Если это версия приложения
-						case 14: cpydata(data, size_data, size_it, this->appVersion); break;
+						case 13: cpydata(data, size_data, size_it, this->appVersion); break;
 						// Если это заголовки запроса
-						case 15: {
+						case 14: {
 							// Выделяем динамически память
 							u_char * buffer = new u_char [size_data];
 							// Извлекаем данные адреса
@@ -1892,11 +2040,15 @@ void HttpData::set(const u_char * data, size_t size){
 							delete [] buffer;
 						} break;
 						// Если это тело запроса
-						case 16: {
+						case 15: {
 							// Выделяем динамически память
 							u_char * buffer = new u_char [size_data];
 							// Извлекаем данные адреса
 							memcpy(buffer, data + size_it, size_data);
+							// Выполняем проверку сжатия, если разрешено то устанавливаем
+							if(compressIsAllowed()) setGzip();
+							// Выполняем инициализацию тела
+							initBody();
 							// Запоминаем результат
 							this->body.set(buffer, size_data);
 							// Определяем смещение
@@ -1938,10 +2090,12 @@ void HttpData::clear(){
 }
 /**
  * initBody Метод инициализации объекта тела
- * @param chunk максимальный размер чанка в байтах
- * @param level тип сжатия
  */
-void HttpData::initBody(const size_t chunk, const int level){
+void HttpData::initBody(){
+	// Получаем уровень сжатия
+	int level = (this->gzipParams != NULL ? this->gzipParams->level : Z_DEFAULT_COMPRESSION);
+	// Получаем размер чанков
+	size_t chunk = (this->gzipParams != NULL ? this->gzipParams->chunk : MOD_GZIP_ZLIB_CHUNK);
 	// Выполняем создание объекта body
 	HttpBody body = HttpBody(chunk, level, this->intGzip, this->extGzip);
 	// Запоминаем строку body
@@ -2017,6 +2171,14 @@ void HttpData::setHeader(const string key, const string value){
 		// Устанавливаем заголовок
 		this->headers.append(key, value);
 	}
+}
+/**
+ * setGzipParams Метод установки параметров сжатия gzip
+ * @param params параметры сжатия
+ */
+void HttpData::setGzipParams(void * params){
+	// Если параметры переданы
+	if(params) this->gzipParams = reinterpret_cast <Gzip *> (params);
 }
 /**
  * setOptions Метод установки настроек прокси сервера

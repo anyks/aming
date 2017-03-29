@@ -199,196 +199,6 @@ void BufferHttpProxy::freeze(){
 	}
 }
 /**
- * setCompress Метод проверки активации режима сжатия данных на уровне прокси сервера
- */
-void BufferHttpProxy::setCompress(){
-	// Если контент пришел не сжатым а сжатие требуется
-	if((this->proxy->config->options & OPT_PGZIP)
-	&& !this->client.connect
-	&& this->httpResponse.isEndHeaders()
-	&& this->httpResponse.getHeader("content-encoding").empty()){
-		// Если это режим сжатия, тогда отправляем завершающие данные
-		if(!this->httpResponse.isIntGzip()){
-			// Получаем размер тела
-			string clength = this->httpResponse.getHeader("content-length");
-			// Получаем тип данных чанкованием
-			string chunked = this->httpResponse.getHeader("transfer-encoding");
-			// Получаем размер контента
-			size_t contentLength = (!clength.empty() ? ::atoi(clength.c_str()) : 0);
-			// Если размер контента не найден тогда проверяем на чанкование
-			if(!contentLength && (!chunked.empty() && (chunked.find("chunked") != string::npos))) contentLength = 2;
-			// Если размер контента не найден но это закрытие подключения
-			else if(!contentLength && this->httpResponse.isClose()) contentLength = 1;
-			// Если размер контента не найден тогда выходим
-			if(!contentLength) return;
-			// Флаг установки режима сжатия
-			bool gzip = true;
-			// Результат работы регулярного выражения
-			smatch match;
-			// Получаем наличие заголовка Via
-			string via = this->httpResponse.getHeader("via");
-			// Получаем тип файла
-			string cmime = this->httpResponse.getHeader("content-type");
-			// Устанавливаем правило регулярного выражения
-			regex e(this->proxy->config->gzip.regex, regex::ECMAScript | regex::icase);
-			// Получаем версию протокола
-			for(auto it = this->proxy->config->gzip.vhttp.begin(); it != this->proxy->config->gzip.vhttp.end(); it++){
-				// Поверяем на соответствие версии
-				if(this->httpResponse.getVersion() == float(::atof(it->c_str()))){
-					// Запоминаем что протокол проверку прошел
-					gzip = true;
-					// Выходим
-					break;
-				// Запрещаем сжатие
-				} else gzip = false;
-			}
-			// Если сжатие разрешено
-			if(gzip){
-				// Проверяем на тип данных
-				for(auto it = this->proxy->config->gzip.types.begin(); it != this->proxy->config->gzip.types.end(); it++){
-					// Выполняем проверку на тип данных
-					if((it->compare("*") == 0) || (cmime.find(* it) != string::npos)){
-						// Запоминаем что протокол проверку прошел
-						gzip = true;
-						// Выходим
-						break;
-					// Запрещаем сжатие
-					} else gzip = false;
-				}
-				// Если сжатие разрешено
-				if(gzip && !via.empty()){
-					// Readme: http://nginx.org/ru/docs/http/ngx_http_gzip_module.html
-					// Запрещаем сжатие
-					gzip = false;
-					// Переходим по всем параметрам
-					for(auto it = this->proxy->config->gzip.proxied.begin(); it != this->proxy->config->gzip.proxied.end(); it++){
-						// Получаем параметр
-						const string param = * it;
-						// Запрещаем сжатие для всех проксированных запросов, игнорируя остальные параметры;
-						if(param.compare("off") == 0){
-							// Запрещаем сжатие
-							gzip = false;
-							// Выходим
-							break;
-						// Разрешаем сжатие для всех проксированных запросов;
-						} else if(param.compare("any") == 0) {
-							// Разрешаем сжатие
-							gzip = true;
-							// Выходим
-							break;
-						// Разрешаем сжатие, если в заголовке ответа есть поле “Expires” со значением, запрещающим кэширование;
-						} else if(param.compare("expired") == 0) {
-							// Получаем наличие заголовка Expires
-							if(!this->httpResponse.getHeader("expires").empty()) gzip = true;
-							// Если проверка не пройдена
-							else {
-								// Запрещаем сжатие
-								gzip = false;
-								// Выходим
-								break;
-							}
-						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “no-cache”;
-						} else if(param.compare("no-cache") == 0) {
-							// Получаем наличие заголовка Cache-Control
-							string cc = this->httpResponse.getHeader("cache-control");
-							// Если заголовок существует
-							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
-							// Если проверка не пройдена
-							else {
-								// Запрещаем сжатие
-								gzip = false;
-								// Выходим
-								break;
-							}
-						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “no-store”;
-						} else if(param.compare("no-store") == 0) {
-							// Получаем наличие заголовка Cache-Control
-							string cc = this->httpResponse.getHeader("cache-control");
-							// Если заголовок существует
-							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
-							// Если проверка не пройдена
-							else {
-								// Запрещаем сжатие
-								gzip = false;
-								// Выходим
-								break;
-							}
-						// Разрешаем сжатие, если в заголовке ответа есть поле “Cache-Control” с параметром “private”;
-						} else if(param.compare("private") == 0) {
-							// Получаем наличие заголовка Cache-Control
-							string cc = this->httpResponse.getHeader("cache-control");
-							// Если заголовок существует
-							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
-							// Если проверка не пройдена
-							else {
-								// Запрещаем сжатие
-								gzip = false;
-								// Выходим
-								break;
-							}
-						// Разрешаем сжатие, если в заголовке ответа нет поля “Last-Modified”;
-						} else if(param.compare("no_last_modified") == 0) {
-							// Получаем наличие заголовка Last-Modified
-							if(this->httpResponse.getHeader("last-modified").empty()) gzip = true;
-							// Если проверка не пройдена
-							else {
-								// Запрещаем сжатие
-								gzip = false;
-								// Выходим
-								break;
-							}
-						// Разрешаем сжатие, если в заголовке ответа нет поля “ETag”;
-						} else if(param.compare("no_etag") == 0) {
-							// Получаем наличие заголовка ETag
-							if(this->httpResponse.getHeader("etag").empty()) gzip = true;
-							// Если проверка не пройдена
-							else {
-								// Запрещаем сжатие
-								gzip = false;
-								// Выходим
-								break;
-							}
-						// Разрешаем сжатие, если в заголовке запроса есть поле “Authorization”;
-						} else if(param.compare("auth") == 0) {
-							// Получаем наличие заголовка Authorization
-							if(!this->httpResponse.getHeader("authorization").empty()) gzip = true;
-							// Если проверка не пройдена
-							else {
-								// Запрещаем сжатие
-								gzip = false;
-								// Выходим
-								break;
-							}
-						}
-					}
-				}
-				// Проверяем есть ли размер
-				if(gzip && contentLength){
-					// Проверяем соответствует ли размер
-					if(this->proxy->config->gzip.length > contentLength) gzip = false;
-				}
-				// Если сжатие разрешено
-				if(gzip){
-					// Выполняем проверку
-					regex_search(this->client.useragent, match, e);
-					// Если проверка не пройдена тогда запрещаем сжатие
-					if(!match.empty()) gzip = false;
-				}
-				// Если запрещено выводить заголовок Vary
-				if(gzip && this->proxy->config->gzip.vary){
-					// Считываем заголовок
-					string vary = this->httpResponse.getHeader("vary");
-					// Проверяем наличие
-					if(!vary.empty() && (toCase(vary)
-					.find("accept-encoding") != string::npos)) this->httpResponse.rmHeader("vary");
-				}
-			}
-			// Устанавливаем что идет сжатие
-			if(gzip) this->httpResponse.setGzip();
-		}
-	}
-}
-/**
  * checkUpgrade Метод проверки на желание смены протокола
  */
 void BufferHttpProxy::checkUpgrade(){
@@ -1298,6 +1108,8 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			if(http->httpResponse.isEndHeaders()){
 				// Получаем статус запроса
 				const u_int status = http->httpResponse.getStatus();
+				// Устанавливаем параметры сжатия
+				http->httpResponse.setGzipParams(&http->proxy->config->gzip);
 				// Если данные соответствуют данным из кэша
 				if((status == 304) && !http->cache.empty()){
 					// Получаем время жизни кэша
@@ -1306,15 +1118,22 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					http->httpResponse.set(http->cache.data(), http->cache.size());
 					// Если время жизни указано то добавляем его
 					if(!age.empty()) http->httpResponse.setHeader("Age", age);
-					// Активируем сжатие данных, на стороне прокси сервера
-					http->setCompress();
-					// Выполняем инициализацию тела данных
-					http->httpResponse.initBody(
-						http->proxy->config->gzip.chunk,
-						http->proxy->config->gzip.level
-					);
+
+					cout << " ================ Cache 2 ================ " << endl;
+
 					// Отправляем ответ клиенту
 					http->sendClient();
+
+					// Очищаем объект http данных
+					http->httpRequest.clear();
+					// Удаляем объект подключения
+					if(!http->parser.httpData.empty()){
+						// Удаляем из массива объект запроса
+						http->parser.httpData.erase(http->parser.httpData.begin());
+					}
+					// Если данные в массиве существуют тогда продолжаем загрузку
+					if(!http->parser.httpData.empty()
+					&& !http->httpResponse.isClose()) do_request(http);
 					// Выходим из функции
 					return;
 				}
@@ -1344,12 +1163,10 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Проверяем является ли это переключение на другой протокол
 				http->checkUpgrade();
 				// Активируем сжатие данных, на стороне прокси сервера
-				http->setCompress();
+				if(!http->client.connect
+				&& http->httpResponse.compressIsAllowed(http->client.useragent)) http->httpResponse.setGzip();
 				// Выполняем инициализацию тела данных
-				http->httpResponse.initBody(
-					http->proxy->config->gzip.chunk,
-					http->proxy->config->gzip.level
-				);
+				http->httpResponse.initBody();
 				// Если данных нет или это не сжатие на стороне прокси, отправляем заголовки
 				if(!http->httpResponse.isIntGzip()
 				&& !http->httpResponse.isClose()) http->sendClient();
@@ -1415,8 +1232,22 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							if(cache.age) http->httpRequest.setHeader("Age", to_string(cache.age));
 							// Добавляем данные из кэша
 							http->httpResponse.set(cache.http.data(), cache.http.size());
+
+							cout << " ================ Cache 1 ================ " << endl;
+
 							// Отправляем ответ клиенту
 							http->sendClient();
+							
+							// Очищаем объект http данных
+							http->httpRequest.clear();
+							// Удаляем объект подключения
+							if(!http->parser.httpData.empty()){
+								// Удаляем из массива объект запроса
+								http->parser.httpData.erase(http->parser.httpData.begin());
+							}
+							// Если данные в массиве существуют тогда продолжаем загрузку
+							if(!http->parser.httpData.empty()
+							&& !http->httpResponse.isClose()) do_request(http);
 							// Выходим из функции
 							return;
 						// Если нужна ревалидация

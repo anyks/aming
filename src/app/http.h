@@ -211,10 +211,6 @@ class BufferHttpProxy {
 		 */
 		void freeze();
 		/**
-		 * setCompress Метод проверки активации режима сжатия данных на уровне прокси сервера
-		 */
-		void setCompress();
-		/**
 		 * checkUpgrade Метод проверки на желание смены протокола
 		 */
 		void checkUpgrade();
