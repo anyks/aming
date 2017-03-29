@@ -771,7 +771,7 @@ const bool Cache::checkEnabledCache(HttpData & http){
 				// Если время жизни найдено, то определяем его
 				} else if(ccMaxAge || ccsMaxAge){
 					// Возраст жизни кэша
-					size_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
+					size_t age = 0;
 					// Извлекачем значение времени
 					const size_t pos = cache.find("=");
 					// Если позиция найдена тогда извлекаем контент
@@ -779,6 +779,10 @@ const bool Cache::checkEnabledCache(HttpData & http){
 					// Если возраст больше нуля и это публичное кэширование тогда разрешаем
 					if(!age || (sdate && ((sdate + age) < cdate))) result = false;
 					else result = true;
+					// Если кэш на сервере еще не устарел тогда разрешаем кэширование
+					if(age && (!ag.empty() && (::atoi(ag.c_str()) < age))) result = true;
+					// Если кэш просто устарел тогда запрещаем кэширование
+					else if(age && !ag.empty()) result = false;
 				}
 				// Если установлен etag или дата последней модификации значит разрешаем кэширование
 				if(!et.empty() || !lm.empty()) result = true;
@@ -862,6 +866,8 @@ Cache::ResultData Cache::getCache(HttpData & http){
 					// Проверяем устарел ли файл
 					if((mdate + cache.age) < date) check = false;
 					else check = true;
+					// Запоминаем время жизни
+					result.age = (date - mdate);
 				}
 				// Если кэш устарел но указан eTag или дата последней модификации, или же кэш не устарел
 				if(check || !cache.etag.empty() || (cache.modified < date)){
@@ -984,9 +990,7 @@ void Cache::setCache(HttpData & http){
 			// Обязательная валидация данных
 			bool valid = false;
 			// Возраст жизни кэша
-			time_t expires = 0, modified = 0, date = time(NULL);
-			// Возраст жизни кэша
-			time_t age = (!ag.empty() ? ::atoi(ag.c_str()) : 0);
+			time_t age = 0, expires = 0, modified = 0, date = time(NULL);
 			// Если дата сервера установлена
 			if(!dt.empty()) date = strToTime(dt.c_str());
 			// Если дата модификации данных указана
@@ -1012,6 +1016,8 @@ void Cache::setCache(HttpData & http){
 						size_t pos = cache.find("=");
 						// Если позиция найдена тогда извлекаем контент
 						if(pos != string::npos) age = ::atoi(cache.substr(pos + 1, cache.length() - (pos + 1)).c_str());
+						// Если время жизни указано то вычитаем из него время которое кэш уже прожил
+						if(age && !ag.empty()) age -= ::atoi(ag.c_str());
 					}
 				}
 			}

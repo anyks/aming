@@ -325,6 +325,7 @@ class HttpData {
 		 * Dump Структура дампа
 		 */
 		struct Dump {
+			size_t intGzip;		// Активация внутреннего режима сжатия
 			size_t status;		// Статус код http запроса
 			size_t options;		// Параметры прокси сервера
 			size_t http;		// http запрос

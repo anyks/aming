@@ -1300,8 +1300,19 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				const u_int status = http->httpResponse.getStatus();
 				// Если данные соответствуют данным из кэша
 				if((status == 304) && !http->cache.empty()){
+					// Получаем время жизни кэша
+					const string age = http->httpResponse.getHeader("age");
 					// Добавляем данные из кэша
 					http->httpResponse.set(http->cache.data(), http->cache.size());
+					// Если время жизни указано то добавляем его
+					if(!age.empty()) http->httpResponse.setHeader("Age", age);
+					// Активируем сжатие данных, на стороне прокси сервера
+					http->setCompress();
+					// Выполняем инициализацию тела данных
+					http->httpResponse.initBody(
+						http->proxy->config->gzip.chunk,
+						http->proxy->config->gzip.level
+					);
 					// Отправляем ответ клиенту
 					http->sendClient();
 					// Выходим из функции
@@ -1334,14 +1345,14 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				http->checkUpgrade();
 				// Активируем сжатие данных, на стороне прокси сервера
 				http->setCompress();
-				// Если данных нет или это не сжатие на стороне прокси, отправляем заголовки
-				if(!http->httpResponse.isIntGzip()
-				&& !http->httpResponse.isClose()) http->sendClient();
 				// Выполняем инициализацию тела данных
 				http->httpResponse.initBody(
 					http->proxy->config->gzip.chunk,
 					http->proxy->config->gzip.level
 				);
+				// Если данных нет или это не сжатие на стороне прокси, отправляем заголовки
+				if(!http->httpResponse.isIntGzip()
+				&& !http->httpResponse.isClose()) http->sendClient();
 				// Если данные есть тогда продолжаем обработку данных
 				if(evbuffer_get_length(input)) send_http_data(http);
 			}
@@ -1400,6 +1411,8 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					if(!cache.http.empty()){
 						// Если ревалидация не нужна
 						if(!cache.valid){
+							// Добавляем заголовок Age
+							if(cache.age) http->httpRequest.setHeader("Age", to_string(cache.age));
 							// Добавляем данные из кэша
 							http->httpResponse.set(cache.http.data(), cache.http.size());
 							// Отправляем ответ клиенту

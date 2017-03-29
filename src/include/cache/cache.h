@@ -131,6 +131,8 @@ class Cache {
 		struct ResultData {
 			// Обязательная ревалидация
 			bool valid;
+			// Возраст кэша
+			time_t age;
 			// Etag кэша
 			string etag;
 			// Дата модификации кэша

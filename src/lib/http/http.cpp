@@ -58,10 +58,14 @@ const u_char * HttpData::HttpHeaders::data(){
 		const size_t size = getHeadersSize();
 		// Переходим по всему фектору заголовков
 		for(size_t i = 0; i < size; i++){
-			// Добавляем заголовок
-			headers.append(this->headers[i].head + string("<-|params|->") + this->headers[i].value);
-			// Если это не последний элемент то добавляем разделитель
-			if(i < (size - 1)) headers.append("<-|heads|->");
+			// Если это не заголовок Age
+			if((toCase(this->headers[i].head).compare("age") != 0)
+			&& (toCase(this->headers[i].head).compare("content-encoding") != 0)){
+				// Добавляем заголовок
+				headers.append(this->headers[i].head + string("<-|params|->") + this->headers[i].value);
+				// Если это не последний элемент то добавляем разделитель
+				if(i < (size - 1)) headers.append("<-|heads|->");
+			}
 		}
 		// Заполняем контейнер данными
 		this->raw.assign(headers.begin(), headers.end());
@@ -1746,6 +1750,7 @@ const u_char * HttpData::data(){
 	if(isEndBody() && isEndHeaders()){
 		// Объект размерности данных
 		Dump sizes = {
+			sizeof(this->intGzip),
 			sizeof(this->status),
 			sizeof(this->options),
 			this->http.size(),
@@ -1769,6 +1774,10 @@ const u_char * HttpData::data(){
 		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
 		// Выполняем копирование карты размеров
 		copy(map, map + size, back_inserter(this->raw));
+		// Получаем данные внутреннего сжатия
+		const u_char * gzip = reinterpret_cast <const u_char *> (&this->intGzip);
+		// Выполняем копирование значение внутреннего сжатия
+		copy(gzip, gzip + sizes.intGzip, back_inserter(this->raw));
 		// Получаем данные статуса
 		const u_char * status = reinterpret_cast <const u_char *> (&this->status);
 		// Выполняем копирование статуса
@@ -1839,36 +1848,38 @@ void HttpData::set(const u_char * data, size_t size){
 				if(size_data && ((size_data + size_it) <= size)){
 					// Определяем тип извлекаемых данных
 					switch(j){
+						// Если это внутреннее сжатие
+						case 0: cpydata(data, size_data, size_it, &this->intGzip); break;
 						// Если это статус запроса
-						case 0: cpydata(data, size_data, size_it, &this->status); break;
+						case 1: cpydata(data, size_data, size_it, &this->status); break;
 						// Если это настройки
-						case 1: cpydata(data, size_data, size_it, &this->options); break;
+						case 2: cpydata(data, size_data, size_it, &this->options); break;
 						// Если это http запрос
-						case 2: cpydata(data, size_data, size_it, this->http); break;
+						case 3: cpydata(data, size_data, size_it, this->http); break;
 						// Если это тип авторизации
-						case 3: cpydata(data, size_data, size_it, this->auth); break;
+						case 4: cpydata(data, size_data, size_it, this->auth); break;
 						// Если это путь запроса
-						case 4: cpydata(data, size_data, size_it, this->path); break;
+						case 5: cpydata(data, size_data, size_it, this->path); break;
 						// Если это хост запроса
-						case 5: cpydata(data, size_data, size_it, this->host); break;
+						case 6: cpydata(data, size_data, size_it, this->host); break;
 						// Если это порт запроса
-						case 6: cpydata(data, size_data, size_it, this->port); break;
+						case 7: cpydata(data, size_data, size_it, this->port); break;
 						// Если это логин пользователя
-						case 7: cpydata(data, size_data, size_it, this->login); break;
+						case 8: cpydata(data, size_data, size_it, this->login); break;
 						// Если это метод запроса
-						case 8: cpydata(data, size_data, size_it, this->method); break;
+						case 9: cpydata(data, size_data, size_it, this->method); break;
 						// Если это название приложения
-						case 9: cpydata(data, size_data, size_it, this->appName); break;
+						case 10: cpydata(data, size_data, size_it, this->appName); break;
 						// Если это версия протокола
-						case 10: cpydata(data, size_data, size_it, this->version); break;
+						case 11: cpydata(data, size_data, size_it, this->version); break;
 						// Если это протокол запроса
-						case 11: cpydata(data, size_data, size_it, this->protocol); break;
+						case 12: cpydata(data, size_data, size_it, this->protocol); break;
 						// Если это пароль пользователя
-						case 12: cpydata(data, size_data, size_it, this->password); break;
+						case 13: cpydata(data, size_data, size_it, this->password); break;
 						// Если это версия приложения
-						case 13: cpydata(data, size_data, size_it, this->appVersion); break;
+						case 14: cpydata(data, size_data, size_it, this->appVersion); break;
 						// Если это заголовки запроса
-						case 14: {
+						case 15: {
 							// Выделяем динамически память
 							u_char * buffer = new u_char [size_data];
 							// Извлекаем данные адреса
@@ -1881,7 +1892,7 @@ void HttpData::set(const u_char * data, size_t size){
 							delete [] buffer;
 						} break;
 						// Если это тело запроса
-						case 15: {
+						case 16: {
 							// Выделяем динамически память
 							u_char * buffer = new u_char [size_data];
 							// Извлекаем данные адреса
