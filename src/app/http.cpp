@@ -333,11 +333,21 @@ void BufferHttpProxy::sendServer(){
 	this->sleep(this->client.request.size(), false);
 	// Отправляем серверу сообщение
 	bufferevent_write(this->events.server, this->client.request.data(), this->client.request.size());
+}
+/**
+ * next Метод перехода к следующему шагу загрузки в очереди KeepAlive
+ */
+void BufferHttpProxy::next(){
+	// Очищаем объект http данных
+	this->httpRequest.clear();
 	// Удаляем объект подключения
 	if(!this->parser.httpData.empty()){
 		// Удаляем из массива объект запроса
 		this->parser.httpData.erase(this->parser.httpData.begin());
 	}
+	// Если данные в массиве существуют тогда продолжаем загрузку
+	if(!this->parser.httpData.empty()
+	&& !this->httpResponse.isClose()) HttpProxy::do_request(this);
 }
 /**
  * BufferHttpProxy Конструктор
@@ -1053,11 +1063,8 @@ void HttpProxy::send_http_data(void * ctx){
 						http->proxy->log->write_data(http->client.ip, log);
 						// Добавляем данные в кэш
 						http->proxy->cache->setCache(http->httpResponse);
-						// Очищаем объект http данных
-						http->httpRequest.clear();
-						// Если данные в массиве существуют тогда продолжаем загрузку
-						if(!http->parser.httpData.empty()
-						&& !http->httpResponse.isClose()) do_request(http);
+						// Продолжаем дальше
+						http->next();
 					}
 				}
 				// Удаляем данные из буфера
@@ -1118,22 +1125,10 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					http->httpResponse.set(http->cache.data(), http->cache.size());
 					// Если время жизни указано то добавляем его
 					if(!age.empty()) http->httpResponse.setHeader("Age", age);
-
-					cout << " ================ Cache 2 ================ " << endl;
-
 					// Отправляем ответ клиенту
 					http->sendClient();
-
-					// Очищаем объект http данных
-					http->httpRequest.clear();
-					// Удаляем объект подключения
-					if(!http->parser.httpData.empty()){
-						// Удаляем из массива объект запроса
-						http->parser.httpData.erase(http->parser.httpData.begin());
-					}
-					// Если данные в массиве существуют тогда продолжаем загрузку
-					if(!http->parser.httpData.empty()
-					&& !http->httpResponse.isClose()) do_request(http);
+					// Продолжаем дальше
+					http->next();
 					// Выходим из функции
 					return;
 				}
@@ -1232,22 +1227,10 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							if(cache.age) http->httpRequest.setHeader("Age", to_string(cache.age));
 							// Добавляем данные из кэша
 							http->httpResponse.set(cache.http.data(), cache.http.size());
-
-							cout << " ================ Cache 1 ================ " << endl;
-
 							// Отправляем ответ клиенту
 							http->sendClient();
-							
-							// Очищаем объект http данных
-							http->httpRequest.clear();
-							// Удаляем объект подключения
-							if(!http->parser.httpData.empty()){
-								// Удаляем из массива объект запроса
-								http->parser.httpData.erase(http->parser.httpData.begin());
-							}
-							// Если данные в массиве существуют тогда продолжаем загрузку
-							if(!http->parser.httpData.empty()
-							&& !http->httpResponse.isClose()) do_request(http);
+							// Продолжаем дальше
+							http->next();
 							// Выходим из функции
 							return;
 						// Если нужна ревалидация

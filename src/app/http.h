@@ -203,6 +203,10 @@ class BufferHttpProxy {
 		 */
 		void closeServer();
 		/**
+		 * next Метод перехода к следующему шагу загрузки в очереди KeepAlive
+		 */
+		void next();
+		/**
 		 * close Метод закрытия подключения
 		 */
 		void close();
@@ -370,11 +374,6 @@ class HttpProxy {
 		 */
 		static void send_http_data(void * ctx);
 		/**
-		 * do_request Функция запроса данных у сервера
-		 * @param ctx передаваемый объект
-		 */
-		static void do_request(void * ctx);
-		/**
 		 * resolve_cb Функция выполняющая ресолвинг домена
 		 * @param ip  IP адрес сервера
 		 * @param ctx передаваемый объект
@@ -428,6 +427,11 @@ class HttpProxy {
 		 */
 		static void run_works(pid_t * pids, const evutil_socket_t socket, const size_t cur, const size_t max, void * ctx);
 	public:
+		/**
+		 * do_request Функция запроса данных у сервера
+		 * @param ctx передаваемый объект
+		 */
+		static void do_request(void * ctx);
 		/**
 		 * connection Функция обработки данных подключения в треде
 		 * @param ctx передаваемый объект
