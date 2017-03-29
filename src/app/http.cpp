@@ -1161,7 +1161,10 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				http->checkUpgrade();
 				// Активируем сжатие данных, на стороне прокси сервера
 				if(!http->client.connect
-				&& http->httpResponse.compressIsAllowed(http->client.useragent)) http->httpResponse.setGzip();
+				&& http->httpResponse.compressIsAllowed(http->client.useragent)){
+					// Активируем сжатие на стороне прокси-сервера
+					http->httpResponse.setGzip();
+				}
 				// Выполняем инициализацию тела данных
 				http->httpResponse.initBody();
 				// Если данных нет или это не сжатие на стороне прокси, отправляем заголовки
