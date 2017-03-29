@@ -301,6 +301,8 @@ void BufferHttpProxy::sendClient(){
 	this->httpResponse.setPath(this->httpRequest.getPath());
 	// Запоминаем домен который был в запросе
 	this->httpResponse.setHost(this->httpRequest.getHost());
+	// Запоминаем протокол подключения
+	this->httpResponse.setProtocol(this->httpRequest.getProtocol());
 	// Выполняем модификацию заголовков
 	this->proxy->headers->modify(this->client.ip, this->client.mac, this->server.ip, this->httpResponse);
 	/** Данные установки необходимы для модификации заголовков КОНЕЦ **/
@@ -1217,31 +1219,34 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					http->client.https		= http->httpRequest.isHttps();
 					http->client.connect	= http->httpRequest.isConnect();
 					http->client.useragent	= http->httpRequest.getUseragent();
-					// Извлекаем данные из кэша
-					auto cache = http->proxy->cache->getCache(http->httpRequest);
-					// Если данные в кэше существуют
-					if(!cache.http.empty()){
-						// Если ревалидация не нужна
-						if(!cache.valid){
-							// Добавляем заголовок Age
-							if(cache.age) http->httpRequest.setHeader("Age", to_string(cache.age));
-							// Добавляем данные из кэша
-							http->httpResponse.set(cache.http.data(), cache.http.size());
-							// Отправляем ответ клиенту
-							http->sendClient();
-							// Продолжаем дальше
-							http->next();
-							// Выходим из функции
-							return;
-						// Если нужна ревалидация
-						} else {
-							// Выполняем добавление новых заголовков
-							// Добавляем заголовок Etag
-							if(!cache.etag.empty()) http->httpRequest.setHeader("If-None-Match", cache.etag);
-							// Добавляем дату последней модификации
-							if(!cache.modified.empty()) http->httpRequest.setHeader("If-Modified-Since", cache.modified);
-							// Запоминаем данные кэша
-							http->cache.assign(cache.http.begin(), cache.http.end());
+					// Если это обычное подключение
+					if(!http->client.connect){
+						// Извлекаем данные из кэша
+						auto cache = http->proxy->cache->getCache(http->httpRequest);
+						// Если данные в кэше существуют
+						if(!cache.http.empty()){
+							// Если ревалидация не нужна
+							if(!cache.valid){
+								// Добавляем заголовок Age
+								if(cache.age) http->httpRequest.setHeader("Age", to_string(cache.age));
+								// Добавляем данные из кэша
+								http->httpResponse.set(cache.http.data(), cache.http.size());
+								// Отправляем ответ клиенту
+								http->sendClient();
+								// Продолжаем дальше
+								http->next();
+								// Выходим из функции
+								return;
+							// Если нужна ревалидация
+							} else {
+								// Выполняем добавление новых заголовков
+								// Добавляем заголовок Etag
+								if(!cache.etag.empty()) http->httpRequest.setHeader("If-None-Match", cache.etag);
+								// Добавляем дату последней модификации
+								if(!cache.modified.empty()) http->httpRequest.setHeader("If-Modified-Since", cache.modified);
+								// Запоминаем данные кэша
+								http->cache.assign(cache.http.begin(), cache.http.end());
+							}
 						}
 					}
 					// Выполняем подключение к удаленному серверу

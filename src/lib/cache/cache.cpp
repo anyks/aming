@@ -391,11 +391,10 @@ void Cache::readDomain(const string domain, DataDNS * data){
 }
 /**
  * readCache Метод чтения данных из файла кэша
- * @param domain название домена
- * @param name   название запроса
- * @param data   данные запроса
+ * @param http блок с данными запроса или ответа
+ * @param data данные запроса
  */
-void Cache::readCache(const string domain, const string name, DataCache * data){
+void Cache::readCache(HttpData &http, DataCache * data){
 	// Если кэширование разрешено
 	if(this->config->cache.response){
 		// Получаем данные каталога где хранится кэш
@@ -403,9 +402,15 @@ void Cache::readCache(const string domain, const string name, DataCache * data){
 		// Получаем имя файла
 		dir = addToPath(dir, "cache");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(domain));
+		dir = addToPath(dir, getPathDomain(http.getHost()));
+		// Добавляем порт
+		dir = addToPath(dir, to_string(http.getPort()));
+		// Добавляем метод
+		dir = addToPath(dir, http.getMethod());
+		// Добавляем тип подключения
+		dir = addToPath(dir, (http.isAlive() ? "a" : "c"));
 		// Создаем адрес для хранения файла
-		const string filename = addToPath(dir, md5(name));
+		const string filename = addToPath(dir, md5(http.getPath()));
 		// Проверяем на существование адреса
 		if(!filename.empty() && isFileExist(filename.c_str())){
 			// Открываем файл на чтение
@@ -429,7 +434,7 @@ void Cache::readCache(const string domain, const string name, DataCache * data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
 		}
 	}
 }
@@ -473,11 +478,10 @@ void Cache::writeDomain(const string domain, DataDNS data){
 }
 /**
  * writeCache Метод записи данных кэша
- * @param domain название домена
- * @param name   название запроса
- * @param data   данные запроса
+ * @param http блок с данными запроса или ответа
+ * @param data данные запроса
  */
-void Cache::writeCache(const string domain, const string name, DataCache data){
+void Cache::writeCache(HttpData &http, DataCache data){
 	// Если кэширование разрешено
 	if(this->config->cache.response){
 		// Получаем данные каталога где хранится кэш
@@ -485,15 +489,21 @@ void Cache::writeCache(const string domain, const string name, DataCache data){
 		// Получаем имя файла
 		dir = addToPath(dir, "cache");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(domain));
+		dir = addToPath(dir, getPathDomain(http.getHost()));
+		// Добавляем порт
+		dir = addToPath(dir, to_string(http.getPort()));
+		// Добавляем метод
+		dir = addToPath(dir, http.getMethod());
+		// Добавляем тип подключения
+		dir = addToPath(dir, (http.isAlive() ? "a" : "c"));
 		// Создаем адрес для хранения файла
-		const string filename = addToPath(dir, md5(name));
+		const string filename = addToPath(dir, md5(http.getPath()));
 		// Проверяем на существование адреса
 		if(!filename.empty()){
 			// Проверяем существует ли нужный нам каталог
 			if(!makePath(dir.c_str())){
 				// Выводим в лог информацию
-				this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), domain.c_str());
+				this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), http.getHost().c_str());
 				// Выходим
 				return;
 			}
@@ -506,7 +516,7 @@ void Cache::writeCache(const string domain, const string name, DataCache data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), domain.c_str());
+			} else this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
 		}
 	}
 }
@@ -714,7 +724,7 @@ const bool Cache::isIpV6(const string ip){
  * @param  http блок с данными запроса или ответа
  * @return      результат проверки
  */
-const bool Cache::checkEnabledCache(HttpData & http){
+const bool Cache::checkEnabledCache(HttpData &http){
 	// Результат проверки
 	bool result = false;
 	// Если кэширование разрешено
@@ -832,7 +842,7 @@ const string Cache::getDomain(const string domain){
  * @param  http блок с данными запроса или ответа
  * @return      объект с данными кэша
  */
-Cache::ResultData Cache::getCache(HttpData & http){
+Cache::ResultData Cache::getCache(HttpData &http){
 	// Создаем объект результата
 	ResultData result;
 	// Если кэширование разрешено
@@ -846,7 +856,7 @@ Cache::ResultData Cache::getCache(HttpData & http){
 			// Создаем объект кеша
 			DataCache cache;
 			// Выполняем чтение данных из кэша
-			readCache(http.getHost(), http.getPath(), &cache);
+			readCache(http, &cache);
 			// Если заголовки получены
 			if(!cache.http.empty()){
 				// Результат проверки валидности кэша
@@ -965,7 +975,7 @@ void Cache::rmAllDomains(){
  * setCache Метод сохранения кэша
  * @param http блок с данными запроса или ответа
  */
-void Cache::setCache(HttpData & http){
+void Cache::setCache(HttpData &http){
 	// Если кэширование разрешено
 	if(this->config->cache.response && http.isEndHeaders()){
 		// Определяем метод запроса
@@ -1034,7 +1044,7 @@ void Cache::setCache(HttpData & http){
 			cache.modified	= modified;
 			cache.http.assign(dump, dump + http.size());
 			// Выполняем запись данных в кэш
-			if(!cache.http.empty()) writeCache(http.getHost(), http.getPath(), cache);
+			if(!cache.http.empty()) writeCache(http, cache);
 		}
 	}
 }
@@ -1042,7 +1052,7 @@ void Cache::setCache(HttpData & http){
  * rmCache Метод удаления кэша
  * @param http блок с данными запроса или ответа
  */
-void Cache::rmCache(HttpData & http){
+void Cache::rmCache(HttpData &http){
 	// Если кэширование разрешено
 	if(this->config->cache.response && http.isEndHeaders()){
 		// Получаем данные каталога где хранится кэш

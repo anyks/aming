@@ -188,11 +188,10 @@ class Cache {
 		void readDomain(const string domain, DataDNS * data);
 		/**
 		 * readCache Метод чтения данных из файла кэша
-		 * @param domain название домена
-		 * @param name   название запроса
-		 * @param data   данные запроса
+		 * @param http блок с данными запроса или ответа
+		 * @param data данные запроса
 		 */
-		void readCache(const string domain, const string name, DataCache * data);
+		void readCache(HttpData &http, DataCache * data);
 		/**
 		 * writeDomain Метод записи данных домена в файл
 		 * @param domain название домена
@@ -201,11 +200,10 @@ class Cache {
 		void writeDomain(const string domain, DataDNS data);
 		/**
 		 * writeCache Метод записи данных кэша
-		 * @param domain название домена
-		 * @param name   название запроса
-		 * @param data   данные запроса
+		 * @param http блок с данными запроса или ответа
+		 * @param data данные запроса
 		 */
-		void writeCache(const string domain, const string name, DataCache data);
+		void writeCache(HttpData &http, DataCache data);
 		/**
 		 * mkdir Метод рекурсивного создания каталогов
 		 * @param path адрес каталогов
@@ -269,7 +267,7 @@ class Cache {
 		 * @param  http блок с данными запроса или ответа
 		 * @return      результат проверки
 		 */
-		const bool checkEnabledCache(HttpData & http);
+		const bool checkEnabledCache(HttpData &http);
 	public:
 		/**
 		 * getDomain Метод получения ip адреса домена
@@ -282,7 +280,7 @@ class Cache {
 		 * @param  http блок с данными запроса или ответа
 		 * @return      объект с данными кэша
 		 */
-		ResultData getCache(HttpData & http);
+		ResultData getCache(HttpData &http);
 		/**
 		 * setDomain Метод записи домена в кэш
 		 * @param  domain название домена
@@ -302,12 +300,12 @@ class Cache {
 		 * setCache Метод сохранения кэша
 		 * @param http блок с данными запроса или ответа
 		 */
-		void setCache(HttpData & http);
+		void setCache(HttpData &http);
 		/**
 		 * rmCache Метод удаления кэша
 		 * @param http блок с данными запроса или ответа
 		 */
-		void rmCache(HttpData & http);
+		void rmCache(HttpData &http);
 		/**
 		 * rmAllCache Метод удаления кэша всех сайтов
 		 */
