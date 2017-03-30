@@ -60,7 +60,8 @@ const u_char * HttpData::HttpHeaders::data(){
 		for(size_t i = 0; i < size; i++){
 			// Если это не заголовок Age
 			if((toCase(this->headers[i].head).compare("age") != 0)
-			&& (toCase(this->headers[i].head).compare("content-encoding") != 0)){
+			&& !((toCase(this->headers[i].head).compare("content-encoding") == 0)
+			&& (toCase(this->headers[i].value).find("gzip") != string::npos))){
 				// Добавляем заголовок
 				headers.append(this->headers[i].head + string("<-|params|->") + this->headers[i].value);
 				// Если это не последний элемент то добавляем разделитель
@@ -1841,14 +1842,14 @@ const string HttpData::getRawResponseData(){
 		setHeader("Content-Length", to_string(body.size()));
 		// Получаем данные заголовков
 		string headers = getResponseHeaders();
-		// Ищем заголовок gzip
-		size_t pos = headers.find("Content-Encoding: gzip\r\n");
-		// Если заголовок найден
-		if(pos != string::npos) headers.replace(pos, 24, "");
-		// Ищем заголовок etag
-		pos = headers.find("ETag: W/");
-		// Если заголовок найден
-		if(pos != string::npos) headers.replace(pos, 8, "ETag: ");
+		// Создаем регулярное выражение
+		regex ce("Content\\-Encoding\\s*\\:[^\\r\\n]*gzip[^\\r\\n]*\\r\\n", regex::ECMAScript | regex::icase);
+		// Выполняем удаление заголовка
+		headers = regex_replace(headers, ce, "");
+		// Создаем регулярное выражение
+		regex et("ETag\\s*\\:\\s*W\\/", regex::ECMAScript | regex::icase);
+		// Выполняем замену заголовка
+		headers = regex_replace(headers, et, "ETag: ");
 		// Если заголовки и тело существуют
 		if(!headers.empty()){
 			// Выполняем добавление заголовков в результат
@@ -1877,14 +1878,14 @@ const string HttpData::getRawRequestData(){
 		setHeader("Content-Length", to_string(body.size()));
 		// Получаем данные заголовков
 		string headers = getRequestHeaders();
-		// Ищем заголовок gzip
-		size_t pos = headers.find("Content-Encoding: gzip\r\n");
-		// Если заголовок найден
-		if(pos != string::npos) headers.replace(pos, 24, "");
-		// Ищем заголовок etag
-		pos = headers.find("ETag: W/");
-		// Если заголовок найден
-		if(pos != string::npos) headers.replace(pos, 8, "ETag: ");
+		// Создаем регулярное выражение
+		regex ce("Content\\-Encoding\\s*\\:[^\\r\\n]*gzip[^\\r\\n]*\\r\\n", regex::ECMAScript | regex::icase);
+		// Выполняем удаление заголовка
+		headers = regex_replace(headers, ce, "");
+		// Создаем регулярное выражение
+		regex et("ETag\\s*\\:\\s*W\\/", regex::ECMAScript | regex::icase);
+		// Выполняем замену заголовка
+		headers = regex_replace(headers, et, "ETag: ");
 		// Если заголовки и тело существуют
 		if(!headers.empty()){
 			// Выполняем добавление заголовков в результат

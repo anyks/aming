@@ -770,8 +770,11 @@ const bool Cache::checkEnabledCache(HttpData &http){
 				bool ccMaxAge		= (cache.find("max-age") != string::npos);
 				bool ccsMaxAge		= (cache.find("s-maxage") != string::npos);
 				bool ccRevalidate	= (cache.find("proxy-revalidate") != string::npos);
+				bool ccNoTransform	= (cache.find("no-transform") != string::npos);
+				// Так-как no-transform запрещает модификацию заголовков: Content-Encoding, Content-Range, Content-Type
+				// А при создании кэша, заголовок Content-Encoding удаляется, то мы просто отказываемся записывать кэш в этом случае
 				// Если кэширование запрещено тогда запрещаем
-				if(ccNoStore || ccPrivate) result = false;
+				if(ccNoStore || ccPrivate || ccNoTransform) result = false;
 				// Определяем тип заголовка
 				else if(ccNoCache || ccRevalidate){
 					// Если etag существует
