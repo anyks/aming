@@ -396,7 +396,7 @@ void Cache::readDomain(const string domain, DataDNS * data){
  */
 void Cache::readCache(HttpData &http, DataCache * data){
 	// Если кэширование разрешено
-	if(this->config->cache.response){
+	if(this->config->cache.dat){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
@@ -483,7 +483,7 @@ void Cache::writeDomain(const string domain, DataDNS data){
  */
 void Cache::writeCache(HttpData &http, DataCache data){
 	// Если кэширование разрешено
-	if(this->config->cache.response){
+	if(this->config->cache.dat){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
@@ -728,7 +728,7 @@ const bool Cache::checkEnabledCache(HttpData &http){
 	// Результат проверки
 	bool result = false;
 	// Если кэширование разрешено
-	if(this->config->cache.response && http.isEndHeaders()){
+	if(this->config->cache.dat && http.isEndHeaders()){
 		// Генерируем текущую дату
 		time_t cdate = time(NULL), sdate = 0, expires = 0;
 		// Определяем дату сервера
@@ -846,7 +846,7 @@ Cache::ResultData Cache::getCache(HttpData &http){
 	// Создаем объект результата
 	ResultData result;
 	// Если кэширование разрешено
-	if(this->config->cache.response && http.isEndHeaders()){
+	if(this->config->cache.dat && http.isEndHeaders()){
 		// Получаем данные if-none-match
 		const string inm = http.getHeader("if-none-match");
 		// Получаем данные if-modified-since
@@ -977,7 +977,7 @@ void Cache::rmAllDomains(){
  */
 void Cache::setCache(HttpData &http){
 	// Если кэширование разрешено
-	if(this->config->cache.response && http.isEndHeaders()){
+	if(this->config->cache.dat && http.isEndHeaders()){
 		// Определяем метод запроса
 		const string method = http.getMethod();
 		// Определяем метод запроса, разрешено только GET и POST
@@ -1054,7 +1054,7 @@ void Cache::setCache(HttpData &http){
  */
 void Cache::rmCache(HttpData &http){
 	// Если кэширование разрешено
-	if(this->config->cache.response && http.isEndHeaders()){
+	if(this->config->cache.dat && http.isEndHeaders()){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
@@ -1070,7 +1070,7 @@ void Cache::rmCache(HttpData &http){
  */
 void Cache::rmAllCache(){
 	// Если кэширование разрешено
-	if(this->config->cache.response){
+	if(this->config->cache.dat){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла

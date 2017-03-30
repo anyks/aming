@@ -445,7 +445,7 @@ void LogApp::welcome(){
 		const char * _transfer = ((* this->config)->proxy.transfer ? "yes" : "no");
 		const char * _optimos = ((* this->config)->proxy.optimos ? "yes" : "no");
 		const char * _bandlimin = ((* this->config)->firewall.bandlimin ? "yes" : "no");
-		const char * _cache = ((* this->config)->cache.response ? "yes" : "no");
+		const char * _cache = ((* this->config)->cache.dat ? "yes" : "no");
 		const char * _totalcon = ((* this->config)->connects.total > 0 ? to_string((* this->config)->connects.total).c_str() : "auto");
 		// Данные прокси сервера
 		string proxyname = APP_NAME, proxyver = APP_VERSION, proxytype, proxyskill;
