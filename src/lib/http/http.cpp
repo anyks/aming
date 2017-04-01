@@ -1726,11 +1726,11 @@ const bool HttpData::addHeaderToString(const string header, const string value, 
  * @param size    размер входящих данных
  * @param name    название приложения
  * @param options опции http парсера
- * @return        результат работы
+ * @return        размер обработанных байт
  */
-const bool HttpData::parse(const char * buffer, const size_t size, const string name, const u_short options){
+const size_t HttpData::parse(const char * buffer, const size_t size, const string name, const u_short options){
 	// Результат работы метода
-	bool result = false;
+	size_t maxsize = 0;
 	// Если данные существуют
 	if(size){
 		// Результат работы регулярного выражения
@@ -1752,7 +1752,7 @@ const bool HttpData::parse(const char * buffer, const size_t size, const string 
 			// Запоминаем первые символы
 			string badchars = match[1].str();
 			// Увеличиваем значение общих найденных символов
-			size_t maxsize = badchars.size();
+			maxsize += badchars.size();
 			// Получаем данные заголовков
 			string headers = match[2].str();
 			// Добавляем размер заголовков
@@ -1764,11 +1764,13 @@ const bool HttpData::parse(const char * buffer, const size_t size, const string 
 			// Добавляем вложенные данные
 			size_t sizeBody = setEntitybody(buffer + maxsize, size - maxsize);
 			// Если размер данных тела не получен
-			if(!sizeBody || isEndBody()) result = true;
+			if(!sizeBody || isEndBody()) maxsize += sizeBody;
+			// Обнуляем размер обработанных данных
+			else maxsize = 0;
 		}
 	}
 	// Выводим результат
-	return result;
+	return maxsize;
 }
 /**
  * getBodySize Метод получения размера тела http данных
@@ -2760,15 +2762,17 @@ const bool Http::isHttp(const string buffer){
  * parse Функция извлечения данных из буфера
  * @param buffer буфер с входящими запросами
  * @param size   размер входящих данных
+ * @return       количество обработанных байтов
  */
-void Http::parse(const char * buffer, const size_t size){
+const size_t Http::parse(const char * buffer, const size_t size){
 	// Выполняем парсинг http запроса
 	HttpData httpData;
-	// Выполняем инициализацию данных
-	if(httpData.parse(buffer, size, this->name, this->options)){
-		// Добавляем в массив объект подключения
-		this->httpData.push_back(httpData);
-	}
+	// Выполняем парсинг входящих данных
+	size_t bytes = httpData.parse(buffer, size, this->name, this->options);
+	// Добавляем в массив объект подключения
+	if(bytes) this->httpData.push_back(httpData);
+	// Выводим результат
+	return bytes;
 }
 /**
  * modify Функция модифицирования ответных данных

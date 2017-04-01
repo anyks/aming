@@ -498,9 +498,9 @@ class HttpData {
 		 * @param size    размер входящих данных
 		 * @param name    название приложения
 		 * @param options опции http парсера
-		 * @return        результат работы
+		 * @return        размер обработанных байт
 		 */
-		const bool parse(const char * buffer, const size_t size, const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
+		const size_t parse(const char * buffer, const size_t size, const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
 		/**
 		 * getBodySize Метод получения размера тела http данных
 		 * @return размер тела данных
@@ -816,8 +816,9 @@ class Http {
 		 * parse Функция извлечения данных из буфера
 		 * @param buffer буфер с входящими запросами
 		 * @param size   размер входящих данных
+		 * @return       количество обработанных байтов
 		 */
-		void parse(const char * buffer, const size_t size);
+		const size_t parse(const char * buffer, const size_t size);
 		/**
 		 * modify Функция модифицирования ответных данных
 		 * @param data ссылка на данные полученные от сервера
