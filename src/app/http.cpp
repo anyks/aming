@@ -301,6 +301,8 @@ void BufferHttpProxy::sendClient(){
 	this->httpResponse.setPath(this->httpRequest.getPath());
 	// Запоминаем домен который был в запросе
 	this->httpResponse.setHost(this->httpRequest.getHost());
+	// Запоминаем порт подключения
+	this->httpResponse.setPort(this->httpRequest.getPort());
 	// Запоминаем протокол подключения
 	this->httpResponse.setProtocol(this->httpRequest.getProtocol());
 	// Выполняем модификацию заголовков
@@ -1230,10 +1232,16 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 						if(!cache.http.empty()){
 							// Если ревалидация не нужна
 							if(!cache.valid){
-								// Добавляем заголовок Age
-								if(cache.age) http->httpRequest.setHeader("Age", to_string(cache.age));
+								// Устанавливаем параметры сжатия
+								http->httpResponse.setGzipParams(&http->proxy->config->gzip);
 								// Добавляем данные из кэша
 								http->httpResponse.set(cache.http.data(), cache.http.size());
+								// Добавляем заголовок Age
+								if(cache.age) http->httpResponse.setHeader("Age", to_string(cache.age));
+								
+
+								cout << " =============1 " << http->httpResponse.getRequestData() << endl;
+
 								// Отправляем ответ клиенту
 								http->sendClient();
 								// Продолжаем дальше
@@ -1242,11 +1250,17 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 								return;
 							// Если нужна ревалидация
 							} else {
-								// Выполняем добавление новых заголовков
-								// Добавляем заголовок Etag
-								if(!cache.etag.empty()) http->httpRequest.setHeader("If-None-Match", cache.etag);
 								// Добавляем дату последней модификации
 								if(!cache.modified.empty()) http->httpRequest.setHeader("If-Modified-Since", cache.modified);
+								// Если ETag существует
+								if(!cache.etag.empty()){
+									// Считываем данные сжатия
+									const string gzip = http->httpRequest.getHeader("accept-encoding");
+									// Проверяем есть ли в запросе gzip
+									if(!gzip.empty()) cache.etag = (string("W/") + cache.etag);
+									// Добавляем заголовок Etag
+									http->httpRequest.setHeader("If-None-Match", cache.etag);
+								}
 								// Запоминаем данные кэша
 								http->cache.assign(cache.http.begin(), cache.http.end());
 							}
@@ -1268,6 +1282,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 						else {
 							// Указываем что нужно отключится сразу после отправки запроса
 							if(!http->client.alive) http->httpRequest.setClose();
+
+							cout << " =============2 " << http->httpRequest.getRequestData() << endl;
+
 							// Отправляем данные на сервер
 							http->sendServer();
 							// Выходим

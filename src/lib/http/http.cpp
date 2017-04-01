@@ -60,10 +60,23 @@ const u_char * HttpData::HttpHeaders::data(){
 		for(size_t i = 0; i < size; i++){
 			// Если это не заголовок Age
 			if((toCase(this->headers[i].head).compare("age") != 0)
+			&& (toCase(this->headers[i].head).compare("content-length") != 0)
+			&& (toCase(this->headers[i].head).compare("transfer-encoding") != 0)
 			&& !((toCase(this->headers[i].head).compare("content-encoding") == 0)
 			&& (toCase(this->headers[i].value).find("gzip") != string::npos))){
+				// Получаем название заголовка
+				string header = this->headers[i].head;
+				// Получаем значение заголовка
+				string value = this->headers[i].value;
+				// Если это ETag
+				if(toCase(header).compare("etag") == 0){
+					// Выполняем поиск экранируемого символа
+					size_t pos = value.find("W/");
+					// Если найден экранируемный символ то удаляем его
+					if(pos != string::npos) value = value.substr(pos + 2, value.length() - 2);
+				}
 				// Добавляем заголовок
-				headers.append(this->headers[i].head + string("<-|params|->") + this->headers[i].value);
+				headers.append(header + string("<-|params|->") + value);
 				// Если это не последний элемент то добавляем разделитель
 				if(i < (size - 1)) headers.append("<-|heads|->");
 			}
@@ -176,10 +189,10 @@ const bool HttpData::HttpHeaders::create(const char * buffer){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^((?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+		"^(?:(?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
 		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
-		"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
-		"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
+		"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
+		"\\s*[^\\r\\n]+\\r\\n)+)\\r\\n)",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск протокола
@@ -984,13 +997,20 @@ void HttpData::genDataConnect(){
 			|| (::toCase(this->path).compare(::toCase(fulladdr3)) == 0)
 			|| (::toCase(this->path).compare(::toCase(fulladdr4)) == 0)))) this->path = "/";
 			// Выполняем удаление из адреса доменного имени
-			else if(strstr(this->path.c_str(), fulladdr1.c_str())){
-				// Запоминаем текущий путь
-				string tmp_path = this->path;
-				// Вырезаем домер из пути
-				tmp_path = tmp_path.replace(0, fulladdr1.length(), "");
-				// Если путь существует
-				if(!tmp_path.empty()) this->path = tmp_path;
+			else {
+				// Выполняем поиск правильного пути, вместе с портом
+				size_t pos = this->path.find(::toCase(fulladdr3)), length = 0;
+				// Если позиция найдена
+				if(pos != string::npos) length = fulladdr3.length();
+				// Если адрес с портом не найден то ищем без порта
+				else {
+					// Выполняем поиск пути без порта
+					pos = this->path.find(::toCase(fulladdr1));
+					// Если позиция найдена
+					if(pos != string::npos) length = fulladdr1.length();
+				}
+				// Если размер пути найден
+				if(length) this->path = this->path.replace(0, length, "");
 			}
 			// Запоминаем хост
 			this->host = scon.host;
@@ -1456,10 +1476,10 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 			else if(!contentLength && isClose()) contentLength = 1;
 			// Если размер контента не найден тогда выходим
 			if(!contentLength) return gzip;
-			// Флаг установки режима сжатия
-			gzip = true;
 			// Результат работы регулярного выражения
 			smatch match;
+			// Флаг установки режима сжатия
+			gzip = true;
 			// Получаем наличие заголовка Via
 			string via = getHeader("via");
 			// Получаем тип файла
@@ -1597,10 +1617,10 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 						}
 					}
 				}
-				// Проверяем есть ли размер
-				if(gzip && contentLength){
+				// Проверяем размер контента на его минимальную длину
+				if(gzip && (contentLength > 2)){
 					// Проверяем соответствует ли размер
-					if(this->gzipParams->length > contentLength) gzip = false;
+					if(this->gzipParams->length >= contentLength) gzip = false;
 				}
 				// Если сжатие разрешено
 				if(gzip && !userAgent.empty()){
@@ -2262,6 +2282,9 @@ void HttpData::set(const u_char * data, size_t size){
 							u_char * buffer = new u_char [size_data];
 							// Извлекаем данные адреса
 							memcpy(buffer, data + size_it, size_data);
+							// Добавляем размер тела, необходимо для того, чтобы включить сжатие
+							// P.S. больше ни на что не влияет, так как при выводе данных этот заголовок генерируется заново
+							setHeader("Content-Length", to_string(size_data));
 							// Выполняем проверку сжатия, если разрешено то устанавливаем
 							if(compressIsAllowed()) setGzip();
 							// Выполняем инициализацию тела

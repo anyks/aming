@@ -797,10 +797,10 @@ const bool Cache::checkEnabledCache(HttpData &http){
 					// Если кэш просто устарел тогда запрещаем кэширование
 					else if(age && !ag.empty()) result = false;
 				}
-				// Если установлен etag или дата последней модификации значит разрешаем кэширование
-				if(!et.empty() || !lm.empty()) result = true;
 			}
 		}
+		// Если установлен etag или дата последней модификации значит разрешаем кэширование
+		if(!et.empty() || !lm.empty()) result = true;
 	}
 	// Выводим результат
 	return result;
@@ -992,8 +992,6 @@ void Cache::setCache(HttpData &http){
 			const string dt = http.getHeader("date");
 			// Определяем время жизни
 			const string ag = http.getHeader("age");
-			// Получаем данные etag
-			const string et = http.getHeader("etag");
 			// Получаем дату смерти кэша
 			const string ex = http.getHeader("expires");
 			// Получаем заголовок контроль кэша
@@ -1038,9 +1036,15 @@ void Cache::setCache(HttpData &http){
 			DataCache cache;
 			// Получаем дамп данных
 			const u_char * dump = http.data();
+			// Считываем данные ETag
+			string etag = http.getHeader("etag");
+			// Выполняем поиск экранируемого символа
+			size_t posEtag = etag.find("W/");
+			// Если найден экранируемный символ то удаляем его
+			if(posEtag != string::npos) etag = etag.substr(posEtag + 2, etag.length() - 2);
 			// Заполняем данные кэша
 			cache.age		= age;
-			cache.etag		= et;
+			cache.etag		= etag;
 			cache.date		= date;
 			cache.valid		= valid;
 			cache.expires	= expires;
