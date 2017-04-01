@@ -85,9 +85,17 @@ class Headers {
 		 * modifyHeaders Метод модификации заголовков
 		 * @param server идентификатор сервера
 		 * @param rules  правила фильтрации
-		 * @param http   блок с данными запроса или ответа
+		 * @param http   блок с http данными
 		 */
-		void modifyHeaders(const string server, vector <Params> rules, HttpData & http);
+		void modifyHeaders(const string server, vector <Params> rules, HttpData &http);
+		/**
+		 * modifyHeaders Метод модификации заголовков
+		 * @param server идентификатор сервера
+		 * @param rules  правила фильтрации
+		 * @param data   строка с данными запроса или ответа
+		 * @param http   блок с http данными
+		 */
+		void modifyHeaders(const string server, vector <Params> rules, string &data, HttpData &http);
 		/**
 		 * addToPath Метод формирования адреса из пути и названия файла
 		 * @param  path путь где хранится файл
@@ -190,7 +198,15 @@ class Headers {
 		 * @param server адрес сервера
 		 * @param http   блок с данными запроса или ответа
 		 */
-		void modify(const string ip, const string mac, const string server, HttpData & http);
+		void modify(const string ip, const string mac, const string server, HttpData &http);
+		/**
+		 * modify Метод модификации заголовков
+		 * @param ip     ip адрес клиента
+		 * @param mac    мак адрес клиента
+		 * @param server адрес сервера
+		 * @param data   строка с данными запроса или ответа
+		 */
+		void modify(const string ip, const string mac, const string server, string &data);
 		/**
 		 * Headers Конструктор
 		 * @param log    объект лога для вывода информации

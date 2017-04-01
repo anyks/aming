@@ -27,6 +27,9 @@
 #define MOD_GZIP_ZLIB_BSIZE			8096
 #define MOD_GZIP_ZLIB_CHUNK			1024
 
+// Параметры парсера по умолчанию
+#define PARSER_OPTIONS_DEFAULT OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG
+
 // Устанавливаем пространство имен
 using namespace std;
 
@@ -475,6 +478,30 @@ class HttpData {
 		 */
 		const bool compressIsAllowed(const string userAgent = "");
 		/**
+		 * rmHeaderInString Метод удаления заголовка из строки
+		 * @param  header  заголовок
+		 * @param  headers список заголовков
+		 * @return         результат работы
+		 */
+		const bool rmHeaderInString(const string header, string &headers);
+		/**
+		 * addHeaderToString Метод добавления заголовка к строке заголовков
+		 * @param  header  заголовок
+		 * @param  value   значение заголовка
+		 * @param  headers список заголовков
+		 * @return         результат работы
+		 */
+		const bool addHeaderToString(const string header, const string value, string &headers);
+		/**
+		 * parse Метод парсинга данных
+		 * @param buffer  буфер с входящими запросами
+		 * @param size    размер входящих данных
+		 * @param name    название приложения
+		 * @param options опции http парсера
+		 * @return        результат работы
+		 */
+		const bool parse(const char * buffer, const size_t size, const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
+		/**
 		 * getBodySize Метод получения размера тела http данных
 		 * @return размер тела данных
 		 */
@@ -572,6 +599,12 @@ class HttpData {
 		 * @return сформированные заголовки запроса
 		 */
 		const string getRequestHeaders();
+		/**
+		 * createHeadResponse Метод модификации заголовков в строке
+		 * @param  str строка с данными заголовков
+		 * @return     модифицированная строка заголовков
+		 */
+		const string modifyHeaderString(const string str);
 		/**
 		 * getBody Метод получения данных тела http
 		 * @param  chunked метод чанкование
@@ -732,14 +765,11 @@ class HttpData {
 		 */
 		void authSuccess();
 		/**
-		 * init Метод инициализации класса
-		 * @param  str     строка http запроса
-		 * @param  name    название приложения
-		 * @param  version версия приложения
-		 * @param  options опции http парсера
-		 * @return         данные http запроса
+		 * setData Метод добавления данных
+		 * @param  buffer  буфер с http данными
+		 * @param  size    размер http данных
 		 */
-		void init(const string str, const string name, const string version, const u_short options);
+		void setData(const char * buffer, const size_t size);
 		/**
 		 * create Метод создания объекта
 		 * @param name    название приложения
@@ -751,7 +781,7 @@ class HttpData {
 		 * @param name    название приложения
 		 * @param options опции http парсера
 		 */
-		HttpData(const string name = APP_NAME, const u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
+		HttpData(const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
 		/**
 		 * ~HttpData Деструктор
 		 */
@@ -787,7 +817,7 @@ class Http {
 		 * @param buffer буфер с входящими запросами
 		 * @param size   размер входящих данных
 		 */
-		const size_t parse(const char * buffer, const size_t size);
+		void parse(const char * buffer, const size_t size);
 		/**
 		 * modify Функция модифицирования ответных данных
 		 * @param data ссылка на данные полученные от сервера
@@ -808,7 +838,7 @@ class Http {
 		 * @param name    строка содержащая название прокси сервера
 		 * @param options параметры прокси сервера
 		 */
-		Http(const string name = APP_NAME, const u_short options = (OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG));
+		Http(const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
 		/**
 		 * ~Http Деструктор
 		 */

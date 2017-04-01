@@ -1015,7 +1015,6 @@ void f3(void * ctx, size_t param){
 	memcpy(ctx, &param, sizeof(param));
 }
 
-
 int main(int len, char * buff[]){
 	
 	B d;
@@ -1163,7 +1162,6 @@ int main(int len, char * buff[]){
 	f3(&par, 22);
 
 	cout << " =========== " << par << endl;
-
 
 	/*
 	// Маска 1

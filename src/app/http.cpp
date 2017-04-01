@@ -1397,8 +1397,10 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 			char * buffer = new char[len];
 			// Копируем в буфер полученные данные
 			evbuffer_copyout(input, buffer, len);
+			// Выполняем парсинг данных
+			http->parser.parse(buffer, len);
 			// Удаляем данные из буфера
-			evbuffer_drain(input, http->parser.parse(buffer, len));
+			evbuffer_drain(input, len);
 			// Удаляем буфер данных
 			delete [] buffer;
 			// Выполняем разбор данных

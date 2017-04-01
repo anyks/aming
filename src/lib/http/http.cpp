@@ -1068,7 +1068,7 @@ const string HttpData::createHeadResponse(){
 	// Определяем тип прокси
 	bool smart = (this->options & OPT_SMART);
 	// Определяем разрешено ли выводить название агента
-	bool agent = !(this->options & OPT_AGENT);
+	bool agent = (this->options & OPT_AGENT);
 	// Замена заголовка Via
 	bool via = false;
 	// Формируем запрос
@@ -1110,19 +1110,12 @@ const string HttpData::createHeadResponse(){
 		+ this->appName + string(" (") + string(APP_NAME)
 		+ string("/") + this->appVersion + string(")\r\n"));
 	}
+	// Получаем заголовок Proxy-Connection
+	const string proxy_connection = getHeader("proxy-connection");
 	// Если это dumb прокси
-	if(!smart){
-		// Проверяем есть ли заголовок соединения прокси
-		string proxy_connection = getHeader("proxy-connection");
-		// Добавляем заголовок закрытия подключения
-		if(proxy_connection.empty()) response.append(string("Proxy-Connection: ") + connection + string("\r\n"));
+	if(!smart && proxy_connection.empty()) response.append(string("Proxy-Connection: ") + connection + string("\r\n"));
 	// Если это smart прокси
-	} else {
-		// Получаем заголовок Proxy-Connection
-		string proxy_connection = getHeader("proxy-connection");
-		// Если постоянное соединение не установлено
-		if(!proxy_connection.empty()) connection = proxy_connection;
-	}
+	else if(smart && !proxy_connection.empty()) connection = proxy_connection;
 	// Добавляем тип подключения
 	if(!connection.empty()) response.append(string("Connection: ") + connection + string("\r\n"));
 	// Запоминаем конец запроса
@@ -1140,7 +1133,7 @@ const string HttpData::createHeadRequest(){
 	// Определяем разрешено ли сжатие
 	bool gzip = (this->options & OPT_GZIP);
 	// Определяем разрешено ли выводить название агента
-	bool agent = !(this->options & OPT_AGENT);
+	bool agent = (this->options & OPT_AGENT);
 	// Определяем разрешено ли постоянное подключение
 	bool keepalive = (this->options & OPT_KEEPALIVE);
 	// Определяем нужно ли попытаться обходить заблокированные сайты
@@ -1223,6 +1216,80 @@ const string HttpData::createHeadRequest(){
 	request.append(string("\r\n"));
 	// Выводим результат
 	return request;
+}
+/**
+ * createHeadResponse Метод модификации заголовков в строке
+ * @param  str строка с данными заголовков
+ * @return     модифицированная строка заголовков
+ */
+const string HttpData::modifyHeaderString(const string str){
+	// Копируем данные заголовков
+	string headers = str;
+	// Если данные существуют
+	if(!headers.empty()){
+		// Заголовок connection
+		string connection;
+		// Определяем тип прокси
+		bool smart = (this->options & OPT_SMART);
+		// Определяем разрешено ли выводить название агента
+		bool agent = (this->options & OPT_AGENT);
+		// Если вывод агента разрешен
+		if(agent){
+			// Результат работы регулярного выражения
+			smatch match;
+			// Устанавливаем правило регулярного выражения
+			regex e("\\r\\nVia\\s*\\:\\s*([^\\r\\n]+)\\r\\n", regex::ECMAScript | regex::icase);
+			// Выполняем поиск заголовка
+			regex_search(headers, match, e);
+			// Заголовок Via
+			string via, proxy;
+			// Если данные найдены
+			if(!match.empty()){
+				// Извлекаем значение заголовка Via
+				via = match[1].str();
+				// Добавляем данные агента
+				via.append(string(", ") + this->version + string(" ")
+				+ this->appName + string(" (") + string(APP_NAME)
+				+ string("/") + this->appVersion + string(")"));
+			// Если заголовок via не найден
+			} else {
+				// Добавляем стандартный заголовок проксирования
+				via.append(this->version + string(" ")
+				+ this->appName + string(" (") + string(APP_NAME)
+				+ string("/") + this->appVersion + string(")"));
+			}
+			// Добавляем название агента
+			proxy.append(this->appName + string(" (")
+			+ string(APP_NAME) + string("/") + this->appVersion + string(")"));
+			// Добавляем заголовок Via
+			addHeaderToString("Via", via, headers);
+			// Добавляем заголовок Proxy-Agent
+			addHeaderToString("Proxy-Agent", proxy, headers);
+		}
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("\\r\\nConnection\\s*\\:\\s*([^\\r\\n]+)\\r\\n", regex::ECMAScript | regex::icase);
+		// Выполняем поиск заголовка
+		regex_search(headers, match, e);
+		// Если данные найдены
+		if(!match.empty()) connection = match[1].str();
+		// Если это dumb прокси
+		if(!smart) addHeaderToString("Proxy-Connection", connection, headers);
+		// Если это smart прокси
+		else {
+			// Устанавливаем правило регулярного выражения
+			regex e("\\r\\nProxy-Connection\\s*\\:\\s*([^\\r\\n]+)\\r\\n", regex::ECMAScript | regex::icase);
+			// Выполняем поиск заголовка
+			regex_search(headers, match, e);
+			// Если данные найдены
+			if(!match.empty()) connection = match[1].str();
+		}
+		// Добавляем тип подключения
+		if(!connection.empty()) addHeaderToString("Connection", connection, headers);
+	}
+	// Выводим результат
+	return headers;
 }
 /**
  * getConnection Функция извлечения данных подключения
@@ -1555,6 +1622,153 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 	}
 	// Выводим результат работы метода
 	return gzip;
+}
+/**
+ * rmHeaderInString Метод удаления заголовка из строки
+ * @param  header  заголовок
+ * @param  headers список заголовков
+ * @return         результат работы
+ */
+const bool HttpData::rmHeaderInString(const string header, string &headers){
+	// Результат работы функции
+	bool result = false;
+	// Если данные существуют
+	if(!headers.empty() && !header.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			"(?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
+			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
+			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем поиск протокола
+		regex_search(headers, match, e);
+		// Если данные найдены
+		if(!match.empty()){
+			// Запоминаем данные заголовков
+			string headers1 = match[0].str(), headers2 = match[0].str();
+			// Создаем регулярное выражение очистки заголовка от запрещенных символов
+			regex he("[^\\w\\-]+", regex::ECMAScript | regex::icase);
+			// Исправляем название заголовка
+			const string head = regex_replace(header, he, "");
+			// Создаем регулярное выражение
+			regex re(head + string("\\s*\\:\\s*[^\\r\\n]+\\r\\n"), regex::ECMAScript | regex::icase);
+			// Выполняем удаление указанного заголовка
+			headers2 = regex_replace(headers2, re, "");
+			// Получаем позицию заголовков
+			size_t pos = headers.find(headers1);
+			// Выполняем замену в строке заголовков
+			if(pos != string::npos) headers.replace(pos, headers1.length(), headers2);
+			// Определяем результат работы функции
+			result = (headers1.compare(headers2) != 0);
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * addHeaderToString Метод добавления заголовка к строке заголовков
+ * @param  header  заголовок
+ * @param  value   значение заголовка
+ * @param  headers список заголовков
+ * @return         результат работы
+ */
+const bool HttpData::addHeaderToString(const string header, const string value, string &headers){
+	// Результат работы функции
+	bool result = false;
+	// Если данные существуют
+	if(!headers.empty() && !value.empty() && !header.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			"(?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
+			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
+			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем поиск протокола
+		regex_search(headers, match, e);
+		// Если данные найдены
+		if(!match.empty()){
+			// Запоминаем данные заголовков
+			string headers1 = match[0].str(), headers2 = match[0].str();
+			// Создаем регулярное выражение очистки заголовка от запрещенных символов
+			regex he("[^\\w\\-]+", regex::ECMAScript | regex::icase);
+			// Создаем регулярное выражение добавления заголовка
+			regex ae("\\r\\n\\r\\n", regex::ECMAScript | regex::icase);
+			// Исправляем название заголовка
+			const string head = regex_replace(header, he, "");
+			// Создаем регулярное выражение удаления заголовка
+			regex re(head + string("\\s*\\:\\s*[^\\r\\n]+\\r\\n"), regex::ECMAScript | regex::icase);
+			// Выполняем удаление указанного заголовка
+			headers2 = regex_replace(headers2, re, "");
+			// Выполняем модификацию указанного заголовка
+			headers2 = regex_replace(headers2, ae, (string("\r\n") + head + string(": ") + value + string("\r\n\r\n")));
+			// Получаем позицию заголовков
+			size_t pos = headers.find(headers1);
+			// Выполняем замену в строке заголовков
+			if(pos != string::npos) headers.replace(pos, headers1.length(), headers2);
+			// Определяем результат работы функции
+			result = (headers1.compare(headers2) != 0);
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * parse Метод парсинга данных
+ * @param buffer  буфер с входящими запросами
+ * @param size    размер входящих данных
+ * @param name    название приложения
+ * @param options опции http парсера
+ * @return        результат работы
+ */
+const bool HttpData::parse(const char * buffer, const size_t size, const string name, const u_short options){
+	// Результат работы метода
+	bool result = false;
+	// Если данные существуют
+	if(size){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Создаем строку для поиска
+		string str(buffer, size);
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			"^([^\\r\\n\\s]*)((?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
+			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
+			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем поиск протокола
+		regex_search(str, match, e);
+		// Если данные найдены
+		if(!match.empty()){
+			// Запоминаем первые символы
+			string badchars = match[1].str();
+			// Увеличиваем значение общих найденных символов
+			size_t maxsize = badchars.size();
+			// Получаем данные заголовков
+			string headers = match[2].str();
+			// Добавляем размер заголовков
+			maxsize += headers.size();
+			// Создаем объект
+			create(name, options);
+			// Выполняем инициализацию объекта
+			setData(headers.c_str(), headers.size());
+			// Добавляем вложенные данные
+			size_t sizeBody = setEntitybody(buffer + maxsize, size - maxsize);
+			// Если размер данных тела не получен
+			if(!sizeBody || isEndBody()) result = true;
+		}
+	}
+	// Выводим результат
+	return result;
 }
 /**
  * getBodySize Метод получения размера тела http данных
@@ -2365,26 +2579,19 @@ void HttpData::authSuccess(){
 	createRequest(200);
 }
 /**
- * init Метод инициализации класса
- * @param  str     строка http запроса
- * @param  name    название приложения
- * @param  version версия приложения
- * @param  options опции http парсера
- * @return         данные http запроса
+ * setData Метод добавления данных
+ * @param  buffer  буфер с http данными
+ * @param  size    размер http данных
  */
-void HttpData::init(const string str, const string name, const string version, const u_short options){
+void HttpData::setData(const char * buffer, const size_t size){
 	// Проверяем существуют ли данные
-	if(!str.empty()){
+	if(size){
 		// Очищаем полученные данные
 		clear();
-		// Запоминаем название приложения
-		this->appName = name;
-		// Запоминаем версию приложения
-		this->appVersion = version;
-		// Запоминаем параметры http парсера
-		this->options = options;
 		// Результат работы регулярного выражения
 		smatch match;
+		// Создаем строку с данными
+		string str(buffer, size);
 		// Устанавливаем правило регулярного выражения
 		regex e(
 			"^((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
@@ -2554,49 +2761,14 @@ const bool Http::isHttp(const string buffer){
  * @param buffer буфер с входящими запросами
  * @param size   размер входящих данных
  */
-const size_t Http::parse(const char * buffer, const size_t size){
-	// Определяем максимальный размер данных
-	size_t maxsize = 0;
-	// Результат работы регулярного выражения
-	smatch match;
-	// Создаем строку для поиска
-	string str(buffer, size);
-	// Устанавливаем правило регулярного выражения
-	regex e(
-		"^([^\\r\\n\\s]*)((?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
-		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
-		"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
-		"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
-		regex::ECMAScript | regex::icase
-	);
-	// Выполняем поиск протокола
-	regex_search(str, match, e);
-	// Если данные найдены
-	if(!match.empty()){
-		// Запоминаем первые символы
-		string badchars = match[1].str();
-		// Увеличиваем значение общих найденных символов
-		maxsize += badchars.size();
-		// Выполняем парсинг http запроса
-		HttpData httpData;
-		// Получаем данные заголовков
-		string headers = match[2].str();
-		// Добавляем размер заголовков
-		maxsize += headers.size();
-		// Выполняем инициализацию объекта
-		httpData.init(headers, this->name, this->version, this->options);
-		// Добавляем вложенные данные
-		size_t sizeBody = httpData.setEntitybody(buffer + maxsize, size - maxsize);
-		// Если размер данных тела не получен
-		if(!sizeBody || httpData.isEndBody()){
-			// Добавляем в массив объект подключения
-			this->httpData.push_back(httpData);
-		}
-		// Увеличиваем общее количество обработанных байт
-		maxsize += sizeBody;
+void Http::parse(const char * buffer, const size_t size){
+	// Выполняем парсинг http запроса
+	HttpData httpData;
+	// Выполняем инициализацию данных
+	if(httpData.parse(buffer, size, this->name, this->options)){
+		// Добавляем в массив объект подключения
+		this->httpData.push_back(httpData);
 	}
-	// Сообщаем что ничего не найдено
-	return maxsize;
 }
 /**
  * modify Функция модифицирования ответных данных
@@ -2606,17 +2778,19 @@ void Http::modify(vector <char> &data){
 	// Получаем данные ответа
 	const char * headers = data.data();
 	// Создаем объект запроса
-	HttpData httpQuery;
+	HttpData httpData;
+	// Создаем объект
+	httpData.create(this->name, this->options);
 	// Выполняем инициализацию объекта
-	httpQuery.init(headers, this->name, this->version, this->options);
+	httpData.setData(headers, data.size());
 	// Если данные распарсены
-	if(httpQuery.isEndHeaders()){
+	if(httpData.isEndHeaders()){
 		// Если завершение заголовка найдено
 		size_t pos = (strstr(headers, "\r\n\r\n") - headers) + 4;
 		// Получаем данные запроса
 		string last(data.data() + pos, data.size() - pos);
 		// Получаем данные заголовков
-		string query = httpQuery.getResponseHeaders();
+		string query = httpData.getResponseHeaders();
 		// Объединяем блоки
 		query.append(last);
 		// Заменяем первоначальный блок с данными

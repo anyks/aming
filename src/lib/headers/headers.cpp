@@ -226,9 +226,9 @@ void Headers::read(){
  * modifyHeaders Метод модификации заголовков
  * @param server идентификатор сервера
  * @param rules  правила фильтрации
- * @param http   блок с данными запроса или ответа
+ * @param http   блок с http данными
  */
-void Headers::modifyHeaders(const string server, vector <Headers::Params> rules, HttpData & http){
+void Headers::modifyHeaders(const string server, vector <Headers::Params> rules, HttpData &http){
 	// Если правила клиента существуют
 	if(!server.empty() && !rules.empty()){
 		// Направление трафика
@@ -350,26 +350,181 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 				else if(rules[i].action.compare("rm") == 0)	action = false;
 				// Переходим по всему массиву заголовков
 				for(u_int j = 0; j < rules[i].headers.size(); j++){
+					// Результат работы регулярного выражения
+					smatch match;
+					// Исправляем название заголовка
+					const string header = rules[i].headers[j];
 					// Если нужно добавить заголовки
 					if(action){
-						// Результат работы регулярного выражения
-						smatch match;
 						// Устанавливаем правило регулярного выражения
 						regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
 						// Выполняем проверку
-						regex_search(rules[i].headers[j], match, e);
+						regex_search(header, match, e);
 						// Если данные найдены
 						if(!match.empty()) http.setHeader(match[1].str(), match[2].str());
 					// Если нужно удалить заголовки
 					} else {
-						// Результат работы регулярного выражения
-						smatch match;
 						// Устанавливаем правило регулярного выражения
 						regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
 						// Выполняем проверку
-						regex_search(rules[i].headers[j], match, e);
+						regex_search(header, match, e);
 						// Если данные найдены
 						if(!match.empty()) http.rmHeader(match[1].str());
+					}
+				}
+			}
+		}
+	}
+}
+/**
+ * modifyHeaders Метод модификации заголовков
+ * @param server идентификатор сервера
+ * @param rules  правила фильтрации
+ * @param data   строка с данными запроса или ответа
+ * @param http   блок с http данными
+ */
+void Headers::modifyHeaders(const string server, vector <Headers::Params> rules, string &data, HttpData &http){
+	// Если правила клиента существуют
+	if(!server.empty() && !rules.empty() && !data.empty()){
+		// Направление трафика
+		bool routeIn = false, routeAll = false, action = false;
+		// Определяем метод запроса
+		const string method = http.getMethod();
+		// Определяем статус запроса
+		const u_int status = http.getStatus();
+		// Выполняем поиск указанного сервера
+		for(u_int i = 0; i < rules.size(); i++){
+			// Результат проверки фильтров
+			bool result = false;
+			// Определяем нужно ли учитывать направление трафика
+			if(rules[i].route.compare("*") == 0) routeAll = true;
+			else routeAll = false;
+			// Определяем направление трафика
+			if(rules[i].route.compare("in") == 0)		routeIn = true;
+			else if(rules[i].route.compare("out") == 0)	routeIn = false;
+			// Накладываем фильтр на направление трафика
+			if(routeAll || ((!status && !routeIn) || (status && routeIn))) result = true;
+			// Если фильтр сработал
+			if(result){
+				// Переходим по всем методам запросов
+				for(u_int j = 0; j < rules[i].methods.size(); j++){
+					// Выполняем проверку на инверсию
+					auto check = isNot(rules[i].methods[j]);
+					// Если это инверсия
+					if(check.inv){
+						// Если это инверсия и метод совпал тогда запрещаем дальнейшие действия и выходим из цикла
+						if(check.str.compare(method) == 0){
+							// Запоминаем что все не удачно
+							result = false;
+							// Выходим из цикла
+							break;
+						// Иначе разрешаем работу
+						} else result = true;
+					// Если это не инверсия
+					} else {
+						// Если это звездочка или не инверсия и метод найден, тогда разрешаем дальнейшие действия и выходим
+						if((check.str.compare("*") == 0)
+						|| (check.str.compare(method) == 0)){
+							// Запоминаем что все удачно
+							result = true;
+							// Выходим из цикла
+							break;
+						// Запрещаем дальнейшие действия
+						} else result = false;
+					}
+				}
+				// Если фильтр сработал
+				if(result){
+					// Если сервер указан конкретный
+					if(rules[i].server.compare("*") != 0){
+						// Выполняем проверку на инверсию
+						auto check = isNot(rules[i].server);
+						// Если это инверсия
+						if(check.inv){
+							// Определяем как надо искать сервер
+							switch(rules[i].stype){
+								// Если поиск идет по ip адресу
+								case 1:
+								case 2: if(check.str.compare(server) == 0) result = false; break;
+								// Если поиск идет по домену
+								case 4: if(toCase(check.str).compare(toCase(http.getHost())) == 0) result = false; break;
+								// Метод по умолчанию
+								default: result = false;
+							}
+						// Если это не инверсия
+						} else {
+							// Определяем как надо искать сервер
+							switch(rules[i].stype){
+								// Если поиск идет по ip адресу
+								case 1:
+								case 2: if(check.str.compare(server) != 0) result = false; break;
+								// Если поиск идет по домену
+								case 4: if(toCase(check.str).compare(toCase(http.getHost())) != 0) result = false; break;
+								// Метод по умолчанию
+								default: result = false;
+							}
+						}
+					}
+					// Если фильтр сработал и это исходящий трафик, проверяем на путь запроса
+					if(result){
+						// Если путь указан конкретный
+						if(rules[i].path.compare("*") != 0){
+							// Выполняем проверку на инверсию
+							auto check = isNot(rules[i].path);
+							// Если это инверсия, и адрес запроса совпадает, запрещаем дальнейшие действия
+							if(check.inv){
+								// Проверяем совпадает ли адрес
+								if(toCase(check.str)
+								.compare(toCase(http.getPath())) == 0) result = false;
+							// Если это не инверсия, и адрес запроса совпадает, тогда разрешаем дальнейшие действия
+							} else {
+								// Проверяем совпадает ли адрес
+								if(toCase(check.str)
+								.compare(toCase(http.getPath())) != 0) result = false;
+							}
+						}
+						// Если фильтр сработал и это исходящий трафик
+						if(result && (rules[i].regex.compare("*") != 0)){
+							// Проверяем на соответствие юзер-агента
+							// Результат работы регулярного выражения
+							smatch match;
+							// Устанавливаем правило регулярного выражения
+							regex e(rules[i].regex, regex::ECMAScript | regex::icase);
+							// Выполняем проверку
+							regex_search(http.getUseragent(), match, e);
+							// Выводим результат
+							result = !match.empty();
+						}
+					}
+				}
+			}
+			// Если фильтры сработали то выполняем модификацию
+			if(result){
+				// Определяем тип действия, удаление или добавление заголовков
+				if(rules[i].action.compare("add") == 0)		action = true;
+				else if(rules[i].action.compare("rm") == 0)	action = false;
+				// Переходим по всему массиву заголовков
+				for(u_int j = 0; j < rules[i].headers.size(); j++){
+					// Результат работы регулярного выражения
+					smatch match;
+					// Исправляем название заголовка
+					const string header = rules[i].headers[j];
+					// Если нужно добавить заголовки
+					if(action){
+						// Устанавливаем правило регулярного выражения
+						regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
+						// Выполняем проверку
+						regex_search(header, match, e);
+						// Если данные найдены
+						if(!match.empty()) http.addHeaderToString(match[1].str(), match[2].str(), data);
+					// Если нужно удалить заголовки
+					} else {
+						// Устанавливаем правило регулярного выражения
+						regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
+						// Выполняем проверку
+						regex_search(header, match, e);
+						// Если данные найдены
+						if(!match.empty()) http.rmHeaderInString(match[1].str(), data);
 					}
 				}
 			}
@@ -640,7 +795,7 @@ void Headers::clear(){
  * @param server адрес сервера
  * @param http   блок с данными запроса или ответа
  */
-void Headers::modify(const string ip, const string mac, const string server, HttpData & http){
+void Headers::modify(const string ip, const string mac, const string server, HttpData &http){
 	// Если правило для клиента найдено
 	if(!ip.empty() && !mac.empty() && !server.empty()){
 		// Создаем объект сети
@@ -663,6 +818,45 @@ void Headers::modify(const string ip, const string mac, const string server, Htt
 		modifyHeaders(serverId, rules1, http);
 		modifyHeaders(serverId, rules2, http);
 		modifyHeaders(serverId, rules3, http);
+	}
+}
+/**
+ * modify Метод модификации заголовков
+ * @param ip     ip адрес клиента
+ * @param mac    мак адрес клиента
+ * @param server адрес сервера
+ * @param data   строка с данными запроса или ответа
+ */
+void Headers::modify(const string ip, const string mac, const string server, string &data){
+	// Если правило для клиента найдено
+	if(!ip.empty() && !mac.empty() && !server.empty() && !data.empty()){
+		// Создаем http объект
+		HttpData http;
+		// Выполняем обработку данных
+		if(http.parse(data.c_str(), data.size(), this->config->proxy.name, this->config->options)){
+			// Создаем объект сети
+			Network nwk;
+			// Получаем идентификатор сервера
+			string serverId = toCase(server);
+			// Получаем типы идентификаторов
+			u_short stype = checkTypeId(serverId);
+			// Если это ip адреса то преобразуем их
+			// Для сервера
+			if(stype == 1)		serverId	= nwk.setLowIp(serverId);	// Если это IPv4
+			else if(stype == 2)	serverId	= nwk.setLowIp6(serverId);	// Если это IPv6
+			// Получаем правила клиента по ip адресу
+			auto rules1 = get(ip, false);
+			// Получаем правила клиента по mac адресу
+			auto rules2 = get(mac, false);
+			// Получаем общие правила для клиента
+			auto rules3 = get("*", false);
+			// Выполняем модификацию заголовков
+			modifyHeaders(serverId, rules1, data, http);
+			modifyHeaders(serverId, rules2, data, http);
+			modifyHeaders(serverId, rules3, data, http);
+			// Выполняем модификацию основных заголовков
+			data = http.modifyHeaderString(data);
+		}
 	}
 }
 /**
