@@ -1348,7 +1348,7 @@ HttpData::Connect HttpData::getConnection(const string str){
 		else data.protocol = "http";
 	}
 	// Создаем регулярное выражение
-	regex ed("(?:http[s]?\\:\\/\\/)?(?:[\\w\\-\\.]+\\.[\\w\\-]+)(?:\\:\\d+)?(\\/)", regex::ECMAScript | regex::icase);
+	regex ed("^(?:http[s]?\\:\\/\\/)?(?:[\\w\\-\\.]+\\.[\\w\\-]+)(?:\\:\\d+)?(\\/)", regex::ECMAScript | regex::icase);
 	// Формируем путь запроса
 	data.path = regex_replace(str, ed, "$1");
 	// Выводим результат
@@ -1453,6 +1453,11 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 	&& (this->options & OPT_PGZIP)
 	&& isEndHeaders()
 	&& getHeader("content-encoding").empty()){
+		// Определяем метод запроса
+		const string method = getMethod();
+		// Определяем метод запроса, разрешено только GET и POST
+		if((method.compare("get") != 0)
+		&& (method.compare("post") != 0)) return gzip;
 		// Если это режим сжатия, тогда отправляем завершающие данные
 		if(!isIntGzip()){
 			// Получаем статус запроса
@@ -1783,12 +1788,15 @@ const bool HttpData::setRedirect(HttpData &response){
 				} else setHeader("Referer", getPath());
 				// Устанавливаем порт запроса
 				setPort(cport);
-				// Устанавливаем хост запроса
-				setHost(connect.host);
 				// Устанавливаем путь запроса
 				setPath(connect.path);
 				// Устанавливаем протокол запроса
 				setProtocol(connect.protocol);
+				// Если хост не является частью пути
+				if(connect.path.find(connect.host) == string::npos){
+					// Устанавливаем хост запроса
+					setHost(connect.host);
+				}
 				// Запоминаем что редирект установлен
 				result = true;
 			}

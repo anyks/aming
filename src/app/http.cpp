@@ -1119,23 +1119,6 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			if(http->httpResponse.isEndHeaders()){
 				// Получаем статус запроса
 				const u_int status = http->httpResponse.getStatus();
-				// Если это редирект
-				if((status > 299) && (status < 400)){
-					// Создаем редирект
-					if(http->httpRequest.setRedirect(http->httpResponse)){
-						// Очищаем объект ответа
-						http->httpResponse.clear();
-						// Создаем объект http данных
-						http->httpResponse.create(
-							http->proxy->config->proxy.name,
-							http->proxy->config->options
-						);
-						// Выполняем ресолв домена
-						http->dns->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http);
-						// Выходим из обработки данных
-						return;
-					}
-				}
 				// Устанавливаем параметры сжатия
 				http->httpResponse.setGzipParams(&http->proxy->config->gzip);
 				// Если данные соответствуют данным из кэша
