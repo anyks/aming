@@ -1348,7 +1348,7 @@ HttpData::Connect HttpData::getConnection(const string str){
 		else data.protocol = "http";
 	}
 	// Создаем регулярное выражение
-	regex ed("(?:http[s]?\\:\\/\\/)?(?:[\\w\\-]+\\.[\\w\\-]+)(?:\\:\\d+)?(\\/)", regex::ECMAScript | regex::icase);
+	regex ed("(?:http[s]?\\:\\/\\/)?(?:[\\w\\-\\.]+\\.[\\w\\-]+)(?:\\:\\d+)?(\\/)", regex::ECMAScript | regex::icase);
 	// Формируем путь запроса
 	data.path = regex_replace(str, ed, "$1");
 	// Выводим результат
