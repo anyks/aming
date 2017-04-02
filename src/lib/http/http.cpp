@@ -997,21 +997,7 @@ void HttpData::genDataConnect(){
 			|| (::toCase(this->path).compare(::toCase(fulladdr3)) == 0)
 			|| (::toCase(this->path).compare(::toCase(fulladdr4)) == 0)))) this->path = "/";
 			// Выполняем удаление из адреса доменного имени
-			else {
-				// Выполняем поиск правильного пути, вместе с портом
-				size_t pos = this->path.find(::toCase(fulladdr3)), length = 0;
-				// Если позиция найдена
-				if(pos != string::npos) length = fulladdr3.length();
-				// Если адрес с портом не найден то ищем без порта
-				else {
-					// Выполняем поиск пути без порта
-					pos = this->path.find(::toCase(fulladdr1));
-					// Если позиция найдена
-					if(pos != string::npos) length = fulladdr1.length();
-				}
-				// Если размер пути найден
-				if(length) this->path = this->path.replace(0, length, "");
-			}
+			else this->path = gcon.path;
 			// Запоминаем хост
 			this->host = scon.host;
 		}
