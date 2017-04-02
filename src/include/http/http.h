@@ -351,6 +351,7 @@ class HttpData {
 		struct Connect {
 			string host;		// Хост
 			string port;		// Порт
+			string path;		// Путь
 			string protocol;	// Протокол
 		};
 		/**
@@ -492,6 +493,12 @@ class HttpData {
 		 * @return         результат работы
 		 */
 		const bool addHeaderToString(const string header, const string value, string &headers);
+		/**
+		 * setRedirect Метод создания запроса редиректа
+		 * @param response объект ответа
+		 * @return         реузльтат установки редиректа
+		 */
+		const bool setRedirect(HttpData &response);
 		/**
 		 * parse Метод парсинга данных
 		 * @param buffer  буфер с входящими запросами
@@ -677,6 +684,12 @@ class HttpData {
 		 */
 		void setHeader(const string key, const string value);
 		/**
+		 * setData Метод добавления данных
+		 * @param  buffer  буфер с http данными
+		 * @param  size    размер http данных
+		 */
+		void setData(const char * buffer, const size_t size);
+		/**
 		 * setGzipParams Метод установки параметров сжатия gzip
 		 * @param params параметры сжатия
 		 */
@@ -741,6 +754,10 @@ class HttpData {
 		 */
 		void addHeader(const char * buffer = NULL);
 		/**
+		 * largeRequest Метод генерации ответа (слишком большой размер файла)
+		 */
+		void largeRequest();
+		/**
 		 * brokenRequest Метод генерации ответа (неудачного отправленного запроса)
 		 */
 		void brokenRequest();
@@ -764,12 +781,6 @@ class HttpData {
 		 * authSuccess Метод генерации ответа (подтверждения авторизации)
 		 */
 		void authSuccess();
-		/**
-		 * setData Метод добавления данных
-		 * @param  buffer  буфер с http данными
-		 * @param  size    размер http данных
-		 */
-		void setData(const char * buffer, const size_t size);
 		/**
 		 * create Метод создания объекта
 		 * @param name    название приложения

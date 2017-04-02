@@ -35,6 +35,15 @@
 				client.write("404 Not Found\n");
 				client.end();
 			} break;
+			// Если это редирект
+			case "/anyks": {
+				// Устанавливаем заголовки
+				client.setHeader('Location', "http://vipmake.com/files/default/css/css_ZEbgsW3PQ8CSHuVoHPvFefbGZwNfubouBXxfMYrp_F0.css");
+				// Сообщаем что страница не найдена
+				client.writeHead(301, {"Content-Type": "text/plain; charset=utf-8"});
+				// Закрываем подключение
+				client.end();
+			} break;
 			// Тест 4 (Etag)
 			case "/etag1": {
 				// Дата последней модификации

@@ -1119,6 +1119,23 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 			if(http->httpResponse.isEndHeaders()){
 				// Получаем статус запроса
 				const u_int status = http->httpResponse.getStatus();
+				// Если это редирект
+				if((status > 299) && (status < 400)){
+					// Создаем редирект
+					if(http->httpRequest.setRedirect(http->httpResponse)){
+						// Очищаем объект ответа
+						http->httpResponse.clear();
+						// Создаем объект http данных
+						http->httpResponse.create(
+							http->proxy->config->proxy.name,
+							http->proxy->config->options
+						);
+						// Выполняем ресолв домена
+						http->dns->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http);
+						// Выходим из обработки данных
+						return;
+					}
+				}
 				// Устанавливаем параметры сжатия
 				http->httpResponse.setGzipParams(&http->proxy->config->gzip);
 				// Если данные соответствуют данным из кэша
@@ -1153,7 +1170,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					// Активируем отдачу буферов целиком одним разом
 					socket_tcpcork(http->sockets.client, http->proxy->log);
 					// Формируем ответ клиенту, что домен не найден
-					http->httpResponse.brokenRequest();
+					http->httpResponse.largeRequest();
 					// Отправляем ответ клиенту
 					http->sendClient();
 					// Выходим из обработки данных
@@ -1240,7 +1257,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 								if(cache.age) http->httpResponse.setHeader("Age", to_string(cache.age));
 								
 
-								cout << " =============1 " << http->httpResponse.getRequestData() << endl;
+								// cout << " =============1 " << http->httpResponse.getRequestData() << endl;
 
 								// Отправляем ответ клиенту
 								http->sendClient();
@@ -1283,7 +1300,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							// Указываем что нужно отключится сразу после отправки запроса
 							if(!http->client.alive) http->httpRequest.setClose();
 
-							cout << " =============2 " << http->httpRequest.getRequestData() << endl;
+							// cout << " =============2 " << http->httpRequest.getRequestData() << endl;
 
 							// Отправляем данные на сервер
 							http->sendServer();

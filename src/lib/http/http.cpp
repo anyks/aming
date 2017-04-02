@@ -706,7 +706,7 @@ const size_t HttpData::HttpBody::addData(const char * buffer, const size_t size,
 			// Обрабатываем чанкованием
 			case 2: {
 				// Выполняем поиск завершения передачи чанков
-				size_t pos = string(buffer, size).find("\r\n0\r\n\r\n");
+				size_t pos = string(buffer, size).find("0\r\n\r\n");
 				// Определяем позицию
 				if(pos != string::npos){
 					// Запоминаем сколько байт мы прочитали
@@ -1360,6 +1360,10 @@ HttpData::Connect HttpData::getConnection(const string str){
 		// Если это не защищенное подключение значит это http подключение
 		else data.protocol = "http";
 	}
+	// Создаем регулярное выражение
+	regex ed("(?:http[s]?\\:\\/\\/)?(?:[\\w\\-]+\\.[\\w\\-]+)(?:\\:\\d+)?(\\/)", regex::ECMAScript | regex::icase);
+	// Формируем путь запроса
+	data.path = regex_replace(str, ed, "$1");
 	// Выводим результат
 	return data;
 }
@@ -1464,14 +1468,20 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 	&& getHeader("content-encoding").empty()){
 		// Если это режим сжатия, тогда отправляем завершающие данные
 		if(!isIntGzip()){
+			// Получаем статус запроса
+			const u_int status = getStatus();
+			// Проверяем значение статуса, если это редиректы то запрещаем сжатие
+			if(((status > 99) && (status < 200))
+			|| ((status > 203) && (status < 400))) return gzip;
 			// Получаем размер тела
-			string clength = getHeader("content-length");
+			const string clength = getHeader("content-length");
 			// Получаем тип данных чанкованием
-			string chunked = getHeader("transfer-encoding");
+			const string chunked = getHeader("transfer-encoding");
 			// Получаем размер контента
 			size_t contentLength = (!clength.empty() ? ::atoi(clength.c_str()) : 0);
 			// Если размер контента не найден тогда проверяем на чанкование
-			if(!contentLength && (!chunked.empty() && (chunked.find("chunked") != string::npos))) contentLength = 2;
+			if(!contentLength && (!chunked.empty()
+			&& (chunked.find("chunked") != string::npos))) contentLength = 2;
 			// Если размер контента не найден но это закрытие подключения
 			else if(!contentLength && isClose()) contentLength = 1;
 			// Если размер контента не найден тогда выходим
@@ -1735,6 +1745,66 @@ const bool HttpData::addHeaderToString(const string header, const string value, 
 			if(pos != string::npos) headers.replace(pos, headers1.length(), headers2);
 			// Определяем результат работы функции
 			result = (headers1.compare(headers2) != 0);
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * setRedirect Метод создания запроса редиректа
+ * @param response объект ответа
+ * @return         реузльтат установки редиректа
+ */
+const bool HttpData::setRedirect(HttpData &response){
+	// Результат установки редиректа
+	bool result = false;
+	// Если данные переданы верные
+	if(response.isEndHeaders()){
+		// Получаем статус запроса
+		const u_int status = response.getStatus();
+		// Получаем адрес запроса
+		const string request = response.getHeader("location");
+		// Если адрес запроса существует
+		if(((status > 299) && (status < 400)) && !request.empty()){
+			// Выполняем получение параметров подключения
+			Connect connect = getConnection(request);
+			// Проверяем протокол
+			if(connect.protocol.compare("http") == 0){
+				// Получаем данные хоста
+				const string host = getHost();
+				// Получаем данные порта
+				const u_int port = getPort();
+				// Получаем данные порта подключения
+				const u_int cport = ::atoi(connect.port.c_str());
+				// Создаем реферала
+				string referer = getProtocol();
+				// Если хост, порт и протокол не совпадают
+				if((host.compare(connect.host) != 0)
+				|| (port != cport)
+				|| (referer.compare(connect.protocol) != 0)){
+					// Добавляем разделитель протокола
+					referer.append("://");
+					// Добавляем хост
+					referer.append(host);
+					// Добавляем порт если он не дефолтный
+					if(port != 80) referer.append(string(":") + to_string(port));
+					// Добавляем путь запроса
+					referer.append(getPath());
+					// Устанавливаем реферала
+					setHeader("Referer", referer);
+				// Устанавливаем путь запроса, если параметры коннекта совпадают
+				} else setHeader("Referer", getPath());
+				// Устанавливаем порт запроса
+				setPort(cport);
+				// Устанавливаем хост запроса
+				setHost(connect.host);
+				// Устанавливаем путь запроса
+				setPath(connect.path);
+				// Устанавливаем протокол запроса
+				setProtocol(connect.protocol);
+				// Запоминаем что редирект установлен
+				result = true;
+			}
 		}
 	}
 	// Выводим результат
@@ -2413,6 +2483,51 @@ void HttpData::setHeader(const string key, const string value){
 	}
 }
 /**
+ * setData Метод добавления данных
+ * @param  buffer  буфер с http данными
+ * @param  size    размер http данных
+ */
+void HttpData::setData(const char * buffer, const size_t size){
+	// Проверяем существуют ли данные
+	if(size){
+		// Очищаем полученные данные
+		clear();
+		// Результат работы регулярного выражения
+		smatch match;
+		// Создаем строку с данными
+		string str(buffer, size);
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			"^((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+)\\r\\n)|(?:[A-Za-z]+"
+			"\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
+			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем поиск протокола
+		regex_search(str, match, e);
+		// Если данные найдены
+		if(!match.empty()){
+			// Определяем версию протокола
+			string version = match[2].str();
+			// Если версия не существует получаем второе значение
+			if(version.empty()) version = match[3].str();
+			// Запоминаем версию протокола
+			this->version = version;
+			// Получаем строку запроса
+			this->http = match[1].str();
+			// Запоминаем http запрос
+			this->http = ::trim(this->http);
+			// Запоминаем статус запроса
+			this->status = ::atoi(match[4].str().c_str());
+			// Создаем объект с заголовками
+			this->headers.create(match[0].str().c_str());
+		}
+		// Генерируем данные подключения
+		genDataConnect();
+	}
+}
+/**
  * setGzipParams Метод установки параметров сжатия gzip
  * @param params параметры сжатия
  */
@@ -2562,6 +2677,13 @@ void HttpData::addHeader(const char * buffer){
 	} else if(buffer) this->headers.setEnd();
 }
 /**
+ * largeRequest Метод генерации ответа (слишком большой размер файла)
+ */
+void HttpData::largeRequest(){
+	// Устанавливаем тело с данными
+	createRequest(509);
+}
+/**
  * brokenRequest Метод генерации ответа (неудачного отправленного запроса)
  */
 void HttpData::brokenRequest(){
@@ -2604,51 +2726,6 @@ void HttpData::authSuccess(){
 	createRequest(200);
 }
 /**
- * setData Метод добавления данных
- * @param  buffer  буфер с http данными
- * @param  size    размер http данных
- */
-void HttpData::setData(const char * buffer, const size_t size){
-	// Проверяем существуют ли данные
-	if(size){
-		// Очищаем полученные данные
-		clear();
-		// Результат работы регулярного выражения
-		smatch match;
-		// Создаем строку с данными
-		string str(buffer, size);
-		// Устанавливаем правило регулярного выражения
-		regex e(
-			"^((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
-			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+)\\r\\n)|(?:[A-Za-z]+"
-			"\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
-			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
-			regex::ECMAScript | regex::icase
-		);
-		// Выполняем поиск протокола
-		regex_search(str, match, e);
-		// Если данные найдены
-		if(!match.empty()){
-			// Определяем версию протокола
-			string version = match[2].str();
-			// Если версия не существует получаем второе значение
-			if(version.empty()) version = match[3].str();
-			// Запоминаем версию протокола
-			this->version = version;
-			// Получаем строку запроса
-			this->http = match[1].str();
-			// Запоминаем http запрос
-			this->http = ::trim(this->http);
-			// Запоминаем статус запроса
-			this->status = ::atoi(match[4].str().c_str());
-			// Создаем объект с заголовками
-			this->headers.create(match[0].str().c_str());
-		}
-		// Генерируем данные подключения
-		genDataConnect();
-	}
-}
-/**
  * init Метод создания объекта
  * @param name    название приложения
  * @param options опции http парсера
@@ -2671,7 +2748,7 @@ void HttpData::create(const string name, const u_short options){
 HttpData::HttpData(const string name, const u_short options){
 	// Создаем шаблоны ответов
 	this->response.insert(pair <u_short, Http> (100, {"Continue", "\r\n", ""}));
-	this->response.insert(pair <u_short, Http> (200, {"Connection established", "\r\n", ""}));
+	this->response.insert(pair <u_short, Http> (200, {"Connection established", "\r\n", "Ok"}));
 	this->response.insert(pair <u_short, Http> (400, {
 		"Bad Request",
 		"Proxy-Connection: close\r\n"
@@ -2737,6 +2814,15 @@ HttpData::HttpData(const string name, const u_short options){
 		"\r\n",
 		"<html><head><title>503 Service Unavailable</title></head>\r\n"
 		"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n"
+	}));
+	this->response.insert(pair <u_short, Http> (509, {
+		"Bandwidth Limit Exceeded",
+		"Proxy-Connection: close\r\n"
+		"Connection: close\r\n"
+		"Content-type: text/html; charset=utf-8\r\n"
+		"\r\n",
+		"<html><head><title>509 Bandwidth Limit Exceeded</title></head>\r\n"
+		"<body><h2>509 Bandwidth Limit Exceeded</h2><h3>Data or File too large size</h3></body></html>\r\n"
 	}));
 	this->response.insert(pair <u_short, Http> (510, {
 		"Not Extended",
