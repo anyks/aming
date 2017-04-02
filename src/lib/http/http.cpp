@@ -1026,7 +1026,8 @@ void HttpData::genDataConnect(){
 						// Запоминаем пароль
 						this->password = match[2].str();
 					}
-				}
+				// Запоминаем данные авторизации если это не стандартная авторизация
+				} else this->login = match[2].str();
 			}
 		}
 	}
