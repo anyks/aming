@@ -1001,6 +1001,11 @@ void HttpProxy::event_cb(struct bufferevent * bev, const short events, void * ct
 					http->client.ip.c_str(),
 					current_fd
 				);
+				// Если размер тела меньше 4K
+				if(http->httpResponse.isClose() && !http->httpResponse.getBodySize()){
+					// Активируем отдачу буферов целиком одним разом
+					socket_tcpcork(http->sockets.client, http->proxy->log);
+				}
 				// Закрываем подключение
 				http->checkClose();
 			}
@@ -1135,14 +1140,6 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					http->next();
 					// Выходим из функции
 					return;
-				}
-				// Если статус утвердительный
-				if(((status > 99) && (status < 200))
-				|| ((status == 204) || (status == 205))
-				|| (status > 300)){
-					// Активируем отдачу буферов целиком одним разом
-					socket_tcpcork(http->sockets.server, http->proxy->log);
-					socket_tcpcork(http->sockets.client, http->proxy->log);
 				}
 				// Проверяем есть ли размер вложений
 				string cl = http->httpResponse.getHeader("content-length");
