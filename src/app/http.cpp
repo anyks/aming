@@ -1134,6 +1134,9 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					http->httpResponse.set(http->cache.data(), http->cache.size());
 					// Если время жизни указано то добавляем его
 					if(!age.empty()) http->httpResponse.setHeader("Age", age);
+
+					cout << " ===========2 " << endl;
+
 					// Отправляем ответ клиенту
 					http->sendClient();
 					// Продолжаем дальше
@@ -1238,6 +1241,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 								
 
 								// cout << " =============1 " << http->httpResponse.getRequestData() << endl;
+								
+								cout << " ===========1 " << endl;
+								
 
 								// Отправляем ответ клиенту
 								http->sendClient();

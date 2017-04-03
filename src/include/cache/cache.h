@@ -86,6 +86,7 @@ class Cache {
 				 * Структура размеров
 				 */
 				struct Map {
+					size_t ipv;
 					size_t age;
 					size_t date;
 					size_t expires;
@@ -97,6 +98,7 @@ class Cache {
 				// Сырые данные
 				vector <u_char> raw;
 			public:
+				u_int ipv;				// Версия интернет протокола
 				time_t age;				// Время жизни кэша
 				time_t date;			// Дата записи кэша прокси сервером
 				time_t expires;			// Дата смерти кэша
@@ -131,6 +133,8 @@ class Cache {
 		struct ResultData {
 			// Обязательная ревалидация
 			bool valid;
+			// Версия интернет протокола
+			u_int ipv;
 			// Возраст кэша
 			time_t age;
 			// Etag кэша

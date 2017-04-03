@@ -111,6 +111,7 @@ const u_char * Cache::DataCache::data(){
 	if(!this->http.empty()){
 		// Объект размерности данных
 		Map sizes = {
+			sizeof(this->ipv),
 			sizeof(this->age),
 			sizeof(this->date),
 			sizeof(this->expires),
@@ -125,6 +126,10 @@ const u_char * Cache::DataCache::data(){
 		const u_char * map = reinterpret_cast <const u_char *> (&sizes);
 		// Выполняем копирование карты размеров
 		copy(map, map + size, back_inserter(this->raw));
+		// Получаем данные интернет протокола
+		const u_char * ipv = reinterpret_cast <const u_char *> (&this->ipv);
+		// Выполняем копирование времени жизни
+		copy(ipv, ipv + sizes.ipv, back_inserter(this->raw));
 		// Получаем данные времени жизни
 		const u_char * age = reinterpret_cast <const u_char *> (&this->age);
 		// Выполняем копирование времени жизни
@@ -179,20 +184,22 @@ void Cache::DataCache::set(const u_char * data, size_t size){
 				if(size_data && ((size_data + size_it) <= size)){
 					// Определяем тип извлекаемых данных
 					switch(j){
+						// Если это версия интернет протокола
+						case 0: cpydata(data, size_data, size_it, &this->ipv); break;
 						// Если это время жизни
-						case 0: cpydata(data, size_data, size_it, &this->age); break;
+						case 1: cpydata(data, size_data, size_it, &this->age); break;
 						// Если это дата записи кэша прокси сервером
-						case 1: cpydata(data, size_data, size_it, &this->date); break;
+						case 2: cpydata(data, size_data, size_it, &this->date); break;
 						// Если это дата смерти кэша
-						case 2: cpydata(data, size_data, size_it, &this->expires); break;
+						case 3: cpydata(data, size_data, size_it, &this->expires); break;
 						// Если это дата последней модификации
-						case 3: cpydata(data, size_data, size_it, &this->modified); break;
+						case 4: cpydata(data, size_data, size_it, &this->modified); break;
 						// Если это обязательная ревалидация
-						case 4: cpydata(data, size_data, size_it, &this->valid); break;
+						case 5: cpydata(data, size_data, size_it, &this->valid); break;
 						// Если это идентификатор ETag
-						case 5: cpydata(data, size_data, size_it, this->etag); break;
+						case 6: cpydata(data, size_data, size_it, this->etag); break;
 						// Если это данные кэша
-						case 6: {
+						case 7: {
 							// Выделяем динамически память
 							u_char * buffer = new u_char [size_data];
 							// Извлекаем данные адреса
@@ -401,6 +408,8 @@ void Cache::readCache(HttpData &http, DataCache * data){
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
 		dir = addToPath(dir, "cache");
+		// Добавляем интернет протокол
+		dir = addToPath(dir, to_string(this->config->proxy.extIPv));
 		// Добавляем основной путь
 		dir = addToPath(dir, getPathDomain(http.getHost()));
 		// Добавляем порт
@@ -488,6 +497,8 @@ void Cache::writeCache(HttpData &http, DataCache data){
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
 		dir = addToPath(dir, "cache");
+		// Добавляем интернет протокол
+		dir = addToPath(dir, to_string(this->config->proxy.extIPv));
 		// Добавляем основной путь
 		dir = addToPath(dir, getPathDomain(http.getHost()));
 		// Добавляем порт
@@ -894,6 +905,8 @@ Cache::ResultData Cache::getCache(HttpData &http){
 					if(!cache.etag.empty()) result.etag = cache.etag;
 					// Запоминаем дату последней модификации
 					if(cache.modified) result.modified = timeToStr(cache.modified);
+					// Запоминаем версию интернет протокола
+					result.ipv = cache.ipv;
 					// Указываем что данные нужно ревалидировать
 					result.valid = cache.valid;
 					// Если ревалидация не указана и проверку не прошли
@@ -1055,6 +1068,7 @@ void Cache::setCache(HttpData &http){
 			cache.valid		= valid;
 			cache.expires	= expires;
 			cache.modified	= modified;
+			cache.ipv		= this->config->proxy.extIPv;
 			cache.http.assign(dump, dump + http.size());
 			// Выполняем запись данных в кэш
 			if(!cache.http.empty()) writeCache(http, cache);
