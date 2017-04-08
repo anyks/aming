@@ -793,14 +793,10 @@ const bool Cache::checkEnabledCache(HttpData &http){
 					// А при создании кэша, заголовок Content-Encoding удаляется, то мы просто отказываемся записывать кэш в этом случае
 					// Если кэширование запрещено тогда запрещаем
 					if(ccNoStore || ccPrivate || ccNoTransform) result = false;
-					// Определяем тип заголовка
-					else if(ccNoCache || ccRevalidate){
-						// Если etag существует
-						if(!et.empty() || !lm.empty()) result = true;
-						// Запрещаем кэширование
-						else result = false;
+					// Запрещаем кэширование
+					else if((ccNoCache || ccRevalidate) && (et.empty() && lm.empty())) result = false;
 					// Если время жизни найдено, то определяем его
-					} else if(ccMaxAge || ccsMaxAge){
+					else if(ccMaxAge || ccsMaxAge){
 						// Если это параметр s-maxage то перекрываем параметр max-age
 						if(!age || ccsMaxAge){
 							// Извлекачем значение времени
