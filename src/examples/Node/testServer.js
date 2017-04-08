@@ -100,12 +100,33 @@
 			} break;
 			// Тест 6 (Etag)
 			case "/etag6": {
+				// Время смерти кэша
+				const expiresCache = 'Tue, 28 Mar 2017 22:19:47 GMT';
+				// Дата последней модификации
+				const modifiedServer = 'Tue, 28 Mar 2017 22:19:47 GMT';
+				// Получаем дату последней модификации от клиента
+				const modifiedClient = req.headers['if-modified-since'];
+				// Данные eTag
+				const etagServer = "123";
+				// Получаем данные Etag
+				let etagClient = req.headers['if-none-match'];
+				// Если etag существует
+				if(etagClient) etagClient = etagClient.replace("W/", "");
 				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
+				client.setHeader('Last-modified', modifiedServer);
+				client.setHeader('Expires', expiresCache);
+				// Если дата на сервере или etag соответствует
+				if(((new Date(modifiedServer)).valueOf() <= (new Date(modifiedClient)).valueOf()) || (etagServer === etagClient)){
+					// Сообщаем что страница не найдена
+					client.writeHead(304, {"Content-Type": "text/plain; charset=utf-8"});
+					client.write("Not Modified\n");
+				// Если данные не соответствуют
+				} else {
+					// Сообщаем что страница не найдена
+					client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
+					client.write("Ok\n");
+				}
+				// Закрываем подключение
 				client.end();
 			} break;
 			// Тест 7 (Etag)
