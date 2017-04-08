@@ -50,9 +50,6 @@
 				const modifiedServer = 'Tue, 28 Mar 2017 22:19:47 GMT';
 				// Получаем дату последней модификации от клиента
 				const modifiedClient = req.headers['if-modified-since'];
-
-				console.log("==============", modifiedClient);
-
 				// Устанавливаем заголовки
 				client.setHeader('Last-modified', modifiedServer);
 				// client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
@@ -80,21 +77,23 @@
 				// Данные eTag
 				const etagServer = "123";
 				// Получаем данные Etag
-				const etagClient = req.headers['if-none-match'];
+				let etagClient = req.headers['if-none-match'];
+				// Если etag существует
+				if(etagClient) etagClient = etagClient.replace("W/", "");
 				// Устанавливаем заголовки
 				client.setHeader('Last-modified', modifiedServer);
-				client.setHeader('Etag', '123');
-				client.setHeader('Pragma', etagServer);
-				// Если дата на сервере изменилась
-				if(((new Date(modifiedServer)).valueOf() > (new Date(modifiedClient)).valueOf()) || (etagServer === etagClient)){
-					// Сообщаем что страница не найдена
-					client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-					client.write("Ok\n");
-				// Если дата не устарела
-				} else {
+				client.setHeader('Etag', etagServer);
+				client.setHeader('Pragma', 'no-cache');
+				// Если дата на сервере или etag соответствует
+				if(((new Date(modifiedServer)).valueOf() <= (new Date(modifiedClient)).valueOf()) || (etagServer === etagClient)){
 					// Сообщаем что страница не найдена
 					client.writeHead(304, {"Content-Type": "text/plain; charset=utf-8"});
 					client.write("Not Modified\n");
+				// Если данные не соответствуют
+				} else {
+					// Сообщаем что страница не найдена
+					client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
+					client.write("Ok\n");
 				}
 				// Закрываем подключение
 				client.end();

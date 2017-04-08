@@ -737,7 +737,7 @@ const bool Cache::isIpV6(const string ip){
  */
 const bool Cache::checkEnabledCache(HttpData &http){
 	// Результат проверки
-	bool result = false;
+	bool result = true;
 	// Если кэширование разрешено
 	if(this->config->cache.dat && http.isEndHeaders()){
 		// Получаем статус запроса
@@ -762,17 +762,19 @@ const bool Cache::checkEnabledCache(HttpData &http){
 			// Получаем дату последней модификации
 			const string lm = http.getHeader("last-modified");
 			// Определяем дату сервера
-			if(!dt.empty()) sdate = strToTime(dt.c_str());
+			if(!dt.empty()) cdate = strToTime(dt.c_str());
+			// Определяем дату последней модификации
+			if(!lm.empty()) sdate = strToTime(lm.c_str());
 			// Определяем время жизни кэша
 			if(!ex.empty()) expires = strToTime(ex.c_str());
 			// Если прагма запрещает кэш то отключаем его
 			if(!pr.empty() && (pr.find("no-cache") != string::npos)) result = false;
-			// Если время для жизни кэша еще есть то разрешаем кэширование
-			if(cdate < expires) result = true;
-			// Запрещаем кэш если время жизни уже истекло
-			else result = false;
+			// Если время жизни кэша истекло тогда запрещаем кэширование
+			if(cdate >= expires) result = false;
 			// Если управление кэшем существует
 			if(!cc.empty()){
+				// Возраст жизни кэша
+				size_t age = 0;
 				// Получаем параметры кэша
 				auto control = split(cc, ",");
 				// Переходим по всему массиву
@@ -799,19 +801,21 @@ const bool Cache::checkEnabledCache(HttpData &http){
 						else result = false;
 					// Если время жизни найдено, то определяем его
 					} else if(ccMaxAge || ccsMaxAge){
-						// Возраст жизни кэша
-						size_t age = 0;
-						// Извлекачем значение времени
-						const size_t pos = cache.find("=");
-						// Если позиция найдена тогда извлекаем контент
-						if(pos != string::npos) age = ::atoi(cache.substr(pos + 1, cache.length() - (pos + 1)).c_str());
-						// Если возраст больше нуля и это публичное кэширование тогда разрешаем
-						if(!age || (sdate && ((sdate + age) < cdate))) result = false;
-						else result = true;
-						// Если кэш на сервере еще не устарел тогда разрешаем кэширование
-						if(age && (!ag.empty() && (::atoi(ag.c_str()) < age))) result = true;
-						// Если кэш просто устарел тогда запрещаем кэширование
-						else if(age && !ag.empty()) result = false;
+						// Если это параметр s-maxage то перекрываем параметр max-age
+						if(!age || ccsMaxAge){
+							// Извлекачем значение времени
+							const size_t pos = cache.find("=");
+							// Если позиция найдена тогда извлекаем контент
+							if(pos != string::npos) age = ::atoi(cache.substr(pos + 1, cache.length() - (pos + 1)).c_str());
+							// Если возраст больше нуля и это публичное кэширование тогда разрешаем
+							if(!age || (sdate && ((sdate + age) < cdate))) result = false;
+							// Если дата еще не истекла
+							else if(sdate && ((sdate + age) >= cdate)) result = true;
+							// Если кэш на сервере еще не устарел тогда разрешаем кэширование
+							if(age && (!ag.empty() && (::atoi(ag.c_str()) < age))) result = true;
+							// Если кэш просто устарел тогда запрещаем кэширование
+							else if(age && !ag.empty()) result = false;
+						}
 					}
 				}
 			}
