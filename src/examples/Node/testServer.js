@@ -44,7 +44,7 @@
 				// Закрываем подключение
 				client.end();
 			} break;
-			// Тест 4 (Etag)
+			// Тест 1 (Etag)
 			case "/etag1": {
 				// Дата последней модификации
 				const modifiedServer = 'Tue, 28 Mar 2017 22:19:47 GMT';
@@ -68,7 +68,7 @@
 				// Закрываем подключение
 				client.end();
 			} break;
-			// Тест 5 (Etag)
+			// Тест 2 (Etag)
 			case "/etag2": {
 				// Дата последней модификации
 				const modifiedServer = 'Tue, 28 Mar 2017 22:19:47 GMT';
@@ -98,25 +98,19 @@
 				// Закрываем подключение
 				client.end();
 			} break;
-			// Тест 6 (Etag)
-			case "/etag6": {
+			// Тест 3 (Etag)
+			case "/etag3": {
 				// Время смерти кэша
-				const expiresCache = 'Tue, 28 Mar 2017 22:19:47 GMT';
+				const expiresCache = 'Sat, 08 Apr 2017 20:52:48 MSK';
 				// Дата последней модификации
 				const modifiedServer = 'Tue, 28 Mar 2017 22:19:47 GMT';
 				// Получаем дату последней модификации от клиента
 				const modifiedClient = req.headers['if-modified-since'];
-				// Данные eTag
-				const etagServer = "123";
-				// Получаем данные Etag
-				let etagClient = req.headers['if-none-match'];
-				// Если etag существует
-				if(etagClient) etagClient = etagClient.replace("W/", "");
 				// Устанавливаем заголовки
 				client.setHeader('Last-modified', modifiedServer);
 				client.setHeader('Expires', expiresCache);
 				// Если дата на сервере или etag соответствует
-				if(((new Date(modifiedServer)).valueOf() <= (new Date(modifiedClient)).valueOf()) || (etagServer === etagClient)){
+				if((new Date(modifiedServer)).valueOf() <= (new Date(modifiedClient)).valueOf()){
 					// Сообщаем что страница не найдена
 					client.writeHead(304, {"Content-Type": "text/plain; charset=utf-8"});
 					client.write("Not Modified\n");
@@ -129,129 +123,85 @@
 				// Закрываем подключение
 				client.end();
 			} break;
-			// Тест 7 (Etag)
-			case "/etag7": {
-				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
-				client.end();
-			} break;
-			// Тест 8 (Cache-control)
+			// Тест 4 (Cache-control)
 			case "/cc1": {
+				// Дата последней модификации
+				const modifiedServer = 'Sun, 09 Apr 2017 21:10:48 MSK';
 				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
+				client.setHeader('Last-modified', modifiedServer);
 				client.setHeader('Cache-control', 'max-age=60');
 				// Сообщаем что страница не найдена
 				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
 				client.write("Ok\n");
 				client.end();
 			} break;
-			// Тест 9 (Cache-control)
+			// Тест 5 (Cache-control)
 			case "/cc2": {
+				// Дата последней модификации
+				const modifiedServer = 'Sun, 09 Apr 2017 21:14:48 MSK';
 				// Устанавливаем заголовки
-				client.setHeader('Age', '120');
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'public, max-age=60');
+				client.setHeader('Last-modified', modifiedServer);
+				client.setHeader('Cache-control', 'public, max-age=60, s-maxage=120');
+				// Сообщаем что страница не найдена
+				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
+				client.write("Ok\n");
+				client.end();
+			} break;
+			// Тест 6 (Cache-control)
+			case "/cc3": {
+				// Дата последней модификации
+				const modifiedServer = 'Sun, 09 Apr 2017 21:22:48 MSK';
+				// Устанавливаем заголовки
+				client.setHeader('Last-modified', modifiedServer);
+				client.setHeader('Cache-control', 'max-age=60, must-revalidate');
+				// Сообщаем что страница не найдена
+				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
+				client.write("Ok\n");
+				client.end();
+			} break;
+			// Тест 7 (Cache-control)
+			case "/cc4": {
+				// Дата последней модификации
+				const modifiedServer = 'Sun, 09 Apr 2017 21:26:48 MSK';
+				// Устанавливаем заголовки
+				client.setHeader('Last-modified', modifiedServer);
+				client.setHeader('Cache-control', 'max-age=60, proxy-revalidate');
+				// Сообщаем что страница не найдена
+				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
+				client.write("Ok\n");
+				client.end();
+			} break;
+			// Тест 8 (Cache-control)
+			case "/cc5": {
+				// Дата последней модификации
+				const modifiedServer = 'Sun, 09 Apr 2017 21:50:48 MSK';
+				// Устанавливаем заголовки
+				client.setHeader('Last-modified', modifiedServer);
+				client.setHeader('Cache-control', 'max-age=60, no-cache');
+				// Сообщаем что страница не найдена
+				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
+				client.write("Ok\n");
+				client.end();
+			} break;
+			// Тест 9 (Cache-control)
+			case "/cc6": {
+				// Дата последней модификации
+				const modifiedServer = 'Sun, 09 Apr 2017 21:50:48 MSK';
+				// Устанавливаем заголовки
+				client.setHeader('Last-modified', modifiedServer);
+				client.setHeader('Cache-control', 'max-age=60, private');
 				// Сообщаем что страница не найдена
 				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
 				client.write("Ok\n");
 				client.end();
 			} break;
 			// Тест 10 (Cache-control)
-			case "/cc3": {
-				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'public, max-age=60, s-maxage=120');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
-				client.end();
-			} break;
-			// Тест 11 (Cache-control)
-			case "/cc4": {
-				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'public, max-age=60, s-maxage=120');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
-				client.end();
-			} break;
-			// Тест 12 (Cache-control)
-			case "/cc5": {
-				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'public, max-age=60, s-maxage=120, must-revalidate');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
-				client.end();
-			} break;
-			// Тест 13 (Cache-control)
-			case "/cc6": {
-				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'max-age=60, s-maxage=120, must-revalidate, proxy-revalidate');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
-				client.end();
-			} break;
-			// Тест 14 (Cache-control)
 			case "/cc7": {
+				// Дата последней модификации
+				const modifiedServer = 'Sun, 09 Apr 2017 21:50:48 MSK';
 				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'public, max-age=60, s-maxage=120, no-cache');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
-				client.end();
-			} break;
-			// Тест 15 (Cache-control)
-			case "/cc8": {
-				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'private, max-age=60, s-maxage=120');
-				// Сообщаем что страница не найдена
-				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-				client.write("Ok\n");
-				client.end();
-			} break;
-			// Тест 16 (Cache-control)
-			case "/cc9": {
-				// Устанавливаем заголовки
-				client.setHeader('Last-modified', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Etag', '123');
-				client.setHeader('Expires', 'Tue, 28 Mar 2017 22:19:47 GMT');
-				client.setHeader('Date', 'Tue, 28 Mar 2017 22:19:47 GMT'); // -3 часа от московского
-				client.setHeader('Cache-control', 'no-store, max-age=60, s-maxage=120');
+				client.setHeader('Last-modified', modifiedServer);
+				client.setHeader('Cache-control', 'max-age=60, no-store');
 				// Сообщаем что страница не найдена
 				client.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
 				client.write("Ok\n");
