@@ -381,14 +381,17 @@ void Cache::readDomain(const string domain, DataDNS * data){
 				const size_t size = file.tellg();
 				// Перемещаемся в начало файла
 				file.seekg(0, file.beg);
-				// Создаем буфер данных
-				u_char * buffer = new u_char [size];
-				// Считываем до тех пор пока все удачно
-				while(file.good()) file.read((char *) buffer + file.tellg(), 60);
-				// Устанавливаем полученные данные
-				data->set(buffer, size);
-				// Удаляем выделенную память
-				delete [] buffer;
+				// Если размер файла получен верно
+				if(size){
+					// Создаем буфер данных
+					u_char * buffer = new u_char [size];
+					// Считываем до тех пор пока все удачно
+					while(file.good()) file.read((char *) buffer + file.tellg(), 60);
+					// Устанавливаем полученные данные
+					data->set(buffer, size);
+					// Удаляем выделенную память
+					delete [] buffer;
+				}
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
