@@ -61,12 +61,12 @@ SOURCES =	./anyks.cpp \
 BIN = ./bin/http
 
 # Конфиг для стандартной сборки
-CONFIG = -Wall -Wpedantic -Werror=vla -Wno-unused-result -g -std=c++11
+CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -g -std=c++11
 
 # Правило сборки
 all:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -msse3 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -msse3 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
 
 # Правила сборки под Dev
 dev:
@@ -76,7 +76,7 @@ dev:
 # Правила сборки под Prod
 prod:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -mavx2 -mbmi2 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
 
 # Правило запуска
 start:
