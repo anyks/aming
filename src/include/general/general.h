@@ -8,10 +8,17 @@
 #ifndef _GENERAL_ANYKS_
 #define _GENERAL_ANYKS_
 
+#include <regex>
+#include <pwd.h>
+#include <grp.h>
 #include <string>
 #include <vector>
 #include <stdlib.h>
+#include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
+#include <sys/file.h>
+#include <sys/stat.h>
 
 // Устанавливаем область видимости
 using namespace std;
@@ -93,5 +100,74 @@ void split(const string &str, const string delim, vector <string> &v);
  * @return       массив составляющих строки
  */
 vector <string> split(const string str, const string delim);
+/**
+ * getUid Функция вывода идентификатора пользователя
+ * @param  name имя пользователя
+ * @return      полученный идентификатор пользователя
+ */
+uid_t getUid(const char * name);
+/**
+ * getGid Функция вывода идентификатора группы пользователя
+ * @param  name название группы пользователя
+ * @return      полученный идентификатор группы пользователя
+ */
+gid_t getGid(const char * name);
+/**
+ * setOwner Функция установки владельца на каталог
+ * @param path  путь к файлу или каталогу для установки владельца
+ * @param user  данные пользователя
+ * @param group идентификатор группы
+ */
+void setOwner(const char * path, const string user, const string group);
+/**
+ * mkDir Метод рекурсивного создания каталогов
+ * @param path адрес каталогов
+ */
+void mkDir(const char * path);
+/**
+ * mDir Метод удаления каталога и всего содержимого
+ * @param  path путь до каталога
+ * @return      количество дочерних элементов
+ */
+const int rmDir(const char * path);
+/**
+ * makePath Функция создания каталога для хранения логов
+ * @param  path  адрес для каталога
+ * @param  user  данные пользователя
+ * @param  group идентификатор группы
+ * @return       результат создания каталога
+ */
+bool makePath(const char * path, const string user, const string group);
+/**
+ * isDirExist Функция проверки существования каталога
+ * @param  path адрес каталога
+ * @return      результат проверки
+ */
+bool isDirExist(const char * path);
+/**
+ * isFileExist Функция проверки существования файла
+ * @param  path адрес каталога
+ * @return      результат проверки
+ */
+bool isFileExist(const char * path);
+/**
+ * addToPath Метод формирования адреса из пути и названия файла
+ * @param  path путь где хранится файл
+ * @param  file название файла
+ * @return      сформированный путь
+ */
+const string addToPath(const string path, const string file);
+/**
+ * strToTime Метод перевода строки в timestamp
+ * @param  date строка даты
+ * @return      timestamp
+ */
+const time_t strToTime(const char * date);
+/**
+ * timeToStr Метод преобразования timestamp в строку
+ * @param  date дата в timestamp
+ * @return      строка содержащая дату
+ */
+const string timeToStr(const time_t date);
 
 #endif // _GENERAL_ANYKS_

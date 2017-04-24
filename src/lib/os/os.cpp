@@ -178,42 +178,6 @@ bool Os::enableCoreDumps(){
 	return false;
 }
 /**
- * getUid Функция вывода идентификатора пользователя
- * @param  name имя пользователя
- * @return      полученный идентификатор пользователя
- */
-uid_t Os::getUid(const char * name){
-	// Получаем идентификатор имени пользователя
-	struct passwd * pwd = getpwnam(name);
-	// Если идентификатор пользователя не найден
-	if(pwd == NULL){
-		// Выводим сообщение об ошибке
-		this->log->write(LOG_ERROR, 0, "failed to get userId from username [%s]", name);
-		// Выходим из приложения
-		exit(EXIT_FAILURE);
-	}
-	// Выводим идентификатор пользователя
-	return pwd->pw_uid;
-}
-/**
- * getGid Функция вывода идентификатора группы пользователя
- * @param  name название группы пользователя
- * @return      полученный идентификатор группы пользователя
- */
-gid_t Os::getGid(const char * name){
-	// Получаем идентификатор группы пользователя
-	struct group * grp = getgrnam(name);
-	// Если идентификатор группы не найден
-	if(grp == NULL){
-		// Выводим сообщение об ошибке
-		this->log->write(LOG_ERROR, 0, "failed to get groupId from groupname [%s]", name);
-		// Выходим из приложения
-		exit(EXIT_FAILURE);
-	}
-	// Выводим идентификатор группы пользователя
-	return grp->gr_gid;
-}
-/**
  * privBind Функция запускает приложение от имени указанного пользователя
  */
 void Os::privBind(){

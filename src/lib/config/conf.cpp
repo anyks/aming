@@ -11,19 +11,6 @@
 using namespace std;
 
 /**
- * isFileExist Функция проверки существования файла
- * @param  path адрес каталога
- * @return      результат проверки
- */
-bool Config::isFileExist(const char * path){
-	// Структура проверка статистики
-	struct stat info;
-	// Проверяем переданный нам адрес
-	if(stat(path, &info) != 0) return false;
-	// Если это файл
-	return (info.st_mode & S_IFMT) != 0;
-}
-/**
  * getSizeBuffer Функция получения размера буфера в байтах
  * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
  * @return     размер буфера в байтах

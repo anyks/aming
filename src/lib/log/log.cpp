@@ -11,159 +11,6 @@
 using namespace std;
 
 /**
- * getUid Функция вывода идентификатора пользователя
- * @param  name имя пользователя
- * @return      полученный идентификатор пользователя
- */
-uid_t LogApp::getUid(const char * name){
-	// Получаем идентификатор имени пользователя
-	struct passwd * pwd = getpwnam(name);
-	// Если идентификатор пользователя не найден
-	if(pwd == NULL){
-		// Выводим сообщение об ошибке
-		printf("failed to get userId from username [%s]\r\n", name);
-		// Выходим из приложения
-		exit(EXIT_FAILURE);
-	}
-	// Выводим идентификатор пользователя
-	return pwd->pw_uid;
-}
-/**
- * getGid Функция вывода идентификатора группы пользователя
- * @param  name название группы пользователя
- * @return      полученный идентификатор группы пользователя
- */
-gid_t LogApp::getGid(const char * name){
-	// Получаем идентификатор группы пользователя
-	struct group * grp = getgrnam(name);
-	// Если идентификатор группы не найден
-	if(grp == NULL){
-		// Выводим сообщение об ошибке
-		printf("failed to get groupId from groupname [%s]\r\n", name);
-		// Выходим из приложения
-		exit(EXIT_FAILURE);
-	}
-	// Выводим идентификатор группы пользователя
-	return grp->gr_gid;
-}
-/**
- * setOwner Функция установки владельца на каталог
- * @param path путь к файлу или каталогу для установки владельца
- */
-void LogApp::setOwner(const char * path){
-	uid_t uid;	// Идентификатор пользователя
-	gid_t gid;	// Идентификатор группы
-	// Размер строкового типа данных
-	string::size_type sz;
-	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber((* this->config)->proxy.user))
-		// Получаем идентификатор пользователя
-		uid = stoi((* this->config)->proxy.user, &sz);
-	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid((* this->config)->proxy.user.c_str());
-	// Если идентификатор группы пришел в виде числа
-	if(isNumber((* this->config)->proxy.group))
-		// Получаем идентификатор группы пользователя
-		gid = stoi((* this->config)->proxy.group, &sz);
-	// Если идентификатор группы пришел в виде названия
-	else gid = getGid((* this->config)->proxy.group.c_str());
-	// Устанавливаем права на каталог
-	chown(path, uid, gid);
-}
-/**
- * mkdir Метод рекурсивного создания каталогов
- * @param path адрес каталогов
- */
-void LogApp::mkdir(const char * path){
-	// Буфер с названием каталога
-	char tmp[256];
-	// Указатель на сепаратор
-	char * p = NULL;
-	// Копируем переданный адрес в буфер
-	snprintf(tmp, sizeof(tmp), "%s", path);
-	// Определяем размер адреса
-	size_t len = strlen(tmp);
-	// Если последний символ является сепаратором тогда удаляем его
-	if(tmp[len - 1] == '/') tmp[len - 1] = 0;
-	// Переходим по всем символам
-	for(p = tmp + 1; * p; p++){
-		// Если найден сепаратор
-		if(* p == '/'){
-			// Сбрасываем указатель
-			* p = 0;
-			// Создаем каталог
-			::mkdir(tmp, S_IRWXU);
-			// Запоминаем сепаратор
-			* p = '/';
-		}
-	}
-	// Создаем последний каталог
-	::mkdir(tmp, S_IRWXU);
-}
-/**
- * makePath Функция создания каталога для хранения логов
- * @param  path адрес для каталога
- * @return      результат создания каталога
- */
-bool LogApp::makePath(const char * path){
-	// Проверяем существует ли нужный нам каталог
-	if(!isDirExist(path)){
-		// Создаем каталог
-		mkdir(path);
-		// Устанавливаем права на каталог
-		setOwner(path);
-		// Сообщаем что все удачно
-		return true;
-	}
-	// Сообщаем что все создано удачно
-	return true;
-}
-/**
- * isDirExist Функция проверки существования каталога
- * @param  path адрес каталога
- * @return      результат проверки
- */
-bool LogApp::isDirExist(const char * path){
-	// Структура проверка статистики
-	struct stat info;
-	// Проверяем переданный нам адрес
-	if(stat(path, &info) != 0) return false;
-	// Если это каталог
-	return (info.st_mode & S_IFDIR) != 0;
-}
-/**
- * isFileExist Функция проверки существования файла
- * @param  path адрес каталога
- * @return      результат проверки
- */
-bool LogApp::isFileExist(const char * path){
-	// Структура проверка статистики
-	struct stat info;
-	// Проверяем переданный нам адрес
-	if(stat(path, &info) != 0) return false;
-	// Если это файл
-	return (info.st_mode & S_IFMT) != 0;
-}
-/**
- * addToPath Метод формирования адреса из пути и названия файла
- * @param  path путь где хранится файл
- * @param  file название файла
- * @return      сформированный путь
- */
-const string LogApp::addToPath(const string path, const string file){
-	// Результирующий адрес
-	string result;
-	// Если параметры переданы
-	if(!path.empty() && !file.empty()){
-		// Формируем регулярное выражение
-		regex pe("\\/+$"), fe("^[\\/\\.\\~]+");
-		// Формируем результирующий адрес
-		result = (regex_replace(path, pe, "") + string("/") + regex_replace(file, fe, ""));
-	}
-	// Выводим результат
-	return result;
-}
-/**
  * write_data_to_file Функция записи в лога полученных данных в файл
  * @param id   идентификатор записи
  * @param data полученные данные
@@ -179,7 +26,7 @@ void LogApp::write_data_to_file(const string id, const string data, void * ctx){
 		// Адрес каталога для хранения логов
 		path = addToPath(path, "data");
 		// Проверяем существует ли нужный нам каталог
-		if(!log->makePath(path.c_str())){
+		if(!makePath(path.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group)){
 			// Сообщаем что каталог не может быть создан
 			perror("Unable to create directory for log files");
 			// Выходим из приложения
@@ -239,7 +86,7 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 		// Адрес каталога для хранения логов
 		string path = addToPath((* log->config)->logs.dir, (* log->config)->proxy.name);
 		// Проверяем существует ли нужный нам каталог
-		if(!log->makePath(path.c_str())){
+		if(!makePath(path.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group)){
 			// Сообщаем что каталог не может быть создан
 			perror("Unable to create directory for log files");
 			// Выходим из приложения
@@ -261,9 +108,9 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 		// Файловый дескриптор
 		FILE * file = NULL;
 		// Проверяем существует ли файл лога
-		if(log->isFileExist(filename.c_str())){
+		if(isFileExist(filename.c_str())){
 			// Устанавливаем права на файл лога
-			log->setOwner(filename.c_str());
+			setOwner(filename.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group);
 			// Открываем файл на чтение в бинарном виде
 			file = fopen(filename.c_str(), "rb");
 			// Если файл открыт

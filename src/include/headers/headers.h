@@ -14,10 +14,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <pwd.h>
-#include <grp.h>
 #include <stdlib.h>
-#include <sys/file.h>
 #include "config/conf.h"
 #include "nwk/nwk.h"
 #include "log/log.h"
@@ -97,53 +94,17 @@ class Headers {
 		 */
 		void modifyHeaders(const string server, vector <Params> rules, string &data, HttpData &http);
 		/**
-		 * addToPath Метод формирования адреса из пути и названия файла
-		 * @param  path путь где хранится файл
-		 * @param  file название файла
-		 * @return      сформированный путь
-		 */
-		const string addToPath(const string path, const string file);
-		/**
 		 * isNot Метод проверки на инверсию
 		 * @param  str строка для проверки
 		 * @return     результат проверки
 		 */
 		IsNot isNot(const string str);
 		/**
-		 * getUid Функция вывода идентификатора пользователя
-		 * @param  name имя пользователя
-		 * @return      полученный идентификатор пользователя
-		 */
-		uid_t getUid(const char * name);
-		/**
-		 * getGid Функция вывода идентификатора группы пользователя
-		 * @param  name название группы пользователя
-		 * @return      полученный идентификатор группы пользователя
-		 */
-		gid_t getGid(const char * name);
-		/**
-		 * setOwner Функция установки владельца на каталог
-		 * @param path путь к файлу или каталогу для установки владельца
-		 */
-		void setOwner(const char * path);
-		/**
 		 * checkTypeId Метод определения типа идентификатора
 		 * @param  str строка идентификатора для определения типа
 		 * @return     тип идентификатора
 		 */
 		u_short checkTypeId(const string str);
-		/**
-		 * isDirExist Функция проверки существования каталога
-		 * @param  path адрес каталога
-		 * @return      результат проверки
-		 */
-		bool isDirExist(const char * path);
-		/**
-		 * isFileExist Функция проверки существования файла
-		 * @param  path адрес каталога
-		 * @return      результат проверки
-		 */
-		bool isFileExist(const char * path);
 		/**
 		 * isAddress Метод проверки на то является ли строка адресом
 		 * @param  address строка адреса для проверки

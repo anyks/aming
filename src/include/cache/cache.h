@@ -14,11 +14,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <pwd.h>
-#include <grp.h>
 #include <stdlib.h>
-#include <dirent.h>
-#include <sys/file.h>
 #include "md5/md5.h"
 #include "config/conf.h"
 #include "nwk/nwk.h"
@@ -155,36 +151,6 @@ class Cache {
 		 */
 		const string getPathDomain(const string domain);
 		/**
-		 * timeToStr Метод преобразования timestamp в строку
-		 * @param  date дата в timestamp
-		 * @return      строка содержащая дату
-		 */
-		const string timeToStr(const time_t date);
-		/**
-		 * addToPath Метод формирования адреса из пути и названия файла
-		 * @param  path путь где хранится файл
-		 * @param  file название файла
-		 * @return      сформированный путь
-		 */
-		const string addToPath(const string path, const string file);
-		/**
-		 * getUid Функция вывода идентификатора пользователя
-		 * @param  name имя пользователя
-		 * @return      полученный идентификатор пользователя
-		 */
-		const uid_t getUid(const char * name);
-		/**
-		 * getGid Функция вывода идентификатора группы пользователя
-		 * @param  name название группы пользователя
-		 * @return      полученный идентификатор группы пользователя
-		 */
-		const gid_t getGid(const char * name);
-		/**
-		 * setOwner Функция установки владельца на каталог
-		 * @param path путь к файлу или каталогу для установки владельца
-		 */
-		void setOwner(const char * path);
-		/**
 		 * readDomain Метод чтения данных домена из файла
 		 * @param domain название домена
 		 * @param data   указатель на данные домена
@@ -208,46 +174,6 @@ class Cache {
 		 * @param data данные запроса
 		 */
 		void writeCache(HttpData &http, DataCache data);
-		/**
-		 * mkdir Метод рекурсивного создания каталогов
-		 * @param path адрес каталогов
-		 */
-		void mkdir(const char * path);
-		/**
-		 * rmdir Метод удаления каталога и всего содержимого
-		 * @param path путь до каталога
-		 */
-		const int rmdir(const char * path);
-		/**
-		 * strToTime Метод перевода строки в timestamp
-		 * @param  date строка даты
-		 * @return      timestamp
-		 */
-		const time_t strToTime(const char * date);
-		/**
-		 * makePath Функция создания каталога для хранения логов
-		 * @param  path адрес для каталога
-		 * @return      результат создания каталога
-		 */
-		const bool makePath(const char * path);
-		/**
-		 * is_number Функция проверки является ли строка числом
-		 * @param  str строка для проверки
-		 * @return     результат проверки
-		 */
-		const bool isNumber(const string &str);
-		/**
-		 * isDirExist Функция проверки существования каталога
-		 * @param  path адрес каталога
-		 * @return      результат проверки
-		 */
-		const bool isDirExist(const char * path);
-		/**
-		 * isFileExist Функция проверки существования файла
-		 * @param  path адрес каталога
-		 * @return      результат проверки
-		 */
-		const bool isFileExist(const char * path);
 		/**
 		 * isDomain Метод проверки на доменное имя
 		 * @param  domain строка названия домена для проверки

@@ -16,14 +16,9 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
-#include <unistd.h>
 #include <time.h>
 #include <zlib.h>
-#include <pwd.h>
-#include <grp.h>
 #include <sys/types.h>
-#include <sys/file.h>
-#include <sys/stat.h>
 #include "config/conf.h"
 #include "general/general.h"
 
@@ -61,53 +56,6 @@ class LogApp {
 		size_t size;
 		// Конфигурационные данные
 		Config ** config = NULL;
-		/**
-		 * getUid Функция вывода идентификатора пользователя
-		 * @param  name имя пользователя
-		 * @return      полученный идентификатор пользователя
-		 */
-		uid_t getUid(const char * name);
-		/**
-		 * getGid Функция вывода идентификатора группы пользователя
-		 * @param  name название группы пользователя
-		 * @return      полученный идентификатор группы пользователя
-		 */
-		gid_t getGid(const char * name);
-		/**
-		 * setOwner Функция установки владельца на каталог
-		 * @param path путь к файлу или каталогу для установки владельца
-		 */
-		void setOwner(const char * path);
-		/**
-		 * mkdir Метод рекурсивного создания каталогов
-		 * @param path адрес каталогов
-		 */
-		void mkdir(const char * path);
-		/**
-		 * makePath Функция создания каталога для хранения логов
-		 * @param  path адрес для каталога
-		 * @return      результат создания каталога
-		 */
-		bool makePath(const char * path);
-		/**
-		 * isDirExist Функция проверки существования каталога
-		 * @param  path адрес каталога
-		 * @return      результат проверки
-		 */
-		bool isDirExist(const char * path);
-		/**
-		 * isFileExist Функция проверки существования файла
-		 * @param  path адрес каталога
-		 * @return      результат проверки
-		 */
-		bool isFileExist(const char * path);
-		/**
-		 * addToPath Метод формирования адреса из пути и названия файла
-		 * @param  path путь где хранится файл
-		 * @param  file название файла
-		 * @return      сформированный путь
-		 */
-		static const string addToPath(const string path, const string file);
 		/**
 		 * write_data_to_file Функция записи в лога полученных данных в файл
 		 * @param id   идентификатор записи

@@ -179,3 +179,243 @@ vector <string> split(const string str, const string delim){
 	// Выводим результат
 	return result;
 }
+/**
+ * getUid Функция вывода идентификатора пользователя
+ * @param  name имя пользователя
+ * @return      полученный идентификатор пользователя
+ */
+uid_t getUid(const char * name){
+	// Получаем идентификатор имени пользователя
+	struct passwd * pwd = getpwnam(name);
+	// Если идентификатор пользователя не найден
+	if(pwd == NULL){
+		// Выводим сообщение об ошибке
+		printf("failed to get userId from username [%s]\r\n", name);
+		// Сообщаем что ничего не найдено
+		return 0;
+	}
+	// Выводим идентификатор пользователя
+	return pwd->pw_uid;
+}
+/**
+ * getGid Функция вывода идентификатора группы пользователя
+ * @param  name название группы пользователя
+ * @return      полученный идентификатор группы пользователя
+ */
+gid_t getGid(const char * name){
+	// Получаем идентификатор группы пользователя
+	struct group * grp = getgrnam(name);
+	// Если идентификатор группы не найден
+	if(grp == NULL){
+		// Выводим сообщение об ошибке
+		printf("failed to get groupId from groupname [%s]\r\n", name);
+		// Сообщаем что ничего не найдено
+		return 0;
+	}
+	// Выводим идентификатор группы пользователя
+	return grp->gr_gid;
+}
+/**
+ * setOwner Функция установки владельца на каталог
+ * @param path  путь к файлу или каталогу для установки владельца
+ * @param user  данные пользователя
+ * @param group идентификатор группы
+ */
+void setOwner(const char * path, const string user, const string group){
+	uid_t uid;	// Идентификатор пользователя
+	gid_t gid;	// Идентификатор группы
+	// Размер строкового типа данных
+	string::size_type sz;
+	// Если идентификатор пользователя пришел в виде числа
+	if(isNumber(user)) uid = stoi(user, &sz);
+	// Если идентификатор пользователя пришел в виде названия
+	else uid = getUid(user.c_str());
+	// Если идентификатор группы пришел в виде числа
+	if(isNumber(group)) gid = stoi(group, &sz);
+	// Если идентификатор группы пришел в виде названия
+	else gid = getGid(group.c_str());
+	// Устанавливаем права на каталог
+	if(uid && gid) chown(path, uid, gid);
+}
+/**
+ * mkDir Метод рекурсивного создания каталогов
+ * @param path адрес каталогов
+ */
+void mkDir(const char * path){
+	// Буфер с названием каталога
+	char tmp[256];
+	// Указатель на сепаратор
+	char * p = NULL;
+	// Копируем переданный адрес в буфер
+	snprintf(tmp, sizeof(tmp), "%s", path);
+	// Определяем размер адреса
+	size_t len = strlen(tmp);
+	// Если последний символ является сепаратором тогда удаляем его
+	if(tmp[len - 1] == '/') tmp[len - 1] = 0;
+	// Переходим по всем символам
+	for(p = tmp + 1; * p; p++){
+		// Если найден сепаратор
+		if(* p == '/'){
+			// Сбрасываем указатель
+			* p = 0;
+			// Создаем каталог
+			::mkdir(tmp, S_IRWXU);
+			// Запоминаем сепаратор
+			* p = '/';
+		}
+	}
+	// Создаем последний каталог
+	::mkdir(tmp, S_IRWXU);
+}
+/**
+ * rmDir Метод удаления каталога и всего содержимого
+ * @param  path путь до каталога
+ * @return      количество дочерних элементов
+ */
+const int rmDir(const char * path){
+	// Открываем указанный каталог
+	DIR * d = opendir(path);
+	// Получаем длину адреса
+	size_t path_len = strlen(path);
+	// Количество дочерних элементов
+	int r = -1;
+	// Если каталог открыт
+	if(d){
+		// Создаем указатель на содержимое каталога
+		struct dirent * p;
+		// Устанавливаем количество дочерних элементов
+		r = 0;
+		// Выполняем чтение содержимого каталога
+		while(!r && (p = readdir(d))){
+			// Количество найденных элементов
+			int r2 = -1;
+			// Пропускаем названия текущие "." и внешние "..", так как идет рекурсия
+			if(!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) continue;
+			// Получаем размер дочернего каталога
+			const size_t len = path_len + strlen(p->d_name) + 2;
+			// Создаем буфер данных
+			char * buf = new char [len];
+			// Если память выделена
+			if(buf){
+				// Создаем структуру буфера статистики
+				struct stat statbuf;
+				// Копируем в буфер название дочернего элемента
+				snprintf(buf, len, "%s/%s", path, p->d_name);
+				// Если статистика извлечена
+				if(!stat(buf, &statbuf)){
+					// Если дочерний элемент является дирректорией
+					if(S_ISDIR(statbuf.st_mode)) r2 = rmDir(buf);
+					// Если дочерний элемент является файлом то удаляем его
+					else r2 = ::unlink(buf);
+				}
+			}
+			// Освобождаем выделенную ранее память
+			delete [] buf;
+			// Запоминаем количество дочерних элементов
+			r = r2;
+		}
+		// Закрываем открытый каталог
+		closedir(d);
+	}
+	// Удаляем последний каталог
+	if(!r) r = ::rmdir(path);
+	// Выводим результат
+	return r;
+}
+/**
+ * makePath Функция создания каталога для хранения логов
+ * @param  path  адрес для каталога
+ * @param  user  данные пользователя
+ * @param  group идентификатор группы
+ * @return       результат создания каталога
+ */
+bool makePath(const char * path, const string user, const string group){
+	// Проверяем существует ли нужный нам каталог
+	if(!isDirExist(path)){
+		// Создаем каталог
+		mkDir(path);
+		// Устанавливаем права на каталог
+		setOwner(path, user, group);
+		// Сообщаем что все удачно
+		return true;
+	}
+	// Сообщаем что все создано удачно
+	return true;
+}
+/**
+ * isDirExist Функция проверки существования каталога
+ * @param  path адрес каталога
+ * @return      результат проверки
+ */
+bool isDirExist(const char * path){
+	// Структура проверка статистики
+	struct stat info;
+	// Проверяем переданный нам адрес
+	if(stat(path, &info) != 0) return false;
+	// Если это каталог
+	return (info.st_mode & S_IFDIR) != 0;
+}
+/**
+ * isFileExist Функция проверки существования файла
+ * @param  path адрес каталога
+ * @return      результат проверки
+ */
+bool isFileExist(const char * path){
+	// Структура проверка статистики
+	struct stat info;
+	// Проверяем переданный нам адрес
+	if(stat(path, &info) != 0) return false;
+	// Если это файл
+	return (info.st_mode & S_IFMT) != 0;
+}
+/**
+ * addToPath Метод формирования адреса из пути и названия файла
+ * @param  path путь где хранится файл
+ * @param  file название файла
+ * @return      сформированный путь
+ */
+const string addToPath(const string path, const string file){
+	// Результирующий адрес
+	string result;
+	// Если параметры переданы
+	if(!path.empty() && !file.empty()){
+		// Формируем регулярное выражение
+		regex pe("\\/+$"), fe("^[\\/\\.\\~]+");
+		// Формируем результирующий адрес
+		result = (regex_replace(path, pe, "") + string("/") + regex_replace(file, fe, ""));
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * strToTime Метод перевода строки в timestamp
+ * @param  date строка даты
+ * @return      timestamp
+ */
+const time_t strToTime(const char * date){
+	// Создаем структуру времени
+	struct tm tm;
+	// Зануляем структуру
+	memset(&tm, 0, sizeof(struct tm));
+	// Выполняем парсинг даты
+	strptime(date, "%a, %d %b %Y %X %Z", &tm);
+	// Выводим результат
+	return mktime(&tm);
+}
+/**
+ * timeToStr Метод преобразования timestamp в строку
+ * @param  date дата в timestamp
+ * @return      строка содержащая дату
+ */
+const string timeToStr(const time_t date){
+	// Создаем структуру времени
+	struct tm * tm = gmtime(&date);
+	// Буфер с данными
+	char buf[255];
+	// Зануляем буфер
+	memset(buf, 0, sizeof(buf));
+	// Выполняем парсинг даты
+	strftime(buf, sizeof(buf), "%a, %d %b %Y %X %Z", tm);
+	// Выводим результат
+	return string(buf);
+}

@@ -305,12 +305,6 @@ class Config {
 		 * @return     размер в секундах
 		 */
 		size_t getSeconds(const string str);
-		/**
-		 * isFileExist Функция проверки существования файла
-		 * @param  path адрес каталога
-		 * @return      результат проверки
-		 */
-		bool isFileExist(const char * path);
 	public:
 		// Основные данные приложения
 		Os os;					// Данные операционной системы

@@ -127,7 +127,7 @@ void Headers::read(){
 		// Проверяем существует ли такой файл
 		&& isFileExist(filename.c_str())){
 			// Устанавливаем права на файл лога
-			setOwner(filename.c_str());
+			setOwner(filename.c_str(), this->config->proxy.user, this->config->proxy.group);
 			// Строка чтения из файла
 			string filedata;
 			// Открываем файл на чтение
@@ -532,25 +532,6 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 	}
 }
 /**
- * addToPath Метод формирования адреса из пути и названия файла
- * @param  path путь где хранится файл
- * @param  file название файла
- * @return      сформированный путь
- */
-const string Headers::addToPath(const string path, const string file){
-	// Результирующий адрес
-	string result;
-	// Если параметры переданы
-	if(!path.empty() && !file.empty()){
-		// Формируем регулярное выражение
-		regex pe("\\/+$"), fe("^[\\/\\.\\~]+");
-		// Формируем результирующий адрес
-		result = (regex_replace(path, pe, "") + string("/") + regex_replace(file, fe, ""));
-	}
-	// Выводим результат
-	return result;
-}
-/**
  * isNot Метод проверки на инверсию
  * @param  str строка для проверки
  * @return     результат проверки
@@ -560,66 +541,6 @@ Headers::IsNot Headers::isNot(const string str){
 	bool result = str[0] == '!';
 	// Выполняем проверку на первый символ
 	return {result, (result ? str.substr(1, str.length() - 1) : str)};
-}
-/**
- * getUid Функция вывода идентификатора пользователя
- * @param  name имя пользователя
- * @return      полученный идентификатор пользователя
- */
-uid_t Headers::getUid(const char * name){
-	// Получаем идентификатор имени пользователя
-	struct passwd * pwd = getpwnam(name);
-	// Если идентификатор пользователя не найден
-	if(pwd == NULL){
-		// Выводим сообщение об ошибке
-		printf("failed to get userId from username [%s]\r\n", name);
-		// Выходим из приложения
-		exit(EXIT_FAILURE);
-	}
-	// Выводим идентификатор пользователя
-	return pwd->pw_uid;
-}
-/**
- * getGid Функция вывода идентификатора группы пользователя
- * @param  name название группы пользователя
- * @return      полученный идентификатор группы пользователя
- */
-gid_t Headers::getGid(const char * name){
-	// Получаем идентификатор группы пользователя
-	struct group * grp = getgrnam(name);
-	// Если идентификатор группы не найден
-	if(grp == NULL){
-		// Выводим сообщение об ошибке
-		printf("failed to get groupId from groupname [%s]\r\n", name);
-		// Выходим из приложения
-		exit(EXIT_FAILURE);
-	}
-	// Выводим идентификатор группы пользователя
-	return grp->gr_gid;
-}
-/**
- * setOwner Функция установки владельца на каталог
- * @param path путь к файлу или каталогу для установки владельца
- */
-void Headers::setOwner(const char * path){
-	uid_t uid;	// Идентификатор пользователя
-	gid_t gid;	// Идентификатор группы
-	// Размер строкового типа данных
-	string::size_type sz;
-	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber(this->config->proxy.user))
-		// Получаем идентификатор пользователя
-		uid = stoi(this->config->proxy.user, &sz);
-	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid(this->config->proxy.user.c_str());
-	// Если идентификатор группы пришел в виде числа
-	if(isNumber(this->config->proxy.group))
-		// Получаем идентификатор группы пользователя
-		gid = stoi(this->config->proxy.group, &sz);
-	// Если идентификатор группы пришел в виде названия
-	else gid = getGid(this->config->proxy.group.c_str());
-	// Устанавливаем права на каталог
-	chown(path, uid, gid);
 }
 /**
  * checkTypeId Метод определения типа идентификатора
@@ -641,32 +562,6 @@ u_short Headers::checkTypeId(const string str){
 	else if(isDomain(str)) type = 4;
 	// Выводим результат
 	return type;
-}
-/**
- * isDirExist Функция проверки существования каталога
- * @param  path адрес каталога
- * @return      результат проверки
- */
-bool Headers::isDirExist(const char * path){
-	// Структура проверка статистики
-	struct stat info;
-	// Проверяем переданный нам адрес
-	if(stat(path, &info) != 0) return false;
-	// Если это каталог
-	return (info.st_mode & S_IFDIR) != 0;
-}
-/**
- * isFileExist Функция проверки существования файла
- * @param  path адрес каталога
- * @return      результат проверки
- */
-bool Headers::isFileExist(const char * path){
-	// Структура проверка статистики
-	struct stat info;
-	// Проверяем переданный нам адрес
-	if(stat(path, &info) != 0) return false;
-	// Если это файл
-	return (info.st_mode & S_IFMT) != 0;
 }
 /**
  * isAddress Метод проверки на то является ли строка адресом
