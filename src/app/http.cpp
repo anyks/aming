@@ -1656,7 +1656,7 @@ void HttpProxy::run_works(pid_t * pids, const evutil_socket_t fd, const size_t c
 	// Получаем объект прокси сервера
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	// Если массив пидов существует
-	if(pids && proxy && (fd > 0) && max){
+	if(pids && proxy && (fd > -1) && max){
 		// Если не все форки созданы
 		if(cur < max){
 			// Выполняем форк процесса
