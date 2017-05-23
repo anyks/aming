@@ -890,12 +890,12 @@ int Network::isLocal6(const string ip){
 			// Преобразуем ip адрес в полный вид
 			ipv6 = toCase(setLowIp6(ipv6));
 			// Формируем векторы данных
-			vector <char> mip(ipv6.begin(), ipv6.end());
-			vector <char> nwk(network.begin(), network.end());
+			vector <string> mip = split(ipv6, ":");
+			vector <string> nwk = split(network, ":");
 			// Начинаем проверять совпадения
 			for(u_int j = 0; j < mip.size(); j++){
 				// Если значение в маске совпадает тогда продолжаем проверку
-				if((mip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
+				if((mip[j].compare(nwk[j]) == 0) || (nwk[j].compare("0000") == 0)) compare = true;
 				else {
 					// Запоминаем что сравнение не удалось
 					compare = false;
@@ -905,7 +905,7 @@ int Network::isLocal6(const string ip){
 			}
 		}
 		// Формируем результат
-		if(compare) result = (!this->locals6[i].allow && compare ? -1 : (compare ? 0 : 1));
+		if(compare) result = (!locals6[i].allow ? -1 : 0);
 	}
 	// Если локальный адрес найден
 	return result;

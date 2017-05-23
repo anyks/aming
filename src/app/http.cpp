@@ -800,43 +800,6 @@ const int HttpProxy::connect_server(void * ctx){
 				} break;
 				// Для протокола IPv6
 				case 6: {
-					/*
-					// Буфер содержащий адрес IPv6
-					char host_client[50], host_server[50];
-					// Запоминаем адрес сервера для биндинга
-					bindhost = http->proxy->config->ipv6.external;
-					// Получаем данные хоста удаленного сервера по его названию
-					struct hostent * client	= gethostbyname2(bindhost.c_str(), AF_INET6);
-					struct hostent * server	= gethostbyname2(http->server.ip.c_str(), AF_INET6);
-					// Указываем адрес прокси сервера
-					inet_ntop(AF_INET6, (struct in_addr *) client->h_addr, host_client, sizeof(host_client));
-					inet_ntop(AF_INET6, (struct in_addr *) server->h_addr, host_server, sizeof(host_server));
-					// Очищаем всю структуру для клиента
-					memset(&client6_addr, 0, sizeof(client6_addr));
-					// Очищаем всю структуру для сервера
-					memset(&server6_addr, 0, sizeof(server6_addr));
-					// Неважно, IPv4 или IPv6
-					client6_addr.sin6_family = AF_INET6;
-					server6_addr.sin6_family = AF_INET6;
-					// Устанавливаем произвольный порт для локального подключения
-					client6_addr.sin6_port = htons(0);
-					// Устанавливаем порт для локального подключения
-					server6_addr.sin6_port = htons(http->server.port);
-					// Копируем полученный ip адрес
-					memcpy(client6_addr.sin6_addr.s6_addr, host_client, sizeof(host_client));
-					memcpy(server6_addr.sin6_addr.s6_addr, host_server, sizeof(host_server));
-					// Запоминаем размер структуры
-					sinlen = sizeof(client6_addr);
-					sotlen = sizeof(server6_addr);
-					// Запоминаем полученную структуру
-					sin	= reinterpret_cast <struct sockaddr *> (&client6_addr);
-					sot	= reinterpret_cast <struct sockaddr *> (&server6_addr);
-					// Создаем сокет подключения
-					http->sockets.server = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
-					*/
-
-
-
 					// Буфер содержащий адрес IPv6
 					char host_client[INET6_ADDRSTRLEN], host_server[INET6_ADDRSTRLEN];
 					// Очищаем всю структуру для клиента
@@ -867,8 +830,8 @@ const int HttpProxy::connect_server(void * ctx){
 					// Создаем сокет подключения
 					http->sockets.server = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 
-
-
+					int n = 0;
+					setsockopt(http->sockets.server, IPPROTO_IPV6, IPV6_V6ONLY, &n, sizeof(n));
 				} break;
 			}
 			// Получаем данные мак адреса клиента
@@ -1594,31 +1557,6 @@ const evutil_socket_t HttpProxy::create_server(){
 		} break;
 		// Для протокола IPv6
 		case 6: {
-			/*
-			// Буфер содержащий адрес IPv6
-			char straddr[50];
-			// Заполняем структуру сервера нулями
-			memset(&server6_addr, 0, sizeof(server6_addr));
-			// Получаем данные хоста удаленного сервера по его названию
-			struct hostent * bindhost = gethostbyname2(this->server->config->ipv6.internal.c_str(), AF_INET6);
-			// Указываем адрес прокси сервера
-			inet_ntop(AF_INET6, (struct in_addr *) bindhost->h_addr, straddr, sizeof(straddr));
-			// Копируем полученный ip адрес
-			memcpy(server6_addr.sin6_addr.s6_addr, straddr, sizeof(straddr));
-			// Указываем версию интернет протокола
-			server6_addr.sin6_family = AF_INET6;
-			// Указываем порт сервера
-			server6_addr.sin6_port = htons(this->server->config->proxy.port);
-			// Запоминаем размер структуры
-			sinlen = sizeof(server6_addr);
-			// Запоминаем полученную структуру
-			sin = reinterpret_cast <struct sockaddr *> (&server6_addr);
-			// Получаем сокет сервера
-			sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
-			*/
-
-
-
 			// Буфер содержащий адрес IPv6
 			char straddr[INET6_ADDRSTRLEN];
 			// Заполняем структуру сервера нулями
@@ -1637,15 +1575,6 @@ const evutil_socket_t HttpProxy::create_server(){
 			sin = reinterpret_cast <struct sockaddr *> (&server6_addr);
 			// Получаем сокет сервера
 			sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
-
-
-
-			/*
-			server6_addr.ai_family = AF_INET6;
-			server6_addr.ai_socktype = SOCK_STREAM;
-			server6_addr.ai_flags = AI_PASSIVE;
-			*/
-
 		} break;
 	}
 	// Создаем сокет
