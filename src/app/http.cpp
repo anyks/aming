@@ -800,6 +800,7 @@ const int HttpProxy::connect_server(void * ctx){
 				} break;
 				// Для протокола IPv6
 				case 6: {
+					/*
 					// Буфер содержащий адрес IPv6
 					char host_client[50], host_server[50];
 					// Запоминаем адрес сервера для биндинга
@@ -832,6 +833,42 @@ const int HttpProxy::connect_server(void * ctx){
 					sot	= reinterpret_cast <struct sockaddr *> (&server6_addr);
 					// Создаем сокет подключения
 					http->sockets.server = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+					*/
+
+
+
+					// Буфер содержащий адрес IPv6
+					char host_client[INET6_ADDRSTRLEN], host_server[INET6_ADDRSTRLEN];
+					// Очищаем всю структуру для клиента
+					memset(&client6_addr, 0, sizeof(client6_addr));
+					// Очищаем всю структуру для сервера
+					memset(&server6_addr, 0, sizeof(server6_addr));
+					// Неважно, IPv4 или IPv6
+					client6_addr.sin6_family = AF_INET6;
+					server6_addr.sin6_family = AF_INET6;
+					// Устанавливаем произвольный порт для локального подключения
+					client6_addr.sin6_port = htons(0);
+					// Устанавливаем порт для локального подключения
+					server6_addr.sin6_port = htons(http->server.port);
+					// Запоминаем адрес сервера для биндинга
+					bindhost = http->proxy->config->ipv6.external;
+					// Указываем адреса
+					inet_pton(AF_INET6, bindhost.c_str(), &(client6_addr.sin6_addr));
+					inet_pton(AF_INET6, http->server.ip.c_str(), &(server6_addr.sin6_addr));
+					// Устанавливаем адреса
+					inet_ntop(AF_INET6, &client6_addr.sin6_addr, host_client, sizeof(host_client));
+					inet_ntop(AF_INET6, &server6_addr.sin6_addr, host_server, sizeof(host_server));
+					// Запоминаем размер структуры
+					sinlen = sizeof(client6_addr);
+					sotlen = sizeof(server6_addr);
+					// Запоминаем полученную структуру
+					sin	= reinterpret_cast <struct sockaddr *> (&client6_addr);
+					sot	= reinterpret_cast <struct sockaddr *> (&server6_addr);
+					// Создаем сокет подключения
+					http->sockets.server = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+
+
+
 				} break;
 			}
 			// Получаем данные мак адреса клиента
