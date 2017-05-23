@@ -119,14 +119,14 @@ void Headers::read(){
 		// Получаем данные каталога где хранится файл с правилами
 		const string dir = this->config->proxy.dir;
 		// Получаем имя файла
-		const string filename = addToPath(dir, "headers");
+		const string filename = addToPath(dir, this->config->proxy.name + ".headers");
 		// Проверяем на существование адреса
 		if(!filename.empty()
 		// Проверяем существует ли такой каталог
 		&& isDirExist(dir.c_str())
 		// Проверяем существует ли такой файл
 		&& isFileExist(filename.c_str())){
-			// Устанавливаем права на файл лога
+			// Устанавливаем права на файл
 			setOwner(filename.c_str(), this->config->proxy.user, this->config->proxy.group);
 			// Строка чтения из файла
 			string filedata;

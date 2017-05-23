@@ -282,11 +282,11 @@ void Cache::readDomain(const string domain, DataDNS * data){
 				// Перемещаемся в конец файла
 				file.seekg(0, file.end);
 				// Определяем размер файла
-				const size_t size = file.tellg();
+				const long size = file.tellg();
 				// Перемещаемся в начало файла
 				file.seekg(0, file.beg);
 				// Если размер файла получен верно
-				if(size){
+				if(size > 0){
 					// Создаем буфер данных
 					u_char * buffer = new u_char [size];
 					// Считываем до тех пор пока все удачно
