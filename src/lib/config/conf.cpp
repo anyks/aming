@@ -151,15 +151,8 @@ Config::Config(const string filename){
 	this->filename = filename;
 	// Если каталог с конфигурационным файлом не найден
 	if(this->filename.empty() || !isFileExist(this->filename.c_str())){
-		// Если это OS Linux
-		#ifdef __linux__
-			// Запоминаем адрес конфигурационного файла Linux
-			this->filename = (string("/etc/") + string(PROXY_NAME) + string("/config.ini"));
-		// Если это OS Apple или FreeBSD
-		#elif __APPLE__ || __MACH__ || __FreeBSD__
-			// Запоминаем адрес конфигурационного файла MacOS X и FreeBSD
-			this->filename = (string("/usr/local/etc/") + string(PROXY_NAME) + string("/config.ini"));
-		#endif
+		// Запоминаем адрес конфигурационного файла MacOS X и FreeBSD
+		this->filename = (string(CONFIG_DIR) + string("/") + string(PROXY_NAME) + string("/config.ini"));
 	}
 	// Инициализируем парсер ini файла
 	INI ini(this->filename);

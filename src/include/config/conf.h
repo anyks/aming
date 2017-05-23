@@ -64,7 +64,13 @@
 
 // Адреса конфигурационных файлов
 #define PID_DIR "/var/run"
-#define CONFIG_DIR "/usr/local/etc"
+
+// Адрес конфигурационного файла
+#ifdef __linux__
+	#define CONFIG_DIR "/etc"
+#else
+	#define CONFIG_DIR "/usr/local/etc"
+#endif
 
 // Максимальное количество воркеров (0 - auto)
 #define MAX_WORKERS 0
