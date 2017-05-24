@@ -364,24 +364,49 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	this->base = event_base_new();
 	// Создаем объект для работы с http заголовками
 	this->parser.create(this->proxy->config->proxy.name, this->proxy->config->options);
-	// Определяем тип подключения
-	switch(this->proxy->config->proxy.extIPv){
-		// Для протокола IPv4
-		case 4: this->dns = new DNSResolver(
+	// Если активация мультисети активирована
+	if(this->proxy->config->proxy.subnet){
+		// Создаем IPv4 ресолвер
+		this->dns4 = new DNSResolver(
 			this->proxy->log,
 			this->proxy->cache,
 			this->base,
 			AF_INET,
 			this->proxy->config->ipv4.resolver
-		); break;
-		// Для протокола IPv6
-		case 6: this->dns = new DNSResolver(
+		);
+		// Создаем IPv6 ресолвер
+		this->dns6 = new DNSResolver(
 			this->proxy->log,
 			this->proxy->cache,
 			this->base,
 			AF_INET6,
 			this->proxy->config->ipv6.resolver
-		); break;
+		);
+	// Если активирован только один тип сети
+	} else {
+		// Определяем тип подключения
+		switch(this->proxy->config->proxy.extIPv){
+			// Для протокола IPv4
+			case 4: {
+				this->dns4 = new DNSResolver(
+					this->proxy->log,
+					this->proxy->cache,
+					this->base,
+					AF_INET,
+					this->proxy->config->ipv4.resolver
+				);
+			} break;
+			// Для протокола IPv6
+			case 6: {
+				this->dns6 = new DNSResolver(
+					this->proxy->log,
+					this->proxy->cache,
+					this->base,
+					AF_INET6,
+					this->proxy->config->ipv6.resolver
+				);
+			} break;
+		}
 	}
 }
 /**
@@ -391,9 +416,10 @@ BufferHttpProxy::~BufferHttpProxy(){
 	// Захватываем мютекс
 	this->mtx.lock();
 	// Удаляем dns сервер
-	delete this->dns;
+	if(this->dns4) delete this->dns4;
+	if(this->dns6) delete this->dns6;
 	// Очищаем объект базы событий
-	event_base_free(this->base); // +++++++++++++++++++++++++ Здесь был КРАШ
+	event_base_free(this->base);
 	// Освобождаем мютекс
 	this->mtx.unlock();
 }
@@ -1351,6 +1377,17 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 				}
 			// Если подключение к указанному серверу запрещено
 			} else http->httpResponse.faultAuth();
+		// Если активация мультисети активирована
+		} else if(http->proxy->config->proxy.subnet && !http->domainNotFound) {
+			// Запоминаем что этот домен был не найден
+			http->domainNotFound = true;
+			// Определяем тип подключения
+			switch(http->proxy->config->proxy.extIPv){
+				// Выполняем ресолв домена IPv4
+				case 4: http->dns6->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
+				// Выполняем ресолв домена IPv6
+				case 6: http->dns4->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
+			}
 		// Если домен не найден
 		} else {
 			// Выводим в лог сообщение
@@ -1398,8 +1435,13 @@ void HttpProxy::do_request(void * ctx){
 			auto httpData = http->parser.httpData.begin();
 			// Запоминаем данные объекта http запроса
 			http->httpRequest = * httpData;
-			// Выполняем ресолв домена
-			http->dns->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http);
+			// Определяем тип подключения
+			switch(http->proxy->config->proxy.extIPv){
+				// Выполняем ресолв домена IPv4
+				case 4: http->dns4->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
+				// Выполняем ресолв домена IPv6
+				case 6: http->dns6->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
+			}
 		// Устанавливаем таймер для клиента
 		} else http->setTimeout(TM_CLIENT, true);
 	}

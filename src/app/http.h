@@ -166,6 +166,8 @@ class BufferHttpProxy {
 		void * frze = NULL;
 		// Флаг авторизации
 		bool auth = false;
+		// Домен был не найден
+		bool domainNotFound = false;
 		// Объект парсера
 		Http parser;
 		// Параметры подключившегося клиента
@@ -182,8 +184,10 @@ class BufferHttpProxy {
 		HttpData httpRequest;
 		// Параметры прокси сервера
 		System * proxy = NULL;
-		// Создаем объект dns ресолвера
-		DNSResolver * dns = NULL;
+		// Создаем объект dns ресолвера IPv4
+		DNSResolver * dns4 = NULL;
+		// Создаем объект dns ресолвера IPv6
+		DNSResolver * dns6 = NULL;
 		// База событий
 		struct event_base * base = NULL;
 		// Данные кэша
