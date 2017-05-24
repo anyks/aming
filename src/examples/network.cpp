@@ -204,6 +204,71 @@ string toCase(string str, bool flag = false){
 	return str;
 }
 /**
+ * rtrim Функция усечения указанных символов с правой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & rtrim(string &str, const char * t = " \t\n\r\f\v"){
+	str.erase(str.find_last_not_of(t) + 1);
+	return str;
+}
+/**
+ * ltrim Функция усечения указанных символов с левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & ltrim(string &str, const char * t = " \t\n\r\f\v"){
+	str.erase(0, str.find_first_not_of(t));
+	return str;
+}
+/**
+ * trim Функция усечения указанных символов с правой и левой стороны строки
+ * @param  str строка для усечения
+ * @param  t   список символов для усечения
+ * @return     результирующая строка
+ */
+string & trim(string &str, const char * t = " \t\n\r\f\v"){
+	return ltrim(rtrim(str, t), t);
+}
+/**
+ * split Метод разбива строки на составляющие
+ * @param  str   исходная строка
+ * @param  delim разделитель
+ * @return       массив составляющих строки
+ */
+vector <string> split(const string str, const string delim){
+	// Результат данных
+	vector <string> result;
+	// Создаем новую строку
+	string value = str;
+	// Убираем пробелы в строке
+	value = trim(value);
+	// Если строка передана
+	if(!value.empty()){
+		string data;
+		string::size_type i = 0;
+		string::size_type j = value.find(delim);
+		u_int len = delim.length();
+		// Выполняем разбиение строк
+		while(j != string::npos){
+			data = value.substr(i, j - i);
+			result.push_back(trim(data));
+			i = ++j + (len - 1);
+			j = value.find(delim, j);
+			if(j == string::npos){
+				data = value.substr(i, value.length());
+				result.push_back(trim(data));
+			}
+		}
+		// Если данные не существуют то устанавливаем строку по умолчанию
+		if(result.empty()) result.push_back(value);
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * getMaskByNumber Функция получения маски из цифровых обозначений
  * @param  value цифровое обозначение маски
  * @return       объект с данными маски
@@ -853,74 +918,6 @@ bool checkRange6(const string ip, const string bip, const string eip){
 	// Сообщаем что проверка не удалась
 	return result;
 }
-
-
-/**
- * rtrim Функция усечения указанных символов с правой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & rtrim(string &str, const char * t = " \t\n\r\f\v"){
-	str.erase(str.find_last_not_of(t) + 1);
-	return str;
-}
-/**
- * ltrim Функция усечения указанных символов с левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & ltrim(string &str, const char * t = " \t\n\r\f\v"){
-	str.erase(0, str.find_first_not_of(t));
-	return str;
-}
-/**
- * trim Функция усечения указанных символов с правой и левой стороны строки
- * @param  str строка для усечения
- * @param  t   список символов для усечения
- * @return     результирующая строка
- */
-string & trim(string &str, const char * t = " \t\n\r\f\v"){
-	return ltrim(rtrim(str, t), t);
-}
-/**
- * split Метод разбива строки на составляющие
- * @param  str   исходная строка
- * @param  delim разделитель
- * @return       массив составляющих строки
- */
-vector <string> split(const string str, const string delim){
-	// Результат данных
-	vector <string> result;
-	// Создаем новую строку
-	string value = str;
-	// Убираем пробелы в строке
-	value = trim(value);
-	// Если строка передана
-	if(!value.empty()){
-		string data;
-		string::size_type i = 0;
-		string::size_type j = value.find(delim);
-		u_int len = delim.length();
-		// Выполняем разбиение строк
-		while(j != string::npos){
-			data = value.substr(i, j - i);
-			result.push_back(trim(data));
-			i = ++j + (len - 1);
-			j = value.find(delim, j);
-			if(j == string::npos){
-				data = value.substr(i, value.length());
-				result.push_back(trim(data));
-			}
-		}
-		// Если данные не существуют то устанавливаем строку по умолчанию
-		if(result.empty()) result.push_back(value);
-	}
-	// Выводим результат
-	return result;
-}
-
 /**
  * isLocal6 Метод проверки на то является ли ip адрес локальным
  * @param  ip адрес подключения IPv6
@@ -944,18 +941,25 @@ int isLocal6(const string ip){
 			string ipv6 = imposePrefix6(ip, locals6[i].prefix);
 			// Преобразуем ip адрес в полный вид
 			ipv6 = toCase(setLowIp6(ipv6));
-			// Формируем векторы данных
+			// Формируем вектор данных ip адреса
 			vector <string> mip = split(ipv6, ":");
-			vector <string> nwk = split(network, ":");
-			// Начинаем проверять совпадения
-			for(u_int j = 0; j < mip.size(); j++){
-				// Если значение в маске совпадает тогда продолжаем проверку
-				if((mip[j].compare(nwk[j]) == 0) || (nwk[j].compare("0000") == 0)) compare = true;
-				else {
-					// Запоминаем что сравнение не удалось
-					compare = false;
-					// Выходим
-					break;
+			// Если первый хекстет нулевой значит это локальный адрес
+			if(mip[0].compare("0000") == 0) compare = true;
+			// Выполняем сравнение по хекстетам
+			else {
+				// Формируем вектор данных сети
+				vector <string> nwk = split(network, ":");
+				// Начинаем проверять совпадения
+				for(u_int j = 0; j < mip.size(); j++){
+					// Если значение в маске совпадает тогда продолжаем проверку
+					if((mip[j].compare(nwk[j]) == 0)
+					|| (nwk[j].compare("0000") == 0)) compare = true;
+					else {
+						// Запоминаем что сравнение не удалось
+						compare = false;
+						// Выходим
+						break;
+					}
 				}
 			}
 		}
@@ -988,18 +992,25 @@ bool checkIPByNetwork6(const string ip, const string nwk){
 		string ipv6 = imposePrefix6(ip, ::atoi(match[2].str().c_str()));
 		// Преобразуем ip адрес в полный вид
 		ipv6 = toCase(setLowIp6(ipv6));
-		// Формируем векторы данных
-		vector <char> mip(ipv6.begin(), ipv6.end());
-		vector <char> nwk(network.begin(), network.end());
-		// Начинаем проверять совпадения
-		for(u_int j = 0; j < mip.size(); j++){
-			// Если значение в маске совпадает тогда продолжаем проверку
-			if((mip[j] == nwk[j]) || (nwk[j] == '0')) compare = true;
-			else {
-				// Запоминаем что сравнение не удалось
-				compare = false;
-				// Выходим
-				break;
+		// Формируем вектор данных ip адреса
+		vector <string> mip = split(ipv6, ":");
+		// Если первый хекстет нулевой значит это локальный адрес
+		if(mip[0].compare("0000") == 0) compare = true;
+		// Выполняем сравнение по хекстетам
+		else {
+			// Формируем вектор данных сети
+			vector <string> nwk = split(network, ":");
+			// Начинаем проверять совпадения
+			for(u_int j = 0; j < mip.size(); j++){
+				// Если значение в маске совпадает тогда продолжаем проверку
+				if((mip[j].compare(nwk[j]) == 0)
+				|| (nwk[j].compare("0000") == 0)) compare = true;
+				else {
+					// Запоминаем что сравнение не удалось
+					compare = false;
+					// Выходим
+					break;
+				}
 			}
 		}
 	}
@@ -1150,7 +1161,7 @@ int main(int len, char * buff[]){
   	printf("%llx\n", (unsigned long long)(u64 & 0xFFFFFFFFFFFFFFFF));
   	*/
   	
-  	cout << " **************1 " << isLocal6("[fe80::]") << endl; //fe80
+  	cout << " **************1 " << isLocal6("[2a03:b0c0:3:d0::42e1:c001]") << endl; //fe80
 
   	cout << " **************2 " << isLocal6("[2a00:1450:4001:824::200e]") << endl; //fe80
 

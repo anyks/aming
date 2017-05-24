@@ -829,9 +829,6 @@ const int HttpProxy::connect_server(void * ctx){
 					sot	= reinterpret_cast <struct sockaddr *> (&server6_addr);
 					// Создаем сокет подключения
 					http->sockets.server = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
-
-					int n = 0;
-					setsockopt(http->sockets.server, IPPROTO_IPV6, IPV6_V6ONLY, &n, sizeof(n));
 				} break;
 			}
 			// Получаем данные мак адреса клиента
@@ -1575,6 +1572,10 @@ const evutil_socket_t HttpProxy::create_server(){
 			sin = reinterpret_cast <struct sockaddr *> (&server6_addr);
 			// Получаем сокет сервера
 			sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+
+//[::ffff:178.57.81.4]
+			int n = 0;
+			setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &n, sizeof(n));
 		} break;
 	}
 	// Создаем сокет
