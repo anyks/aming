@@ -212,6 +212,8 @@ Config::Config(const string filename){
 			PROXY_FORWARD,
 			// Активация режима отображения IPv4 в IPv6
 			PROXY_IPV6ONLY,
+			// Активация режима мульти-сетевого взаимодействия
+			PROXY_SUBNET,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			PROXY_OPTIMOS,
 			// Идентификатор группы пользователя под которым запускается прокси
@@ -465,6 +467,8 @@ Config::Config(const string filename){
 			ini.GetBoolean("proxy", "forward", PROXY_FORWARD),
 			// Активация режима отображения IPv4 в IPv6
 			ini.GetBoolean("proxy", "ipv6only", PROXY_IPV6ONLY),
+			// Активация режима мульти-сетевого взаимодействия
+			ini.GetBoolean("proxy", "subnet", PROXY_SUBNET),
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			ini.GetBoolean("proxy", "optimos", PROXY_OPTIMOS),
 			// Идентификатор группы пользователя под которым запускается прокси

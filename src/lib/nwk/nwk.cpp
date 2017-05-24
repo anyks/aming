@@ -829,11 +829,46 @@ __uint64_t Network::strIp6ToHex64(const string ip){
 	return result;
 }
 /**
+ * checkNetworkByIp Функция определения типа сети по ip адресу
+ * @param  ip данные ip адреса
+ * @return    тип сети в 10-м виде
+ */
+const u_int Network::checkNetworkByIp(const string ip){
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		"^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем поиск ip адреса
+	regex_search(ip, match, e);
+	// Если данные найдены
+	if(!match.empty()) return 4;
+	// Если это не IPv4
+	else {
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			"^\\[?[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}"
+			"\\:[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}"
+			"\\:[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}"
+			"\\:[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}\\]?$",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем поиск ip адреса
+		regex_search(ip, match, e);
+		// Если данные найдены
+		if(!match.empty()) return 6;
+		// Сообщаем что протокол не определен
+		else return 0;
+	}
+}
+/**
  * isLocal Метод проверки на то является ли ip адрес локальным
  * @param  ip адрес подключения ip
  * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
  */
-int Network::isLocal(const string ip){
+const int Network::isLocal(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -878,7 +913,7 @@ int Network::isLocal(const string ip){
  * @param  ip адрес подключения IPv6
  * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
  */
-int Network::isLocal6(const string ip){
+const int Network::isLocal6(const string ip){
 	// Искомый результат
 	int result = 1;
 	// Результат сравнения

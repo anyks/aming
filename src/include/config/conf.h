@@ -52,6 +52,7 @@
 #define PROXY_DEBUG false
 #define PROXY_DAEMON false
 #define PROXY_IPV6ONLY true
+#define PROXY_SUBNET false
 #define PROXY_IPV "4 -> 4"
 #define PROXY_HTTP_PORT 8080
 #define PROXY_SOCKS5_PORT 1080
@@ -286,6 +287,7 @@ class Config {
 			bool transfer;	// Активация поддержки прокси листа
 			bool forward;	// Прямой прокси (доступ во внешнюю сеть)
 			bool ipv6only;	// Активация режима отображения IPv4 в IPv6
+			bool subnet;	// Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть
 			bool optimos;	// Оптимизировать настройки операционной системы (нужен root доступ)
 			string user;	// Идентификатор группы пользователя под которым запускается прокси
 			string group;	// Идентификатор пользователя под которым запускается прокси

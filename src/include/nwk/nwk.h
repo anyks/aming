@@ -325,17 +325,23 @@ class Network {
 		 */
 		__uint64_t strIp6ToHex64(const string ip);
 		/**
+		 * checkNetworkByIp Функция определения типа сети по ip адресу
+		 * @param  ip данные ip адреса
+		 * @return    тип сети в 10-м виде
+		 */
+		const u_int checkNetworkByIp(const string ip);
+		/**
 		 * isLocal Метод проверки на то является ли ip адрес локальным
 		 * @param  ip адрес подключения ip
 		 * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
 		 */
-		int isLocal(const string ip);
+		const int isLocal(const string ip);
 		/**
 		 * isLocal6 Метод проверки на то является ли ip адрес локальным
 		 * @param  ip адрес подключения IPv6
 		 * @return    результат проверки (-1 - запрещенный, 0 - локальный, 1 - глобальный)
 		 */
-		int isLocal6(const string ip);
+		const int isLocal6(const string ip);
 };
 
 #endif // _NETWORK_ANYKS_

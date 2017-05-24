@@ -784,8 +784,17 @@ const int HttpProxy::connect_server(void * ctx){
 			struct sockaddr_in server4_addr, client4_addr;
 			// Структуры серверного и локального подключений
 			struct sockaddr_in6 server6_addr, client6_addr;
+			// Тип сети
+			u_int nettype = http->proxy->config->proxy.extIPv;
+			// Если активация мультисети активирована
+			if(http->proxy->config->proxy.subnet){
+				// Создаем объект сети
+				Network nwk;
+				// Определяем ip адрес
+				nettype = nwk.checkNetworkByIp(http->server.ip);
+			}
 			// Определяем тип подключения
-			switch(http->proxy->config->proxy.extIPv){
+			switch(nettype){
 				// Для протокола IPv4
 				case 4: {
 					// Запоминаем адрес сервера для биндинга
@@ -850,6 +859,19 @@ const int HttpProxy::connect_server(void * ctx){
 					// Создаем сокет подключения
 					http->sockets.server = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 				} break;
+				// Если тип сети не определен
+				default: {
+					// Выводим в лог сообщение
+					http->proxy->log->write(
+						LOG_ERROR, 0,
+						"network not allow from server = %s, port = %d, client = %s",
+						http->server.ip.c_str(),
+						http->server.port,
+						http->client.ip.c_str()
+					);
+					// Выходим
+					return 0;
+				}
 			}
 			// Получаем данные мак адреса клиента
 			http->server.mac = get_mac(sot);
