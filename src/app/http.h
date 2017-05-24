@@ -167,7 +167,7 @@ class BufferHttpProxy {
 		// Флаг авторизации
 		bool auth = false;
 		// Домен был не найден
-		bool domainNotFound = false;
+		bool dnext = false;
 		// Объект парсера
 		Http parser;
 		// Параметры подключившегося клиента

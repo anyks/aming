@@ -1265,6 +1265,15 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 	if(http){
 		// Если дарес домена найден
 		if(!ip.empty()){
+			// Если активация мультисети активирована
+			if(http->proxy->config->proxy.subnet){
+				// Создаем объект сети
+				Network nwk;
+				// Запоминаем что этот домен был найден
+				http->dnext = false;
+				// Определяем ip адрес
+				http->proxy->config->proxy.extIPv = nwk.checkNetworkByIp(ip);
+			}
 			// Если подключение к указанному серверу разрешено
 			if(isallow_remote_connect(ip, http)){
 				// Определяем connect прокси разрешен
@@ -1378,9 +1387,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			// Если подключение к указанному серверу запрещено
 			} else http->httpResponse.faultAuth();
 		// Если активация мультисети активирована
-		} else if(http->proxy->config->proxy.subnet && !http->domainNotFound) {
+		} else if(http->proxy->config->proxy.subnet && !http->dnext) {
 			// Запоминаем что этот домен был не найден
-			http->domainNotFound = true;
+			http->dnext = true;
 			// Определяем тип подключения
 			switch(http->proxy->config->proxy.extIPv){
 				// Выполняем ресолв домена IPv4
@@ -1388,6 +1397,8 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 				// Выполняем ресолв домена IPv6
 				case 6: http->dns4->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
 			}
+			// Выходим
+			return;
 		// Если домен не найден
 		} else {
 			// Выводим в лог сообщение
