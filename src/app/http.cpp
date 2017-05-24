@@ -742,8 +742,15 @@ const bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
 		Network nwk;
 		// Результат проверки
 		int check = -1;
+		// Тип сети
+		u_int nettype = http->proxy->config->proxy.extIPv;
+		// Если активация мультисети активирована
+		if(http->proxy->config->proxy.subnet){
+			// Определяем ip адрес
+			nettype = nwk.checkNetworkByIp(ip);
+		}
 		// Определяем тип подключения
-		switch(http->proxy->config->proxy.extIPv){
+		switch(nettype){
 			// Для протокола IPv4
 			case 4: check = nwk.isLocal(ip);	break;
 			// Для протокола IPv6

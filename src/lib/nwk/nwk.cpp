@@ -294,22 +294,25 @@ bool Network::checkIPByNetwork6(const string ip, const string nwk){
 		ipv6 = toCase(setLowIp6(ipv6));
 		// Формируем вектор данных ip адреса
 		vector <string> mip = split(ipv6, ":");
-		// Если первый хекстет нулевой значит это локальный адрес
-		if(mip[0].compare("0000") == 0) compare = true;
-		// Выполняем сравнение по хекстетам
-		else {
-			// Формируем вектор данных сети
-			vector <string> nwk = split(network, ":");
-			// Начинаем проверять совпадения
-			for(u_int j = 0; j < mip.size(); j++){
-				// Если значение в маске совпадает тогда продолжаем проверку
-				if((mip[j].compare(nwk[j]) == 0)
-				|| (nwk[j].compare("0000") == 0)) compare = true;
-				else {
-					// Запоминаем что сравнение не удалось
-					compare = false;
-					// Выходим
-					break;
+		// Если данные получены
+		if(!mip.empty()){
+			// Если первый хекстет нулевой значит это локальный адрес
+			if(mip[0].compare("0000") == 0) compare = true;
+			// Выполняем сравнение по хекстетам
+			else {
+				// Формируем вектор данных сети
+				vector <string> nwk = split(network, ":");
+				// Начинаем проверять совпадения
+				for(u_int j = 0; j < mip.size(); j++){
+					// Если значение в маске совпадает тогда продолжаем проверку
+					if((mip[j].compare(nwk[j]) == 0)
+					|| (nwk[j].compare("0000") == 0)) compare = true;
+					else {
+						// Запоминаем что сравнение не удалось
+						compare = false;
+						// Выходим
+						break;
+					}
 				}
 			}
 		}
@@ -856,7 +859,7 @@ const u_int Network::checkNetworkByIp(const string ip){
 			regex::ECMAScript | regex::icase
 		);
 		// Выполняем поиск ip адреса
-		regex_search(ip, match, e);
+		regex_search(setLowIp6(ip), match, e);
 		// Если данные найдены
 		if(!match.empty()) return 6;
 		// Сообщаем что протокол не определен
@@ -933,21 +936,24 @@ const int Network::isLocal6(const string ip){
 			ipv6 = toCase(setLowIp6(ipv6));
 			// Формируем вектор данных ip адреса
 			vector <string> mip = split(ipv6, ":");
-			// Если первый хекстет нулевой значит это локальный адрес
-			if(mip[0].compare("0000") == 0) compare = true;
-			// Выполняем сравнение по хекстетам
-			else {
-				// Формируем вектор данных сети
-				vector <string> nwk = split(network, ":");
-				// Начинаем проверять совпадения
-				for(u_int j = 0; j < mip.size(); j++){
-					// Если значение в маске совпадает тогда продолжаем проверку
-					if((mip[j].compare(nwk[j]) == 0) || (nwk[j].compare("0000") == 0)) compare = true;
-					else {
-						// Запоминаем что сравнение не удалось
-						compare = false;
-						// Выходим
-						break;
+			// Если данные получены
+			if(!mip.empty()){
+				// Если первый хекстет нулевой значит это локальный адрес
+				if(mip[0].compare("0000") == 0) compare = true;
+				// Выполняем сравнение по хекстетам
+				else {
+					// Формируем вектор данных сети
+					vector <string> nwk = split(network, ":");
+					// Начинаем проверять совпадения
+					for(u_int j = 0; j < mip.size(); j++){
+						// Если значение в маске совпадает тогда продолжаем проверку
+						if((mip[j].compare(nwk[j]) == 0) || (nwk[j].compare("0000") == 0)) compare = true;
+						else {
+							// Запоминаем что сравнение не удалось
+							compare = false;
+							// Выходим
+							break;
+						}
 					}
 				}
 			}
