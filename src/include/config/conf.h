@@ -51,6 +51,7 @@
 #define PROXY_OPTIMOS false
 #define PROXY_DEBUG false
 #define PROXY_DAEMON false
+#define PROXY_ONLY6OFF false
 #define PROXY_IPV "4 -> 4"
 #define PROXY_HTTP_PORT 8080
 #define PROXY_SOCKS5_PORT 1080
@@ -284,6 +285,7 @@ class Config {
 			bool reverse;	// Обратный прокси (доступ из сети в локальную сеть)
 			bool transfer;	// Активация поддержки прокси листа
 			bool forward;	// Прямой прокси (доступ во внешнюю сеть)
+			bool only6off;	// Активация режима отображения IPv4 в IPv6
 			bool optimos;	// Оптимизировать настройки операционной системы (нужен root доступ)
 			string user;	// Идентификатор группы пользователя под которым запускается прокси
 			string group;	// Идентификатор пользователя под которым запускается прокси

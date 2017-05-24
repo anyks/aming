@@ -210,6 +210,8 @@ Config::Config(const string filename){
 			PROXY_TRANSFER,
 			// Прямой прокси (доступ во внешнюю сеть)
 			PROXY_FORWARD,
+			// Активация режима отображения IPv4 в IPv6
+			PROXY_ONLY6OFF,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			PROXY_OPTIMOS,
 			// Идентификатор группы пользователя под которым запускается прокси
@@ -461,6 +463,8 @@ Config::Config(const string filename){
 			ini.GetBoolean("proxy", "transfer", PROXY_TRANSFER),
 			// Прямой прокси (доступ во внешнюю сеть)
 			ini.GetBoolean("proxy", "forward", PROXY_FORWARD),
+			// Активация режима отображения IPv4 в IPv6
+			ini.GetBoolean("proxy", "only6off", PROXY_ONLY6OFF),
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			ini.GetBoolean("proxy", "optimos", PROXY_OPTIMOS),
 			// Идентификатор группы пользователя под которым запускается прокси
