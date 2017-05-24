@@ -589,14 +589,15 @@ const int HttpProxy::socket_reuseable(const evutil_socket_t fd, LogApp * log){
 	return 0;
 }
 /**
- * socket_only6off Функция включающая режим отображения IPv4 на IPv6
+ * socket_ipv6only Функция включающая или отключающая режим отображения IPv4 на IPv6
  * @param  fd   файловый дескриптор (сокет)
+ * @param  mode Активация или деактивация режима
  * @param  log  указатель на объект ведения логов
  * @return      результат работы функции
  */
-const int HttpProxy::socket_only6off(const evutil_socket_t fd, LogApp * log){
+const int HttpProxy::socket_ipv6only(const evutil_socket_t fd, const bool mode, LogApp * log){
 	// Устанавливаем параметр
-	int only6 = 0;
+	int only6 = (mode ? 1 : 0);
 	// Разрешаем повторно использовать тот же host:port после отключения
 	if(setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &only6, sizeof(only6)) < 0){
 		// Выводим в лог информацию
@@ -1592,7 +1593,7 @@ const evutil_socket_t HttpProxy::create_server(){
 			// Получаем сокет сервера
 			sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 			// Включаем отображение сети IPv4 в IPv6
-			if(this->server->config->proxy.only6off) socket_only6off(sock, this->server->log);
+			socket_ipv6only(sock, this->server->config->proxy.ipv6only, this->server->log);
 		} break;
 	}
 	// Создаем сокет

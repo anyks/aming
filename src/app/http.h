@@ -330,12 +330,13 @@ class HttpProxy {
 		 */
 		static const int socket_reuseable(const evutil_socket_t fd, LogApp * log);
 		/**
-		 * socket_only6off Функция включающая режим отображения IPv4 на IPv6
+		 * socket_ipv6only Функция включающая или отключающая режим отображения IPv4 на IPv6
 		 * @param  fd   файловый дескриптор (сокет)
+		 * @param  mode Активация или деактивация режима
 		 * @param  log  указатель на объект ведения логов
 		 * @return      результат работы функции
 		 */
-		static const int socket_only6off(const evutil_socket_t fd, LogApp * log);
+		static const int socket_ipv6only(const evutil_socket_t fd, const bool mode, LogApp * log);
 		/**
 		 * socket_keepalive Функция устанавливает постоянное подключение на сокет
 		 * @param  fd      файловый дескриптор (сокет)
