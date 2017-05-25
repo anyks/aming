@@ -121,8 +121,8 @@
 #define LOGS_DIR "/var/log"
 
 // Модуль постоянного подключения
-#define KEEPALIVE_CNT 6
-#define KEEPALIVE_IDLE 3
+#define KEEPALIVE_CNT 3
+#define KEEPALIVE_IDLE 1
 #define KEEPALIVE_INTVL 2
 
 // Модуль авторизаций
