@@ -254,6 +254,8 @@ void BufferHttpProxy::sleep(const size_t size, const bool type){
 		max = (max / float(this->activeConnects()));
 		// Если размер больше нуля то продолжаем
 		if((max > 0) && (size > max)) seconds = (size / max);
+		// Устанавливаем предел задержки времени
+		// if(seconds > 60) seconds = 60;
 		// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 		this_thread::sleep_for(chrono::seconds(seconds));
 	}
@@ -290,10 +292,8 @@ void BufferHttpProxy::setTimeout(const u_short type, const bool read, const bool
 void BufferHttpProxy::sendClient(){
 	// Очищаем кэш
 	this->cache.clear();
-	// Если это код разрешающий коннект, устанавливаем таймер для клиента
-	if(!this->httpResponse.isClose()) this->setTimeout(TM_CLIENT, true, true);
-	// Если это завершение работы то устанавливаем таймер только на запись
-	else this->setTimeout(TM_CLIENT, false, true);
+	// Очищаем таймер сервера
+	this->setTimeout(TM_SERVER);
 	/** Данные установки необходимы для модификации заголовков НАЧАЛО **/
 	// Запоминаем метод который был в запросе
 	this->httpResponse.setMethod(this->httpRequest.getMethod());
@@ -311,7 +311,13 @@ void BufferHttpProxy::sendClient(){
 	// Запоминаем данные запроса
 	string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
-	if(!this->httpResponse.isClose()) this->sleep(response.size(), false);
+	if(!this->httpResponse.isClose()){
+		// Погружаем поток в сон
+		this->sleep(response.size(), false);
+		// Если это код разрешающий коннект, устанавливаем таймер для клиента
+		this->setTimeout(TM_CLIENT, true, true);
+	// Если это завершение работы то устанавливаем таймер только на запись
+	} else this->setTimeout(TM_CLIENT, false, true);
 	// Устанавливаем водяной знак на количество байт необходимое для идентификации переданных данных
 	bufferevent_setwatermark(this->events.client, EV_WRITE, response.size(), 0);
 	// Активируем ватермарк
@@ -323,18 +329,20 @@ void BufferHttpProxy::sendClient(){
  * sendServer Метод отправки данных на сервер
  */
 void BufferHttpProxy::sendServer(){
-	// Если это не постоянное подключение
-	if(!this->client.alive)
-		// Устанавливаем таймаут на чтение и запись
-		this->setTimeout(TM_SERVER, true, true);
-	// Устанавливаем таймаут только на запись
-	else this->setTimeout(TM_SERVER, false, true);
+	// Очищаем таймер клиента
+	this->setTimeout(TM_CLIENT);
 	// Выполняем модификацию заголовков
 	this->proxy->headers->modify(this->client.ip, this->client.mac, this->server.ip, this->httpRequest);
 	// Формируем запрос на сервер
 	this->client.request = this->httpRequest.getRequestData();
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 	this->sleep(this->client.request.size(), false);
+	// Если это не постоянное подключение
+	if(!this->client.alive)
+		// Устанавливаем таймаут на чтение и запись
+		this->setTimeout(TM_SERVER, true, true);
+	// Устанавливаем таймаут только на запись
+	else this->setTimeout(TM_SERVER, false, true);
 	// Отправляем серверу сообщение
 	bufferevent_write(this->events.server, this->client.request.data(), this->client.request.size());
 }
@@ -1168,15 +1176,17 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http){
+		// Снимаем таймеры с клиента
+		http->setTimeout(TM_CLIENT);
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
-		// Ставим таймер только на чтение и запись
-		http->setTimeout(TM_CLIENT, true, true);
 		// Получаем размер входящих данных
 		size_t len = evbuffer_get_length(input);
 		// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
 		http->sleep(len, true);
+		// Ставим таймер только на чтение и запись
+		http->setTimeout(TM_CLIENT, true, true);
 		// Если заголовки менять не надо тогда просто обмениваемся данными
 		if(http->client.connect) evbuffer_add_buffer(output, input);
 		// Если это обычные данные, выполняем отправку данных
@@ -1540,22 +1550,25 @@ void HttpProxy::connection(void * ctx){
 	if(http){
 		// Коллбек для удаления текущего подключения
 		function <void (void)> remove = http->remove;
-		// Выполняем заморозку потока
-		http->freeze();
 		// Создаем буфер событий
 		http->events.client = bufferevent_socket_new(http->base, http->sockets.client, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-		// Устанавливаем таймер для клиента
-		http->setTimeout(TM_CLIENT, true);
-		// Устанавливаем водяной знак на 5 байт (чтобы считывать данные когда они действительно приходят)
-		// bufferevent_setwatermark(http->events.client, EV_READ | EV_WRITE, 5, 0);
-		// Устанавливаем коллбеки
-		bufferevent_setcb(http->events.client, &HttpProxy::read_client_cb, &HttpProxy::write_client_cb, &HttpProxy::event_cb, http);
-		// Очищаем буферы событий при завершении работы
-		bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
-		// Активируем буферы событий на чтение и запись
-		bufferevent_enable(http->events.client, EV_READ | EV_WRITE);
-		// Активируем перебор базы событий
-		event_base_dispatch(http->base);
+		// Если подключения клиента исчерпаны, отключаем его
+		if(http->isFull()) http->close();
+		// Иначе устанавливаем подключение
+		else {
+			// Устанавливаем таймер для клиента
+			http->setTimeout(TM_CLIENT, true);
+			// Устанавливаем водяной знак на 5 байт (чтобы считывать данные когда они действительно приходят)
+			// bufferevent_setwatermark(http->events.client, EV_READ | EV_WRITE, 5, 0);
+			// Устанавливаем коллбеки
+			bufferevent_setcb(http->events.client, &HttpProxy::read_client_cb, &HttpProxy::write_client_cb, &HttpProxy::event_cb, http);
+			// Очищаем буферы событий при завершении работы
+			bufferevent_flush(http->events.client, EV_READ | EV_WRITE, BEV_FINISHED);
+			// Активируем буферы событий на чтение и запись
+			bufferevent_enable(http->events.client, EV_READ | EV_WRITE);
+			// Активируем перебор базы событий
+			event_base_dispatch(http->base);
+		}
 		// Удаляем объект подключения
 		delete http;
 		// Выполняем удаление подключения из списка
