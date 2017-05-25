@@ -355,7 +355,7 @@ NKdata Network::getNetwork(string str){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})(?:\\/(\\d+|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}))?$",
+		"^(\\d{1,3}(?:\\.\\d{1,3}){3})(?:\\/(\\d+|\\d{1,3}(?:\\.\\d{1,3}){3}))?$",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск ip адреса и маски сети
@@ -467,10 +467,10 @@ const string Network::getLow1Ip6(const string ip){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^\\[?([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})"
-		"\\:([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})"
-		"\\:([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})"
-		"\\:([ABCDEFabcdef\\d]{4})\\:([ABCDEFabcdef\\d]{4})\\]?$",
+		"^\\[?([A-Fa-f\\d]{4})\\:([A-Fa-f\\d]{4})"
+		"\\:([A-Fa-f\\d]{4})\\:([A-Fa-f\\d]{4})"
+		"\\:([A-Fa-f\\d]{4})\\:([A-Fa-f\\d]{4})"
+		"\\:([A-Fa-f\\d]{4})\\:([A-Fa-f\\d]{4})\\]?$",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск ip адреса
@@ -482,7 +482,7 @@ const string Network::getLow1Ip6(const string ip){
 		// Определяем количество элементов в массиве
 		u_int len = match.size();
 		// Регулярное выражение для поиска старших нулей
-		regex e("^(0+)([ABCDEFabcdef\\d]+)$");
+		regex e("^(0+)([A-Fa-f\\d]+)$");
 		// Переходим по всему массиву и заменяем 0000 на 0 и убираем старшие нули
 		for(u_int i = 1; i < len; i++){
 			// Получаем группу байт адреса для обработки
@@ -512,10 +512,10 @@ const string Network::getLow2Ip6(const string ip){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^\\[?([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
-		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
-		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
-		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})\\]?$",
+		"^\\[?([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})"
+		"\\:([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})"
+		"\\:([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})"
+		"\\:([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})\\]?$",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск ip адреса
@@ -586,10 +586,10 @@ const string Network::setLow1Ip6(const string ip){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^\\[?([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
-		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
-		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})"
-		"\\:([ABCDEFabcdef\\d]{1,4})\\:([ABCDEFabcdef\\d]{1,4})\\]?$",
+		"^\\[?([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})"
+		"\\:([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})"
+		"\\:([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})"
+		"\\:([A-Fa-f\\d]{1,4})\\:([A-Fa-f\\d]{1,4})\\]?$",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск ip адреса
@@ -603,7 +603,7 @@ const string Network::setLow1Ip6(const string ip){
 		// Результат работы регулярного выражения
 		smatch match;
 		// Устанавливаем правило регулярного выражения
-		regex e("([ABCDEFabcdef\\d]{1,4})", regex::ECMAScript | regex::icase);
+		regex e("([A-Fa-f\\d]{1,4})", regex::ECMAScript | regex::icase);
 		// Выполняем удаление из ip адреса хексетов
 		while(true){
 			// Выполняем поиск ip адреса
@@ -663,7 +663,7 @@ const string Network::setLow2Ip6(const string ip){
 		// Результат работы регулярного выражения
 		smatch match;
 		// Устанавливаем правило регулярного выражения
-		regex e("([ABCDEFabcdef\\d]{1,4})", regex::ECMAScript | regex::icase);
+		regex e("([A-Fa-f\\d]{1,4})", regex::ECMAScript | regex::icase);
 		// Выполняем удаление из ip адреса хексетов
 		while(true){
 			// Выполняем поиск ip адреса
@@ -729,7 +729,7 @@ const string Network::imposePrefix6(const string ip6, u_int prefix){
 				// Результат работы регулярного выражения
 				smatch match;
 				// Устанавливаем правило регулярного выражения
-				regex e("([ABCDEFabcdef\\d]{4})", regex::ECMAScript | regex::icase);
+				regex e("([A-Fa-f\\d]{4})", regex::ECMAScript | regex::icase);
 				// Выполняем удаление из ip адреса хексетов
 				while(true){
 					// Выполняем поиск ip адреса
@@ -819,7 +819,7 @@ __uint64_t Network::strIp6ToHex64(const string ip){
 	// Создаем поток
 	stringstream strm;
 	// Устанавливаем правило регулярного выражения
-	regex e("[^ABCDEFabcdef\\d]", regex::ECMAScript | regex::icase);
+	regex e("[^A-Fa-f\\d]", regex::ECMAScript | regex::icase);
 	// Убираем лишние символы из 16-го выражения
 	string str = regex_replace(ip, e, "");
 	// Если число слишком длинное
@@ -841,7 +841,7 @@ const u_int Network::checkNetworkByIp(const string ip){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$",
+		"^\\d{1,3}(?:\\.\\d{1,3}){3}$",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск ip адреса
@@ -852,14 +852,11 @@ const u_int Network::checkNetworkByIp(const string ip){
 	else {
 		// Устанавливаем правило регулярного выражения
 		regex e(
-			"^\\[?[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}"
-			"\\:[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}"
-			"\\:[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}"
-			"\\:[ABCDEFabcdef\\d]{1,4}\\:[ABCDEFabcdef\\d]{1,4}\\]?$",
+			"^\\[?[A-Fa-f\\d]{1,4}(?:\\:[A-Fa-f\\d]{1,4}){7}\\]?$",
 			regex::ECMAScript | regex::icase
 		);
 		// Выполняем поиск ip адреса
-		regex_search(setLowIp6(ip), match, e);
+		regex_search(setLow2Ip6(ip), match, e);
 		// Если данные найдены
 		if(!match.empty()) return 6;
 		// Сообщаем что протокол не определен
@@ -876,7 +873,7 @@ const int Network::isLocal(const string ip){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$",
+		"^\\d{1,3}(?:\\.\\d{1,3}){3}$",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск ip адреса

@@ -576,11 +576,11 @@ bool Headers::isAddress(const string address){
 		// Определение домена
 		"(?:[\\w\\-\\.]+\\.[\\w\\-]+|"
 		// Определение мак адреса
-		"[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}|"
+		"[A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5}|"
 		// Определение ip адреса
-		"\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|"
+		"\\d{1,3}(?:\\.\\d{1,3}){3}|"
 		// Определение ip6 адреса (в полном формате)
-		"[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4})",
+		"[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7})",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем проверку
@@ -597,7 +597,7 @@ bool Headers::isIpV4(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
-	regex e("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}", regex::ECMAScript | regex::icase);
+	regex e("\\d{1,3}(?:\\.\\d{1,3}){3}", regex::ECMAScript | regex::icase);
 	// Выполняем проверку
 	regex_search(ip, match, e);
 	// Выводим результат
@@ -612,7 +612,7 @@ bool Headers::isIpV6(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
-	regex e("[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}", regex::ECMAScript | regex::icase);
+	regex e("[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7}", regex::ECMAScript | regex::icase);
 	// Выполняем проверку
 	regex_search(ip, match, e);
 	// Выводим результат
@@ -628,8 +628,8 @@ bool Headers::isIp(const string ip){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"(?:\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|"
-		"[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4})",
+		"(?:\\d{1,3}(?:\\.\\d{1,3}){3}|"
+		"[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7})",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем проверку
@@ -646,7 +646,7 @@ bool Headers::isMac(const string mac){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
-	regex e("[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}\\:[A-Fa-f\\d]{2}", regex::ECMAScript | regex::icase);
+	regex e("[A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5}", regex::ECMAScript | regex::icase);
 	// Выполняем проверку
 	regex_search(mac, match, e);
 	// Выводим результат
