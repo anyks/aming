@@ -416,6 +416,8 @@ Config::Config(const string filename){
 			// Порт redirect прокси
 			case 3: proxy_port = PROXY_REDIRECT_PORT;	break;
 		}
+		// Получаем данные режима мульти-сетевого взаимодействия
+		bool proxy_subnet = ini.GetBoolean("proxy", "subnet", PROXY_SUBNET);
 		// Массив протоколов
 		vector <string> ipVx = split(ini.Get("proxy", "ipv", PROXY_IPV), "->");
 		// Запоминаем внешнюю версию интернет протокола
@@ -425,6 +427,8 @@ Config::Config(const string filename){
 		// Если версия меньше 4 или больше 6 то устанавливаем версию по умолчанию
 		proxy_intIPv = ((proxy_intIPv < 4) || (proxy_intIPv > 6) ? 4 : proxy_intIPv);
 		proxy_extIPv = ((proxy_extIPv < 4) || (proxy_extIPv > 6) ? 4 : proxy_extIPv);
+		// Если ни один из сетевых интерфейсов не принадлежит IPv6 тогда отключаем мульти-сетевое взаимодействие
+		if((proxy_intIPv != 6) && (proxy_extIPv != 6)) proxy_subnet = false;
 		// Массив dns серверов
 		vector <string> resolver4 = split(ini.Get("ipv4", "resolver", ""), "|");
 		vector <string> resolver6 = split(ini.Get("ipv6", "resolver", ""), "|");
@@ -468,7 +472,7 @@ Config::Config(const string filename){
 			// Активация режима отображения IPv4 в IPv6
 			ini.GetBoolean("proxy", "ipv6only", PROXY_IPV6ONLY),
 			// Активация режима мульти-сетевого взаимодействия
-			ini.GetBoolean("proxy", "subnet", PROXY_SUBNET),
+			proxy_subnet,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			ini.GetBoolean("proxy", "optimos", PROXY_OPTIMOS),
 			// Идентификатор группы пользователя под которым запускается прокси
