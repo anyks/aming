@@ -229,13 +229,13 @@ void BufferHttpProxy::freeze(){
  */
 void BufferHttpProxy::checkUpgrade(){
 	// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
-	if(!this->client.connect
-	&& this->httpResponse.isEndHeaders()
-	&& this->httpResponse.isUpgrade()
+	if(this->httpResponse.isUpgrade()
 	&& (this->httpResponse.getStatus() == 101)){
 		// Устанавливаем что это соединение CONNECT,
 		// для будущего обмена данными, так как они будут приходить бинарные
 		this->client.connect = true;
+		// Запоминаем что протокол у сервера переключен
+		this->server.upgrade = true;
 	}
 }
 /**
@@ -296,9 +296,9 @@ void BufferHttpProxy::setTimeout(const u_short type, const bool read, const bool
 	// Захватываем мютекс
 	this->mtx.lock();
 	// Устанавливаем таймаут ожидания результата на чтение с сервера
-	struct timeval readTimeout = {this->proxy->config->timeouts.read, 0};
+	struct timeval readTimeout = {this->readTimeout, 0};
 	// Устанавливаем таймаут записи результата на запись
-	struct timeval writeTimeout = {this->proxy->config->timeouts.write, 0};
+	struct timeval writeTimeout = {this->writeTimeout, 0};
 	// Получаем параметры флагов
 	bool readValue	= read;
 	bool writeValue	= write;
@@ -324,6 +324,8 @@ void BufferHttpProxy::setTimeout(const u_short type, const bool read, const bool
 void BufferHttpProxy::sendClient(){
 	// Очищаем кэш
 	this->cache.clear();
+	// Проверяем является ли это переключение на другой протокол
+	this->checkUpgrade();
 	/** Данные установки необходимы для модификации заголовков НАЧАЛО **/
 	// Запоминаем метод который был в запросе
 	this->httpResponse.setMethod(this->httpRequest.getMethod());
@@ -339,12 +341,18 @@ void BufferHttpProxy::sendClient(){
 	this->proxy->headers->modify(this->client.ip, this->client.mac, this->server.ip, this->httpResponse);
 	/** Данные установки необходимы для модификации заголовков КОНЕЦ **/
 	// Запоминаем данные запроса
-	string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
+	const string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
+	// Если протокол был переключен
+	if(this->server.upgrade){
+		// Устанавливаем таймер на 1000 секунд
+		this->readTimeout = 1000;
+		// Устанавливаем таймер для клиента и сервера
+		this->setTimeout(TM_CLIENT | TM_SERVER, true, true);
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
-	if(!this->httpResponse.isClose()){
+	} else if(!this->httpResponse.isClose()) {
 		// Погружаем поток в сон
 		this->sleep(response.size(), false);
-		// Если это код разрешающий коннект, устанавливаем таймер для клиента
+		// Устанавливаем таймер для клиента
 		this->setTimeout(TM_CLIENT, true, true);
 	// Если это завершение работы то устанавливаем таймер только на запись
 	} else this->setTimeout(TM_CLIENT, false, true);
@@ -398,6 +406,10 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	this->base = event_base_new();
 	// Создаем объект для работы с http заголовками
 	this->parser.create(this->proxy->config->proxy.name, this->proxy->config->options);
+	// Запоминаем таймаут ожидания результата на чтение с сервера
+	this->readTimeout = this->proxy->config->timeouts.read;
+	// Запоминаем таймаут записи результата на запись
+	this->writeTimeout = this->proxy->config->timeouts.write;
 	// Если активация мультисети активирована
 	if(this->proxy->config->proxy.subnet){
 		// Создаем IPv4 резолвер
@@ -1241,8 +1253,6 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					// Выходим из обработки данных
 					return;
 				}
-				// Проверяем является ли это переключение на другой протокол
-				http->checkUpgrade();
 				// Активируем сжатие данных, на стороне прокси сервера
 				if(!http->client.connect
 				&& http->httpResponse.compressIsAllowed(http->client.useragent)){

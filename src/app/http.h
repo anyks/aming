@@ -110,6 +110,8 @@ class BufferHttpProxy {
 	private:
 		// Мютекс для захвата потока
 		mutex mtx;
+		// Значение таймаутов
+		time_t readTimeout = 0, writeTimeout = 0;
 		/**
 		 * Events Буферы событий
 		 */
@@ -128,9 +130,10 @@ class BufferHttpProxy {
 		 * Server Данные текущего сервера
 		 */
 		struct Server {
-			u_int	port	= 0;	// Порт
-			string	ip		= "";	// ip адрес сервера
-			string	mac		= "";	// Мак адрес
+			bool	upgrade	= false;	// Протокол переключен
+			u_int	port	= 0;		// Порт
+			string	ip		= "";		// ip адрес сервера
+			string	mac		= "";		// Мак адрес
 		};
 		/**
 		 * Sockets Сокеты клиента и сервера
