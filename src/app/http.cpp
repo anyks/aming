@@ -360,6 +360,32 @@ void BufferHttpProxy::next(){
 	&& !this->httpResponse.isClose()) HttpProxy::do_request(this);
 }
 /**
+ * createDNS4 Создание резолвера DNS IPv4
+ */
+void BufferHttpProxy::createDNS4(){
+	// Создаем IPv4 резолвер
+	this->dns4 = new DNSResolver(
+		this->proxy->log,
+		this->proxy->cache,
+		this->base,
+		AF_INET,
+		this->proxy->config->ipv4.resolver
+	);
+}
+/**
+ * createDNS6 Создание резолвера DNS IPv6
+ */
+void BufferHttpProxy::createDNS6(){
+	// Создаем IPv6 резолвер
+	this->dns6 = new DNSResolver(
+		this->proxy->log,
+		this->proxy->cache,
+		this->base,
+		AF_INET6,
+		this->proxy->config->ipv6.resolver
+	);
+}
+/**
  * BufferHttpProxy Конструктор
  * @param proxy объект данных прокси сервера
  */
@@ -374,46 +400,18 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	this->parser.create(this->proxy->config->proxy.name, this->proxy->config->options);
 	// Если активация мультисети активирована
 	if(this->proxy->config->proxy.subnet){
-		// Создаем IPv4 ресолвер
-		this->dns4 = new DNSResolver(
-			this->proxy->log,
-			this->proxy->cache,
-			this->base,
-			AF_INET,
-			this->proxy->config->ipv4.resolver
-		);
-		// Создаем IPv6 ресолвер
-		this->dns6 = new DNSResolver(
-			this->proxy->log,
-			this->proxy->cache,
-			this->base,
-			AF_INET6,
-			this->proxy->config->ipv6.resolver
-		);
+		// Создаем IPv4 резолвер
+		this->createDNS4();
+		// Создаем IPv6 резолвер
+		this->createDNS6();
 	// Если активирован только один тип сети
 	} else {
 		// Определяем тип подключения
 		switch(this->proxy->config->proxy.extIPv){
 			// Для протокола IPv4
-			case 4: {
-				this->dns4 = new DNSResolver(
-					this->proxy->log,
-					this->proxy->cache,
-					this->base,
-					AF_INET,
-					this->proxy->config->ipv4.resolver
-				);
-			} break;
+			case 4: this->createDNS4(); break;
 			// Для протокола IPv6
-			case 6: {
-				this->dns6 = new DNSResolver(
-					this->proxy->log,
-					this->proxy->cache,
-					this->base,
-					AF_INET6,
-					this->proxy->config->ipv6.resolver
-				);
-			} break;
+			case 6: this->createDNS6(); break;
 		}
 	}
 	// Освобождаем мютекс
@@ -1266,7 +1264,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 	return;
 }
 /**
- * resolve_cb Функция выполняющая ресолвинг домена
+ * resolve_cb Функция выполняющая резолвинг домена
  * @param ip  IP адрес сервера
  * @param ctx передаваемый объект
  */
@@ -1401,9 +1399,9 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			http->dnext = true;
 			// Определяем тип подключения
 			switch(http->proxy->config->proxy.extIPv){
-				// Выполняем ресолв домена IPv4
+				// Выполняем резолв домена IPv4
 				case 4: http->dns6->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
-				// Выполняем ресолв домена IPv6
+				// Выполняем резолв домена IPv6
 				case 6: http->dns4->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
 			}
 			// Выходим
@@ -1457,9 +1455,9 @@ void HttpProxy::do_request(void * ctx){
 			http->httpRequest = * httpData;
 			// Определяем тип подключения
 			switch(http->proxy->config->proxy.extIPv){
-				// Выполняем ресолв домена IPv4
+				// Выполняем резолв домена IPv4
 				case 4: http->dns4->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
-				// Выполняем ресолв домена IPv6
+				// Выполняем резолв домена IPv6
 				case 6: http->dns6->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
 			}
 		}

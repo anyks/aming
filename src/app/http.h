@@ -184,9 +184,9 @@ class BufferHttpProxy {
 		HttpData httpRequest;
 		// Параметры прокси сервера
 		System * proxy = NULL;
-		// Создаем объект dns ресолвера IPv4
+		// Создаем объект dns резолвера IPv4
 		DNSResolver * dns4 = NULL;
-		// Создаем объект dns ресолвера IPv6
+		// Создаем объект dns резолвера IPv6
 		DNSResolver * dns6 = NULL;
 		// База событий
 		struct event_base * base = NULL;
@@ -248,6 +248,14 @@ class BufferHttpProxy {
 		 * sendServer Метод отправки данных на сервер
 		 */
 		void sendServer();
+		/**
+		 * createDNS4 Создание резолвера DNS IPv4
+		 */
+		void createDNS4();
+		/**
+		 * createDNS6 Создание резолвера DNS IPv6
+		 */
+		void createDNS6();
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param proxy объект данных прокси сервера
@@ -386,7 +394,7 @@ class HttpProxy {
 		 */
 		static void send_http_data(void * ctx);
 		/**
-		 * resolve_cb Функция выполняющая ресолвинг домена
+		 * resolve_cb Функция выполняющая резолвинг домена
 		 * @param ip  IP адрес сервера
 		 * @param ctx передаваемый объект
 		 */
