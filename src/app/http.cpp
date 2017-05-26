@@ -116,6 +116,32 @@ void ConnectClients::rm(const string key){
 	this->mtx.unlock();
 }
 /**
+ * createDNS4 Создание резолвера DNS IPv4
+ */
+void BufferHttpProxy::createDNS4(){
+	// Создаем IPv4 резолвер
+	this->dns4 = new DNSResolver(
+		this->proxy->log,
+		this->proxy->cache,
+		this->base,
+		AF_INET,
+		this->proxy->config->ipv4.resolver
+	);
+}
+/**
+ * createDNS6 Создание резолвера DNS IPv6
+ */
+void BufferHttpProxy::createDNS6(){
+	// Создаем IPv6 резолвер
+	this->dns6 = new DNSResolver(
+		this->proxy->log,
+		this->proxy->cache,
+		this->base,
+		AF_INET6,
+		this->proxy->config->ipv6.resolver
+	);
+}
+/**
  * free_socket Метод отключения сокета
  * @param fd ссылка на файловый дескриптор (сокет)
  */
@@ -358,32 +384,6 @@ void BufferHttpProxy::next(){
 	// Если данные в массиве существуют тогда продолжаем загрузку
 	if(!this->parser.httpData.empty()
 	&& !this->httpResponse.isClose()) HttpProxy::do_request(this);
-}
-/**
- * createDNS4 Создание резолвера DNS IPv4
- */
-void BufferHttpProxy::createDNS4(){
-	// Создаем IPv4 резолвер
-	this->dns4 = new DNSResolver(
-		this->proxy->log,
-		this->proxy->cache,
-		this->base,
-		AF_INET,
-		this->proxy->config->ipv4.resolver
-	);
-}
-/**
- * createDNS6 Создание резолвера DNS IPv6
- */
-void BufferHttpProxy::createDNS6(){
-	// Создаем IPv6 резолвер
-	this->dns6 = new DNSResolver(
-		this->proxy->log,
-		this->proxy->cache,
-		this->base,
-		AF_INET6,
-		this->proxy->config->ipv6.resolver
-	);
 }
 /**
  * BufferHttpProxy Конструктор

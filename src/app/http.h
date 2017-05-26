@@ -152,6 +152,14 @@ class BufferHttpProxy {
 			string	request		= "";		// Данные запроса
 		};
 		/**
+		 * createDNS4 Создание резолвера DNS IPv4
+		 */
+		void createDNS4();
+		/**
+		 * createDNS6 Создание резолвера DNS IPv6
+		 */
+		void createDNS6();
+		/**
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)
 		 */
@@ -248,14 +256,6 @@ class BufferHttpProxy {
 		 * sendServer Метод отправки данных на сервер
 		 */
 		void sendServer();
-		/**
-		 * createDNS4 Создание резолвера DNS IPv4
-		 */
-		void createDNS4();
-		/**
-		 * createDNS6 Создание резолвера DNS IPv6
-		 */
-		void createDNS6();
 		/**
 		 * BufferHttpProxy Конструктор
 		 * @param proxy объект данных прокси сервера
