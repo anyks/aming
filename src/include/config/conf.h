@@ -39,7 +39,7 @@
 #define OPT_KEEPALIVE 0x20	// Флаг разрешающий постоянное соединение
 #define OPT_LOG 0x40		// Флаг разрешающий логирование данных
 #define OPT_PGZIP 0x80		// Флаг разрешающий сжатие не сжатых данных
-#define OPT_DEBLOCK 0x160	// Флаг разрешающий обход блокировок
+#define OPT_DEBLOCK 0x100	// Флаг разрешающий обход блокировок
 
 // Параметры прокси сервера (http, socks5, redirect)
 #define PROXY_TYPE "http"
