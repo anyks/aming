@@ -97,7 +97,7 @@ void DNSResolver::resolve(const string domain, const int family, handler fn, voi
 		// Результат работы регулярного выражения
 		smatch match;
 		// Устанавливаем правило регулярного выражения
-		regex e("^(?:\\d{1,3}(?:\\.\\d{1,3}){3}|\\[[A-Fa-f\\d\\:]{2,39}\\])$", regex::ECMAScript | regex::icase);
+		regex e("^\\[?(\\d{1,3}(?:\\.\\d{1,3}){3}|[A-Fa-f\\d\\:]{2,39})\\]?$", regex::ECMAScript | regex::icase);
 		// Выполняем поиск протокола
 		regex_search(domain, match, e);
 		// Если данные найдены
@@ -140,7 +140,7 @@ void DNSResolver::resolve(const string domain, const int family, handler fn, voi
 				if((req == NULL) && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
 			}
 		// Если передан домен то возвращаем его
-		} else fn(domain, ctx);
+		} else fn(match[1].str(), ctx);
 	}
 	// Выходим
 	return;
