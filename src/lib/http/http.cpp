@@ -1323,7 +1323,7 @@ HttpData::Connect HttpData::getConnection(const string str){
 		// Стандартная запись IPv4 127.0.0.1
 		"\\d{1,3}(?:\\.\\d{1,3}){3}|"
 		// Стандартная запись IPv6 [2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d]
-		"\\[[A-Fa-f\\d\\:]+\\])(?:\\:(\\d+))?",
+		"\\[[A-Fa-f\\d\\:]{2,39}\\])(?:\\:(\\d+))?",
 		regex::ECMAScript | regex::icase
 	);
 	// Выполняем поиск домена и порта

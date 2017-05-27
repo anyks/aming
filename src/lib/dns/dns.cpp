@@ -40,7 +40,7 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 				// IP адрес
 				const char * ip = NULL;
 				// Если это искомый тип интернет протокола
-				if(ai->ai_family == domainData->family){
+				if((ai->ai_family == domainData->family) || (domainData->family == AF_UNSPEC)){
 					// Получаем структуру для указанного интернет протокола
 					switch(ai->ai_family){
 						// Если это IPv4 адрес
@@ -87,16 +87,17 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 /**
  * resolve Метод ресолвинга домена
  * @param domain название домена
+ * @param family тип интернет протокола IPv4 или IPv6
  * @param fn     функция обратного вызова срабатывающая при получении данных
  * @param ctx    указатель на объект передаваемый пользователем
  */
-void DNSResolver::resolve(const string domain, handler fn, void * ctx){
+void DNSResolver::resolve(const string domain, const int family, handler fn, void * ctx){
 	// Если домен передан
 	if(!domain.empty()){
 		// Результат работы регулярного выражения
 		smatch match;
 		// Устанавливаем правило регулярного выражения
-		regex e("^(?:\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\[[\\w\\:]+\\])$", regex::ECMAScript | regex::icase);
+		regex e("^(?:\\d{1,3}(?:\\.\\d{1,3}){3}|\\[[A-Fa-f\\d\\:]{2,39}\\])$", regex::ECMAScript | regex::icase);
 		// Выполняем поиск протокола
 		regex_search(domain, match, e);
 		// Если данные найдены
@@ -132,7 +133,7 @@ void DNSResolver::resolve(const string domain, handler fn, void * ctx){
 				// Запоминаем объект управления кэшем
 				domainData->cache = this->cache;
 				// Устанавливаем тип протокола интернета
-				domainData->family = this->family;
+				domainData->family = family;
 				// Выполняем dns запрос
 				struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
 				// Выводим в лог сообщение
@@ -162,14 +163,6 @@ void DNSResolver::createDNSBase(){
 	}
 	// Если нейм сервера переданы
 	setNameServers(this->servers);
-}
-/**
- * setFamily Метод установки интернет протокола
- * @param family интернет протокол
- */
-void DNSResolver::setFamily(const int family){
-	// Если интернет протокол передан
-	if(family) this->family = family;
 }
 /**
  * setLog Метод установки объекта лога
@@ -224,18 +217,15 @@ void DNSResolver::setNameServers(vector <string> servers){
  * @param log     объект ведения логов
  * @param cache   объект кэша
  * @param base    база данных событий
- * @param family  тип интернет протокола IPv4 или IPv6
  * @param servers массив dns серверов
  */
-DNSResolver::DNSResolver(LogApp * log, Cache * cache, struct event_base * base, int family, vector <string> servers){
+DNSResolver::DNSResolver(LogApp * log, Cache * cache, struct event_base * base, vector <string> servers){
 	// Запоминаем объект лога
 	this->log = log;
 	// Запоминаем объект кэша
 	this->cache = cache;
 	// Создаем базу данных событий
 	this->base = base;
-	// Запоминаем тип интернет протокола
-	this->family = family;
 	// Запоминаем dns сервера
 	this->servers = servers;
 	// Создаем dns базу

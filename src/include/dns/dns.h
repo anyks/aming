@@ -47,8 +47,6 @@ class DNSResolver {
 		};
 		// Мютекс для захвата потока
 		mutex mtx;
-		// Тип протокола интернета AF_INET или AF_INET6
-		int family;
 		// Объект ведения логов
 		LogApp * log = NULL;
 		// Объект управления кэшем
@@ -74,15 +72,11 @@ class DNSResolver {
 		/**
 		 * resolve Метод ресолвинга домена
 		 * @param domain название домена
+		 * @param family тип интернет протокола AF_INET, AF_INET6 или AF_UNSPEC
 		 * @param fn     функция обратного вызова срабатывающая при получении данных
 		 * @param ctx    указатель на объект передаваемый пользователем
 		 */
-		void resolve(const string domain, handler fn, void * ctx = NULL);
-		/**
-		 * setFamily Метод установки интернет протокола
-		 * @param family интернет протокол
-		 */
-		void setFamily(const int family);
+		void resolve(const string domain, const int family, handler fn, void * ctx = NULL);
 		/**
 		 * setLog Метод установки объекта лога
 		 * @param log объект лога
@@ -108,10 +102,9 @@ class DNSResolver {
 		 * @param log     объект ведения логов
 		 * @param cache   объект кэша
 		 * @param base    база данных событий
-		 * @param family  тип интернет протокола IPv4 или IPv6
 		 * @param servers массив dns серверов
 		 */
-		DNSResolver(LogApp * log = NULL, Cache * cache = NULL, struct event_base * base = NULL, int family = AF_INET, vector <string> servers = {});
+		DNSResolver(LogApp * log = NULL, Cache * cache = NULL, struct event_base * base = NULL, vector <string> servers = {});
 		/**
 		 * ~DNSResolver Деструктор
 		 */

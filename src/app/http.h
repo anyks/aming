@@ -156,14 +156,6 @@ class BufferHttpProxy {
 			string	request		= "";		// Данные запроса
 		};
 		/**
-		 * createDNS4 Создание резолвера DNS IPv4
-		 */
-		void createDNS4();
-		/**
-		 * createDNS6 Создание резолвера DNS IPv6
-		 */
-		void createDNS6();
-		/**
 		 * free_socket Метод отключения сокета
 		 * @param fd ссылка на файловый дескриптор (сокет)
 		 */
@@ -178,8 +170,6 @@ class BufferHttpProxy {
 		void * frze = NULL;
 		// Флаг авторизации
 		bool auth = false;
-		// Домен был не найден
-		bool dnext = false;
 		// Объект парсера
 		Http parser;
 		// Параметры подключившегося клиента
@@ -196,10 +186,8 @@ class BufferHttpProxy {
 		HttpData httpRequest;
 		// Параметры прокси сервера
 		System * proxy = NULL;
-		// Создаем объект dns резолвера IPv4
-		DNSResolver * dns4 = NULL;
-		// Создаем объект dns резолвера IPv6
-		DNSResolver * dns6 = NULL;
+		// Создаем объект dns резолвера
+		DNSResolver * dns = NULL;
 		// База событий
 		struct event_base * base = NULL;
 		// Данные кэша

@@ -116,32 +116,6 @@ void ConnectClients::rm(const string key){
 	this->mtx.unlock();
 }
 /**
- * createDNS4 Создание резолвера DNS IPv4
- */
-void BufferHttpProxy::createDNS4(){
-	// Создаем IPv4 резолвер
-	this->dns4 = new DNSResolver(
-		this->proxy->log,
-		this->proxy->cache,
-		this->base,
-		AF_INET,
-		this->proxy->config->ipv4.resolver
-	);
-}
-/**
- * createDNS6 Создание резолвера DNS IPv6
- */
-void BufferHttpProxy::createDNS6(){
-	// Создаем IPv6 резолвер
-	this->dns6 = new DNSResolver(
-		this->proxy->log,
-		this->proxy->cache,
-		this->base,
-		AF_INET6,
-		this->proxy->config->ipv6.resolver
-	);
-}
-/**
  * free_socket Метод отключения сокета
  * @param fd ссылка на файловый дескриптор (сокет)
  */
@@ -414,22 +388,17 @@ BufferHttpProxy::BufferHttpProxy(System * proxy){
 	this->readTimeout = this->proxy->config->timeouts.read;
 	// Запоминаем таймаут записи результата на запись
 	this->writeTimeout = this->proxy->config->timeouts.write;
-	// Если активация мультисети активирована
-	if(this->proxy->config->proxy.subnet){
-		// Создаем IPv4 резолвер
-		this->createDNS4();
-		// Создаем IPv6 резолвер
-		this->createDNS6();
-	// Если активирован только один тип сети
-	} else {
-		// Определяем тип подключения
-		switch(this->proxy->config->proxy.extIPv){
-			// Для протокола IPv4
-			case 4: this->createDNS4(); break;
-			// Для протокола IPv6
-			case 6: this->createDNS6(); break;
-		}
+	// Список доменов резолвера
+	vector <string> resolver;
+	// Определяем тип подключения
+	switch(this->proxy->config->proxy.extIPv){
+		// Резолвер IPv4
+		case 4: resolver = this->proxy->config->ipv4.resolver; break;
+		// Резолвер IPv6
+		case 6: resolver = this->proxy->config->ipv6.resolver; break;
 	}
+	// Создаем резолвер доменов
+	this->dns = new DNSResolver(this->proxy->log, this->proxy->cache, this->base, resolver);
 	// Освобождаем мютекс
 	this->mtx.unlock();
 }
@@ -440,8 +409,7 @@ BufferHttpProxy::~BufferHttpProxy(){
 	// Захватываем мютекс
 	this->mtx.lock();
 	// Удаляем dns сервер
-	if(this->dns4) delete this->dns4;
-	if(this->dns6) delete this->dns6;
+	if(this->dns) delete this->dns;
 	// Очищаем объект базы событий
 	event_base_free(this->base);
 	// Освобождаем мютекс
@@ -1289,15 +1257,6 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 	if(http){
 		// Если дарес домена найден
 		if(!ip.empty()){
-			// Если активация мультисети активирована
-			if(http->proxy->config->proxy.subnet){
-				// Создаем объект сети
-				Network nwk;
-				// Запоминаем что этот домен был найден
-				http->dnext = false;
-				// Определяем ip адрес
-				http->proxy->config->proxy.extIPv = nwk.checkNetworkByIp(ip);
-			}
 			// Если подключение к указанному серверу разрешено
 			if(isallow_remote_connect(ip, http)){
 				// Определяем connect прокси разрешен или нет
@@ -1410,19 +1369,6 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 				}
 			// Если подключение к указанному серверу запрещено
 			} else http->httpResponse.faultAuth();
-		// Если активация мультисети активирована
-		} else if(http->proxy->config->proxy.subnet && !http->dnext) {
-			// Запоминаем что этот домен был не найден
-			http->dnext = true;
-			// Определяем тип подключения
-			switch(http->proxy->config->proxy.extIPv){
-				// Выполняем резолв домена IPv4
-				case 4: http->dns6->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
-				// Выполняем резолв домена IPv6
-				case 6: http->dns4->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
-			}
-			// Выходим
-			return;
 		// Если домен не найден
 		} else {
 			// Выводим в лог сообщение
@@ -1470,13 +1416,17 @@ void HttpProxy::do_request(void * ctx){
 			auto httpData = http->parser.httpData.begin();
 			// Запоминаем данные объекта http запроса
 			http->httpRequest = * httpData;
-			// Определяем тип подключения
-			switch(http->proxy->config->proxy.extIPv){
-				// Выполняем резолв домена IPv4
-				case 4: http->dns4->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
-				// Выполняем резолв домена IPv6
-				case 6: http->dns6->resolve(http->httpRequest.getHost(), &HttpProxy::resolve_cb, http); break;
-			}
+			// Если мультисеть не активирована
+			if(!http->proxy->config->proxy.subnet){
+				// Определяем тип подключения
+				switch(http->proxy->config->proxy.extIPv){
+					// Выполняем резолв домена IPv4
+					case 4: http->dns->resolve(http->httpRequest.getHost(), AF_INET, &HttpProxy::resolve_cb, http); break;
+					// Выполняем резолв домена IPv6
+					case 6: http->dns->resolve(http->httpRequest.getHost(), AF_INET6, &HttpProxy::resolve_cb, http); break;
+				}
+			// Если мультисеть активирована
+			} else http->dns->resolve(http->httpRequest.getHost(), AF_UNSPEC, &HttpProxy::resolve_cb, http);
 		}
 	}
 	// Выходим
