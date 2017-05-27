@@ -32,13 +32,14 @@
 // Основные флаги прокси сервера
 #define OPT_NULL 0x00		// Флаг устанавливающий пустые данные NULL
 #define OPT_CONNECT 0x01	// Флаг разрешения connect прокси сервера
-#define OPT_AGENT 0x02		// Флаг вывода названия прокси сервера
-#define OPT_GZIP 0x04		// Флаг разрешения сжатия данных методом gzip
-#define OPT_SMART 0x08		// Флаг разрешающий smart прокси сервер
-#define OPT_KEEPALIVE 0x10	// Флаг разрешающий постоянное соединение
-#define OPT_LOG 0x20		// Флаг разрешающий логирование данных
-#define OPT_PGZIP 0x40		// Флаг разрешающий сжатие не сжатых данных
-#define OPT_DEBLOCK 0x80	// Флаг разрешающий обход блокировок
+#define OPT_UPGRADE 0x02	// Флаг разрешающий переключение протокола
+#define OPT_AGENT 0x04		// Флаг вывода названия прокси сервера
+#define OPT_GZIP 0x08		// Флаг разрешения сжатия данных методом gzip
+#define OPT_SMART 0x10		// Флаг разрешающий smart прокси сервер
+#define OPT_KEEPALIVE 0x20	// Флаг разрешающий постоянное соединение
+#define OPT_LOG 0x40		// Флаг разрешающий логирование данных
+#define OPT_PGZIP 0x80		// Флаг разрешающий сжатие не сжатых данных
+#define OPT_DEBLOCK 0x160	// Флаг разрешающий обход блокировок
 
 // Параметры прокси сервера (http, socks5, redirect)
 #define PROXY_TYPE "http"
@@ -109,8 +110,9 @@
 #define BUFFER_READ_SIZE "auto"
 
 // Таймауты подключения
-#define TIMEOUTS_READ 5
-#define TIMEOUTS_WRITE 15
+#define TIMEOUTS_READ "5s"
+#define TIMEOUTS_WRITE "15s"
+#define TIMEOUTS_UPGRADE "300s"
 
 // Модуль логов
 #define LOGS_ENABLED false
@@ -173,8 +175,9 @@ class Config {
 		 * Timeout Структура таймаутов
 		 */
 		struct Timeouts {
-			u_short read;	// Таймаут времени на чтение
-			u_short write;	// Таймаут времени на запись
+			size_t read;	// Таймаут на чтение данных
+			size_t write;	// Таймаут на запись данных
+			size_t upgrade;	// Таймаут на работу в режиме переключения протоколов
 		};
 		/**
 		 * BufferSize Структура размеров буфера

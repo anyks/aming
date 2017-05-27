@@ -32,7 +32,7 @@ long Config::getSizeBuffer(const string str){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e("\\b([\\d\\.\\,]+)(bps|kbps|Mbps|Gbps)", regex::ECMAScript);
-	// Выполняем поиск протокола
+	// Выполняем поиск скорости
 	regex_search(str, match, e);
 	// Если данные найдены
 	if(!match.empty()){
@@ -66,13 +66,13 @@ long Config::getSizeBuffer(const string str){
  * @return     размер в байтах
  */
 size_t Config::getBytes(const string str){
-	// Размер буфера в байтах
+	// Размер количество байт
 	size_t size = 0;
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e("\\b([\\d\\.\\,]+)(B|KB|MB|GB)", regex::ECMAScript);
-	// Выполняем поиск протокола
+	// Выполняем размерности данных
 	regex_search(str, match, e);
 	// Если данные найдены
 	if(!match.empty()){
@@ -94,7 +94,7 @@ size_t Config::getBytes(const string str){
 		else if(param.compare("GB") == 0) dimension = (isbite ? 1000000000 : 1073741824);
 		// Размер буфера по умолчанию
 		size = (long) value;
-		// Если скорость установлена тогда расчитываем размер буфера
+		// Если размерность установлена тогда расчитываем количество байт
 		if(value > -1) size = (value * dimension);
 	}
 	// Выводим результат
@@ -106,13 +106,13 @@ size_t Config::getBytes(const string str){
  * @return     размер в секундах
  */
 size_t Config::getSeconds(const string str){
-	// Размер буфера в байтах
-	size_t size = 0;
+	// Количество секунд
+	size_t seconds = 0;
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e("\\b([\\d\\.\\,]+)(s|m|h|d|M|y)", regex::ECMAScript);
-	// Выполняем поиск протокола
+	// Выполняем поиск времени
 	regex_search(str, match, e);
 	// Если данные найдены
 	if(!match.empty()){
@@ -135,12 +135,12 @@ size_t Config::getSeconds(const string str){
 		// Если это размерность в годах
 		else if(param.compare("y") == 0) dimension = 31104000;
 		// Размер буфера по умолчанию
-		size = (long) value;
-		// Если скорость установлена тогда расчитываем размер буфера
-		if(value > -1) size = (value * dimension);
+		seconds = (long) value;
+		// Если время установлено тогда расчитываем количество секунд
+		if(value > -1) seconds = (value * dimension);
 	}
 	// Выводим результат
-	return size;
+	return seconds;
 }
 /**
  * Config Конструктор модуля конфигурационного файла
@@ -346,9 +346,11 @@ Config::Config(const string filename){
 		// Заполняем структуру timeouts
 		this->timeouts = {
 			// Таймаут времени на чтение
-			TIMEOUTS_READ,
+			(size_t) getSeconds(TIMEOUTS_READ),
 			// Таймаут времени на запись
-			TIMEOUTS_WRITE
+			(size_t) getSeconds(TIMEOUTS_WRITE),
+			// Таймаут на работу в режиме переключения протоколов
+			(size_t) getSeconds(TIMEOUTS_UPGRADE)
 		};
 		// Заполняем структуру buffers
 		this->buffers = {
@@ -370,6 +372,8 @@ Config::Config(const string filename){
 	} else {
 		// Активируем разрешение connect прокси сервера
 		this->options = (ini.GetBoolean("proxy", "connect", true) ? OPT_CONNECT : OPT_NULL);
+		// Активируем разрешение переключения протокола прокси сервера
+		this->options = (this->options | (ini.GetBoolean("proxy", "upgrade", false) ? OPT_UPGRADE : OPT_NULL));
 		// Активируем вывод или скрытие названия прокси сервера
 		this->options = (this->options | (ini.GetBoolean("proxy", "agent", true) ? OPT_AGENT : OPT_NULL));
 		// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
@@ -605,9 +609,11 @@ Config::Config(const string filename){
 		// Заполняем структуру timeouts
 		this->timeouts = {
 			// Таймаут времени на чтение
-			(u_short) ini.GetInteger("timeouts", "read", TIMEOUTS_READ),
+			(size_t) getSeconds(ini.Get("timeouts", "read", TIMEOUTS_READ)),
 			// Таймаут времени на запись
-			(u_short) ini.GetInteger("timeouts", "write", TIMEOUTS_WRITE)
+			(size_t) getSeconds(ini.Get("timeouts", "write", TIMEOUTS_WRITE)),
+			// Таймаут на работу в режиме переключения протоколов
+			(size_t) getSeconds(ini.Get("timeouts", "upgrade", TIMEOUTS_UPGRADE))
 		};
 		// Заполняем структуру buffers
 		this->buffers = {

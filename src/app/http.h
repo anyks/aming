@@ -146,6 +146,7 @@ class BufferHttpProxy {
 		 * Client Структура с информацией о подключении клиента
 		 */
 		struct Client {
+			bool	upgrade		= false;	// Протокол переключен
 			bool	connect		= false;	// Метод connect это или нет
 			bool	alive		= false;	// Постоянное подключение или нет
 			bool	https		= false;	// Защищенное подключение или нет

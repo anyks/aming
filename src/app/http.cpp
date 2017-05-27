@@ -231,11 +231,15 @@ void BufferHttpProxy::checkUpgrade(){
 	// Если сервер переключил версию протокола с HTTP1.0 на HTTP2
 	if(this->httpResponse.isUpgrade()
 	&& (this->httpResponse.getStatus() == 101)){
-		// Устанавливаем что это соединение CONNECT,
-		// для будущего обмена данными, так как они будут приходить бинарные
-		this->client.connect = true;
-		// Запоминаем что протокол у сервера переключен
-		this->server.upgrade = true;
+		// Определяем upgrade прокси разрешен
+		if(this->proxy->config->options & OPT_UPGRADE){
+			// Устанавливаем что это соединение CONNECT,
+			// для будущего обмена данными, так как они будут приходить бинарные
+			this->client.connect = true;
+			// Запоминаем что протокол у сервера переключен
+			this->server.upgrade = true;
+		// Сообщаем что подключение запрещено
+		} else this->httpResponse.faultAuth();
 	}
 }
 /**
@@ -303,8 +307,8 @@ void BufferHttpProxy::setTimeout(const u_short type, const bool read, const bool
 	bool readValue	= read;
 	bool writeValue	= write;
 	// Если время постоянного подключения меньше 1 секунды значит таймер ставить не надо
-	if(this->proxy->config->timeouts.read < 1)	readValue	= false;
-	if(this->proxy->config->timeouts.write < 1)	writeValue	= false;
+	if(this->readTimeout < 1)	readValue	= false;
+	if(this->writeTimeout < 1)	writeValue	= false;
 	// Устанавливаем таймауты для сервера
 	if((type & TM_SERVER) && this->events.server){
 		// Устанавливаем таймауты
@@ -345,7 +349,7 @@ void BufferHttpProxy::sendClient(){
 	// Если протокол был переключен
 	if(this->server.upgrade){
 		// Устанавливаем таймер на 1000 секунд
-		this->readTimeout = 1000;
+		this->readTimeout = this->proxy->config->timeouts.upgrade;
 		// Устанавливаем таймер для клиента и сервера
 		this->setTimeout(TM_CLIENT | TM_SERVER, true, true);
 	// Погружаем поток в сон на указанное время, чтобы соблюсти предел скорости
@@ -1296,8 +1300,10 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			}
 			// Если подключение к указанному серверу разрешено
 			if(isallow_remote_connect(ip, http)){
-				// Определяем connect прокси разрешен
-				bool conn_enabled = (http->proxy->config->options & OPT_CONNECT);
+				// Определяем connect прокси разрешен или нет
+				const bool conn_enabled = (http->proxy->config->options & OPT_CONNECT);
+				// Определяем upgrade прокси разрешен или нет
+				const bool upge_enabled = (http->proxy->config->options & OPT_UPGRADE);
 				// Если авторизация не прошла
 				if(!http->auth) http->auth = check_auth(http);
 				// Если нужно запросить пароль
@@ -1312,7 +1318,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 				// Если авторизация прошла
 				} else {
 					// Получаем порт сервера
-					u_int port = http->httpRequest.getPort();
+					const u_int port = http->httpRequest.getPort();
 					// Если хост и порт сервера не совпадают тогда очищаем данные
 					if(http->events.server
 					&& ((http->server.ip.compare(ip) != 0)
@@ -1324,6 +1330,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					http->client.alive		= http->httpRequest.isAlive();
 					http->client.https		= http->httpRequest.isHttps();
 					http->client.connect	= http->httpRequest.isConnect();
+					http->client.upgrade	= http->httpRequest.isUpgrade();
 					http->client.useragent	= http->httpRequest.getUseragent();
 					// Если это обычное подключение
 					if(!http->client.connect){
@@ -1370,35 +1377,35 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							}
 						}
 					}
-					// Выполняем подключение к удаленному серверу
-					int connect = connect_server(http);
-					// Если сокет существует
-					if(connect > 0){
-						// Определяем порт, если это метод connect
-						if(http->client.connect && (conn_enabled || http->client.https))
+					// Если методы не разрешены, то рубим подключение
+					if((http->client.connect && !(http->client.https || conn_enabled))
+					|| (http->client.upgrade && !upge_enabled)) http->httpResponse.faultAuth();
+					// Если подключение разрешено тогда пытаемся подключится
+					else {
+						// Выполняем подключение к удаленному серверу
+						int connect = connect_server(http);
+						// Если сокет существует
+						if(connect > 0){
 							// Формируем ответ клиенту
-							http->httpResponse.authSuccess();
-						// Если connect разрешен только для https подключений
-						else if(!conn_enabled && http->client.connect)
-							// Сообращем что подключение запрещено
-							http->httpResponse.faultConnect();
-						// Иначе делаем запрос на получение данных
+							if(http->client.connect) http->httpResponse.authSuccess();
+							// Иначе делаем запрос на получение данных
+							else {
+								// Указываем что нужно отключится сразу после отправки запроса
+								if(!http->client.alive) http->httpRequest.setClose();
+								// Отправляем данные на сервер
+								http->sendServer();
+								// Выходим
+								return;
+							}
+						// Если подключение не удачное то сообщаем об этом
+						} else if(connect == 0) http->httpResponse.faultConnect();
+						// Если подключение удалено, выходим
 						else {
-							// Указываем что нужно отключится сразу после отправки запроса
-							if(!http->client.alive) http->httpRequest.setClose();
-							// Отправляем данные на сервер
-							http->sendServer();
+							// Закрываем подключение
+							http->close();
 							// Выходим
 							return;
 						}
-					// Если подключение не удачное то сообщаем об этом
-					} else if(connect == 0) http->httpResponse.faultConnect();
-					// Если подключение удалено, выходим
-					else {
-						// Закрываем подключение
-						http->close();
-						// Выходим
-						return;
 					}
 				}
 			// Если подключение к указанному серверу запрещено
