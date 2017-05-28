@@ -18,9 +18,9 @@ ifeq ($(OS), Darwin)
 
 	# Сторонние модули
 	LIBS =	-lz \
-			-lpthread \
-			-lstdc++ \
 			-lldap \
+			-lstdc++ \
+			-lpthread \
 			/usr/local/opt/libevent/lib/libevent.a
 endif
 
@@ -31,10 +31,12 @@ ifeq ($(OS), FreeBSD)
 
 	# Сторонние модули
 	LIBS =	-lz \
+			-lldap \
+			-lstdc++ \
 			-lpthread \
 			-DLDAP_DEPRECATED \
-			/usr/local/lib/libevent.a \
-			/usr/local/lib/libldap.a
+			-L/usr/local/lib \
+			/usr/local/lib/libevent.a
 endif
 
 # Если это Linux
@@ -44,6 +46,7 @@ ifeq ($(OS), Linux)
 
 	# Сторонние модули
 	LIBS =	-lm \
+			-lldap \
 			-pthread \
 			/usr/lib/x86_64-linux-gnu/libevent.a \
 			/usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a \
