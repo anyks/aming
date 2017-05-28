@@ -438,6 +438,8 @@ void HttpProxy::create_client(const string ip, const string mac, const evutil_so
 	http->client.mac = mac;
 	// Запоминаем данные клиента
 	http->client.ip = ip;
+	// Запоминаем данные ldap сервера
+	http->ldap = this->ldap;
 	// Добавляем в список клиентов объект подключения
 	this->clients.add(http);
 }
@@ -732,13 +734,12 @@ const bool HttpProxy::check_auth(void * ctx){
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
 	if(http){
-		// Логин
-		const char * username = "zdD786KeuS";
-		// Проль
-		const char * password = "k.frolovv@gmail.com";
-		// Проверяем логин и пароль
-		if(!strcmp(http->httpRequest.getLogin().c_str(), username)
-		&& !strcmp(http->httpRequest.getPassword().c_str(), password)) return true;
+		// Получаем данные пользвоателя
+		const string user = http->httpRequest.getLogin();
+		// Получаем данные пароля
+		const string password = http->httpRequest.getPassword();
+		// Выводим результат
+		return http->ldap->checkUser(user, password);
 		// Выводим в лог информацию о неудачном подключении
 		http->proxy->log->write(LOG_MESSAGE, 0, "auth client [%s] to proxy wrong!", http->client.ip.c_str());
 	}
@@ -1772,6 +1773,8 @@ HttpProxy::HttpProxy(System * proxy){
 	if(proxy){
 		// Запоминаем параметры прокси сервера
 		this->server = proxy;
+		// Подключаемся к LDAP серверу
+		this->ldap = new AuthLDAP(this->server->log, this->server->config);
 		// Создаем прокси сервер
 		evutil_socket_t socket = create_server();
 		// Если сокет существует
@@ -1791,9 +1794,9 @@ HttpProxy::HttpProxy(System * proxy){
 				// Если максимальное число пидов больше указанного то запрещаем
 				if(max_works > MMAX_WORKERS) max_works = MMAX_WORKERS;
 				// Наши ID процесса и сессии
-				pids = new pid_t[max_works];
+				this->pids = new pid_t[max_works];
 				// Запускаем создание воркеров
-				run_works(pids, socket, 0, max_works, this);
+				run_works(this->pids, socket, 0, max_works, this);
 			// Если режим отладки включен, тогда просто запускаем прокси сервер
 			} else {
 				// Добавляем свой идентификатор пида
@@ -1811,6 +1814,8 @@ HttpProxy::HttpProxy(System * proxy){
  * ~HttpProxy Деструктор
  */
 HttpProxy::~HttpProxy(){
+	// Удаляем объект подключения к LDAP серверу
+	if(this->ldap) delete this->ldap;
 	// Если массив процессов существует то удаляем его
-	if(pids) delete [] pids;
+	if(this->pids) delete [] this->pids;
 }

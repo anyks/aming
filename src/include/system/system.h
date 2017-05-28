@@ -8,6 +8,7 @@
 #ifndef _SYSTEM_PARAMS_ANYKS_
 #define _SYSTEM_PARAMS_ANYKS_
 
+#include <regex>
 #include <string>
 #include <iostream>
 #include <sys/ipc.h>

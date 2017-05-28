@@ -28,6 +28,7 @@
 #include <event2/bufferevent.h>
 #include "dns/dns.h"
 #include "nwk/nwk.h"
+#include "ldap/ldap.h"
 #include "http/http.h"
 #include "system/system.h"
 #include "general/general.h"
@@ -184,9 +185,11 @@ class BufferHttpProxy {
 		HttpData httpResponse;
 		// Данные http запроса
 		HttpData httpRequest;
+		// LDAP проверка авторизации
+		AuthLDAP * ldap = NULL;
 		// Параметры прокси сервера
 		System * proxy = NULL;
-		// Создаем объект dns резолвера
+		// DNS резолвер
 		DNSResolver * dns = NULL;
 		// База событий
 		struct event_base * base = NULL;
@@ -269,6 +272,8 @@ class HttpProxy {
 		ConnectClients clients;
 		// Идентификаторы процессов
 		pid_t * pids = NULL;
+		// LDAP проверка авторизации
+		AuthLDAP * ldap = NULL;
 		// Параметры прокси сервера
 		System * server = NULL;
 		// Создаем новую базу

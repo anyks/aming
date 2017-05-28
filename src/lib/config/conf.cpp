@@ -229,13 +229,13 @@ Config::Config(const string filename){
 		};
 		// Заполняем структуру cache
 		this->cache = {
-			// Кеширование dns запросов
+			// Кэширование dns запросов
 			CACHE_DNS,
-			// Кеширование часто-запрашиваемых страниц
+			// Кэширование часто-запрашиваемых страниц
 			CACHE_RESPONSE,
 			// Время жизни dns кэша в секундах
 			(time_t) getSeconds(CACHE_DTTL),
-			// Каталог хранения кеш файлов
+			// Каталог хранения кэш файлов
 			CACHE_DIR
 		};
 		// Заполняем структуру gzip
@@ -342,6 +342,25 @@ Config::Config(const string filename){
 			IPV6_INTERNAL,
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			IPV6_RESOLVER
+		};
+		// Заполняем структуру ldap
+		this->ldap = {
+			// Активация модуля LDAP
+			LDAP_ENABLED,
+			// Версия протокола LDAP
+			LDAP_VER,
+			// Тип поиска LDAP
+			LDAP_SCOPE,
+			// Адрес сервера LDAP
+			LDAP_SERVER,
+			// DN пользователя LDAP
+			LDAP_USERDN,
+			// Фильтр поиска LDAP
+			LDAP_FILTER,
+			// DN администратора LDAP
+			LDAP_BINDDN,
+			// Пароль администратора LDAP
+			LDAP_BINDPW
 		};
 		// Заполняем структуру timeouts
 		this->timeouts = {
@@ -511,13 +530,13 @@ Config::Config(const string filename){
 		};
 		// Заполняем структуру cache
 		this->cache = {
-			// Кеширование dns запросов
+			// Кэширование dns запросов
 			ini.GetBoolean("cache", "dns", CACHE_DNS),
-			// Кеширование часто-запрашиваемых страниц
+			// Кэширование часто-запрашиваемых страниц
 			ini.GetBoolean("cache", "dat", CACHE_RESPONSE),
 			// Время жизни dns кэша в секундах
 			(time_t) getSeconds(ini.Get("cache", "dttl", CACHE_DTTL)),
-			// Каталог хранения кеш файлов
+			// Каталог хранения кэш файлов
 			ini.Get("cache", "dir", CACHE_DIR)
 		};
 		// Заполняем структуру firewall
@@ -605,6 +624,25 @@ Config::Config(const string filename){
 			ini.Get("ipv6", "internal", IPV6_INTERNAL),
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			resolver6
+		};
+		// Заполняем структуру ldap
+		this->ldap = {
+			// Активация модуля LDAP
+			ini.GetBoolean("authorization", "ldap", LDAP_ENABLED),
+			// Версия протокола LDAP
+			(u_int) ini.GetInteger("ldap", "version", LDAP_VER),
+			// Тип поиска LDAP
+			ini.Get("ldap", "scope", LDAP_SCOPE),
+			// Адрес сервера LDAP
+			ini.Get("ldap", "server", LDAP_SERVER),
+			// DN пользователя LDAP
+			ini.Get("ldap", "userdn", LDAP_USERDN),
+			// Фильтр поиска LDAP
+			ini.Get("ldap", "filter", LDAP_FILTER),
+			// DN администратора LDAP
+			ini.Get("ldap", "binddn", LDAP_BINDDN),
+			// Пароль администратора LDAP
+			ini.Get("ldap", "bindpw", LDAP_BINDPW)
 		};
 		// Заполняем структуру timeouts
 		this->timeouts = {

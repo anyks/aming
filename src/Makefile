@@ -12,12 +12,15 @@ OS := $(shell uname -s)
 
 # Если это MacOS X (Сборка через make)
 ifeq ($(OS), Darwin)
+	# export MACOSX_DEPLOYMENT_TARGET="10.3";
 	# Компилятор
 	CC = clang++
 
 	# Сторонние модули
 	LIBS =	-lz \
 			-lpthread \
+			-lstdc++ \
+			-lldap \
 			/usr/local/opt/libevent/lib/libevent.a
 endif
 
@@ -29,7 +32,9 @@ ifeq ($(OS), FreeBSD)
 	# Сторонние модули
 	LIBS =	-lz \
 			-lpthread \
-			/usr/local/lib/libevent.a
+			-DLDAP_DEPRECATED \
+			/usr/local/lib/libevent.a \
+			/usr/local/lib/libldap.a
 endif
 
 # Если это Linux

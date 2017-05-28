@@ -105,6 +105,16 @@
 #define IPV6_INTERNAL "::1"
 #define IPV6_RESOLVER {"2001:4860:4860::8888", "2001:4860:4860::8844"}
 
+// Модуль LDAP
+#define LDAP_ENABLED false
+#define LDAP_VER 2
+#define LDAP_SCOPE "sub"
+#define LDAP_SERVER ""
+#define LDAP_USERDN "ou=users,dc=example,dc=com"
+#define LDAP_FILTER "(uid=%v)"
+#define LDAP_BINDDN "cn=manager,dc=example,dc=com"
+#define LDAP_BINDPW "manager"
+
 // Размеры буферов клиента
 #define BUFFER_WRITE_SIZE "auto"
 #define BUFFER_READ_SIZE "auto"
@@ -159,7 +169,7 @@ using namespace std;
 class Config {
 	private:
 		/**
-		 * Gzip Параметры сжатия данных на уровне прокси сервера
+		 * Gzip Структура параметров сжатия данных на уровне прокси сервера
 		 */
 		struct Gzip {
 			bool vary;					// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
@@ -187,7 +197,7 @@ class Config {
 			long write;		// Буфер на запись
 		};
 		/**
-		 * IP Подключение
+		 * IP Структура биндинга прокси-сервера
 		 */
 		struct IP {
 			string external;			// Внешний интерфейс, через который будут уходить запросы от сервера
@@ -195,7 +205,7 @@ class Config {
 			vector <string> resolver;	// Массив со списком dns серверов
 		};
 		/**
-		 * Keepalive Параметры постоянного подключения
+		 * Keepalive Структура параметров постоянного подключения
 		 */
 		struct Keepalive {
 			int keepcnt;	// Максимальное количество попыток
@@ -203,14 +213,14 @@ class Config {
 			int keepintvl;	// Интервал времени в секундах между попытками
 		};
 		/**
-		 * Header http заголовки из запроса или ответа
+		 * Header Структура вывода http заголовков из запроса или ответа
 		 */
 		struct Header {
 			bool request;	// Убирать заголовки в запросе
 			bool response;	// Убирать заголовки в ответе
 		};
 		/**
-		 * Logs Параметры логов
+		 * Logs Структура параметров логов
 		 */
 		struct Logs {
 			bool files;		// Разрешить хранить логи в файлах
@@ -221,7 +231,7 @@ class Config {
 			string dir;		// Адрес каталога для хранения логов
 		};
 		/**
-		 * Authorization Параметры авторизации
+		 * Authorization Структура параметров авторизации
 		 */
 		struct Authorization {
 			bool osusers;	// Активировать авторизацию через пользователей в операционной системе
@@ -229,7 +239,7 @@ class Config {
 			bool enabled;	// Разрешить авторизацию пользователя
 		};
 		/**
-		 * Firewall Блокировка плохих запросов
+		 * Firewall Структура блокировки плохих запросов
 		 */
 		struct Firewall {
 			u_int maxtryauth;		// 10 неудачных попыток авторизации
@@ -249,16 +259,16 @@ class Config {
 			string name;	// Название os
 		};
 		/**
-		 * Cache Структура настроек модуля кеширования
+		 * Cache Структура настроек модуля кэширования
 		 */
 		struct Cache {
-			bool dns;		// Кеширование dns запросов
-			bool dat;		// Кеширование часто-запрашиваемых страниц
+			bool dns;		// Кэширование dns запросов
+			bool dat;		// Кэширование часто-запрашиваемых страниц
 			time_t dttl;	// Время жизни dns кэша в секундах
-			string dir;		// Каталог хранения кеш файлов
+			string dir;		// Каталог хранения кэш файлов
 		};
 		/**
-		 * Connects Контроль подключений клиента к серверу
+		 * Connects Структура контроля подключений клиента к серверу
 		 */
 		struct Connects {
 			u_int key;		// Ключ по которому определяются подключения (ip = 0, mac = 1)
@@ -268,7 +278,20 @@ class Config {
 			size_t size;	// Максимальный размер скачиваемых данных в байтах
 		};
 		/**
-		 * Proxy Параметры самого прокси-сервера
+		 * Ldap Структура параметров для авторизации через LDAP
+		 */
+		struct Ldap {
+			bool enabled;	// Активация модуля LDAP
+			u_int version;	// Версия протокола LDAP
+			string scope;	// Тип поиска LDAP
+			string server;	// Адрес сервера LDAP
+			string userdn;	// DN пользователя LDAP
+			string filter;	// Фильтр поиска LDAP
+			string binddn;	// DN администратора LDAP
+			string bindpw;	// Пароль администратора LDAP
+		};
+		/**
+		 * Proxy Структура параметров самого прокси-сервера
 		 */
 		struct Proxy {
 			u_int intIPv;	// Версия протокола интернета внутреннего (4, 6)
@@ -315,9 +338,10 @@ class Config {
 		Os os;					// Данные операционной системы
 		IP ipv6;				// Подключение по IPv6
 		IP ipv4;				// Подключение по IPv4
+		Ldap ldap;				// Параметры авторизации по LDAP
 		Logs logs;				// Параметры логов
 		Gzip gzip;				// Параметры gzip
-		Cache cache;			// Параметры кеширования
+		Cache cache;			// Параметры кэширования
 		Proxy proxy;			// Параметры самого прокси-сервера
 		Header rmheader;		// Удалять указанные http заголовки из запроса или ответа
 		Header setheader;		// Установить указанные http заголовки в запрос или ответ
