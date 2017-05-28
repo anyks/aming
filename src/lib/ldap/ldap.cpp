@@ -80,47 +80,61 @@ const bool AuthLDAP::checkUser(const string user, const string password){
 			// Найденный DN пользователя
 			char * dn = NULL;
 			// Объект LDAP подключения
-			LDAP * uld = NULL;
-			// Указатели на сообщения LDAP
-			LDAPMessage * result, * e;
-			// Формируем наш фильтр
-			string filter = this->filter;
-			// Заменяем ключ на логин пользователя
-			filter = filter.replace(pos, strlen(key), user);
-			// Выполняем поиск в ldap пользователя
-			int rc = ldap_search_ext_s(this->ld, this->userdn.c_str(), this->scope, filter.c_str(), NULL, 0, NULL, NULL, NULL, 0, &result);
-			// Если поиск не удался
-			if(rc != LDAP_SUCCESS){
+			LDAP * ld = NULL, * uld = NULL;
+			// Выполняем инициализацию подключения к серверу
+			if(ldap_initialize(&ld, this->server.c_str())){
 				// Выводим в консоль информацию
-				this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
-				// Сообщаем что поиск не удачный
+				this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+				// Сообщаем что авторизация не прошла
 				return auth;
 			}
-			// Выполняем перебор найденных данных
-			for(e = ldap_first_entry(this->ld, result ); e != NULL; e = ldap_next_entry(this->ld, e)){
-				// Если DN пользователя найден
-				if((dn = ldap_get_dn(this->ld, e)) != NULL){
-					// Выполняем инициализацию подключения к серверу
-					if(ldap_initialize(&uld, this->server.c_str())){
-						// Выводим в консоль информацию
-						this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
-						// Сообщаем что авторизация не прошла
-						return auth;
-					}
-					// Проверяем авторизацию
-					auth = authLDAP(uld, dn, password);
-					// Выполняем очистику объекта LDAP
-					ldap_unbind_ext(uld, NULL, NULL);
-					// Очищаем полученный DN
-					ldap_memfree(dn);
-					// Если пользователь найден то выходим
-					if(auth) break;
+			// Выполняем авторизацию на сервере
+			if(authLDAP(ld, this->config->ldap.binddn, this->config->ldap.bindpw)){
+				// Указатели на сообщения LDAP
+				LDAPMessage * result, * e;
+				// Формируем наш фильтр
+				string filter = this->filter;
+				// Заменяем ключ на логин пользователя
+				filter = filter.replace(pos, strlen(key), user);
+				// Выполняем поиск в ldap пользователя
+				int rc = ldap_search_ext_s(ld, this->userdn.c_str(), this->scope, filter.c_str(), NULL, 0, NULL, NULL, NULL, 0, &result);
+				// Если поиск не удался
+				if(rc != LDAP_SUCCESS){
+					// Выводим в консоль информацию
+					this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
+					// Очищаем подключение
+					ldap_unbind_ext(ld, NULL, NULL);
+					// Сообщаем что поиск не удачный
+					return auth;
 				}
+				// Выполняем перебор найденных данных
+				for(e = ldap_first_entry(ld, result ); e != NULL; e = ldap_next_entry(ld, e)){
+					// Если DN пользователя найден
+					if((dn = ldap_get_dn(ld, e)) != NULL){
+						// Выполняем инициализацию подключения к серверу
+						if(ldap_initialize(&uld, this->server.c_str())){
+							// Выводим в консоль информацию
+							this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
+							// Очищаем подключение
+							ldap_unbind_ext(ld, NULL, NULL);
+							// Сообщаем что авторизация не прошла
+							return auth;
+						}
+						// Проверяем авторизацию
+						auth = authLDAP(uld, dn, password);
+						// Выполняем очистику объекта LDAP
+						ldap_unbind_ext(uld, NULL, NULL);
+						// Очищаем полученный DN
+						ldap_memfree(dn);
+						// Если пользователь найден то выходим
+						if(auth) break;
+					}
+				}
+				// Очищаем данные сообщения
+				if(result) ldap_msgfree(result);
 			}
-			// Очищаем данные сообщения
-			if(result) ldap_msgfree(result);
-			// Сообщаем что все удачно
-			return auth;
+			// Очищаем подключение
+			ldap_unbind_ext(ld, NULL, NULL);
 		}
 	}
 	// Сообщаем что авторизация не прошла
@@ -159,21 +173,20 @@ AuthLDAP::AuthLDAP(LogApp * log, Config * config){
 		if(this->config->ldap.scope.compare("sub") == 0)		this->scope = LDAP_SCOPE_SUBTREE;
 		else if(this->config->ldap.scope.compare("one") == 0)	this->scope = LDAP_SCOPE_ONELEVEL;
 		else if(this->config->ldap.scope.compare("base") == 0)	this->scope = LDAP_SCOPE_BASE;
+		// Объект LDAP подключения
+		LDAP * ld = NULL;
 		// Выполняем инициализацию подключения к серверу
-		if(ldap_initialize(&this->ld, this->server.c_str())){
+		if(ldap_initialize(&ld, this->server.c_str())){
 			// Устанавливаем что сервер деактивирован
 			this->enabled = false;
 			// Выводим в консоль информацию
 			this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+		// Если коннект к серверу удачный
+		} else {
+			// Выполняем авторизацию на сервере
+			this->enabled = authLDAP(ld, this->config->ldap.binddn, this->config->ldap.bindpw);
+			// Очищаем подключение
+			ldap_unbind_ext(ld, NULL, NULL);
 		}
-		// Выполняем авторизацию на сервере
-		this->enabled = authLDAP(this->ld, this->config->ldap.binddn, this->config->ldap.bindpw);
 	}
-}
-/**
- * ~AuthLDAP Деструктор
- */
-AuthLDAP::~AuthLDAP(){
-	// Очищаем подключение
-	if(this->ld) ldap_unbind_ext(this->ld, NULL, NULL);
 }

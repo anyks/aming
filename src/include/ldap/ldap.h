@@ -22,8 +22,6 @@ using namespace std;
  */
 class AuthLDAP {
 	private:
-		// Объект LDAP подключения
-		LDAP * ld = NULL;
 		// Объект лога
 		LogApp * log = NULL;
 		// Конфигурационные данные
@@ -62,10 +60,6 @@ class AuthLDAP {
 		 * @param config конфигурационные данные
 		 */
 		AuthLDAP(LogApp * log = NULL, Config * config = NULL);
-		/**
-		 * ~AuthLDAP Деструктор
-		 */
-		~AuthLDAP();
 };
 
 #endif // _AUTH_LDAP_ANYKS_
