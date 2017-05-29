@@ -21,6 +21,8 @@ ifeq ($(OS), Darwin)
 			-lldap \
 			-lstdc++ \
 			-lpthread \
+			-I/usr/local/Cellar/openssl@1.1/1.1.0e/include \
+			/usr/local/Cellar/openssl@1.1/1.1.0e/lib/libcrypto.a \
 			/usr/local/opt/libevent/lib/libevent.a
 endif
 
@@ -33,6 +35,7 @@ ifeq ($(OS), FreeBSD)
 	LIBS =	-lz \
 			-lldap \
 			-lstdc++ \
+			-lcrypto \
 			-lpthread \
 			-DLDAP_DEPRECATED \
 			-L/usr/local/lib \
@@ -69,7 +72,7 @@ SOURCES =	./anyks.cpp \
 BIN = ./bin/http
 
 # Конфиг для стандартной сборки
-CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -g -std=c++11
+CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -Wno-deprecated -g -std=c++11
 
 # Правило сборки
 all:

@@ -1016,8 +1016,10 @@ void HttpData::genDataConnect(){
 				this->auth = ::toCase(match[1].str());
 				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
 				if(this->auth.compare("basic") == 0){
+					// Создаем объект base64
+					Base64 base64;
 					// Выполняем декодирование логина и пароля
-					string dauth = base64_decode(match[2].str());
+					const string dauth = base64.decode(match[2].str());
 					// Устанавливаем правило регулярного выражения
 					regex e("\\b([\\s\\S]+)\\:([\\s\\S]+)", regex::ECMAScript | regex::icase);
 					// Выполняем поиск протокола
