@@ -164,8 +164,11 @@ void HttpData::HttpHeaders::append(const string key, const string val){
 	// Убираем пробелы
 	ckey = ::trim(ckey);
 	cval = ::trim(cval);
+	// Приводим к нижнему регистру ключ для удаления
+	string rkey = ::toCase(ckey);
 	// Удаляем сначала исходный заголовок
-	remove(ckey);
+	if((rkey.compare("cookie") != 0)
+	&& (rkey.compare("set-cookie") != 0)) remove(rkey);
 	// Запоминаем найденны параметры
 	this->headers.push_back({ckey, cval});
 }
