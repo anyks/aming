@@ -855,8 +855,10 @@ const u_int Network::checkNetworkByIp(const string ip){
 			"^\\[?[A-Fa-f\\d]{1,4}(?:\\:[A-Fa-f\\d]{1,4}){7}\\]?$",
 			regex::ECMAScript | regex::icase
 		);
+		// Приводим ip адрес к новой форме
+		const string ip2 = setLow2Ip6(ip);
 		// Выполняем поиск ip адреса
-		regex_search(setLow2Ip6(ip), match, e);
+		regex_search(ip2, match, e);
 		// Если данные найдены
 		if(!match.empty()) return 6;
 		// Сообщаем что протокол не определен

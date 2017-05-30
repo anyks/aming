@@ -335,8 +335,10 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 							smatch match;
 							// Устанавливаем правило регулярного выражения
 							regex e(rules[i].regex, regex::ECMAScript | regex::icase);
+							// Получаем UserAgent
+							const string userAgent = http.getUseragent();
 							// Выполняем проверку
-							regex_search(http.getUseragent(), match, e);
+							regex_search(userAgent, match, e);
 							// Выводим результат
 							result = !match.empty();
 						}
@@ -490,8 +492,10 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 							smatch match;
 							// Устанавливаем правило регулярного выражения
 							regex e(rules[i].regex, regex::ECMAScript | regex::icase);
+							// Получаем UserAgent
+							const string userAgent = http.getUseragent();
 							// Выполняем проверку
-							regex_search(http.getUseragent(), match, e);
+							regex_search(userAgent, match, e);
 							// Выводим результат
 							result = !match.empty();
 						}
