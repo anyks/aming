@@ -1,38 +1,26 @@
 #!/bin/bash
 #
-# Service script for a Node.js application running under Forever.
+# Init script for multiplex
 #
-# This is suitable for Fedora, Red Hat, CentOS and similar distributions.
-# It will not work on Ubuntu or other Debian-style distributions!
+# Author:	Lobarev Yuriy <forman@anyks.com>.
 #
-# There is some perhaps unnecessary complexity going on in the relationship between
-# Forever and the server process. See: https://github.com/indexzero/forever
-#
-# 1) Forever starts its own watchdog process, and keeps its own configuration data
-# in /var/run/forever.
-#
-# 2) If the process dies, Forever will restart it: if it fails but continues to run,
-# it won't be restarted.
-#
-# 3) If the process is stopped via this script, the pidfile is left in place; this
-# helps when issues happen with failed stop attempts.
-#
-# 4) Which means the check for running/not running is complex, and involves parsing
-# of the Forever list output.
-#
-# chkconfig: 345 80 20
-# description: mrf description
-# processname: mrf
-# pidfile: /var/run/mrf.pid
-# logfile: /var/log/mrf.log
-#
+### BEGIN INIT INFO
+# Provides:          multiplex
+# Required-Start:    $syslog $local_fs $remote_fs $time
+# Required-Stop:     $syslog $local_fs $remote_fs
+# Should-Start:      $network
+# Should-Stop:       $network
+# Default-Start:     2 3 4 5
+# Default-Stop:	     0 1 6
+# Short-Description: Proxy server multiplex (C) ANYKS
+# Description:       Proxy server multiplex, a daemon that run in system Linux
+#                    systemctl start multiplex | systemctl stop multiplex
+#                    systemctl restart multiplex | systemctl status multiplex
+### END INIT INFO
 
-# Source function library.
-# . /etc/init.d
-#
-# Autostart
-# sudo update-rc.d multiplex start 70 2 3 4 5 . stop 20 0 1 6 .
-# sudo update-rc.d -f multiplex remove
+
+# Using LSB funtions:
+. /lib/lsb/init-functions
 
 # Logging options. By default syslog is used, it allows easy log rotation.
 logpri='local3.info'
