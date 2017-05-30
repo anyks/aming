@@ -73,7 +73,7 @@ SOURCES =	./anyks.cpp \
 BIN = ./bin/http
 
 # Конфиг для стандартной сборки
-CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -Wno-deprecated -g -std=c++11
+CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -Wno-unused-value -Wno-deprecated -Wno-sign-compare -g -std=c++11
 
 # Правило сборки
 all:

@@ -57,20 +57,20 @@ class IPdata {
  * NTdata Структура данных типов сетей
  */
 struct NTdata {
-	char mask[17];		// Маска сети
-	char nmask[17];		// Маска подсети
-	char smask[17];		// Начальный адрес
-	char emask[17];		// Конечный адрес
-	char invers[17];	// Инверсия
-	char format[13];	// Распределение байт (С — сеть, Х — хост)
-	char type[3];		// Тип сети
-	float cls;			// Класс типа сети
-	u_int number;		// Цифровое значение маски
-	u_int sbytes;		// Первые биты
-	u_long counts;		// Количество доступных адресов
-	u_long maxnwk;		// Число возможных адресов сетей
-	u_long maxhst;		// Число возможных адресов хостов
-	bool notEmpty;		// Структура заполнена или нет
+	string mask;	// Маска сети
+	string nmask;	// Маска подсети
+	string smask;	// Начальный адрес
+	string emask;	// Конечный адрес
+	string invers;	// Инверсия
+	string format;	// Распределение байт (С — сеть, Х — хост)
+	string type;	// Тип сети
+	float cls;		// Класс типа сети
+	u_int number;	// Цифровое значение маски
+	u_int sbytes;	// Первые биты
+	u_long counts;	// Количество доступных адресов
+	u_long maxnwk;	// Число возможных адресов сетей
+	u_long maxhst;	// Число возможных адресов хостов
+	bool notEmpty;	// Структура заполнена или нет
 };
 /**
  * NLdata Структура содержащая параметры локальных и запрещенных сетей
