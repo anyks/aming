@@ -506,19 +506,27 @@ const string HttpProxy::get_ip(const int family, void * ctx){
  * @return      результат работы функции
  */
 const int HttpProxy::socket_nosigpipe(const evutil_socket_t fd, LogApp * log){
-	// Устанавливаем параметр
-	int nosigpipe = 1;
 // Если это Linux
 #ifdef __linux__
-	// Устанавливаем SO_NOSIGPIPE
-	if(setsockopt(fd, SOL_SOCKET, MSG_NOSIGNAL, &nosigpipe, sizeof(nosigpipe)) < 0){
+	// Создаем структуру активации сигнала
+	struct sigaction act;
+	// Зануляем структуру
+	memset(&act, 0, sizeof(act));
+	// Устанавливаем макрос игнорирования сигнала
+	act.sa_handler = SIG_IGN;
+	// Устанавливаем флаг перезагрузки
+	act.sa_flags = SA_RESTART;
+	// Устанавливаем блокировку сигнала
+	if(sigaction(SIGPIPE, &act, NULL)){
 		// Выводим в лог информацию
-		log->write(LOG_ERROR, 0, "cannot set MSG_NOSIGNAL option on socket %d", fd);
+		log->write(LOG_ERROR, 0, "cannot set SO_NOSIGPIPE option on socket %d", fd);
 		// Выходим
 		return -1;
 	}
 // Если это FreeBSD или MacOS X
 #elif __APPLE__ || __FreeBSD__
+	// Устанавливаем параметр
+	int nosigpipe = 1;
 	// Устанавливаем SO_NOSIGPIPE
 	if(setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe)) < 0){
 		// Выводим в лог информацию
