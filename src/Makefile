@@ -50,6 +50,7 @@ ifeq ($(OS), Linux)
 	# Сторонние модули
 	LIBS =	-lm \
 			-lldap \
+			-lcrypto \
 			-pthread \
 			/usr/lib/x86_64-linux-gnu/libevent.a \
 			/usr/lib/gcc/x86_64-linux-gnu/5/libstdc++.a \

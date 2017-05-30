@@ -508,6 +508,17 @@ const string HttpProxy::get_ip(const int family, void * ctx){
 const int HttpProxy::socket_nosigpipe(const evutil_socket_t fd, LogApp * log){
 	// Устанавливаем параметр
 	int nosigpipe = 1;
+// Если это Linux
+#ifdef __linux__
+	// Устанавливаем SO_NOSIGPIPE
+	if(setsockopt(fd, SOL_SOCKET, MSG_NOSIGNAL, &nosigpipe, sizeof(nosigpipe)) < 0){
+		// Выводим в лог информацию
+		log->write(LOG_ERROR, 0, "cannot set MSG_NOSIGNAL option on socket %d", fd);
+		// Выходим
+		return -1;
+	}
+// Если это FreeBSD или MacOS X
+#elif __APPLE__ || __FreeBSD__
 	// Устанавливаем SO_NOSIGPIPE
 	if(setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe)) < 0){
 		// Выводим в лог информацию
@@ -515,6 +526,7 @@ const int HttpProxy::socket_nosigpipe(const evutil_socket_t fd, LogApp * log){
 		// Выходим
 		return -1;
 	}
+#endif
 	// Все удачно
 	return 0;
 }
