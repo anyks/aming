@@ -304,6 +304,12 @@ class HttpProxy {
 		 */
 		static const string get_ip(const int family, void * ctx);
 		/**
+		 * nosigpipe Функция игнорирования отключения сигнала записи в убитый сокет
+		 * @param  log  указатель на объект ведения логов
+		 * @return      результат работы функции
+		 */
+		static const int nosigpipe(LogApp * log);
+		/**
 		 * socket_nosigpipe Функция установки отключения сигнала записи в оборванное подключение
 		 * @param  fd   файловый дескриптор (сокет)
 		 * @param  log  указатель на объект ведения логов
