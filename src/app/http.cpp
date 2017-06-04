@@ -531,7 +531,7 @@ const int HttpProxy::nosigpipe(LogApp * log){
  */
 const int HttpProxy::socket_nosigpipe(const evutil_socket_t fd, LogApp * log){
 // Если это FreeBSD или MacOS X
-#ifdef defined(__APPLE__) || defined(__FreeBSD__)
+#ifdef __APPLE__ || __MACH__ || __FreeBSD__
 	// Устанавливаем параметр
 	int nosigpipe = 1;
 	// Устанавливаем SO_NOSIGPIPE
@@ -576,7 +576,7 @@ const int HttpProxy::socket_tcpcork(const evutil_socket_t fd, LogApp * log){
 	// Устанавливаем параметр
 	int tcpcork = 1;
 // Если это Linux
-#ifdef defined(__linux__)
+#ifdef __linux__
 	// Устанавливаем TCP_CORK
 	if(setsockopt(fd, IPPROTO_TCP, TCP_CORK, &tcpcork, sizeof(tcpcork)) < 0){
 		// Выводим в лог информацию
@@ -585,7 +585,7 @@ const int HttpProxy::socket_tcpcork(const evutil_socket_t fd, LogApp * log){
 		return -1;
 	}
 // Если это FreeBSD или MacOS X
-#elif defined(__APPLE__) || defined(__FreeBSD__)
+#elif __APPLE__ || __MACH__ || __FreeBSD__
 	// Устанавливаем TCP_NOPUSH
 	if(setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &tcpcork, sizeof(tcpcork)) < 0){
 		// Выводим в лог информацию
@@ -682,7 +682,7 @@ const int HttpProxy::socket_keepalive(const evutil_socket_t fd, LogApp * log, co
 		return -1;
 	}
 // Если это MacOS X
-#ifdef defined(__APPLE__)
+#ifdef __APPLE__ || __MACH__
 	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(int))){
 		// Выводим в лог информацию
@@ -691,7 +691,7 @@ const int HttpProxy::socket_keepalive(const evutil_socket_t fd, LogApp * log, co
 		return -1;
 	}
 // Если это FreeBSD или Linux
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif __linux__ || __FreeBSD__
 	// Время через которое происходит проверка подключения
 	if(setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int))){
 		// Выводим в лог информацию
@@ -1684,11 +1684,11 @@ const evutil_socket_t HttpProxy::create_server(){
 		return -1;
 	}
 // Если это Linux
-#ifdef defined(__linux__)
+#ifdef __linux__
 	// Отключаем сигнал записи в оборванное подключение
 	nosigpipe(this->server->log);
 // Если это FreeBSD или MacOS X
-#elif defined(__APPLE__) || defined(__FreeBSD__)
+#elif __APPLE__ || __MACH__ || __FreeBSD__
 	// Отключаем сигнал записи в оборванное подключение
 	socket_nosigpipe(sock, this->server->log);
 #endif

@@ -18,22 +18,22 @@ Os::OsData Os::getOsName(){
 	// Результат
 	OsData result;
 	// Определяем операционную систему
-	#ifdef defined(_WIN32)
+	#ifdef _WIN32
 		// Заполняем структуру
 		result = {"Windows 32-bit", 1};
-	#elif defined(_WIN64)
+	#elif _WIN64
 		// Заполняем структуру
 		result = {"Windows 64-bit", 2};
-	#elif defined(__APPLE__) || defined(__MACH__)
+	#elif __APPLE__ || __MACH__
 		// Заполняем структуру
 		result = {"MacOS X", 3};
-	#elif defined(__linux__)
+	#elif __linux__
 		// Заполняем структуру
 		result = {"Linux", 4};
-	#elif defined(__FreeBSD__)
+	#elif __FreeBSD__
 		// Заполняем структуру
 		result = {"FreeBSD", 5};
-	#elif defined(__unix) || defined(__unix__)
+	#elif __unix || __unix__
 		// Заполняем структуру
 		result = {"Unix", 6};
 	#else
