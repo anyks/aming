@@ -315,8 +315,6 @@ void Cache::readCache(HttpData &http, DataCache * data){
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
 		dir = addToPath(dir, "cache");
-		// Добавляем интернет протокол
-		dir = addToPath(dir, to_string(this->config->proxy.extIPv));
 		// Добавляем основной путь
 		dir = addToPath(dir, getPathDomain(http.getHost()));
 		// Добавляем порт
@@ -404,8 +402,6 @@ void Cache::writeCache(HttpData &http, DataCache data){
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
 		dir = addToPath(dir, "cache");
-		// Добавляем интернет протокол
-		dir = addToPath(dir, to_string(this->config->proxy.extIPv));
 		// Добавляем основной путь
 		dir = addToPath(dir, getPathDomain(http.getHost()));
 		// Добавляем порт
@@ -462,7 +458,7 @@ const bool Cache::isIpV4(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
-	regex e("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}", regex::ECMAScript | regex::icase);
+	regex e("\\d{1,3}(?:\\.\\d{1,3}){3}", regex::ECMAScript | regex::icase);
 	// Выполняем проверку
 	regex_search(ip, match, e);
 	// Выводим результат
@@ -477,7 +473,7 @@ const bool Cache::isIpV6(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
-	regex e("[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}\\:[A-Fa-f\\d]{4}", regex::ECMAScript | regex::icase);
+	regex e("[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7}", regex::ECMAScript | regex::icase);
 	// Выполняем проверку
 	regex_search(ip, match, e);
 	// Выводим результат

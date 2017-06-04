@@ -78,17 +78,25 @@ CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -Wno-
 # Правило сборки
 all:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -msse3 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -msse3 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)
 
 # Правила сборки под Dev
 dev:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O1 -ggdb $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p ./bin && $(CC) $(CONFIG) -O1 -ggdb $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)
+
+# Правила сборки под Dev Tools CCache
+dtcc:
+	mkdir -p ./bin && $(CC) $(CONFIG) -O1 -ggdb ./lib/config/conf.cpp ./lib/general/general.cpp ./lib/ini/ini.cpp ./tools/ccache.cpp $(INCLUDE) -I./tools $(LIBS) -o ./bin/ccache
 
 # Правила сборки под Prod
 prod:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCES) $(MODULES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)
+
+# Правила сборки под Prod Tools CCache
+ptcc:
+	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 ./lib/config/conf.cpp ./lib/general/general.cpp ./lib/ini/ini.cpp ./tools/ccache.cpp $(INCLUDE) -I./tools $(LIBS) -o ./bin/ccache
 
 # Правило запуска
 start:
