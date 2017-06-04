@@ -69,8 +69,14 @@ SOURCES =	./anyks.cpp \
 			$(shell find ./app/*.cpp) \
 			$(shell find ./lib/*/*.cpp)
 
+# Код для сборки Tools CCache
+SOURCETCC = ./lib/config/conf.cpp \
+			./lib/general/general.cpp \
+			./lib/ini/ini.cpp \
+			./tools/ccache.cpp
+
 # Бинарный файл
-BIN = ./bin/http
+BIN = ./bin
 
 # Конфиг для стандартной сборки
 CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -Wno-unused-value -Wno-deprecated -Wno-sign-compare -Wno-extra-tokens -g -std=c++11
@@ -78,30 +84,30 @@ CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -Wno-
 # Правило сборки
 all:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -msse3 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -msse3 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
 
 # Правила сборки под Dev
 dev:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O1 -ggdb $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O1 -ggdb $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
 
 # Правила сборки под Dev Tools CCache
 dtcc:
-	mkdir -p ./bin && $(CC) $(CONFIG) -O1 -ggdb ./lib/config/conf.cpp ./lib/general/general.cpp ./lib/ini/ini.cpp ./tools/ccache.cpp $(INCLUDE) -I./tools $(LIBS) -o ./bin/ccache
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O1 -ggdb $(SOURCETCC) $(INCLUDE) -I./tools $(LIBS) -o $(BIN)/dtcc
 
 # Правила сборки под Prod
 prod:
 	# Выполняем сборку проекта
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
 
 # Правила сборки под Prod Tools CCache
 ptcc:
-	mkdir -p ./bin && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 ./lib/config/conf.cpp ./lib/general/general.cpp ./lib/ini/ini.cpp ./tools/ccache.cpp $(INCLUDE) -I./tools $(LIBS) -o ./bin/ccache
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCETCC) $(INCLUDE) -I./tools $(LIBS) -o $(BIN)/ptcc
 
 # Правило запуска
 start:
-	./bin/http -c ./config.ini
+	$(BIN)/http -c ./config.ini
 
 # Правило очистки
 clean:
-	rm -rf ./bin
+	rm -rf $(BIN)
