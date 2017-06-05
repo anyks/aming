@@ -5,6 +5,11 @@
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
+/*
+* Example crontab:
+* # crontab -e
+* 47 6 * * 7 root /root/proxy/src/bin/ptcc -c /etc/anyks/config.ini >> /var/log/ptcc.log 2>&1
+*/
 #ifndef _CACHE_CLEANER_ANYKS_
 #define _CACHE_CLEANER_ANYKS_
 
