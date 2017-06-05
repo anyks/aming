@@ -692,8 +692,10 @@ void Cache::setDomain(const string domain, const string ip){
 			DataDNS data;
 			// Считываем данные домена
 			readDomain(domain, &data);
+			// Определяем ip адрес
+			u_int nettype = nwk.checkNetworkByIp(ip);
 			// Определяем тип подключения
-			switch(this->config->proxy.extIPv){
+			switch(nettype){
 				// Для протокола IPv4
 				case 4: {
 					// Создаем ip адрес
