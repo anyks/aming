@@ -133,6 +133,53 @@ const string INI::getString(const string section, const string key, const string
 	return (!data.empty() ? data : defval);
 }
 /**
+ * addData Метод добавления данных
+ * @param  section название раздела
+ * @param  key     название параметра
+ * @param  value   значение параметра
+ * @return         результат добавления
+ */
+const bool INI::addData(const string section, const string key, const string value){
+	// Результат добавления
+	bool result = false;
+	// Выводим результат
+	return result;
+}
+/**
+ * delData Метод удаления данных
+ * @param  section название раздела
+ * @param  key     название параметра
+ * @return         результат удаления
+ */
+const bool INI::delData(const string section, const string key){
+	// Результат удаления
+	bool result = false;
+	// Выводим результат
+	return result;
+}
+/**
+ * addSection Метод добавления раздела
+ * @param  name название раздела
+ * @return      результат добавления
+ */
+const bool INI::addSection(const string name){
+	// Результат добавления
+	bool result = false;
+	// Выводим результат
+	return result;
+}
+/**
+ * delSection Метод удаления раздела
+ * @param  name название раздела
+ * @return      результат удаления
+ */
+const bool INI::delSection(const string name){
+	// Результат удаления
+	bool result = false;
+	// Выводим результат
+	return result;
+}
+/**
  * read Метод чтения данных из файла
  * @param filename адрес конфигурационного файла
  */
@@ -177,7 +224,7 @@ void INI::read(const string filename){
  * @param filename адрес конфигурационного файла
  */
 void INI::write(const string filename){
-	
+
 }
 /**
  * INI Конструктор

@@ -91,6 +91,33 @@ class INI {
 		 */
 		const string getString(const string section, const string key, const string defval = "");
 		/**
+		 * addData Метод добавления данных
+		 * @param  section название раздела
+		 * @param  key     название параметра
+		 * @param  value   значение параметра
+		 * @return         результат добавления
+		 */
+		const bool addData(const string section, const string key, const string value);
+		/**
+		 * delData Метод удаления данных
+		 * @param  section название раздела
+		 * @param  key     название параметра
+		 * @return         результат удаления
+		 */
+		const bool delData(const string section, const string key);
+		/**
+		 * addSection Метод добавления раздела
+		 * @param  name название раздела
+		 * @return      результат добавления
+		 */
+		const bool addSection(const string name);
+		/**
+		 * delSection Метод удаления раздела
+		 * @param  name название раздела
+		 * @return      результат удаления
+		 */
+		const bool delSection(const string name);
+		/**
 		 * read Метод чтения данных из файла
 		 * @param filename адрес конфигурационного файла
 		 */
