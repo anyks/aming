@@ -8,12 +8,12 @@
 #ifndef _HEADERS_ANYKS_
 #define _HEADERS_ANYKS_
 
-#include <map>
 #include <regex>
 #include <string>
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 #include <stdlib.h>
 #include "config/conf.h"
 #include "nwk/nwk.h"
@@ -55,7 +55,7 @@ class Headers {
 		// Конфигурационные данные
 		Config * config = NULL;
 		// Список правил
-		map <const string, vector <Params>> rules;
+		unordered_map <string, vector <Params>> rules;
 		/**
 		 * get Метод получения правил клиента
 		 * @param client     идентификатор клиента

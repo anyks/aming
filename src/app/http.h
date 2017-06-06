@@ -11,6 +11,7 @@
 #include <mutex>
 #include <thread>
 #include <iostream>
+#include <unordered_map>
 #include <condition_variable>
 #include <errno.h>
 #include <stdlib.h>
@@ -91,7 +92,7 @@ class ConnectClients {
 		// Мютекс для захвата потока
 		mutex mtx;
 		// Массив всех активных клиентов
-		map <string, unique_ptr <Client>> clients;
+		unordered_map <string, unique_ptr <Client>> clients;
 		/**
 		 * rm Метод удаления объекта подключившихся клиентов
 		 * @param key ключ клиента

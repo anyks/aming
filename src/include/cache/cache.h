@@ -8,7 +8,6 @@
 #ifndef _CACHE_ANYKS_
 #define _CACHE_ANYKS_
 
-#include <map>
 #include <regex>
 #include <string>
 #include <vector>

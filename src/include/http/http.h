@@ -14,6 +14,7 @@
 #include <cstring>
 #include <sstream>
 #include <algorithm>
+#include <unordered_map>
 #include <zlib.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -396,7 +397,7 @@ class HttpData {
 		// Параметры GZip
 		Gzip * gzipParams = NULL;
 		// Шаблоны ответов
-		map <u_short, Http> response;
+		unordered_map <u_short, Http> response;
 		/**
 		 * genDataConnect Метод генерации данных для подключения
 		 */

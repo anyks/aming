@@ -8,12 +8,12 @@
 #ifndef _CONFIG_INI_ANYKS_
 #define _CONFIG_INI_ANYKS_
 
-#include <map>
 #include <regex>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -37,7 +37,7 @@ class INI {
 		// Название раздела
 		string section;
 		// Собранные конфигурационные данные
-		map <string, vector <Params>> data;
+		unordered_map <string, vector <Params>> data;
 		/**
 		 * getParams Метод извлечения параметров
 		 * @param  str строка для проверки

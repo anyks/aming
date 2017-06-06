@@ -42,7 +42,7 @@ vector <Headers::Params> Headers::get(const string client, bool addGeneral){
 		// Если это инверсия то перебираем все что есть кроме звездочек
 		} else if(check.inv) {
 			// Выполняем перебор всех правил
-			for(map <const string, vector <Params>>::iterator it = this->rules.begin(); it != this->rules.end(); ++it){
+			for(auto it = this->rules.begin(); it != this->rules.end(); ++it){
 				// Если это не звездочки
 				if(it->first.compare("*") != 0) copy(it->second.begin(), it->second.end(), back_inserter(rules));
 			}
