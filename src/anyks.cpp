@@ -5,7 +5,9 @@
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2016 - 2017
 */
-#include "proxy/proxy.h"
+//#include "proxy/proxy.h"
+
+#include "include/ini2/ini2.h"
 
 // Устанавливаем пространство имен
 using namespace std;
@@ -33,7 +35,9 @@ int main(int argc, char * argv[]){
 		// Удаляем параметр из адреса файла
 		configfile = param.replace(0, 9, "");
 	// Запускаем прокси сервер
-	Proxy proxy(configfile);
+	// Proxy proxy(configfile);
+	INI ini(configfile);
+
 	// Выходим
 	return 0;
 }

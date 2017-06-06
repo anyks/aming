@@ -135,12 +135,12 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 					int datelen = strftime(datefile, sizeof(datefile), dateformat.c_str(), timeinfo);
 					// Устанавливаем конец строки
 					datefile[datelen] = '\0';
-					// Строка чтения из файла
-					string filedata;
 					// Открываем файл на чтение
 					ifstream logfile(filename.c_str());
 					// Если файл открыт
 					if(logfile.is_open()){
+						// Строка чтения из файла
+						string filedata;
 						// Создаем адрес сжатого файла
 						string gzlogfile = filename;
 						// Заменяем название файла
