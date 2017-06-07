@@ -59,6 +59,14 @@ class INI {
 		const string get(const string section, const string key);
 	public:
 		/**
+		 * getFloat Получить значение числа с плавающей точкой
+		 * @param  section раздел
+		 * @param  key     ключ
+		 * @param  defval  значение по умолчанию, если ключ не найден
+		 * @return         искомый результат
+		 */
+		const double getFloat(const string section, const string key, const double defval = 0.0);
+		/**
 		 * getNumber Получить значение числа в знаковой форме
 		 * @param  section раздел
 		 * @param  key     ключ

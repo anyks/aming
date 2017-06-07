@@ -87,6 +87,46 @@ const string INI::get(const string section, const string key){
 	return result;
 }
 /**
+ * getFloat Получить значение числа с плавающей точкой
+ * @param  section раздел
+ * @param  key     ключ
+ * @param  defval  значение по умолчанию, если ключ не найден
+ * @return         искомый результат
+ */
+const double INI::getFloat(const string section, const string key, const double defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\-?(?:\\d+(?:\\.|\\,)\\d+|\\d+)$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()) return ::atof(match[0].str().c_str());
+		// Если это не число то нужно прверить на булевые значения
+		else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return 1.0;
+				else return 0.0;
+			}
+		}
+	}
+	// Выводим результат
+	return defval;
+}
+/**
  * getNumber Получить значение числа в знаковой форме
  * @param  section раздел
  * @param  key     ключ
@@ -94,6 +134,35 @@ const string INI::get(const string section, const string key){
  * @return         искомый результат
  */
 const int64_t INI::getNumber(const string section, const string key, const int64_t defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\-?\\d+$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()) return ::atoi(match[0].str().c_str());
+		// Если это не число то нужно прверить на булевые значения
+		else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return 1;
+				else return 0;
+			}
+		}
+	}
 	// Выводим результат
 	return defval;
 }
@@ -105,6 +174,35 @@ const int64_t INI::getNumber(const string section, const string key, const int64
  * @return         искомый результат
  */
 const size_t INI::getUNumber(const string section, const string key, const size_t defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\d+$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()) return ::atoi(match[0].str().c_str());
+		// Если это не число то нужно прверить на булевые значения
+		else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return 1;
+				else return 0;
+			}
+		}
+	}
 	// Выводим результат
 	return defval;
 }
@@ -116,6 +214,40 @@ const size_t INI::getUNumber(const string section, const string key, const size_
  * @return         искомый результат
  */
 const bool INI::getBoolean(const string section, const string key, const bool defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\-?\\d+$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()){
+			// Преобразуем в число
+			int64_t value = ::atoi(match[0].str().c_str());
+			// Выводим результат
+			if(value > 0) return true;
+			else return false;
+		// Если это не число то нужно прверить на булевые значения
+		} else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return true;
+				else return false;
+			}
+		}
+	}
 	// Выводим результат
 	return defval;
 }
@@ -140,8 +272,24 @@ const string INI::getString(const string section, const string key, const string
  * @return         результат добавления
  */
 const bool INI::addData(const string section, const string key, const string value){
-	// Результат добавления
+	// Результат удаления
 	bool result = false;
+	// Если данные переданы
+	if(!section.empty() && !key.empty()){
+		// Сообщаем что все удачно
+		result = true;
+		// Полученные параметры
+		Params params = {key, value};
+		// Если раздел существует
+		if(this->data.count(section)){
+			// Добавляем новые параметры в раздел
+			this->data.find(section)->second.push_back(params);
+		// Если раздел не найден
+		} else {
+			// Добавляем новые параметры
+			this->data.insert(pair <string, vector <Params>>(section, {params}));
+		}
+	}
 	// Выводим результат
 	return result;
 }
@@ -154,6 +302,30 @@ const bool INI::addData(const string section, const string key, const string val
 const bool INI::delData(const string section, const string key){
 	// Результат удаления
 	bool result = false;
+	// Если данные переданы
+	if(!section.empty() && !key.empty()){
+		// Если раздел существует
+		if(this->data.count(section)){
+			// Получаем данные раздела
+			auto params = this->data.find(section)->second;
+			// Выполняем перебор полученных данных
+			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Если ключ найден, выводим результат
+				if(key.compare(it->key) == 0){
+					// Сообщаем что все удачно
+					result = true;
+					// Если ключ найден тогда удаляем элемент
+					params.erase(it);
+					// Удаляем раздел
+					this->data.erase(section);
+					// Добавляем новые параметры
+					this->data.insert(pair <string, vector <Params>>(section, params));
+					// Выходим из цикла
+					break;
+				}
+			}
+		}
+	}
 	// Выводим результат
 	return result;
 }
@@ -165,6 +337,13 @@ const bool INI::delData(const string section, const string key){
 const bool INI::addSection(const string name){
 	// Результат добавления
 	bool result = false;
+	// Если раздел не существует
+	if(!name.empty() && !this->data.count(name)){
+		// Запоминаем что все удачно
+		result = true;
+		// Добавляем параметры
+		this->data.insert(pair <string, vector <Params>>(name, {{}}));
+	}
 	// Выводим результат
 	return result;
 }
@@ -176,6 +355,13 @@ const bool INI::addSection(const string name){
 const bool INI::delSection(const string name){
 	// Результат удаления
 	bool result = false;
+	// Если раздел существует
+	if(!name.empty() && this->data.count(name)){
+		// Запоминаем что все удачно
+		result = true;
+		// Добавляем параметры
+		this->data.erase(name);
+	}
 	// Выводим результат
 	return result;
 }
@@ -224,7 +410,35 @@ void INI::read(const string filename){
  * @param filename адрес конфигурационного файла
  */
 void INI::write(const string filename){
-
+	// Если файл передан
+	if(!filename.empty()){
+		// Результирующая строка
+		string result = "";
+		// Переходим по всем разделам
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Получаем данные раздела
+			auto params = it->second;
+			// Добавляем название раздела
+			result.append(string("\r\n[") + it->first + string("]\r\n"));
+			// Выполняем перебор полученных данных
+			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Добавляем данные раздела
+				result.append(it->key + string(" = ") + it->value + string("\r\n"));
+			}
+		}
+		// Документ сформирован
+		if(!result.empty()){
+			// Открываем файл на чтение
+			ofstream config(filename.c_str(), ios::binary);
+			// Если файл открыт
+			if(config.is_open()){
+				// Выполняем запись данных в файл
+				config.write((const char *) result.data(), result.size());
+				// Закрываем файл
+				config.close();
+			}
+		}
+	}
 }
 /**
  * INI Конструктор
