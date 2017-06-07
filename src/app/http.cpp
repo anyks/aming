@@ -367,9 +367,12 @@ void BufferHttpProxy::next(){
 		// Удаляем из массива объект запроса
 		this->parser.httpData.erase(this->parser.httpData.begin());
 	}
-	// Если данные в массиве существуют тогда продолжаем загрузку
-	if(!this->parser.httpData.empty()
-	&& !this->httpResponse.isClose()) HttpProxy::do_request(this);
+	// Если конвеерная обработка включена
+	if(this->proxy->config->proxy.pipelining){
+		// Если данные в массиве существуют тогда продолжаем загрузку
+		if(!this->parser.httpData.empty()
+		&& !this->httpResponse.isClose()) HttpProxy::do_request(this);
+	}
 }
 /**
  * BufferHttpProxy Конструктор

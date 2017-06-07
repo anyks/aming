@@ -216,6 +216,8 @@ Config::Config(const string filename){
 			PROXY_SUBNET,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			PROXY_OPTIMOS,
+			// Активация конвеерной обработки
+			PROXY_PIPELINING,
 			// Идентификатор группы пользователя под которым запускается прокси
 			PROXY_USER,
 			// Идентификатор пользователя под которым запускается прокси
@@ -498,6 +500,8 @@ Config::Config(const string filename){
 			proxy_subnet,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
 			ini.getBoolean("proxy", "optimos", PROXY_OPTIMOS),
+			// Активация конвеерной обработки
+			ini.getBoolean("proxy", "pipelining", PROXY_PIPELINING),
 			// Идентификатор группы пользователя под которым запускается прокси
 			ini.getString("proxy", "user", PROXY_USER),
 			// Идентификатор пользователя под которым запускается прокси

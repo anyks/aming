@@ -109,7 +109,7 @@ const double INI::getFloat(const string section, const string key, const double 
 		// Если это не число то нужно прверить на булевые значения
 		else {
 			// Устанавливаем правило регулярного выражения
-			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			regex e("^(true|false)$", regex::ECMAScript | regex::icase);
 			// Выполняем проверку на то является ли это булевым значением
 			regex_search(data, match, e);
 			// Если это булевое значение, определяем результат
@@ -149,7 +149,7 @@ const int64_t INI::getNumber(const string section, const string key, const int64
 		// Если это не число то нужно прверить на булевые значения
 		else {
 			// Устанавливаем правило регулярного выражения
-			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			regex e("^(true|false)$", regex::ECMAScript | regex::icase);
 			// Выполняем проверку на то является ли это булевым значением
 			regex_search(data, match, e);
 			// Если это булевое значение, определяем результат
@@ -189,7 +189,7 @@ const size_t INI::getUNumber(const string section, const string key, const size_
 		// Если это не число то нужно прверить на булевые значения
 		else {
 			// Устанавливаем правило регулярного выражения
-			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			regex e("^(true|false)$", regex::ECMAScript | regex::icase);
 			// Выполняем проверку на то является ли это булевым значением
 			regex_search(data, match, e);
 			// Если это булевое значение, определяем результат
@@ -234,7 +234,7 @@ const bool INI::getBoolean(const string section, const string key, const bool de
 		// Если это не число то нужно прверить на булевые значения
 		} else {
 			// Устанавливаем правило регулярного выражения
-			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			regex e("^(true|false)$", regex::ECMAScript | regex::icase);
 			// Выполняем проверку на то является ли это булевым значением
 			regex_search(data, match, e);
 			// Если это булевое значение, определяем результат
