@@ -157,7 +157,7 @@ Config::Config(const string filename){
 	// Инициализируем парсер ini файла
 	INI ini(this->filename);
 	// Если во время чтения файла возникли ошибки
-	if(ini.ParseError() < 0){
+	if(ini.isError()){
 		// Выводим сообщение об ошибке
 		printf("Can't load config file %s\n", this->filename.c_str());
 		// Формируем опции по умолчанию
@@ -390,27 +390,27 @@ Config::Config(const string filename){
 	// Если все нормально то выполняем извлечение данных из конфигурационного файла
 	} else {
 		// Активируем разрешение connect прокси сервера
-		this->options = (ini.GetBoolean("proxy", "connect", true) ? OPT_CONNECT : OPT_NULL);
+		this->options = (ini.getBoolean("proxy", "connect", true) ? OPT_CONNECT : OPT_NULL);
 		// Активируем разрешение переключения протокола прокси сервера
-		this->options = (this->options | (ini.GetBoolean("proxy", "upgrade", false) ? OPT_UPGRADE : OPT_NULL));
+		this->options = (this->options | (ini.getBoolean("proxy", "upgrade", false) ? OPT_UPGRADE : OPT_NULL));
 		// Активируем вывод или скрытие названия прокси сервера
-		this->options = (this->options | (ini.GetBoolean("proxy", "agent", true) ? OPT_AGENT : OPT_NULL));
+		this->options = (this->options | (ini.getBoolean("proxy", "agent", true) ? OPT_AGENT : OPT_NULL));
 		// Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)
-		this->options = (this->options | (ini.GetBoolean("proxy", "deblock", false) ? OPT_DEBLOCK : OPT_NULL));
+		this->options = (this->options | (ini.getBoolean("proxy", "deblock", false) ? OPT_DEBLOCK : OPT_NULL));
 		// Активируем разрешение сжатия данных методом gzip
-		this->options = (this->options | (ini.GetBoolean("gzip", "transfer", true) ? OPT_GZIP : OPT_NULL));
+		this->options = (this->options | (ini.getBoolean("gzip", "transfer", true) ? OPT_GZIP : OPT_NULL));
 		// Активируем сжатие не сжатых данных
-		this->options = (this->options | (ini.GetBoolean("gzip", "response", true) ? OPT_PGZIP : OPT_NULL));
+		this->options = (this->options | (ini.getBoolean("gzip", "response", true) ? OPT_PGZIP : OPT_NULL));
 		// Активируем разрешающий smart прокси сервер
-		this->options = (this->options | ((ini.Get("proxy", "skill", "dumb").compare("smart") == 0) ? OPT_SMART : OPT_NULL));
+		this->options = (this->options | ((ini.getString("proxy", "skill", "dumb").compare("smart") == 0) ? OPT_SMART : OPT_NULL));
 		// Активируем постоянное соединение
-		this->options = (this->options | (ini.GetBoolean("keepalive", "enabled", true) ? OPT_KEEPALIVE : OPT_NULL));
+		this->options = (this->options | (ini.getBoolean("keepalive", "enabled", true) ? OPT_KEEPALIVE : OPT_NULL));
 		// Активируем логирование данных
-		this->options = (this->options | (ini.GetBoolean("logs", "enabled", true) ? OPT_LOG : OPT_NULL));
+		this->options = (this->options | (ini.getBoolean("logs", "enabled", true) ? OPT_LOG : OPT_NULL));
 		// Уровень сжатия gzip
 		int glevel = Z_DEFAULT_COMPRESSION;
 		// Получаем уровень сжатия
-		string gzipLevel = ini.Get("gzip", "level", "");
+		string gzipLevel = ini.getString("gzip", "level");
 		// Если размер указан
 		if(!gzipLevel.empty()){
 			// Определяем тип сжатия
@@ -420,11 +420,11 @@ Config::Config(const string filename){
 			else if(gzipLevel.compare("no") == 0)		glevel = Z_NO_COMPRESSION;
 		}
 		// Тип ключа определения коннектов к прокси
-		u_int connect_key = (toCase(ini.Get("connects", "key", CONNECTS_KEY)).compare("mac") == 0 ? 1 : 0);
+		u_int connect_key = (toCase(ini.getString("connects", "key", CONNECTS_KEY)).compare("mac") == 0 ? 1 : 0);
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port;
 		// Получаем тип прокси сервера
-		string type = ini.Get("proxy", "type", PROXY_TYPE);
+		string type = ini.getString("proxy", "type", PROXY_TYPE);
 		// Если прокси сервер это http
 		if(type.compare("http") == 0) proxy_type = 1;
 		else if(type.compare("socks5") == 0) proxy_type = 2;
@@ -440,9 +440,9 @@ Config::Config(const string filename){
 			case 3: proxy_port = PROXY_REDIRECT_PORT;	break;
 		}
 		// Получаем данные режима мульти-сетевого взаимодействия
-		bool proxy_subnet = ini.GetBoolean("proxy", "subnet", PROXY_SUBNET);
+		bool proxy_subnet = ini.getBoolean("proxy", "subnet", PROXY_SUBNET);
 		// Массив протоколов
-		vector <string> ipVx = split(ini.Get("proxy", "ipv", PROXY_IPV), "->");
+		vector <string> ipVx = split(ini.getString("proxy", "ipv", PROXY_IPV), "->");
 		// Запоминаем внешнюю версию интернет протокола
 		u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
 		// Запоминаем внутреннюю версию интернет протокола
@@ -453,21 +453,21 @@ Config::Config(const string filename){
 		// Если ни один из сетевых интерфейсов не принадлежит IPv6 тогда отключаем мульти-сетевое взаимодействие
 		if((proxy_intIPv != 6) && (proxy_extIPv != 6)) proxy_subnet = false;
 		// Массив dns серверов
-		vector <string> resolver4 = split(ini.Get("ipv4", "resolver", ""), "|");
-		vector <string> resolver6 = split(ini.Get("ipv6", "resolver", ""), "|");
+		vector <string> resolver4 = split(ini.getString("ipv4", "resolver"), "|");
+		vector <string> resolver6 = split(ini.getString("ipv6", "resolver"), "|");
 		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
 		if(resolver4.empty()) resolver4 = IPV4_RESOLVER;
 		if(resolver6.empty()) resolver6 = IPV6_RESOLVER;
 		// Массив версий http протоколов
-		vector <string> gvhttp = split(ini.Get("gzip", "vhttp", ""), "|");
+		vector <string> gvhttp = split(ini.getString("gzip", "vhttp"), "|");
 		// Если версии не указаны тогда устанавливаем значение по умолчанию
 		if(gvhttp.empty()) gvhttp = GZIP_VHTTP;
 		// Массив параметров сжатия для проксированных запросов
-		vector <string> gproxied = split(ini.Get("gzip", "proxied", ""), "|");
+		vector <string> gproxied = split(ini.getString("gzip", "proxied"), "|");
 		// Если версии не указаны тогда устанавливаем значение по умолчанию
 		if(gproxied.empty()) gproxied = GZIP_PROXIED;
 		// Массив параметров сжатия для типов данных
-		vector <string> gtypes = split(ini.Get("gzip", "types", ""), "|");
+		vector <string> gtypes = split(ini.getString("gzip", "types"), "|");
 		// Если версии не указаны тогда устанавливаем значение по умолчанию
 		if(gtypes.empty()) gtypes = GZIP_TYPES;
 		// Заполняем структуру proxy
@@ -479,48 +479,48 @@ Config::Config(const string filename){
 			// Тип прокси сервера (http, socks5, redirect)
 			proxy_type,
 			// Устанавливаем порт прокси сервера
-			(u_int) ini.GetInteger("proxy", "port", proxy_port),
+			(u_int) ini.getUNumber("proxy", "port", proxy_port),
 			// Максимальное количество воркеров
-			(u_int) ini.GetInteger("proxy", "workers", MAX_WORKERS),
+			(u_int) ini.getUNumber("proxy", "workers", MAX_WORKERS),
 			// Активация режима отладки
-			ini.GetBoolean("proxy", "debug", PROXY_DEBUG),
+			ini.getBoolean("proxy", "debug", PROXY_DEBUG),
 			// Запусть в виде демона
-			ini.GetBoolean("proxy", "daemon", PROXY_DAEMON),
+			ini.getBoolean("proxy", "daemon", PROXY_DAEMON),
 			// Обратный прокси (доступ из сети в локальную сеть)
-			ini.GetBoolean("proxy", "reverse", PROXY_REVERSE),
+			ini.getBoolean("proxy", "reverse", PROXY_REVERSE),
 			// Активация поддержки прокси листа
-			ini.GetBoolean("proxy", "transfer", PROXY_TRANSFER),
+			ini.getBoolean("proxy", "transfer", PROXY_TRANSFER),
 			// Прямой прокси (доступ во внешнюю сеть)
-			ini.GetBoolean("proxy", "forward", PROXY_FORWARD),
+			ini.getBoolean("proxy", "forward", PROXY_FORWARD),
 			// Активация режима отображения IPv4 в IPv6
-			ini.GetBoolean("proxy", "ipv6only", PROXY_IPV6ONLY),
+			ini.getBoolean("proxy", "ipv6only", PROXY_IPV6ONLY),
 			// Активация режима мульти-сетевого взаимодействия
 			proxy_subnet,
 			// Оптимизировать настройки операционной системы (нужен root доступ)
-			ini.GetBoolean("proxy", "optimos", PROXY_OPTIMOS),
+			ini.getBoolean("proxy", "optimos", PROXY_OPTIMOS),
 			// Идентификатор группы пользователя под которым запускается прокси
-			ini.Get("proxy", "user", PROXY_USER),
+			ini.getString("proxy", "user", PROXY_USER),
 			// Идентификатор пользователя под которым запускается прокси
-			ini.Get("proxy", "group", PROXY_GROUP),
+			ini.getString("proxy", "group", PROXY_GROUP),
 			// Название сервиса
-			ini.Get("proxy", "name", PROXY_NAME),
+			ini.getString("proxy", "name", PROXY_NAME),
 			// Адрес хранения pid файла
-			ini.Get("proxy", "piddir", PID_DIR),
+			ini.getString("proxy", "piddir", PID_DIR),
 			// Адрес хранения конфигурационных файлов
-			ini.Get("proxy", "dir", CONFIG_DIR)
+			ini.getString("proxy", "dir", CONFIG_DIR)
 		};
 		// Заполняем структуру gzip
 		this->gzip = {
 			// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
-			ini.GetBoolean("gzip", "vary", GZIP_VARY),
+			ini.getBoolean("gzip", "vary", GZIP_VARY),
 			// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
 			glevel,
 			// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
-			ini.GetInteger("gzip", "length", GZIP_LENGTH),
+			ini.getNumber("gzip", "length", GZIP_LENGTH),
 			// Максимальный размер чанка в байтах
-			getBytes(ini.Get("gzip", "chunk", GZIP_CHUNK)),
+			getBytes(ini.getString("gzip", "chunk", GZIP_CHUNK)),
 			// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
-			ini.Get("gzip", "regex", GZIP_REGEX),
+			ini.getString("gzip", "regex", GZIP_REGEX),
 			// Версия http протокола
 			gvhttp,
 			// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
@@ -531,143 +531,143 @@ Config::Config(const string filename){
 		// Заполняем структуру cache
 		this->cache = {
 			// Кэширование dns запросов
-			ini.GetBoolean("cache", "dns", CACHE_DNS),
+			ini.getBoolean("cache", "dns", CACHE_DNS),
 			// Кэширование часто-запрашиваемых страниц
-			ini.GetBoolean("cache", "dat", CACHE_RESPONSE),
+			ini.getBoolean("cache", "dat", CACHE_RESPONSE),
 			// Время жизни dns кэша в секундах
-			(time_t) getSeconds(ini.Get("cache", "dttl", CACHE_DTTL)),
+			(time_t) getSeconds(ini.getString("cache", "dttl", CACHE_DTTL)),
 			// Каталог хранения кэш файлов
-			ini.Get("cache", "dir", CACHE_DIR)
+			ini.getString("cache", "dir", CACHE_DIR)
 		};
 		// Заполняем структуру firewall
 		this->firewall = {
 			// Количество неудачных попыток авторизации
-			(u_int) ini.GetInteger("firewall", "maxtryauth", FIREWALL_MAX_TRYAUTH),
+			(u_int) ini.getUNumber("firewall", "maxtryauth", FIREWALL_MAX_TRYAUTH),
 			// Разрешить блокирование пользователя после неудачных попыток авторизации
-			ini.GetBoolean("firewall", "blockauth", FIREWALL_AUTH),
+			ini.getBoolean("firewall", "blockauth", FIREWALL_AUTH),
 			// Разрешить блокирование зацикливающих запросов
-			ini.GetBoolean("firewall", "blockloop", FIREWALL_LOOP),
+			ini.getBoolean("firewall", "blockloop", FIREWALL_LOOP),
 			// Активировать черный список сайтов или портов
-			ini.GetBoolean("firewall", "blacklist", FIREWALL_BLACK_LIST),
+			ini.getBoolean("firewall", "blacklist", FIREWALL_BLACK_LIST),
 			// Активировать белый список сайтов или портов
-			ini.GetBoolean("firewall", "whitelist", FIREWALL_WHITE_LIST),
+			ini.getBoolean("firewall", "whitelist", FIREWALL_WHITE_LIST),
 			// Активировать ограничение трафика пользователей
-			ini.GetBoolean("firewall", "bandlimin", FIREWALL_BANDLIMIN),
+			ini.getBoolean("firewall", "bandlimin", FIREWALL_BANDLIMIN),
 			// Время блокирования зацикливающих запросов (s - секунды, m - минуты, h - часы, d - дни, M - месяцы, y - годы)
-			ini.Get("firewall", "timeblockloop", FIREWALL_TIME_LOOP)
+			ini.getString("firewall", "timeblockloop", FIREWALL_TIME_LOOP)
 		};
 		// Заполняем структуру auth
 		this->auth = {
 			// Активировать авторизацию через пользователей в операционной системе
-			ini.GetBoolean("authorization", "osusers", AUTH_OS_USERS),
+			ini.getBoolean("authorization", "osusers", AUTH_OS_USERS),
 			// Активировать авторизацию через файл со списком пользователей и ip/mac адресами
-			ini.GetBoolean("authorization", "listusers", AUTH_FILE_USERS),
+			ini.getBoolean("authorization", "listusers", AUTH_FILE_USERS),
 			// Разрешить авторизацию пользователя
-			ini.GetBoolean("authorization", "enabled", AUTH_ENABLED)
+			ini.getBoolean("authorization", "enabled", AUTH_ENABLED)
 		};
 		// Заполняем структуру logs
 		this->logs = {
 			// Разрешить хранить логи в файлах
-			ini.GetBoolean("logs", "files", LOGS_FILES),
+			ini.getBoolean("logs", "files", LOGS_FILES),
 			// Разрешить вывод логов в консоль
-			ini.GetBoolean("logs", "console", LOGS_CONSOLE),
+			ini.getBoolean("logs", "console", LOGS_CONSOLE),
 			// Разрешить ведение логов данных для обмена
-			ini.GetBoolean("logs", "data", LOGS_DATA),
+			ini.getBoolean("logs", "data", LOGS_DATA),
 			// Разрешить ведение логов
-			ini.GetBoolean("logs", "enabled", LOGS_ENABLED),
+			ini.getBoolean("logs", "enabled", LOGS_ENABLED),
 			// Размер файла лога
-			getBytes(ini.Get("logs", "size", LOGS_SIZE)),
+			getBytes(ini.getString("logs", "size", LOGS_SIZE)),
 			// Адрес хранения логов
-			ini.Get("logs", "dir", LOGS_DIR)
+			ini.getString("logs", "dir", LOGS_DIR)
 		};
 		// Удалять указанные http заголовки из запроса или ответа
 		this->rmheader = {
 			// Убирать заголовки в запросе
-			ini.GetBoolean("rmheader", "request", RM_HEADERS_REQUEST),
+			ini.getBoolean("rmheader", "request", RM_HEADERS_REQUEST),
 			// Убирать заголовки в ответе
-			ini.GetBoolean("rmheader", "response", RM_HEADERS_RESPONSE)
+			ini.getBoolean("rmheader", "response", RM_HEADERS_RESPONSE)
 		};
 		// Установить указанные http заголовки в запрос или ответ
 		this->setheader = {
 			// Установить заголовки в запрос
-			ini.GetBoolean("setheader", "request", SET_HEADERS_REQUEST),
+			ini.getBoolean("setheader", "request", SET_HEADERS_REQUEST),
 			// Установить заголовки в ответ
-			ini.GetBoolean("setheader", "response", SET_HEADERS_RESPONSE)
+			ini.getBoolean("setheader", "response", SET_HEADERS_RESPONSE)
 		};
 		// Контроль подключений клиента к серверу
 		this->connects = {
 			// Ключ по которому определяются подключения (ip = 0, mac = 1)
 			connect_key,
 			// Максимальное количество файловых дескрипторов
-			(u_int) ini.GetInteger("connects", "fds", CONNECTS_FDS),
+			(u_int) ini.getUNumber("connects", "fds", CONNECTS_FDS),
 			// Максимальное количество подключений (одного клиента к прокси серверу)
-			(u_int) ini.GetInteger("connects", "connect", CONNECTS_CONNECT),
+			(u_int) ini.getUNumber("connects", "connect", CONNECTS_CONNECT),
 			// Общее количество одновременных подключений к прокси серверу
-			(int) ini.GetInteger("connects", "total", CONNECTS_TOTAL),
+			(int) ini.getNumber("connects", "total", CONNECTS_TOTAL),
 			// Максимальный размер скачиваемых данных в байтах
-			getBytes(ini.Get("connects", "size", CONNECTS_SIZE))
+			getBytes(ini.getString("connects", "size", CONNECTS_SIZE))
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
 			// Внешний интерфейс, через который будут уходить запросы от сервера
-			ini.Get("ipv4", "external", IPV4_EXTERNAL),
+			ini.getString("ipv4", "external", IPV4_EXTERNAL),
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-			ini.Get("ipv4", "internal", IPV4_INTERNAL),
+			ini.getString("ipv4", "internal", IPV4_INTERNAL),
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			resolver4
 		};
 		// Заполняем структуру ipv6
 		this->ipv6 = {
 			// Внешний интерфейс, через который будут уходить запросы от сервера
-			ini.Get("ipv6", "external", IPV6_EXTERNAL),
+			ini.getString("ipv6", "external", IPV6_EXTERNAL),
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
-			ini.Get("ipv6", "internal", IPV6_INTERNAL),
+			ini.getString("ipv6", "internal", IPV6_INTERNAL),
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			resolver6
 		};
 		// Заполняем структуру ldap
 		this->ldap = {
 			// Активация модуля LDAP
-			ini.GetBoolean("authorization", "ldap", LDAP_ENABLED),
+			ini.getBoolean("authorization", "ldap", LDAP_ENABLED),
 			// Версия протокола LDAP
-			(u_int) ini.GetInteger("ldap", "version", LDAP_VER),
+			(u_int) ini.getUNumber("ldap", "version", LDAP_VER),
 			// Тип поиска LDAP
-			ini.Get("ldap", "scope", LDAP_SCOPE),
+			ini.getString("ldap", "scope", LDAP_SCOPE),
 			// Адрес сервера LDAP
-			ini.Get("ldap", "server", LDAP_SERVER),
+			ini.getString("ldap", "server", LDAP_SERVER),
 			// DN пользователя LDAP
-			ini.Get("ldap", "userdn", LDAP_USERDN),
+			ini.getString("ldap", "userdn", LDAP_USERDN),
 			// Фильтр поиска LDAP
-			ini.Get("ldap", "filter", LDAP_FILTER),
+			ini.getString("ldap", "filter", LDAP_FILTER),
 			// DN администратора LDAP
-			ini.Get("ldap", "binddn", LDAP_BINDDN),
+			ini.getString("ldap", "binddn", LDAP_BINDDN),
 			// Пароль администратора LDAP
-			ini.Get("ldap", "bindpw", LDAP_BINDPW)
+			ini.getString("ldap", "bindpw", LDAP_BINDPW)
 		};
 		// Заполняем структуру timeouts
 		this->timeouts = {
 			// Таймаут времени на чтение
-			(size_t) getSeconds(ini.Get("timeouts", "read", TIMEOUTS_READ)),
+			(size_t) getSeconds(ini.getString("timeouts", "read", TIMEOUTS_READ)),
 			// Таймаут времени на запись
-			(size_t) getSeconds(ini.Get("timeouts", "write", TIMEOUTS_WRITE)),
+			(size_t) getSeconds(ini.getString("timeouts", "write", TIMEOUTS_WRITE)),
 			// Таймаут на работу в режиме переключения протоколов
-			(size_t) getSeconds(ini.Get("timeouts", "upgrade", TIMEOUTS_UPGRADE))
+			(size_t) getSeconds(ini.getString("timeouts", "upgrade", TIMEOUTS_UPGRADE))
 		};
 		// Заполняем структуру buffers
 		this->buffers = {
 			// Скорость входящего подключения
-			getSizeBuffer(ini.Get("speed", "input", BUFFER_READ_SIZE)),
+			getSizeBuffer(ini.getString("speed", "input", BUFFER_READ_SIZE)),
 			// Скорость исходящего подключения
-			getSizeBuffer(ini.Get("speed", "output", BUFFER_WRITE_SIZE))
+			getSizeBuffer(ini.getString("speed", "output", BUFFER_WRITE_SIZE))
 		};
 		// Заполняем структуру постоянного подключения keepalive
 		this->keepalive = {
 			// Максимальное количество попыток
-			(int) ini.GetInteger("keepalive", "keepcnt", KEEPALIVE_CNT),
+			(int) ini.getNumber("keepalive", "keepcnt", KEEPALIVE_CNT),
 			// Интервал времени в секундах через которое происходит проверка подключения
-			(int) ini.GetInteger("keepalive", "keepidle", KEEPALIVE_IDLE),
+			(int) ini.getNumber("keepalive", "keepidle", KEEPALIVE_IDLE),
 			// Интервал времени в секундах между попытками
-			(int) ini.GetInteger("keepalive", "keepintvl", KEEPALIVE_INTVL)
+			(int) ini.getNumber("keepalive", "keepintvl", KEEPALIVE_INTVL)
 		};
 	}
 }

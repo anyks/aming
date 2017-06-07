@@ -1,106 +1,156 @@
-// Read an INI file into easy-to-access name/value pairs.
+/* МОДУЛЬ ЧТЕНИЯ КОНФИГУРАЦИОННЫХ ФАЙЛОВ ANYKS */
+/*
+*	автор:				Юрий Николаевич Лобарев
+*	skype:				efrantick
+*	телефон:			+7(920)672-33-22
+*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
+*/
+#ifndef _CONFIG_INI_ANYKS_
+#define _CONFIG_INI_ANYKS_
 
-// inih and INI are released under the New BSD license (see LICENSE.txt).
-// Go to the project home page for more info:
-//
-// https://github.com/benhoyt/inih
-
-#ifndef __INIREADER_H__
-#define __INIREADER_H__
-
-#include <map>
+#include <regex>
+#include <vector>
 #include <string>
-#include <cctype>
-#include <cstdlib>
-#include <cstring>
+#include <fstream>
 #include <iostream>
-#include <algorithm>
+#include <unordered_map>
+#include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include "general/general.h"
 
-/* Max params */
-#define MAX_SECTION 50
-#define MAX_NAME 50
-
-/* Nonzero to allow multi-line value parsing, in the style of Python's
-	configparser. If allowed, ini_parse() will call the handler with the same
-	name for each subsequent line parsed. */
-#define INI_ALLOW_MULTILINE 1
-
-/* Nonzero to allow a UTF-8 BOM sequence (0xEF 0xBB 0xBF) at the start of
-	the file. See http://code.google.com/p/inih/issues/detail?id=21 */
-#ifndef INI_ALLOW_BOM
-#define INI_ALLOW_BOM 1
-#endif
-
-/* Nonzero to allow inline comments (with valid inline comment characters
-	specified by INI_INLINE_COMMENT_PREFIXES). Set to 0 to turn off and match
-	Python 3.2+ configparser behaviour. */
-#define INI_ALLOW_INLINE_COMMENTS 1
-#define INI_INLINE_COMMENT_PREFIXES ";"
-
-/* Stop parsing on first error (default is to keep parsing). */
-#ifndef INI_STOP_ON_FIRST_ERROR
-#define INI_STOP_ON_FIRST_ERROR 0
-#endif
-
-/* Maximum line length for any line in INI file. */
-#define INI_MAX_LINE 1024
-
+// Устанавливаем область видимости
 using namespace std;
 
-// Read an INI file into easy-to-access name/value pairs. (Note that I've gone
-// for simplicity here rather than speed, but it should be pretty decent.)
+/**
+ * INI Класс чтения конфигурационных данных из ini файлов
+ */
 class INI {
-	public:
-		// Construct INI and parse given filename. See ini.h for more info
-		// about the parsing.
-		INI(const string &filename);
-		// Return the result of ini_parse(), i.e., 0 on success, line number of
-		// first error on parse error, or -1 on file open error.
-		int ParseError() const;
-		// Get a string value from INI file, returning default_value if not found.
-		string Get(const string &section, const string &name, const string &default_value) const;
-		// Get an integer (long) value from INI file, returning default_value if
-		// not found or not a valid integer (decimal "1234", "-1234", or hex "0x4d2").
-		long GetInteger(const string &section, const string &name, long default_value) const;
-		// Get a real (floating point double) value from INI file, returning
-		// default_value if not found or not a valid floating point value
-		// according to strtod().
-		double GetReal(const string &section, const string &name, double default_value) const;
-		// Get a boolean value from INI file, returning default_value if not found or if
-		// not a valid true/false value. Valid true values are "true", "yes", "on", "1",
-		// and valid false values are "false", "no", "off", "0" (not case sensitive).
-		bool GetBoolean(const string &section, const string &name, bool default_value) const;
 	private:
-		int _error;
-		map<string, string> _values;
-		/* Typedef for prototype of handler function. */
-		#if INI_HANDLER_LINENO
-			typedef int (* ini_handler) (void * user, const char * section, const char * name, const char * value, int lineno);
-		#else
-			typedef int (* ini_handler) (void * user, const char * section, const char * name, const char * value);
-		#endif
-		/* Typedef for prototype of fgets-style reader function. */
-		typedef char * (* ini_reader) (char * str, int num, void * stream);
-		/* Other function */
-		static string MakeKey(const string &section, const string &name);
-		static int ValueHandler(void * user, const char * section, const char * name, const char * value);
-		/* Strip whitespace chars off end of given string, in place. Return s. */
-		static char * rstrip(char * s);
-		/* Return pointer to first non-whitespace char in given string. */
-		static char * lskip(const char * s);
-		/* Return pointer to first char (of chars) or inline comment in given string,
-		   or pointer to null at end of string if neither found. Inline comment must
-		   be prefixed by a whitespace character to register as a comment. */
-		static char * findCharsOrComment(const char * s, const char * chars);
-		/* Version of strncpy that ensures dest (size bytes) is null-terminated. */
-		static char * strncpy0(char * dest, const char * src, size_t size);
-		/* See documentation in header file. */
-		int iniParseStream(ini_reader reader, void * stream, ini_handler handler, void * user);
-		/* See documentation in header file. */
-		int iniParseFile(FILE * file, ini_handler handler, void * user);
-		/* See documentation in header file. */
-		int iniParse(string filename, ini_handler handler, void * user);
+		/**
+		 * Params Структура параметров конфигурационного файла
+		 */
+		struct Params {
+			string key;		// Ключ
+			string value;	// Значение
+		};
+		// Ошибка чтения файла
+		bool error = false;
+		// Название раздела
+		string section;
+		// Собранные конфигурационные данные
+		unordered_map <string, vector <Params>> data;
+		/**
+		 * getParams Метод извлечения параметров
+		 * @param  str строка для проверки
+		 * @return     данные параметров
+		 */
+		const Params getParams(const string str);
+		/**
+		 * getSection Метод извлечения раздела
+		 * @param  str строка для проверки
+		 * @return     название раздела
+		 */
+		const string getSection(const string str);
+		/**
+		 * get Метод извлечения данных
+		 * @param  section раздел
+		 * @param  key     ключ
+		 * @return         искомый результат
+		 */
+		const string get(const string section, const string key);
+	public:
+		/**
+		 * getFloat Получить значение числа с плавающей точкой
+		 * @param  section раздел
+		 * @param  key     ключ
+		 * @param  defval  значение по умолчанию, если ключ не найден
+		 * @return         искомый результат
+		 */
+		const double getFloat(const string section, const string key, const double defval = 0.0);
+		/**
+		 * getNumber Получить значение числа в знаковой форме
+		 * @param  section раздел
+		 * @param  key     ключ
+		 * @param  defval  значение по умолчанию, если ключ не найден
+		 * @return         искомый результат
+		 */
+		const int64_t getNumber(const string section, const string key, const int64_t defval = 0);
+		/**
+		 * getUNumber Получить значение числа в беззнаковой форме
+		 * @param  section раздел
+		 * @param  key     ключ
+		 * @param  defval  значение по умолчанию, если ключ не найден
+		 * @return         искомый результат
+		 */
+		const size_t getUNumber(const string section, const string key, const size_t defval = 0);
+		/**
+		 * getBoolean Получить значение в булевом виде
+		 * @param  section раздел
+		 * @param  key     ключ
+		 * @param  defval  значение по умолчанию, если ключ не найден
+		 * @return         искомый результат
+		 */
+		const bool getBoolean(const string section, const string key, const bool defval = false);
+		/**
+		 * getString Получить значение строки
+		 * @param  section раздел
+		 * @param  key     ключ
+		 * @param  defval  значение по умолчанию, если ключ не найден
+		 * @return         искомый результат
+		 */
+		const string getString(const string section, const string key, const string defval = "");
+		/**
+		 * addData Метод добавления данных
+		 * @param  section название раздела
+		 * @param  key     название параметра
+		 * @param  value   значение параметра
+		 * @return         результат добавления
+		 */
+		const bool addData(const string section, const string key, const string value);
+		/**
+		 * delData Метод удаления данных
+		 * @param  section название раздела
+		 * @param  key     название параметра
+		 * @return         результат удаления
+		 */
+		const bool delData(const string section, const string key);
+		/**
+		 * addSection Метод добавления раздела
+		 * @param  name название раздела
+		 * @return      результат добавления
+		 */
+		const bool addSection(const string name);
+		/**
+		 * delSection Метод удаления раздела
+		 * @param  name название раздела
+		 * @return      результат удаления
+		 */
+		const bool delSection(const string name);
+		/**
+		 * isError Метод проверяющий на возникновение ошибки чтения
+		 * @return результат проверки
+		 */
+		const bool isError();
+		/**
+		 * read Метод чтения данных из файла
+		 * @param filename адрес конфигурационного файла
+		 */
+		void read(const string filename);
+		/**
+		 * write Метод записи данных в файл
+		 * @param filename адрес конфигурационного файла
+		 */
+		void write(const string filename);
+		/**
+		 * INI Конструктор
+		 * @param filename адрес конфигурационного файла
+		 */
+		INI(const string filename);
+		/**
+		 * ~INI Деструктор
+		 */
+		~INI();
 };
 
-#endif  // __INIREADER_H__
+#endif // _CONFIG_INI_ANYKS_

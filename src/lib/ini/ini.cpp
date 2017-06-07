@@ -1,193 +1,466 @@
-// Read an INI file into easy-to-access name/value pairs.
-
-// inih and INI are released under the New BSD license (see LICENSE.txt).
-// Go to the project home page for more info:
-//
-// https://github.com/benhoyt/inih
+/* МОДУЛЬ ЧТЕНИЯ КОНФИГУРАЦИОННЫХ ФАЙЛОВ ANYKS */
+/*
+*	автор:				Юрий Николаевич Лобарев
+*	skype:				efrantick
+*	телефон:			+7(920)672-33-22
+*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
+*/
 #include "ini/ini.h"
 
+// Устанавливаем область видимости
 using namespace std;
 
-INI::INI(const string &filename){
-	_error = iniParse(filename, ValueHandler, this);
-}
-
-int INI::ParseError() const {
-	return _error;
-}
-
-string INI::Get(const string &section, const string &name, const string &default_value) const {
-	string key = MakeKey(section, name);
-	// Use _values.find() here instead of _values.at() to support pre C++11 compilers
-	return _values.count(key) ? _values.find(key)->second : default_value;
-}
-
-long INI::GetInteger(const string &section, const string &name, long default_value) const {
-	string valstr = Get(section, name, "");
-	const char * value = valstr.c_str();
-	char * end;
-	// This parses "1234" (decimal) and also "0x4D2" (hex)
-	long n = strtol(value, &end, 0);
-	return (end > value ? n : default_value);
-}
-
-double INI::GetReal(const string &section, const string &name, double default_value) const {
-	string valstr = Get(section, name, "");
-	const char * value = valstr.c_str();
-	char * end;
-	double n = strtod(value, &end);
-	return (end > value ? n : default_value);
-}
-
-bool INI::GetBoolean(const string &section, const string &name, bool default_value) const {
-	string valstr = Get(section, name, "");
-	// Convert to lower case to make string comparisons case-insensitive
-	transform(valstr.begin(), valstr.end(), valstr.begin(), ::tolower);
-	if((valstr.compare("true") == 0) || (valstr.compare("yes") == 0)
-	|| (valstr.compare("on") == 0) || (valstr.compare("1") == 0)) return true;
-	else if((valstr.compare("false") == 0) || (valstr.compare("no") == 0)
-	|| (valstr.compare("off") == 0) || (valstr.compare("0") == 0)) return false;
-	else return default_value;
-}
-
-string INI::MakeKey(const string& section, const string& name){
-	string key = section + "=" + name;
-	// Convert to lower case to make section/name lookups case-insensitive
-	transform(key.begin(), key.end(), key.begin(), ::tolower);
-	return key;
-}
-
-int INI::ValueHandler(void * user, const char * section, const char * name, const char * value){
-	INI * reader = (INI *) user;
-	string key = MakeKey(section, name);
-	if(reader->_values[key].size() > 0) reader->_values[key] += "\n";
-	reader->_values[key] += value;
-	return 1;
-}
-
-/* Strip whitespace chars off end of given string, in place. Return s. */
-char * INI::rstrip(char * s){
-	char * p = s + strlen(s);
-	while(p > s && isspace((unsigned char)(*--p))) *p = '\0';
-	return s;
-}
-
-/* Return pointer to first non-whitespace char in given string. */
-char * INI::lskip(const char * s){
-	while(*s && isspace((unsigned char)(*s))) s++;
-	return (char*)s;
-}
-
-/* Return pointer to first char (of chars) or inline comment in given string,
-   or pointer to null at end of string if neither found. Inline comment must
-   be prefixed by a whitespace character to register as a comment. */
-char * INI::findCharsOrComment(const char * s, const char * chars){
-	int was_space = 0;
-	while(*s && (!chars || !strchr(chars, *s))
-	&& !(was_space && strchr(INI_INLINE_COMMENT_PREFIXES, *s))){
-		was_space = isspace((unsigned char)(*s));
-		s++;
+/**
+ * getParams Метод извлечения параметров
+ * @param  str строка для проверки
+ * @return     данные параметров
+ */
+const INI::Params INI::getParams(const string str){
+	// Полученные параметры
+	Params params;
+	// Если строка передана
+	if(!str.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\s*(\\w+)\\s*\\=\\s*([^\\r\\n\\;\\#]+)", regex::ECMAScript | regex::icase);
+		// Выполняем проверку
+		regex_search(str, match, e);
+		// Если раздел найден, выводим результат
+		if(!match.empty()){
+			// Получаем ключ
+			params.key = match[1].str();
+			// Получаем значение
+			params.value = match[2].str();
+			// Исправляем значения
+			params.value = ::trim(params.value);
+		}
 	}
-	return (char *) s;
+	// Выводим результат
+	return params;
 }
-
-/* Version of strncpy that ensures dest (size bytes) is null-terminated. */
-char * INI::strncpy0(char * dest, const char * src, size_t size){
-	strncpy(dest, src, size);
-	dest[size - 1] = '\0';
-	return dest;
+/**
+ * getSection Метод извлечения раздела
+ * @param  str строка для проверки
+ * @return     название раздела
+ */
+const string INI::getSection(const string str){
+	// Полученные параметры
+	string result;
+	// Если строка передана
+	if(!str.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\s*\\[(\\w+)\\]", regex::ECMAScript | regex::icase);
+		// Выполняем проверку
+		regex_search(str, match, e);
+		// Если раздел найден, выводим результат
+		if(!match.empty()) result = match[1].str();
+	}
+	// Выводим результат
+	return result;
 }
-
-/* See documentation in header file. */
-int INI::iniParseStream(ini_reader reader, void * stream, ini_handler handler, void * user){
-	/* Uses a fair bit of stack (use heap instead if you need to) */
-	char * line;
-	char section[MAX_SECTION] = "";
-	char prev_name[MAX_NAME] = "";
-
-	char * start;
-	char * end;
-	char * name;
-	char * value;
-	int lineno = 0;
-	int error = 0;
-	line = new char[INI_MAX_LINE];
-	if(!line) return -2;
-
-#if INI_HANDLER_LINENO
-#define HANDLER(u, s, n, v) handler(u, s, n, v, lineno)
-#else
-#define HANDLER(u, s, n, v) handler(u, s, n, v)
-#endif
-
-	/* Scan through stream line by line */
-	while(reader(line, INI_MAX_LINE, stream) != NULL){
-		lineno++;
-		start = line;
-#if INI_ALLOW_BOM
-		if(lineno == 1 && (unsigned char)start[0] == 0xEF
-		&& (unsigned char) start[1] == 0xBB
-		&& (unsigned char) start[2] == 0xBF) start += 3;
-#endif
-		start = lskip(rstrip(start));
-
-		if((* start == ';') || (* start == '#')){
-			/* Per Python configparser, allow both ; and # comments at the
-			   start of a line */
-		}
-		else if((* prev_name) && ((* start) && (start > line))) {
-			/* Non-blank line with leading whitespace, treat as continuation
-			   of previous name's value (as per Python configparser). */
-			if(!HANDLER(user, section, prev_name, start) && !error) error = lineno;
-		}
-		else if(* start == '[') {
-			/* A "[section]" line */
-			end = findCharsOrComment(start + 1, "]");
-			if(* end == ']'){
-				* end = '\0';
-				strncpy0(section, start + 1, sizeof(section));
-				* prev_name = '\0';
-			} else if(!error) {
-				/* No ']' found on section line */
-				error = lineno;
-			}
-		} else if(* start) {
-			/* Not a comment, must be a name[=:]value pair */
-			end = findCharsOrComment(start, "=:");
-			if((* end == '=') || (*end == ':')){
-				* end = '\0';
-				name = rstrip(start);
-				value = end + 1;
-				end = findCharsOrComment(value, NULL);
-				if(* end) * end = '\0';
-				value = lskip(value);
-				rstrip(value);
-				/* Valid name[=:]value pair found, call handler */
-				strncpy0(prev_name, name, sizeof(prev_name));
-				if(!HANDLER(user, section, name, value) && !error) error = lineno;
-			} else if(!error) {
-				/* No '=' or ':' found on name[=:]value line */
-				error = lineno;
+/**
+ * get Метод извлечения данных
+ * @param  section раздел
+ * @param  key     ключ
+ * @return         искомый результат
+ */
+const string INI::get(const string section, const string key){
+	// Результат
+	string result;
+	// Если данные переданы
+	if(!section.empty() && !key.empty()){
+		// Если раздел существует
+		if(this->data.count(section)){
+			// Получаем данные раздела
+			auto params = this->data.find(section)->second;
+			// Выполняем перебор полученных данных
+			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Если ключ найден, выводим результат
+				if(key.compare(it->key) == 0) return it->value;
 			}
 		}
-#if INI_STOP_ON_FIRST_ERROR
-	if(error) break;
-#endif
 	}
-	delete [] line;
-	return error;
+	// Выводим результат
+	return result;
 }
-
-/* See documentation in header file. */
-int INI::iniParseFile(FILE * file, ini_handler handler, void * user){
-	return iniParseStream((ini_reader) fgets, file, handler, user);
+/**
+ * getFloat Получить значение числа с плавающей точкой
+ * @param  section раздел
+ * @param  key     ключ
+ * @param  defval  значение по умолчанию, если ключ не найден
+ * @return         искомый результат
+ */
+const double INI::getFloat(const string section, const string key, const double defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\-?(?:\\d+(?:\\.|\\,)\\d+|\\d+)$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()) return ::atof(match[0].str().c_str());
+		// Если это не число то нужно прверить на булевые значения
+		else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return 1.0;
+				else return 0.0;
+			}
+		}
+	}
+	// Выводим результат
+	return defval;
 }
-
-/* See documentation in header file. */
-int INI::iniParse(string filename, ini_handler handler, void * user){
-	FILE * file = fopen(filename.c_str(), "r");
-	if(!file) return -1;
-	int error = iniParseFile(file, handler, user);
-	fclose(file);
-	return error;
+/**
+ * getNumber Получить значение числа в знаковой форме
+ * @param  section раздел
+ * @param  key     ключ
+ * @param  defval  значение по умолчанию, если ключ не найден
+ * @return         искомый результат
+ */
+const int64_t INI::getNumber(const string section, const string key, const int64_t defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\-?\\d+$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()) return ::atoi(match[0].str().c_str());
+		// Если это не число то нужно прверить на булевые значения
+		else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return 1;
+				else return 0;
+			}
+		}
+	}
+	// Выводим результат
+	return defval;
+}
+/**
+ * getUNumber Получить значение числа в беззнаковой форме
+ * @param  section раздел
+ * @param  key     ключ
+ * @param  defval  значение по умолчанию, если ключ не найден
+ * @return         искомый результат
+ */
+const size_t INI::getUNumber(const string section, const string key, const size_t defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\d+$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()) return ::atoi(match[0].str().c_str());
+		// Если это не число то нужно прверить на булевые значения
+		else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return 1;
+				else return 0;
+			}
+		}
+	}
+	// Выводим результат
+	return defval;
+}
+/**
+ * getBoolean Получить значение в булевом виде
+ * @param  section раздел
+ * @param  key     ключ
+ * @param  defval  значение по умолчанию, если ключ не найден
+ * @return         искомый результат
+ */
+const bool INI::getBoolean(const string section, const string key, const bool defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Если данные пришли верные
+	if(!data.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e("^\\-?\\d+$", regex::ECMAScript | regex::icase);
+		// Выполняем проверку на то является ли это числом
+		regex_search(data, match, e);
+		// Если это число, выводим результат
+		if(!match.empty()){
+			// Преобразуем в число
+			int64_t value = ::atoi(match[0].str().c_str());
+			// Выводим результат
+			if(value > 0) return true;
+			else return false;
+		// Если это не число то нужно прверить на булевые значения
+		} else {
+			// Устанавливаем правило регулярного выражения
+			regex e("^(TRUE|true|FALSE|false)$", regex::ECMAScript | regex::icase);
+			// Выполняем проверку на то является ли это булевым значением
+			regex_search(data, match, e);
+			// Если это булевое значение, определяем результат
+			if(!match.empty()){
+				// Получаем данные зачения
+				string value = match[1].str();
+				// Определяем булевое значение
+				if(::toCase(value).compare("true") == 0)
+					return true;
+				else return false;
+			}
+		}
+	}
+	// Выводим результат
+	return defval;
+}
+/**
+ * getString Получить значение строки
+ * @param  section раздел
+ * @param  key     ключ
+ * @param  defval  значение по умолчанию, если ключ не найден
+ * @return         искомый результат
+ */
+const string INI::getString(const string section, const string key, const string defval){
+	// Запрашиваем данные
+	string data = get(section, key);
+	// Выводим результат
+	return (!data.empty() ? data : defval);
+}
+/**
+ * addData Метод добавления данных
+ * @param  section название раздела
+ * @param  key     название параметра
+ * @param  value   значение параметра
+ * @return         результат добавления
+ */
+const bool INI::addData(const string section, const string key, const string value){
+	// Результат удаления
+	bool result = false;
+	// Если данные переданы
+	if(!section.empty() && !key.empty()){
+		// Сообщаем что все удачно
+		result = true;
+		// Полученные параметры
+		Params params = {key, value};
+		// Если раздел существует
+		if(this->data.count(section)){
+			// Добавляем новые параметры в раздел
+			this->data.find(section)->second.push_back(params);
+		// Если раздел не найден
+		} else {
+			// Добавляем новые параметры
+			this->data.insert(pair <string, vector <Params>>(section, {params}));
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * delData Метод удаления данных
+ * @param  section название раздела
+ * @param  key     название параметра
+ * @return         результат удаления
+ */
+const bool INI::delData(const string section, const string key){
+	// Результат удаления
+	bool result = false;
+	// Если данные переданы
+	if(!section.empty() && !key.empty()){
+		// Если раздел существует
+		if(this->data.count(section)){
+			// Получаем данные раздела
+			auto params = this->data.find(section)->second;
+			// Выполняем перебор полученных данных
+			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Если ключ найден, выводим результат
+				if(key.compare(it->key) == 0){
+					// Сообщаем что все удачно
+					result = true;
+					// Если ключ найден тогда удаляем элемент
+					params.erase(it);
+					// Удаляем раздел
+					this->data.erase(section);
+					// Добавляем новые параметры
+					this->data.insert(pair <string, vector <Params>>(section, params));
+					// Выходим из цикла
+					break;
+				}
+			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * addSection Метод добавления раздела
+ * @param  name название раздела
+ * @return      результат добавления
+ */
+const bool INI::addSection(const string name){
+	// Результат добавления
+	bool result = false;
+	// Если раздел не существует
+	if(!name.empty() && !this->data.count(name)){
+		// Запоминаем что все удачно
+		result = true;
+		// Добавляем параметры
+		this->data.insert(pair <string, vector <Params>>(name, {{}}));
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * delSection Метод удаления раздела
+ * @param  name название раздела
+ * @return      результат удаления
+ */
+const bool INI::delSection(const string name){
+	// Результат удаления
+	bool result = false;
+	// Если раздел существует
+	if(!name.empty() && this->data.count(name)){
+		// Запоминаем что все удачно
+		result = true;
+		// Добавляем параметры
+		this->data.erase(name);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * isError Метод проверяющий на возникновение ошибки чтения
+ * @return результат проверки
+ */
+const bool INI::isError(){
+	// Выводим результат
+	return this->error;
+}
+/**
+ * read Метод чтения данных из файла
+ * @param filename адрес конфигурационного файла
+ */
+void INI::read(const string filename){
+	// Если файл передан
+	if(!filename.empty() && isFileExist(filename.c_str())){
+		// Открываем файл на чтение
+		ifstream config(filename.c_str());
+		// Если файл открыт
+		if(config.is_open()){
+			// Строка чтения из файла
+			string filedata;
+			// Считываем до тех пор пока все удачно
+			while(config.good()){
+				// Считываем строку из файла
+				getline(config, filedata);
+				// Получаем название раздела
+				const string section = getSection(filedata);
+				// Получаем параметры конфига
+				const Params params = getParams(filedata);
+				// Если раздел существует, запоминаем
+				if(!section.empty()) this->section = section;
+				// Если параметры существуют
+				else if(!params.key.empty()){
+					// Если раздел не существует
+					if(!this->data.count(this->section))
+						// Добавляем параметры
+						this->data.insert(pair <string, vector <Params>>(this->section, {params}));
+					// Если такой раздел существует
+					else this->data.find(this->section)->second.push_back(params);
+				}
+			}
+			// Очищаем название раздела
+			this->section.clear();
+			// Закрываем файл
+			config.close();
+		}
+	// Запоминаем что приозошла ошибка
+	} else this->error = true;
+}
+/**
+ * write Метод записи данных в файл
+ * @param filename адрес конфигурационного файла
+ */
+void INI::write(const string filename){
+	// Если файл передан
+	if(!filename.empty()){
+		// Результирующая строка
+		string result = "";
+		// Переходим по всем разделам
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Получаем данные раздела
+			auto params = it->second;
+			// Добавляем название раздела
+			result.append(string("\r\n[") + it->first + string("]\r\n"));
+			// Выполняем перебор полученных данных
+			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Добавляем данные раздела
+				result.append(it->key + string(" = ") + it->value + string("\r\n"));
+			}
+		}
+		// Документ сформирован
+		if(!result.empty()){
+			// Открываем файл на чтение
+			ofstream config(filename.c_str(), ios::binary);
+			// Если файл открыт
+			if(config.is_open()){
+				// Выполняем запись данных в файл
+				config.write((const char *) result.data(), result.size());
+				// Закрываем файл
+				config.close();
+			}
+		}
+	}
+}
+/**
+ * INI Конструктор
+ * @param filename адрес конфигурационного файла
+ */
+INI::INI(const string filename){
+	// Выполняем чтение данных из файла конфига
+	read(filename);
+}
+/**
+ * ~INI Деструктор
+ */
+INI::~INI(){
+	// Очищаем данные
+	this->data.clear();
 }
