@@ -12,9 +12,9 @@ OS := $(shell uname -s)
 
 # Если это MacOS X (Сборка через make)
 ifeq ($(OS), Darwin)
-	# export MACOSX_DEPLOYMENT_TARGET="10.3";
+	# export MACOSX_DEPLOYMENT_TARGET="10.12";
 	# Компилятор
-	CC = clang++
+	CC = export MACOSX_DEPLOYMENT_TARGET="10.12"; clang++
 
 	# Сторонние модули
 	LIBS =	-lz \
@@ -97,12 +97,12 @@ dtcc:
 
 # Правила сборки под Prod
 prod:
-	# Выполняем сборку проекта
-	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
+	# Выполняем сборку проекта [-mbmi2]
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mfma -mrdrnd -mf16c $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
 
-# Правила сборки под Prod Tools CCache
+# Правила сборки под Prod Tools CCache [-mbmi2]
 ptcc:
-	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mbmi2 $(SOURCETCC) $(INCLUDE) -I./tools $(LIBS) -o $(BIN)/ptcc
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mfma -mrdrnd -mf16c $(SOURCETCC) $(INCLUDE) -I./tools $(LIBS) -o $(BIN)/ptcc
 
 # Правило запуска
 start:
