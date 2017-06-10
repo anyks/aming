@@ -853,8 +853,16 @@ const int HttpProxy::connect_server(void * ctx){
 			switch(nettype){
 				// Для протокола IPv4
 				case 4: {
-					// Запоминаем адрес сервера для биндинга
-					bindhost = http->proxy->config->ipv4.external;
+					// Получаем список ip адресов
+					auto ips = http->proxy->config->ipv4.external;
+					// Если количество элементов больше 1
+					if(ips.size() > 1){
+						// рандомизация генератора случайных чисел
+						srand(time(0));
+						// Получаем ip адрес
+						bindhost = ips[rand() % ips.size()];
+					// Выводим только первый элемент
+					} else bindhost = ips[0];
 					// Получаем данные хоста удаленного сервера по его названию
 					struct hostent * client = gethostbyname2(bindhost.c_str(), AF_INET);
 					// Очищаем всю структуру для клиента
@@ -885,6 +893,16 @@ const int HttpProxy::connect_server(void * ctx){
 				} break;
 				// Для протокола IPv6
 				case 6: {
+					// Получаем список ip адресов
+					auto ips = http->proxy->config->ipv6.external;
+					// Если количество элементов больше 1
+					if(ips.size() > 1){
+						// рандомизация генератора случайных чисел
+						srand(time(0));
+						// Получаем ip адрес
+						bindhost = ips[rand() % ips.size()];
+					// Выводим только первый элемент
+					} else bindhost = ips[0];
 					// Буфер содержащий адрес IPv6
 					char host_client[INET6_ADDRSTRLEN], host_server[INET6_ADDRSTRLEN];
 					// Очищаем всю структуру для клиента
@@ -898,8 +916,6 @@ const int HttpProxy::connect_server(void * ctx){
 					client6_addr.sin6_port = htons(0);
 					// Устанавливаем порт для локального подключения
 					server6_addr.sin6_port = htons(http->server.port);
-					// Запоминаем адрес сервера для биндинга
-					bindhost = http->proxy->config->ipv6.external;
 					// Указываем адреса
 					inet_pton(AF_INET6, bindhost.c_str(), &(client6_addr.sin6_addr));
 					inet_pton(AF_INET6, http->server.ip.c_str(), &(server6_addr.sin6_addr));

@@ -169,7 +169,7 @@ Config::Config(const string filename){
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port;
 		// Массив протоколов
-		vector <string> ipVx = split(PROXY_IPV, "->");
+		auto ipVx = split(PROXY_IPV, "->");
 		// Запоминаем внешнюю версию интернет протокола
 		const u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
 		// Запоминаем внутреннюю версию интернет протокола
@@ -329,19 +329,19 @@ Config::Config(const string filename){
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
-			// Внешний интерфейс, через который будут уходить запросы от сервера
-			IPV4_EXTERNAL,
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
 			IPV4_INTERNAL,
+			// Внешний интерфейс, через который будут уходить запросы от сервера
+			IPV4_EXTERNAL,
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			IPV4_RESOLVER
 		};
 		// Заполняем структуру ipv6
 		this->ipv6 = {
-			// Внешний интерфейс, через который будут уходить запросы от сервера
-			IPV6_EXTERNAL,
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
 			IPV6_INTERNAL,
+			// Внешний интерфейс, через который будут уходить запросы от сервера
+			IPV6_EXTERNAL,
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			IPV6_RESOLVER
 		};
@@ -412,7 +412,7 @@ Config::Config(const string filename){
 		// Уровень сжатия gzip
 		int glevel = Z_DEFAULT_COMPRESSION;
 		// Получаем уровень сжатия
-		string gzipLevel = ini.getString("gzip", "level");
+		const string gzipLevel = ini.getString("gzip", "level");
 		// Если размер указан
 		if(!gzipLevel.empty()){
 			// Определяем тип сжатия
@@ -426,7 +426,7 @@ Config::Config(const string filename){
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port;
 		// Получаем тип прокси сервера
-		string type = ini.getString("proxy", "type", PROXY_TYPE);
+		const string type = ini.getString("proxy", "type", PROXY_TYPE);
 		// Если прокси сервер это http
 		if(type.compare("http") == 0) proxy_type = 1;
 		else if(type.compare("socks5") == 0) proxy_type = 2;
@@ -444,34 +444,39 @@ Config::Config(const string filename){
 		// Получаем данные режима мульти-сетевого взаимодействия
 		bool proxy_subnet = ini.getBoolean("proxy", "subnet", PROXY_SUBNET);
 		// Массив протоколов
-		vector <string> ipVx = split(ini.getString("proxy", "ipv", PROXY_IPV), "->");
-		// Запоминаем внешнюю версию интернет протокола
+		auto ipVx = split(ini.getString("proxy", "ipv", PROXY_IPV), "->");
+		// Массив внешних ip адресов
+		auto externalIPv4 = split(ini.getString("ipv4", "external"), "|");
+		auto externalIPv6 = split(ini.getString("ipv6", "external"), "|");
+		// Массив dns серверов
+		auto resolver4 = split(ini.getString("ipv4", "resolver"), "|");
+		auto resolver6 = split(ini.getString("ipv6", "resolver"), "|");
+		// Массив параметров сжатия для проксированных запросов
+		auto gproxied = split(ini.getString("gzip", "proxied"), "|");
+		// Массив версий http протоколов
+		auto gvhttp = split(ini.getString("gzip", "vhttp"), "|");
+		// Массив параметров сжатия для типов данных
+		auto gtypes = split(ini.getString("gzip", "types"), "|");
+		// Запоминаем внешнюю и внутреннюю версию интернет протокола
 		u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
-		// Запоминаем внутреннюю версию интернет протокола
 		u_int proxy_extIPv = ::atoi(ipVx[1].c_str());
+		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
+		if(externalIPv4.empty()) externalIPv4 = IPV4_EXTERNAL;
+		if(externalIPv6.empty()) externalIPv6 = IPV6_EXTERNAL;
+		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
+		if(resolver4.empty()) resolver4 = IPV4_RESOLVER;
+		if(resolver6.empty()) resolver6 = IPV6_RESOLVER;
+		// Если версии не указаны тогда устанавливаем значение по умолчанию
+		if(gproxied.empty()) gproxied = GZIP_PROXIED;
+		// Если версии не указаны тогда устанавливаем значение по умолчанию
+		if(gvhttp.empty()) gvhttp = GZIP_VHTTP;
+		// Если версии не указаны тогда устанавливаем значение по умолчанию
+		if(gtypes.empty()) gtypes = GZIP_TYPES;
 		// Если версия меньше 4 или больше 6 то устанавливаем версию по умолчанию
 		proxy_intIPv = ((proxy_intIPv < 4) || (proxy_intIPv > 6) ? 4 : proxy_intIPv);
 		proxy_extIPv = ((proxy_extIPv < 4) || (proxy_extIPv > 6) ? 4 : proxy_extIPv);
 		// Если ни один из сетевых интерфейсов не принадлежит IPv6 тогда отключаем мульти-сетевое взаимодействие
 		if((proxy_intIPv != 6) && (proxy_extIPv != 6)) proxy_subnet = false;
-		// Массив dns серверов
-		vector <string> resolver4 = split(ini.getString("ipv4", "resolver"), "|");
-		vector <string> resolver6 = split(ini.getString("ipv6", "resolver"), "|");
-		// Если ресолвер пустой тогда устанавливаем значение по умолчанию
-		if(resolver4.empty()) resolver4 = IPV4_RESOLVER;
-		if(resolver6.empty()) resolver6 = IPV6_RESOLVER;
-		// Массив версий http протоколов
-		vector <string> gvhttp = split(ini.getString("gzip", "vhttp"), "|");
-		// Если версии не указаны тогда устанавливаем значение по умолчанию
-		if(gvhttp.empty()) gvhttp = GZIP_VHTTP;
-		// Массив параметров сжатия для проксированных запросов
-		vector <string> gproxied = split(ini.getString("gzip", "proxied"), "|");
-		// Если версии не указаны тогда устанавливаем значение по умолчанию
-		if(gproxied.empty()) gproxied = GZIP_PROXIED;
-		// Массив параметров сжатия для типов данных
-		vector <string> gtypes = split(ini.getString("gzip", "types"), "|");
-		// Если версии не указаны тогда устанавливаем значение по умолчанию
-		if(gtypes.empty()) gtypes = GZIP_TYPES;
 		// Заполняем структуру proxy
 		this->proxy = {
 			// Версия внутреннего протокола интернета (4, 6)
@@ -613,19 +618,19 @@ Config::Config(const string filename){
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
-			// Внешний интерфейс, через который будут уходить запросы от сервера
-			ini.getString("ipv4", "external", IPV4_EXTERNAL),
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
 			ini.getString("ipv4", "internal", IPV4_INTERNAL),
+			// Внешний интерфейс, через который будут уходить запросы от сервера
+			externalIPv4,
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			resolver4
 		};
 		// Заполняем структуру ipv6
 		this->ipv6 = {
-			// Внешний интерфейс, через который будут уходить запросы от сервера
-			ini.getString("ipv6", "external", IPV6_EXTERNAL),
 			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
 			ini.getString("ipv6", "internal", IPV6_INTERNAL),
+			// Внешний интерфейс, через который будут уходить запросы от сервера
+			externalIPv6,
 			// Серверы DNS, используемые для преобразования имён вышестоящих серверов в адреса
 			resolver6
 		};

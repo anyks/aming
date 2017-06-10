@@ -319,12 +319,12 @@ void LogApp::welcome(){
 			// Версия протокола IPv4
 			case 4: {
 				internal = (* this->config)->ipv4.internal;
-				external = (* this->config)->ipv4.external;
+				external = (* this->config)->ipv4.external[0];
 			} break;
 			// Версия протокола IPv6
 			case 6: {
 				internal = (* this->config)->ipv6.internal;
-				external = (* this->config)->ipv6.external;
+				external = (* this->config)->ipv6.external[0];
 			} break;
 		}
 		// Создаем буфер для хранения даты

@@ -97,13 +97,13 @@
 #define SET_HEADERS_RESPONSE false
 
 // Модуль IPv4
-#define IPV4_EXTERNAL "0.0.0.0"
 #define IPV4_INTERNAL "127.0.0.1"
+#define IPV4_EXTERNAL {"0.0.0.0"}
 #define IPV4_RESOLVER {"8.8.8.8", "8.8.4.4"}
 
 // Модуль IPv6
-#define IPV6_EXTERNAL "::0"
 #define IPV6_INTERNAL "::1"
+#define IPV6_EXTERNAL {"::0"}
 #define IPV6_RESOLVER {"2001:4860:4860::8888", "2001:4860:4860::8844"}
 
 // Модуль LDAP
@@ -201,8 +201,8 @@ class Config {
 		 * IP Структура биндинга прокси-сервера
 		 */
 		struct IP {
-			string external;			// Внешний интерфейс, через который будут уходить запросы от сервера
 			string internal;			// IP адрес интерфейса на котором будут приниматься запросы от клиентов
+			vector <string> external;	// Внешний интерфейс, через который будут уходить запросы от сервера
 			vector <string> resolver;	// Массив со списком dns серверов
 		};
 		/**

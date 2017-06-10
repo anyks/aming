@@ -15,7 +15,6 @@
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <event2/dns.h>
