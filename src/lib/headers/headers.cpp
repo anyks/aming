@@ -540,7 +540,7 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
  * @param  str строка для проверки
  * @return     результат проверки
  */
-Headers::IsNot Headers::isNot(const string str){
+const Headers::IsNot Headers::isNot(const string str){
 	// Результат проверки
 	bool result = str[0] == '!';
 	// Выполняем проверку на первый символ
@@ -551,7 +551,7 @@ Headers::IsNot Headers::isNot(const string str){
  * @param  str строка идентификатора для определения типа
  * @return     тип идентификатора
  */
-u_short Headers::checkTypeId(const string str){
+const u_short Headers::checkTypeId(const string str){
 	// Создаем объект сети
 	Network nwk;
 	// Тип идентификатора по умолчанию
@@ -572,7 +572,7 @@ u_short Headers::checkTypeId(const string str){
  * @param  address строка адреса для проверки
  * @return         результат проверки
  */
-bool Headers::isAddress(const string address){
+const bool Headers::isAddress(const string address){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -597,7 +597,7 @@ bool Headers::isAddress(const string address){
  * @param  ip строка ip адреса для проверки
  * @return    результат проверки
  */
-bool Headers::isIpV4(const string ip){
+const bool Headers::isIpV4(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -612,7 +612,7 @@ bool Headers::isIpV4(const string ip){
  * @param  ip строка ip адреса для проверки
  * @return    результат проверки
  */
-bool Headers::isIpV6(const string ip){
+const bool Headers::isIpV6(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -627,7 +627,7 @@ bool Headers::isIpV6(const string ip){
  * @param  ip строка ip адреса для проверки
  * @return    результат проверки
  */
-bool Headers::isIp(const string ip){
+const bool Headers::isIp(const string ip){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -646,7 +646,7 @@ bool Headers::isIp(const string ip){
  * @param  mac строка mac адреса для проверки
  * @return     результат проверки
  */
-bool Headers::isMac(const string mac){
+const bool Headers::isMac(const string mac){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -661,7 +661,7 @@ bool Headers::isMac(const string mac){
  * @param  domain строка названия домена для проверки
  * @return        результат проверки
  */
-bool Headers::isDomain(const string domain){
+const bool Headers::isDomain(const string domain){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -676,9 +676,29 @@ bool Headers::isDomain(const string domain){
  * @param  login строка логина для проверки
  * @return       результат проверки
  */
-bool Headers::isLogin(const string login){
+const bool Headers::isLogin(const string login){
 	// Выводим результат проверки
 	return !isAddress(login);
+}
+/**
+ * checkAvailable Метод проверки на существование параметров заголовков
+ * @param  name название файла с параметрами
+ * @return      результат проверки
+ */
+const bool Headers::checkAvailable(const string name){
+	// Результат проверки
+	bool result = false;
+	// Если название существует
+	if(!name.empty()){
+		// Получаем данные каталога где хранится файл с правилами
+		const string dir = this->config->proxy.dir;
+		// Получаем имя файла
+		const string filename = addToPath(dir, name + ".headers");
+		// Проверяем существуют ли параметры заголовков
+		if(isDirExist(dir.c_str()) && isFileExist(filename.c_str())) result = true;
+	}
+	// Выводим результат
+	return result;
 }
 /**
  * clear Метод очистки данных

@@ -112,6 +112,19 @@ class INI {
 		 */
 		const string getString(const string section, const string key, const string defval = "");
 		/**
+		 * checkParam Метод проверки существования параметра
+		 * @param  section название раздела
+		 * @param  key     ключ для проверки
+		 * @return         результат проверки
+		 */
+		const bool checkParam(const string section, const string key);
+		/**
+		 * checkSection Метод проверки существования раздела
+		 * @param  name название раздела
+		 * @return      результат проверки
+		 */
+		const bool checkSection(const string name);
+		/**
 		 * addData Метод добавления данных
 		 * @param  section название раздела
 		 * @param  key     название параметра

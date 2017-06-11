@@ -48,7 +48,7 @@ const Groups::Data Groups::createDefaultData(const u_int id, const string name){
 			this->config->proxy.pipelining
 		};
 		// Инициализируем модуль управления заголовками
-		group.headers = Headers(this->config, this->log, group.options, group.name);
+		group.headers = Headers(this->config, this->log);
 		// Устанавливаем параметры контроля подключений клиента к серверу
 		group.connects = {
 			this->config->connects.size,
@@ -134,14 +134,108 @@ const bool Groups::readGroupsFromFile(){
 						group.users.push_back(uid);
 					}
 				}
+				// Получаем список исходящих адресов
+				auto IPv4Ext = split(ini.getString(group.name + "_ipv4", "external"), "|");
+				auto IPv6Ext = split(ini.getString(group.name + "_ipv6", "external"), "|");
+				// Получаем список резолверов
+				auto IPv4Res = split(ini.getString(group.name + "_ipv4", "resolver"), "|");
+				auto IPv6Res = split(ini.getString(group.name + "_ipv6", "resolver"), "|");
+				// Получаем данные таймаутов
+				size_t tRead	= (size_t) getSeconds(ini.getString(group.name + "_timeouts", "read"));
+				size_t tWrite	= (size_t) getSeconds(ini.getString(group.name + "_timeouts", "write"));
+				size_t tUpgrade	= (size_t) getSeconds(ini.getString(group.name + "_timeouts", "upgrade"));
+				// Получаем данные буферов
+				long buffIn		= getSizeBuffer(ini.getString(group.name + "_speed", "input"));
+				long buffOut	= getSizeBuffer(ini.getString(group.name + "_speed", "output"));
+				// Получаем параметры постоянного подключения
+				int kPcnt	= (int) ini.getNumber(group.name + "_keepalive", "keepcnt");
+				int kPidle	= (int) ini.getNumber(group.name + "_keepalive", "keepidle");
+				int kIntvl	= (int) ini.getNumber(group.name + "_keepalive", "keepintvl");
+				/* Извлекаем данные GZIP НАЧАЛО */
+				string gRegex	= ini.getString(group.name + "_gzip", "regex");
+				bool gVary		= ini.getBoolean(group.name + "_gzip", "vary");
+				long gLength	= ini.getNumber(group.name + "_gzip", "length");
+				size_t gChunk	= getBytes(ini.getString(group.name + "_gzip", "chunk"));
+				auto gVhttp		= split(ini.getString(group.name + "_gzip", "vhttp"), "|");
+				auto gTypes		= split(ini.getString(group.name + "_gzip", "types"), "|");
+				auto gProxied	= split(ini.getString(group.name + "_gzip", "proxied"), "|");
+				// Уровень сжатия gzip
+				int gLevel = 0x0;
+				// Получаем уровень сжатия
+				const string gzipLevel = ini.getString(group.name + "_gzip", "level");
+				// Если размер указан
+				if(!gzipLevel.empty()){
+					// Определяем тип сжатия
+					if(gzipLevel.compare("default") == 0)		gLevel = Z_DEFAULT_COMPRESSION;
+					else if(gzipLevel.compare("best") == 0)		gLevel = Z_BEST_COMPRESSION;
+					else if(gzipLevel.compare("speed") == 0)	gLevel = Z_BEST_SPEED;
+					else if(gzipLevel.compare("no") == 0)		gLevel = Z_NO_COMPRESSION;
+				}
+				/* Извлекаем данные GZIP КОНЕЦ */
+				// Получаем параметры коннектов
+				size_t conSize		= getBytes(ini.getString(group.name + "_connects", "size"));
+				u_int conConnect	= (u_int) ini.getUNumber(group.name + "_connects", "connect");
+				// Получаем параметры прокси
+				bool pSubnet		= ini.getBoolean(group.name + "_proxy", "subnet");
+				bool pReverse		= ini.getBoolean(group.name + "_proxy", "reverse");
+				bool pForward		= ini.getBoolean(group.name + "_proxy", "forward");
+				bool pTransfer		= ini.getBoolean(group.name + "_proxy", "transfer");
+				bool pPipelining	= ini.getBoolean(group.name + "_proxy", "pipelining");
+				// Формируем параметры
+				u_short options = (ini.getBoolean(group.name + "_proxy", "connect") ? OPT_CONNECT : OPT_NULL);
+				options = (options | (ini.getBoolean(group.name + "_proxy", "upgrade") ? OPT_UPGRADE : OPT_NULL));
+				options = (options | (ini.getBoolean(group.name + "_proxy", "agent") ? OPT_AGENT : OPT_NULL));
+				options = (options | (ini.getBoolean(group.name + "_proxy", "deblock") ? OPT_DEBLOCK : OPT_NULL));
+				options = (options | (ini.getBoolean(group.name + "_gzip", "transfer") ? OPT_GZIP : OPT_NULL));
+				options = (options | (ini.getBoolean(group.name + "_gzip", "response") ? OPT_PGZIP : OPT_NULL));
+				options = (options | ((ini.getString(group.name + "_proxy", "skill", "dumb").compare("smart") == 0) ? OPT_SMART : OPT_NULL));
+				options = (options | (ini.getBoolean(group.name + "_keepalive", "enabled") ? OPT_KEEPALIVE : OPT_NULL));
+				// Перекрываем параметры по умолчанию
+				if(options != 0x00) group.options = options;
+				// Заполняем параметры ip адресов
+				if(!IPv4Ext.empty()) group.ipv4.ip = IPv4Ext;
+				if(!IPv6Ext.empty()) group.ipv6.ip = IPv6Ext;
+				if(!IPv4Res.empty()) group.ipv4.resolver = IPv4Res;
+				if(!IPv6Res.empty()) group.ipv6.resolver = IPv6Res;
+				// Заполняем параметры сжатия
+				if(gVary) group.gzip.vary = gVary;
+				if(gLevel) group.gzip.level = gLevel;
+				if(gLength) group.gzip.length = gLength;
+				if(gChunk) group.gzip.chunk = gChunk;
+				if(!gRegex.empty()) group.gzip.regex = gRegex;
+				if(!gVhttp.empty()) group.gzip.vhttp = gVhttp;
+				if(!gProxied.empty()) group.gzip.proxied = gProxied;
+				if(!gTypes.empty()) group.gzip.types = gTypes;
+				// Заполняем параметры прокси
+				if(pSubnet) group.proxy.subnet = pSubnet;
+				if(pReverse) group.proxy.reverse = pReverse;
+				if(pForward) group.proxy.forward = pForward;
+				if(pTransfer) group.proxy.transfer = pTransfer;
+				if(pPipelining) group.proxy.pipelining = pPipelining;
+				// Инициализируем модуль управления заголовками
+				if(group.headers.checkAvailable(group.name)){
+					// Присваиваем новый файл конфигурации заголовков
+					group.headers = Headers(this->config, this->log, group.options, group.name);
+				}
+				// Присваиваем параметры подключения
+				if(conSize)		group.connects.size = conSize;
+				if(conConnect)	group.connects.connect = conConnect;
+				// Присваиваем параметры таймаутов
+				if(tRead)		group.timeouts.read = tRead;
+				if(tWrite)		group.timeouts.write = tWrite;
+				if(tUpgrade)	group.timeouts.upgrade = tUpgrade;
+				// Присваиваем параметры буферов
+				if(buffIn)	group.buffers.read = buffIn;
+				if(buffOut)	group.buffers.write = buffOut;
+				// Присваиваем параметры постоянного подключения
+				if(kPcnt)	group.keepalive.keepcnt = kPcnt;
+				if(kPidle)	group.keepalive.keepidle = kPidle;
+				if(kIntvl)	group.keepalive.keepintvl = kIntvl;
 				// Создаем список идентификаторов группы
 				group.idnt	= {
 					split(ini.getString(group.name + "_idnt", "ip"), "|"),
 					split(ini.getString(group.name + "_idnt", "mac"), "|")
 				};
-
-
-
 				// Добавляем группу в список групп
 				this->data.insert(pair <u_int, Data>(group.id, group));
 			}

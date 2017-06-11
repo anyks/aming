@@ -102,56 +102,62 @@ class Headers {
 		 * @param  str строка для проверки
 		 * @return     результат проверки
 		 */
-		IsNot isNot(const string str);
+		const IsNot isNot(const string str);
 		/**
 		 * checkTypeId Метод определения типа идентификатора
 		 * @param  str строка идентификатора для определения типа
 		 * @return     тип идентификатора
 		 */
-		u_short checkTypeId(const string str);
+		const u_short checkTypeId(const string str);
 		/**
 		 * isAddress Метод проверки на то является ли строка адресом
 		 * @param  address строка адреса для проверки
 		 * @return         результат проверки
 		 */
-		bool isAddress(const string address);
+		const bool isAddress(const string address);
 		/**
 		 * isIpV4 Метод проверки на ip адрес, интернет протокола версии 4
 		 * @param  ip строка ip адреса для проверки
 		 * @return    результат проверки
 		 */
-		bool isIpV4(const string ip);
+		const bool isIpV4(const string ip);
 		/**
 		 * isIpV6 Метод проверки на ip адрес, интернет протокола версии 6
 		 * @param  ip строка ip адреса для проверки
 		 * @return    результат проверки
 		 */
-		bool isIpV6(const string ip);
+		const bool isIpV6(const string ip);
 		/**
 		 * isIp Метод проверки на ip адрес
 		 * @param  ip строка ip адреса для проверки
 		 * @return    результат проверки
 		 */
-		bool isIp(const string ip);
+		const bool isIp(const string ip);
 		/**
 		 * isMac Метод проверки на mac адрес
 		 * @param  mac строка mac адреса для проверки
 		 * @return     результат проверки
 		 */
-		bool isMac(const string mac);
+		const bool isMac(const string mac);
 		/**
 		 * isDomain Метод проверки на доменное имя
 		 * @param  domain строка названия домена для проверки
 		 * @return        результат проверки
 		 */
-		bool isDomain(const string domain);
+		const bool isDomain(const string domain);
 		/**
 		 * isLogin Метод проверки на логин пользователя
 		 * @param  login строка логина для проверки
 		 * @return       результат проверки
 		 */
-		bool isLogin(const string login);
+		const bool isLogin(const string login);
 	public:
+		/**
+		 * checkAvailable Метод проверки на существование параметров заголовков
+		 * @param  name название файла с параметрами
+		 * @return      результат проверки
+		 */
+		const bool checkAvailable(const string name);
 		/**
 		 * clear Метод очистки данных
 		 */

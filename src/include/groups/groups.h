@@ -13,6 +13,7 @@
 #include <vector>
 #include <iostream>
 #include <unordered_map>
+#include <zlib.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include "ini/ini.h"

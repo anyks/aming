@@ -307,6 +307,46 @@ const string INI::getString(const string section, const string key, const string
 	return (!data.empty() ? data : defval);
 }
 /**
+ * checkParam Метод проверки существования параметра
+ * @param  section название раздела
+ * @param  key     ключ для проверки
+ * @return         результат проверки
+ */
+const bool INI::checkParam(const string section, const string key){
+	// Результат проверки
+	bool result = false;
+	// Если название раздела передано
+	if(!section.empty() && !key.empty() && this->data.count(section)){
+		// Получаем данные раздела
+		auto params = this->data.find(section)->second;
+		// Выполняем перебор полученных данных
+		for(auto it = params.cbegin(); it != params.cend(); ++it){
+			// Если ключ найден, выводим результат
+			if(key.compare(it->key) == 0){
+				// Запоминаем что результат найден
+				result = true;
+				// Выходим из цикла
+				break;
+			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkSection Метод проверки существования раздела
+ * @param  name название раздела
+ * @return      результат проверки
+ */
+const bool INI::checkSection(const string name){
+	// Результат проверки
+	bool result = false;
+	// Если название раздела передано
+	if(!name.empty() && this->data.count(name)) result = true;
+	// Выводим результат
+	return result;
+}
+/**
  * addData Метод добавления данных
  * @param  section название раздела
  * @param  key     название параметра
