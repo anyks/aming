@@ -61,6 +61,17 @@ class INI {
 		const string get(const string section, const string key);
 	public:
 		/**
+		 * getSections Получить список разделов
+		 * @return список разделов
+		 */
+		const vector <string> getSections();
+		/**
+		 * getParamsInSection Получить список параметров в разделе
+		 * @param  section раздел
+		 * @return         список параметров
+		 */
+		const vector <Params> getParamsInSection(const string section);
+		/**
 		 * getFloat Получить значение числа с плавающей точкой
 		 * @param  section раздел
 		 * @param  key     ключ

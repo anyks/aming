@@ -120,10 +120,10 @@ class Os {
 		void privBind();
 		/**
 		 * Os Конструктор
-		 * @param log     объект лога для вывода информации
 		 * @param config  объект конфигурационных файлов
+		 * @param log     объект лога для вывода информации
 		 */
-		Os(LogApp * log = NULL, Config ** config = NULL);
+		Os(Config ** config = NULL, LogApp * log = NULL);
 };
 
 #endif // _OS_ANYKS_

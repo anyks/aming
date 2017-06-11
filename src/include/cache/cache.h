@@ -241,10 +241,10 @@ class Cache {
 		void rmAllCache();
 		/**
 		 * Cache Конструктор
-		 * @param log    объект лога для вывода информации
 		 * @param config конфигурационные данные
+		 * @param log    объект лога для вывода информации
 		 */
-		Cache(LogApp * log = NULL, Config * config = NULL);
+		Cache(Config * config = NULL, LogApp * log = NULL);
 };
 
 #endif // _CACHE_ANYKS_

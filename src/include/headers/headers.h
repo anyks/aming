@@ -50,10 +50,14 @@ class Headers {
 			vector <string> methods;	// Массив методов запросов (get, post, head ...)
 			vector <string> headers;	// Массив заголовков
 		};
+		// Название файла конфигурации
+		string name = "";
 		// Объект лога
 		LogApp * log = NULL;
 		// Конфигурационные данные
 		Config * config = NULL;
+		// Параметры для парсинга http данных
+		u_short options = 0x0;
 		// Список правил
 		unordered_map <string, vector <Params>> rules;
 		/**
@@ -170,10 +174,12 @@ class Headers {
 		void modify(const string ip, const string mac, const string server, string &data);
 		/**
 		 * Headers Конструктор
-		 * @param log    объект лога для вывода информации
-		 * @param config конфигурационные данные
+		 * @param config  конфигурационные данные
+		 * @param log     объект лога для вывода информации
+		 * @param options основные параметры прокси
+		 * @param name    название конфигурационного файла
 		 */
-		Headers(LogApp * log = NULL, Config * config = NULL);
+		Headers(Config * config = NULL, LogApp * log = NULL, const u_short options = 0x0, const string name = "");
 };
 
 #endif // _HEADERS_ANYKS_

@@ -10,9 +10,7 @@
 
 #include <string>
 #include <vector>
-#include <regex>
 #include <iostream>
-#include <math.h>
 #include <zlib.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -87,14 +85,6 @@
 #define CONNECTS_CONNECT 100
 #define CONNECTS_FDS 1024 * 10
 #define CONNECTS_SIZE "5MB"
-
-// Модуль скрытия заголовков
-#define RM_HEADERS_REQUEST false
-#define RM_HEADERS_RESPONSE false
-
-// Модуль установки заголовков
-#define SET_HEADERS_REQUEST false
-#define SET_HEADERS_RESPONSE false
 
 // Модуль IPv4
 #define IPV4_INTERNAL "127.0.0.1"
@@ -214,13 +204,6 @@ class Config {
 			int keepintvl;	// Интервал времени в секундах между попытками
 		};
 		/**
-		 * Header Структура вывода http заголовков из запроса или ответа
-		 */
-		struct Header {
-			bool request;	// Убирать заголовки в запросе
-			bool response;	// Убирать заголовки в ответе
-		};
-		/**
 		 * Logs Структура параметров логов
 		 */
 		struct Logs {
@@ -317,24 +300,6 @@ class Config {
 		};
 		// Адрес конфигурационного файла
 		string filename;
-		/**
-		 * getSizeBuffer Функция получения размера буфера в байтах
-		 * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
-		 * @return     размер буфера в байтах
-		 */
-		long getSizeBuffer(const string str);
-		/**
-		 * getBytes Функция получения размера в байтах из строки
-		 * @param  str строка обозначения размерности
-		 * @return     размер в байтах
-		 */
-		size_t getBytes(const string str);
-		/**
-		 * getSeconds Функция получения размера в секундах из строки
-		 * @param  str строка обозначения размерности
-		 * @return     размер в секундах
-		 */
-		size_t getSeconds(const string str);
 	public:
 		// Основные данные приложения
 		Os os;					// Данные операционной системы
@@ -345,8 +310,6 @@ class Config {
 		Gzip gzip;				// Параметры gzip
 		Cache cache;			// Параметры кэширования
 		Proxy proxy;			// Параметры самого прокси-сервера
-		Header rmheader;		// Удалять указанные http заголовки из запроса или ответа
-		Header setheader;		// Установить указанные http заголовки в запрос или ответ
 		Connects connects;		// Контроль подключений клиента к серверу
 		Firewall firewall;		// Параметры файервола
 		Timeouts timeouts;		// Таймауты подключений

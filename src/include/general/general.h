@@ -13,6 +13,7 @@
 #include <grp.h>
 #include <string>
 #include <vector>
+#include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -169,5 +170,23 @@ const time_t strToTime(const char * date);
  * @return      строка содержащая дату
  */
 const string timeToStr(const time_t date);
+/**
+ * getSizeBuffer Функция получения размера буфера в байтах
+ * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
+ * @return     размер буфера в байтах
+ */
+const long getSizeBuffer(const string str);
+/**
+ * getBytes Функция получения размера в байтах из строки
+ * @param  str строка обозначения размерности
+ * @return     размер в байтах
+ */
+const size_t getBytes(const string str);
+/**
+ * getSeconds Функция получения размера в секундах из строки
+ * @param  str строка обозначения размерности
+ * @return     размер в секундах
+ */
+const size_t getSeconds(const string str);
 
 #endif // _GENERAL_ANYKS_

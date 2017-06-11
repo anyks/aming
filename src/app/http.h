@@ -11,6 +11,7 @@
 #include <mutex>
 #include <thread>
 #include <random>
+#include <string>
 #include <iostream>
 #include <unordered_map>
 #include <condition_variable>

@@ -1827,7 +1827,7 @@ HttpProxy::HttpProxy(System * proxy){
 		// Запоминаем параметры прокси сервера
 		this->server = proxy;
 		// Подключаемся к LDAP серверу
-		this->ldap = new AuthLDAP(this->server->log, this->server->config);
+		this->ldap = new AuthLDAP(this->server->config, this->server->log);
 		// Создаем прокси сервер
 		evutil_socket_t socket = create_server();
 		// Если сокет существует

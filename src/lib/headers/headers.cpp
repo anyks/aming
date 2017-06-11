@@ -115,11 +115,11 @@ void Headers::rm(const string client){
  */
 void Headers::read(){
 	// Если конфигурационный файл существует
-	if(this->config){
+	if(this->config != NULL){
 		// Получаем данные каталога где хранится файл с правилами
 		const string dir = this->config->proxy.dir;
 		// Получаем имя файла
-		const string filename = addToPath(dir, this->config->proxy.name + ".headers");
+		const string filename = addToPath(dir, this->name + ".headers");
 		// Проверяем на существование адреса
 		if(!filename.empty()
 		// Проверяем существует ли такой каталог
@@ -216,7 +216,7 @@ void Headers::read(){
 				file.close();
 			}
 		// Выводим сообщение в лог
-		} else if(!filename.empty() && this->log){
+		} else if(!filename.empty() && (this->log != NULL)){
 			// Выводим сообщение в лог, что файл не найден
 			this->log->write(LOG_WARNING, 0, "headers file (%s) is not found", filename.c_str());
 		}
@@ -732,7 +732,7 @@ void Headers::modify(const string ip, const string mac, const string server, str
 		// Создаем http объект
 		HttpData http;
 		// Выполняем обработку данных
-		if(http.parse(data.c_str(), data.size(), this->config->proxy.name, this->config->options)){
+		if(http.parse(data.c_str(), data.size(), this->config->proxy.name, this->options)){
 			// Создаем объект сети
 			Network nwk;
 			// Получаем идентификатор сервера
@@ -760,16 +760,25 @@ void Headers::modify(const string ip, const string mac, const string server, str
 }
 /**
  * Headers Конструктор
- * @param log    объект лога для вывода информации
- * @param config конфигурационные данные
+ * @param config  конфигурационные данные
+ * @param log     объект лога для вывода информации
+ * @param options основные параметры прокси
+ * @param name    название конфигурационного файла
  */
-Headers::Headers(LogApp * log, Config * config){
-	// Очищаем все параметры
-	clear();
-	// Запоминаем объект логов
-	this->log = log;
-	// Запоминаем параметры конфига
-	this->config = config;
-	// Выполняем чтение файла конфигурации
-	read();
+Headers::Headers(Config * config, LogApp * log, const u_short options, const string name){
+	// Если конфигурационные данные переданы
+	if(config != NULL){
+		// Очищаем все параметры
+		clear();
+		// Запоминаем объект логов
+		this->log = log;
+		// Запоминаем параметры конфига
+		this->config = config;
+		// Запоминаем название конфигурационного файла
+		this->name = (!name.empty() ? name : this->config->proxy.name);
+		// Запоминаем основные параметры прокси
+		this->options = (options != 0x0 ? options : this->config->options);
+		// Выполняем чтение файла конфигурации
+		read();
+	}
 }

@@ -299,7 +299,7 @@ void Cache::readDomain(const string domain, DataDNS * data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
 	}
 }
@@ -348,7 +348,7 @@ void Cache::readCache(HttpData &http, DataCache * data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else this->log->write(LOG_ERROR, 0, "cannot read cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
+			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot read cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
 		}
 	}
 }
@@ -373,7 +373,7 @@ void Cache::writeDomain(const string domain, DataDNS data){
 			// Проверяем существует ли нужный нам каталог
 			if(!makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
 				// Выводим в лог информацию
-				this->log->write(LOG_ERROR, 0, "unable to create directory for dns cache file %s for domain %s", dir.c_str(), domain.c_str());
+				if(this->log != NULL) this->log->write(LOG_ERROR, 0, "unable to create directory for dns cache file %s for domain %s", dir.c_str(), domain.c_str());
 				// Выходим
 				return;
 			}
@@ -386,7 +386,7 @@ void Cache::writeDomain(const string domain, DataDNS data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else this->log->write(LOG_ERROR, 0, "cannot write dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot write dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
 	}
 }
@@ -417,7 +417,7 @@ void Cache::writeCache(HttpData &http, DataCache data){
 			// Проверяем существует ли нужный нам каталог
 			if(!makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
 				// Выводим в лог информацию
-				this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), http.getHost().c_str());
+				if(this->log != NULL) this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), http.getHost().c_str());
 				// Выходим
 				return;
 			}
@@ -430,7 +430,7 @@ void Cache::writeCache(HttpData &http, DataCache data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
+			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
 		}
 	}
 }
@@ -864,12 +864,15 @@ void Cache::rmAllCache(){
 }
 /**
  * Cache Конструктор
- * @param log    объект лога для вывода информации
  * @param config конфигурационные данные
+ * @param log    объект лога для вывода информации
  */
-Cache::Cache(LogApp * log, Config * config){
-	// Запоминаем объект логов
-	this->log = log;
-	// Запоминаем параметры конфига
-	this->config = config;
+Cache::Cache(Config * config, LogApp * log){
+	// Если данные пришли
+	if(config != NULL){
+		// Запоминаем объект логов
+		this->log = log;
+		// Запоминаем параметры конфига
+		this->config = config;
+	}
 }

@@ -56,10 +56,10 @@ class AuthLDAP {
 		const bool checkUser(const string user, const string password);
 		/**
 		 * AuthLDAP Конструктор
-		 * @param log    объект лога для вывода информации
 		 * @param config конфигурационные данные
+		 * @param log    объект лога для вывода информации
 		 */
-		AuthLDAP(LogApp * log = NULL, Config * config = NULL);
+		AuthLDAP(Config * config = NULL, LogApp * log = NULL);
 };
 
 #endif // _AUTH_LDAP_ANYKS_

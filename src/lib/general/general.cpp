@@ -419,3 +419,135 @@ const string timeToStr(const time_t date){
 	// Выводим результат
 	return string(buf);
 }
+/**
+ * getSizeBuffer Функция получения размера буфера в байтах
+ * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
+ * @return     размер буфера в байтах
+ */
+const long getSizeBuffer(const string str){
+	/*
+	* Help - http://www.securitylab.ru/analytics/243414.php
+	*
+	* 0.04 - Пропускная способность сети 40 милисекунд
+	* 100 - Скорость в мегабитах (Мб) на пользователя
+	* 8 - Количество бит в байте
+	* 1024000 - количество байт в мегабайте
+	* (2 * 0.04) * ((100 * 1024000) / 8)  = 1000 байт
+	*
+	*/
+	// Размер буфера в байтах
+	long size = -1;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([\\d\\.\\,]+)(bps|kbps|Mbps|Gbps)", regex::ECMAScript);
+	// Выполняем поиск скорости
+	regex_search(str, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Запоминаем параметры
+		string param = match[2].str();
+		// Размерность скорости
+		double dimension = 1;
+		// Получаем значение скорости
+		double speed = ::atof(match[1].str().c_str());
+		// Проверяем являются ли переданные данные байтами (8, 16, 32, 64, 128, 256, 512, 1024 ...)
+		bool isbite = !fmod(speed / 8, 2);
+		// Если это байты
+		if(param.compare("bps") == 0) dimension = 1;
+		// Если это размерность в киллобитах
+		else if(param.compare("kbps") == 0) dimension = (isbite ? 1000 : 1024);
+		// Если это размерность в мегабитах
+		else if(param.compare("Mbps") == 0) dimension = (isbite ? 1000000 : 1048576);
+		// Если это размерность в гигабитах
+		else if(param.compare("Gbps") == 0) dimension = (isbite ? 1000000000 : 1073741824);
+		// Размер буфера по умолчанию
+		size = (long) speed;
+		// Если скорость установлена тогда расчитываем размер буфера
+		if(speed > -1) size = (2 * 0.04) * ((speed * dimension) / 8);
+	}
+	// Выводим результат
+	return size;
+}
+/**
+ * getBytes Функция получения размера в байтах из строки
+ * @param  str строка обозначения размерности
+ * @return     размер в байтах
+ */
+const size_t getBytes(const string str){
+	// Размер количество байт
+	size_t size = 0;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([\\d\\.\\,]+)(B|KB|MB|GB)", regex::ECMAScript);
+	// Выполняем размерности данных
+	regex_search(str, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Запоминаем параметры
+		string param = match[2].str();
+		// Размерность скорости
+		double dimension = 1;
+		// Получаем значение размерности
+		double value = ::atof(match[1].str().c_str());
+		// Проверяем являются ли переданные данные байтами (8, 16, 32, 64, 128, 256, 512, 1024 ...)
+		bool isbite = !fmod(value / 8, 2);
+		// Если это байты
+		if(param.compare("B") == 0) dimension = 1;
+		// Если это размерность в киллобитах
+		else if(param.compare("KB") == 0) dimension = (isbite ? 1000 : 1024);
+		// Если это размерность в мегабитах
+		else if(param.compare("MB") == 0) dimension = (isbite ? 1000000 : 1048576);
+		// Если это размерность в гигабитах
+		else if(param.compare("GB") == 0) dimension = (isbite ? 1000000000 : 1073741824);
+		// Размер буфера по умолчанию
+		size = (long) value;
+		// Если размерность установлена тогда расчитываем количество байт
+		if(value > -1) size = (value * dimension);
+	}
+	// Выводим результат
+	return size;
+}
+/**
+ * getSeconds Функция получения размера в секундах из строки
+ * @param  str строка обозначения размерности
+ * @return     размер в секундах
+ */
+const size_t getSeconds(const string str){
+	// Количество секунд
+	size_t seconds = 0;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e("\\b([\\d\\.\\,]+)(s|m|h|d|M|y)", regex::ECMAScript);
+	// Выполняем поиск времени
+	regex_search(str, match, e);
+	// Если данные найдены
+	if(!match.empty()){
+		// Запоминаем параметры
+		string param = match[2].str();
+		// Размерность времени
+		double dimension = 1;
+		// Получаем значение размерности
+		double value = ::atof(match[1].str().c_str());
+		// Если это секунды
+		if(param.compare("s") == 0) dimension = 1;
+		// Если это размерность в минутах
+		else if(param.compare("m") == 0) dimension = 60;
+		// Если это размерность в часах
+		else if(param.compare("h") == 0) dimension = 3600;
+		// Если это размерность в днях
+		else if(param.compare("d") == 0) dimension = 86400;
+		// Если это размерность в месяцах
+		else if(param.compare("М") == 0) dimension = 2592000;
+		// Если это размерность в годах
+		else if(param.compare("y") == 0) dimension = 31104000;
+		// Размер буфера по умолчанию
+		seconds = (long) value;
+		// Если время установлено тогда расчитываем количество секунд
+		if(value > -1) seconds = (value * dimension);
+	}
+	// Выводим результат
+	return seconds;
+}

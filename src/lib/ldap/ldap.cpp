@@ -23,7 +23,7 @@ const bool AuthLDAP::authLDAP(LDAP * ld, const string dn, const string password)
 	// Устанавливаем версию протокола
 	if(rc != LDAP_SUCCESS){
 		// Выводим в консоль информацию
-		this->log->write(LOG_ERROR, 0, "set version ldap filed: %s", ldap_err2string(rc));
+		if(this->log != NULL) this->log->write(LOG_ERROR, 0, "set version ldap filed: %s", ldap_err2string(rc));
 		// Выводим сообщение что авторизация не удалась
 		return false;
 	}
@@ -53,7 +53,7 @@ const bool AuthLDAP::authLDAP(LDAP * ld, const string dn, const string password)
 	// Если авторизация не удалась
 	if(rc != LDAP_SUCCESS){
 		// Выводим в консоль информацию
-		this->log->write(LOG_ERROR, 0, "ldap auth filed: %s", ldap_err2string(rc));
+		if(this->log != NULL) this->log->write(LOG_ERROR, 0, "ldap auth filed: %s", ldap_err2string(rc));
 		// Выводим сообщение что авторизация не удалась
 		return false;
 	}
@@ -84,7 +84,7 @@ const bool AuthLDAP::checkUser(const string user, const string password){
 			// Выполняем инициализацию подключения к серверу
 			if(ldap_initialize(&ld, this->server.c_str())){
 				// Выводим в консоль информацию
-				this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+				if(this->log != NULL) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
 				// Сообщаем что авторизация не прошла
 				return auth;
 			}
@@ -101,7 +101,7 @@ const bool AuthLDAP::checkUser(const string user, const string password){
 				// Если поиск не удался
 				if(rc != LDAP_SUCCESS){
 					// Выводим в консоль информацию
-					this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
+					if(this->log != NULL) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
 					// Очищаем подключение
 					ldap_unbind_ext(ld, NULL, NULL);
 					// Сообщаем что поиск не удачный
@@ -114,7 +114,7 @@ const bool AuthLDAP::checkUser(const string user, const string password){
 						// Выполняем инициализацию подключения к серверу
 						if(ldap_initialize(&uld, this->server.c_str())){
 							// Выводим в консоль информацию
-							this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
+							if(this->log != NULL) this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
 							// Очищаем подключение
 							ldap_unbind_ext(ld, NULL, NULL);
 							// Сообщаем что авторизация не прошла
@@ -142,10 +142,10 @@ const bool AuthLDAP::checkUser(const string user, const string password){
 }
 /**
  * AuthLDAP Конструктор
- * @param log    объект лога для вывода информации
  * @param config конфигурационные данные
+ * @param log    объект лога для вывода информации
  */
-AuthLDAP::AuthLDAP(LogApp * log, Config * config){
+AuthLDAP::AuthLDAP(Config * config, LogApp * log){
 	// Если сервер активирован
 	if((config != NULL)
 	&& config->ldap.enabled
@@ -180,7 +180,7 @@ AuthLDAP::AuthLDAP(LogApp * log, Config * config){
 			// Устанавливаем что сервер деактивирован
 			this->enabled = false;
 			// Выводим в консоль информацию
-			this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+			if(this->log != NULL) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
 		// Если коннект к серверу удачный
 		} else {
 			// Выполняем авторизацию на сервере

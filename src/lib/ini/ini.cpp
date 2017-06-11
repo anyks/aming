@@ -87,6 +87,48 @@ const string INI::get(const string section, const string key){
 	return result;
 }
 /**
+ * getSections Получить список разделов
+ * @return список разделов
+ */
+const vector <string> INI::getSections(){
+	// Результат полученных данных
+	vector <string> result;
+	// Если раздел передан
+	if(!this->data.empty()){
+		// Переходим по всем разделам
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Добавляем данные в массив результатов
+			result.push_back(it->first);
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getParamsInSection Получить список параметров в разделе
+ * @param  section раздел
+ * @return         список параметров
+ */
+const vector <INI::Params> INI::getParamsInSection(const string section){
+	// Результат полученных данных
+	vector <Params> result;
+	// Если раздел передан
+	if(!section.empty() && !this->data.empty()){
+		// Переходим по всем разделам
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Получаем данные раздела
+			auto params = it->second;
+			// Выполняем перебор полученных данных
+			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Добавляем данные в массив результатов
+				result.push_back({it->key, it->value});
+			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * getFloat Получить значение числа с плавающей точкой
  * @param  section раздел
  * @param  key     ключ

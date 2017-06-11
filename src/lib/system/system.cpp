@@ -130,11 +130,11 @@ System::System(string configfile){
 	// Инициализируем модуль логов
 	this->log = new LogApp(&this->config, TOLOG_FILES | TOLOG_CONSOLE);
 	// Инициализируем модуль настроек операционной системы
-	this->os = new Os(this->log, &this->config);
+	this->os = new Os(&this->config, this->log);
 	// Инициализируем модуль кеша
-	this->cache = new Cache(this->log, this->config);
+	this->cache = new Cache(this->config, this->log);
 	// Инициализируем модуль управления заголовками
-	this->headers = new Headers(this->log, this->config);
+	this->headers = new Headers(this->config, this->log);
 }
 /**
  * ~System Деструктор
