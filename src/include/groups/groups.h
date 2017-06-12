@@ -211,11 +211,23 @@ class Groups {
 		 */
 		const bool checkUser(const string groupName, const string userName);
 		/**
+		 * getUidByName Метод извлечения идентификатора пользователя по его имени
+		 * @param  userName название пользователя
+		 * @return          идентификатор пользователя
+		 */
+		const u_int getUidByName(const string userName);
+		/**
 		 * getIdByName Метод извлечения идентификатора группы по ее имени
 		 * @param  groupName название группы
 		 * @return           идентификатор группы
 		 */
 		const u_int getIdByName(const string groupName);
+		/**
+		 * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
+		 * @param  uid идентификатор пользователя
+		 * @return     название пользователя
+		 */
+		const string getUserNameByUid(const u_int uid);
 		/**
 		 * getNameById Метод извлечения имени группы по ее идентификатору
 		 * @param  gid идентификатор группы
@@ -276,11 +288,11 @@ class Groups {
 		const bool addUser(const string groupName, const string userName);
 		/**
 		 * addGroup Метод добавления группы
-		 * @param  gid  идентификатор группы
+		 * @param  id   идентификатор группы
 		 * @param  name название группы
 		 * @return      результат добавления
 		 */
-		const bool addGroup(const u_int gid, const string name);
+		const bool addGroup(const u_int id, const string name);
 		/**
 		 * Groups Конструктор
 		 * @param config конфигурационные данные
