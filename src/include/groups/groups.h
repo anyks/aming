@@ -151,37 +151,37 @@ class Groups {
 		 * @param  gid идентификатор группы
 		 * @return     данные группы
 		 */
-		Data getDataById(const u_int gid);
+		const Data getDataById(const u_int gid);
 		/**
 		 * getDataByName Метод получения данные группы по имени группы
 		 * @param  groupName название группы
 		 * @return           данные группы
 		 */
-		Data getDataByName(const string groupName);
+		const Data getDataByName(const string groupName);
 		/**
 		 * getGroupIdByUser Метод получения идентификатор группы по идентификатору пользователя
 		 * @param  uid идентификатор пользователя
 		 * @return     идентификатор группы
 		 */
-		const u_int getGroupIdByUser(const u_int uid);
+		const vector <u_int> getGroupIdByUser(const u_int uid);
 		/**
 		 * getGroupIdByUser Метод получения идентификатор группы по имени пользователя
 		 * @param  userName название пользователя
 		 * @return          идентификатор группы
 		 */
-		const u_int getGroupIdByUser(const string userName);
+		const vector <u_int> getGroupIdByUser(const string userName);
 		/**
 		 * getGroupNameByUser Метод получения название группы по идентификатору пользователя
 		 * @param  uid идентификатор пользователя
 		 * @return     название группы
 		 */
-		const string getGroupNameByUser(const u_int uid);
+		const vector <string> getGroupNameByUser(const u_int uid);
 		/**
 		 * getGroupNameByUser Метод получения название группы по имени пользователя
 		 * @param  userName название пользователя
 		 * @return          название группы
 		 */
-		const string getGroupNameByUser(const string userName);
+		const vector <string> getGroupNameByUser(const string userName);
 		/**
 		 * checkUser Метод проверки принадлежности пользователя к группе
 		 * @param  gid идентификатор группы

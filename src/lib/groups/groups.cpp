@@ -348,6 +348,220 @@ const bool Groups::readGroupsFromFile(){
 	return result;
 }
 /**
+ * getDataById Метод получения данные группы по идентификатору группы
+ * @param  gid идентификатор группы
+ * @return     данные группы
+ */
+const Groups::Data Groups::getDataById(const u_int gid){
+	// Результат работы функции
+	Data result;
+	// Если идентификатор группы передан
+	if(gid && this->data.count(gid)){
+		// Получаем данные группы
+		result = this->data.find(gid)->second;
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getDataByName Метод получения данные группы по имени группы
+ * @param  groupName название группы
+ * @return           данные группы
+ */
+const Groups::Data Groups::getDataByName(const string groupName){
+	// Результат работы функции
+	Data result;
+	// Если название группы передано
+	if(!groupName.empty()){
+		// Получаем идентификатор группы
+		const u_int gid = getIdByName(groupName);
+		// Выводим результат
+		result = getDataById(gid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getGroupIdByUser Метод получения идентификатор группы по идентификатору пользователя
+ * @param  uid идентификатор пользователя
+ * @return     идентификатор группы
+ */
+const vector <u_int> Groups::getGroupIdByUser(const u_int uid){
+	// Результат работы функции
+	vector <u_int> result;
+	// Если идентификатор пользователя передан
+	if(uid){
+		// Переходим по списку групп
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Получаем список пользователей
+			auto users = it->second.users;
+			// Переходим по списку пользователей
+			for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
+				// Если идентификатор пользователя соответствует
+				if(uid == *ut){
+					// Добавляем идентификатор группы в список
+					result.push_back(it->first);
+					// Выходим из цикла
+					break;
+				}
+			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getGroupIdByUser Метод получения идентификатор группы по имени пользователя
+ * @param  userName название пользователя
+ * @return          идентификатор группы
+ */
+const vector <u_int> Groups::getGroupIdByUser(const string userName){
+	// Результат работы функции
+	vector <u_int> result;
+	// Если название пользователя передано
+	if(!userName.empty()){
+		// Получаем идентификатор пользователя
+		const u_int uid = getUidByName(userName);
+		// Получаем идентификаторы группы
+		result = getGroupIdByUser(uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getGroupNameByUser Метод получения название группы по идентификатору пользователя
+ * @param  uid идентификатор пользователя
+ * @return     название группы
+ */
+const vector <string> Groups::getGroupNameByUser(const u_int uid){
+	// Результат работы функции
+	vector <string> result;
+	// Если идентификатор пользователя передан
+	if(uid){
+		// Переходим по списку групп
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Получаем список пользователей
+			auto users = it->second.users;
+			// Переходим по списку пользователей
+			for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
+				// Если идентификатор пользователя соответствует
+				if(uid == *ut){
+					// Добавляем название группы в список
+					result.push_back(it->second.name);
+					// Выходим из цикла
+					break;
+				}
+			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getGroupNameByUser Метод получения название группы по имени пользователя
+ * @param  userName название пользователя
+ * @return          название группы
+ */
+const vector <string> Groups::getGroupNameByUser(const string userName){
+	// Результат работы функции
+	vector <string> result;
+	// Если название пользователя передано
+	if(!userName.empty()){
+		// Получаем идентификатор пользователя
+		const u_int uid = getUidByName(userName);
+		// Получаем название группы
+		result = getGroupNameByUser(uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUser Метод проверки принадлежности пользователя к группе
+ * @param  gid идентификатор группы
+ * @param  uid идентификатор пользователя
+ * @return     результат проверки
+ */
+const bool Groups::checkUser(const u_int gid, const u_int uid){
+	// Результат проверки
+	bool result = false;
+	// Если идентификаторы пользователя и группы переданы
+	if(gid && uid && this->data.count(gid)){
+		// Получаем список пользователей
+		auto users = this->data.find(gid)->second.users;
+		// Переходим по списку пользователей
+		for(auto it = users.cbegin(); it != users.cend(); ++it){
+			// Если идентификатор пользователя найден
+			if(uid == *it){
+				// Запоминаем результат
+				result = true;
+				// Выходим из цикла
+				break;
+			}
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUser Метод проверки принадлежности пользователя к группе
+ * @param  gid      идентификатор группы
+ * @param  userName название пользователя
+ * @return          результат проверки
+ */
+const bool Groups::checkUser(const u_int gid, const string userName){
+	// Результат проверки
+	bool result = false;
+	// Если данные для проверки переданы
+	if(gid && !userName.empty()){
+		// Получаем идентификатор пользователя
+		const u_int uid = getUidByName(userName);
+		// Проверяем принадлежность пользователя
+		result = checkUser(gid, uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUser Метод проверки принадлежности пользователя к группе
+ * @param  groupName название группы
+ * @param  uid       идентификатор пользователя
+ * @return           результат проверки
+ */
+const bool Groups::checkUser(const string groupName, const u_int uid){
+	// Результат проверки
+	bool result = false;
+	// Если данные для проверки переданы
+	if(uid && !groupName.empty()){
+		// Получаем идентификатор группы
+		const u_int gid = getIdByName(groupName);
+		// Проверяем принадлежность пользователя
+		result = checkUser(gid, uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUser Метод проверки принадлежности пользователя к группе
+ * @param  groupName название группы
+ * @param  userName  название пользователя
+ * @return           результат проверки
+ */
+const bool Groups::checkUser(const string groupName, const string userName){
+	// Результат проверки
+	bool result = false;
+	// Если названия пользователя и группы переданы
+	if(!groupName.empty() && !userName.empty()){
+		// Получаем идентификатор группы
+		const u_int gid = getIdByName(groupName);
+		// Получаем идентификатор пользователя
+		const u_int uid = getUidByName(userName);
+		// Проверяем принадлежность пользователя
+		result = checkUser(gid, uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * getUidByName Метод извлечения идентификатора пользователя по его имени
  * @param  userName название пользователя
  * @return          идентификатор пользователя
