@@ -78,6 +78,27 @@ const Groups::Data Groups::createDefaultData(const u_int id, const string name){
 	return group;
 }
 /**
+ * setProxyOptions Функция добавления опций прокси
+ * @param option       опция для добавления
+ * @param proxyOptions список существующих опций
+ * @param flag         флаг добавления или удаления опции
+ */
+void Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
+	// Формируем параметры
+	u_short options = proxyOptions;
+	// Устанавливаем параметры прокси сервера
+	if(flag) options = options | option;
+	// Если нужно убрать настройку
+	else {
+		// Убираем настройку
+		options = options ^ option;
+		// Если параметры больше стали чем были значит ошибка
+		if(options > proxyOptions) options = proxyOptions;
+	}
+	// Устанавливаем новые параметры
+	proxyOptions = options;
+}
+/**
  * readGroupsFromPam Метод чтения данных групп из операционной системы
  * @return результат операции
  */
@@ -118,8 +139,6 @@ const bool Groups::readGroupsFromFile(){
 			auto groups = ini.getParamsInSection("groups");
 			// Переходим по списку групп
 			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
-				// Формируем параметры
-				u_short options = 0x00;
 				// Создаем блок с данными группы
 				Data group = createDefaultData(::atoi(it->key.c_str()), it->value);
 				// Если список пользователей существует
@@ -148,46 +167,60 @@ const bool Groups::readGroupsFromFile(){
 				};
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_proxy", "connect")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | (ini.getBoolean(group.name + "_proxy", "connect") ? OPT_CONNECT : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = ini.getBoolean(group.name + "_proxy", "connect");
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_CONNECT, group.options, check);
 				}
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_proxy", "upgrade")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | (ini.getBoolean(group.name + "_proxy", "upgrade") ? OPT_UPGRADE : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = ini.getBoolean(group.name + "_proxy", "upgrade");
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_UPGRADE, group.options, check);
 				}
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_proxy", "agent")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | (ini.getBoolean(group.name + "_proxy", "agent") ? OPT_AGENT : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = ini.getBoolean(group.name + "_proxy", "agent");
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_AGENT, group.options, check);
 				}
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_proxy", "deblock")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | (ini.getBoolean(group.name + "_proxy", "deblock") ? OPT_DEBLOCK : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = ini.getBoolean(group.name + "_proxy", "deblock");
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_DEBLOCK, group.options, check);
 				}
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_gzip", "transfer")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | (ini.getBoolean(group.name + "_gzip", "transfer") ? OPT_GZIP : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = ini.getBoolean(group.name + "_gzip", "transfer");
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_GZIP, group.options, check);
 				}
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_gzip", "response")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | (ini.getBoolean(group.name + "_gzip", "response") ? OPT_PGZIP : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = ini.getBoolean(group.name + "_gzip", "response");
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_PGZIP, group.options, check);
 				}
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_proxy", "skill")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | ((ini.getString(group.name + "_proxy", "skill", "dumb").compare("smart") == 0) ? OPT_SMART : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = (ini.getString(group.name + "_proxy", "skill", "dumb").compare("smart") == 0);
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_SMART, group.options, check);
 				}
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_keepalive", "enabled")){
-					// Устанавливаем параметры прокси сервера
-					options = (options | (ini.getBoolean(group.name + "_keepalive", "enabled") ? OPT_KEEPALIVE : OPT_NULL));
+					// Выполняем проверку на доступность опции
+					const bool check = ini.getBoolean(group.name + "_keepalive", "enabled");
+					// Устанавливаем или убираем опцию
+					setProxyOptions(OPT_KEEPALIVE, group.options, check);
 				}
-				// Перекрываем параметры по умолчанию
-				if(options != 0x00) group.options = options;
 				// Выполняем проверку на существование записи в конфигурационном файле
 				if(ini.checkParam(group.name + "_ipv4", "external")){
 					// Устанавливаем список ip адресов

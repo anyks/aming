@@ -129,6 +129,13 @@ class Groups {
 		// Список групп
 		unordered_map <u_int, Data> data;
 		/**
+		 * setProxyOptions Функция добавления опций прокси
+		 * @param option       опция для добавления
+		 * @param proxyOptions список существующих опций
+		 * @param flag         флаг добавления или удаления опции
+		 */
+		void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
+		/**
 		 * createDefaultData Метод создания группы с параметрами по умолчанию
 		 * @param  id   идентификатор групыы
 		 * @param  name название группы
