@@ -124,6 +124,10 @@ class Groups {
 		// Список групп
 		unordered_map <u_int, Data> data;
 		/**
+		 * update Метод обновления групп
+		 */
+		void update();
+		/**
 		 * createDefaultData Метод создания группы с параметрами по умолчанию
 		 * @param  id   идентификатор групыы
 		 * @param  name название группы

@@ -12,6 +12,20 @@
 using namespace std;
 
 /**
+ * update Метод обновления групп
+ */
+void Groups::update(){
+	// Считываем данные групп из файлов
+	readGroupsFromFile();
+	// Определяем тип поиска группы
+	switch(this->typeSearch){
+		// Считываем данные групп из системы
+		case 1: readGroupsFromPam(); break;
+		// Считываем данные групп из LDAP
+		case 2: readGroupsFromLdap(); break;
+	}
+}
+/**
  * createDefaultData Метод создания группы с параметрами по умолчанию
  * @param  id   идентификатор групыы
  * @param  name название группы
@@ -817,14 +831,7 @@ Groups::Groups(Config * config, LogApp * log){
 		this->config = config;
 		// Запоминаем тип поиска групп пользователя
 		this->typeSearch = 0;
-		// Считываем данные групп из файлов
-		readGroupsFromFile();
-		// Определяем тип поиска группы
-		switch(this->typeSearch){
-			// Считываем данные групп из системы
-			case 1: readGroupsFromPam(); break;
-			// Считываем данные групп из LDAP
-			case 2: readGroupsFromLdap(); break;
-		}
+		// Считываем данные групп
+		update();
 	}
 }
