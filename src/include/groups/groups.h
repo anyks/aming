@@ -13,6 +13,7 @@
 #include <vector>
 #include <iostream>
 #include <unordered_map>
+#include <time.h>
 #include <zlib.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -115,6 +116,10 @@ class Groups {
 			Keepalive keepalive;	// Постоянное подключение
 			vector <u_int> users;	// Список идентификаторов пользователей
 		};
+		// Время в течение которого обновлять нельзя
+		time_t maxUpdate = 0;
+		// Время последнего обновления данных
+		time_t lastUpdate = 0;
 		// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
 		u_short typeSearch = 0;
 		// Объект лога
@@ -124,10 +129,6 @@ class Groups {
 		// Список групп
 		unordered_map <u_int, Data> data;
 		/**
-		 * update Метод обновления групп
-		 */
-		void update();
-		/**
 		 * createDefaultData Метод создания группы с параметрами по умолчанию
 		 * @param  id   идентификатор групыы
 		 * @param  name название группы
@@ -135,12 +136,12 @@ class Groups {
 		 */
 		const Data createDefaultData(const u_int id, const string name);
 		/**
-		 * readGroupsFromFile Метод чтения данных групп из операционной системы
+		 * readGroupsFromPam Метод чтения данных групп из операционной системы
 		 * @return результат операции
 		 */
 		const bool readGroupsFromPam();
 		/**
-		 * readGroupsFromFile Метод чтения данных групп из LDAP сервера
+		 * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
 		 * @return результат операции
 		 */
 		const bool readGroupsFromLdap();
@@ -149,6 +150,10 @@ class Groups {
 		 * @return результат операции
 		 */
 		const bool readGroupsFromFile();
+		/**
+		 * update Метод обновления групп
+		 */
+		const bool update();
 	public:
 		/**
 		 * getDataById Метод получения данные группы по идентификатору группы

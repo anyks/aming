@@ -12,20 +12,6 @@
 using namespace std;
 
 /**
- * update Метод обновления групп
- */
-void Groups::update(){
-	// Считываем данные групп из файлов
-	readGroupsFromFile();
-	// Определяем тип поиска группы
-	switch(this->typeSearch){
-		// Считываем данные групп из системы
-		case 1: readGroupsFromPam(); break;
-		// Считываем данные групп из LDAP
-		case 2: readGroupsFromLdap(); break;
-	}
-}
-/**
  * createDefaultData Метод создания группы с параметрами по умолчанию
  * @param  id   идентификатор групыы
  * @param  name название группы
@@ -92,7 +78,7 @@ const Groups::Data Groups::createDefaultData(const u_int id, const string name){
 	return group;
 }
 /**
- * readGroupsFromFile Метод чтения данных групп из операционной системы
+ * readGroupsFromPam Метод чтения данных групп из операционной системы
  * @return результат операции
  */
 const bool Groups::readGroupsFromPam(){
@@ -102,7 +88,7 @@ const bool Groups::readGroupsFromPam(){
 	return result;
 }
 /**
- * readGroupsFromFile Метод чтения данных групп из LDAP сервера
+ * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
  * @return результат операции
  */
 const bool Groups::readGroupsFromLdap(){
@@ -362,6 +348,33 @@ const bool Groups::readGroupsFromFile(){
 	return result;
 }
 /**
+ * update Метод обновления групп
+ */
+const bool Groups::update(){
+	// Результат проверки
+	bool result = false;
+	// Создаем текущее время генерации
+	time_t curUpdate = time(NULL);
+	// Если время ожидания уже вышло, выполняем обновление данных
+	if((this->lastUpdate + this->maxUpdate) < curUpdate){
+		// Запоминаем текущее время
+		this->lastUpdate = curUpdate;
+		// Считываем данные групп из файлов
+		readGroupsFromFile();
+		// Определяем тип поиска группы
+		switch(this->typeSearch){
+			// Считываем данные групп из системы
+			case 1: readGroupsFromPam(); break;
+			// Считываем данные групп из LDAP
+			case 2: readGroupsFromLdap(); break;
+		}
+		// Сообщаем что все удачно
+		result = true;
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * getDataById Метод получения данные группы по идентификатору группы
  * @param  gid идентификатор группы
  * @return     данные группы
@@ -373,6 +386,10 @@ const Groups::Data Groups::getDataById(const u_int gid){
 	if(gid && this->data.count(gid)){
 		// Получаем данные группы
 		result = this->data.find(gid)->second;
+	// Если группа не найдена
+	} else if(gid && update()) {
+		// Получаем данные группы
+		result = getDataById(gid);
 	}
 	// Выводим результат
 	return result;
@@ -512,6 +529,10 @@ const bool Groups::checkUser(const u_int gid, const u_int uid){
 				break;
 			}
 		}
+	// Если группа не найдена
+	} else if(gid && uid && update()) {
+		// Выполняем проверку пользователя
+		result = checkUser(gid, uid);
 	}
 	// Выводим результат
 	return result;
@@ -639,6 +660,10 @@ const string Groups::getNameById(const u_int gid){
 	if(gid && this->data.count(gid)){
 		// Получаем название группы
 		result = this->data.find(gid)->second.name;
+	// Если группа не найдена
+	} else if(gid && update()) {
+		// Получаем имя группы
+		result = getNameById(gid);
 	}
 	// Выводим результат
 	return result;
@@ -662,6 +687,10 @@ const vector <string> Groups::getNameUsers(const u_int gid){
 			// Добавляем имя пользователя в список
 			result.push_back(userName);
 		}
+	// Если группа не найдена
+	} else if(gid && update()) {
+		// Получаем список имен пользователей
+		result = getNameUsers(gid);
 	}
 	// Выводим результат
 	return result;
@@ -696,6 +725,10 @@ const vector <u_int> Groups::getIdUsers(const u_int gid){
 	if(gid && this->data.count(gid)){
 		// Получаем список пользователей
 		result = this->data.find(gid)->second.users;
+	// Если группа не найдена
+	} else if(gid && update()) {
+		// Получаем список пользователей
+		result = getIdUsers(gid);
 	}
 	// Выводим результат
 	return result;
@@ -733,6 +766,10 @@ const bool Groups::addUser(const u_int gid, const u_int uid){
 		this->data.find(gid)->second.users.push_back(uid);
 		// Запоминаем что все удачно
 		result = true;
+	// Если группа не найдена
+	} else if(gid && uid && update()) {
+		// Пробуем еще раз
+		result = addUser(gid, uid);
 	}
 	// Выводим результат
 	return result;
@@ -831,6 +868,8 @@ Groups::Groups(Config * config, LogApp * log){
 		this->config = config;
 		// Запоминаем тип поиска групп пользователя
 		this->typeSearch = 0;
+		// Запоминаем время в течение которого запрещено обновлять данные
+		this->maxUpdate = 600;
 		// Считываем данные групп
 		update();
 	}

@@ -13,6 +13,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <time.h>
 #include <stdlib.h>
 #include "md5/md5.h"
 #include "config/conf.h"
