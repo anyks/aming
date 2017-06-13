@@ -392,6 +392,8 @@ const bool Groups::readGroupsFromPam(){
 							Data group = createDefaultData(gr->gr_gid, gr->gr_name);
 							// Устанавливаем тип группы
 							group.type = 1;
+							// Добавляем пароль группы
+							group.pass = gr->gr_passwd;
 							// Добавляем пользователя в список
 							group.users.push_back(pw->pw_uid);
 							// Переопределяем дефолтные данные из файла конфигурации
