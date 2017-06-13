@@ -330,6 +330,16 @@ const Groups::Data Groups::createDefaultData(const gid_t id, const string name){
 	return group;
 }
 /**
+ * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
+ * @return результат операции
+ */
+const bool Groups::readGroupsFromLdap(){
+	// Результат работы функции
+	bool result = false;
+	// Выводим результат
+	return result;
+}
+/**
  * readGroupsFromPam Метод чтения данных групп из операционной системы
  * @return результат операции
  */
@@ -351,7 +361,7 @@ const bool Groups::readGroupsFromPam(){
 		// Если оболочка пользователя актуальная
 		if(!match.empty()){
 			// Максимальное количество групп пользователя
-			int maxGroupsUser = 100;
+			int maxGroupsUser = this->maxPamGroupsUser;
 			// Создаем список групп пользователя
 			int * userGroups = new int[(const int) maxGroupsUser];
 			// Данные группы
@@ -416,16 +426,6 @@ const bool Groups::readGroupsFromPam(){
 			delete [] userGroups;
 		}
 	}
-	// Выводим результат
-	return result;
-}
-/**
- * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
- * @return результат операции
- */
-const bool Groups::readGroupsFromLdap(){
-	// Результат работы функции
-	bool result = false;
 	// Выводим результат
 	return result;
 }
@@ -1061,6 +1061,8 @@ Groups::Groups(Config * config, LogApp * log){
 		this->typeSearch = 1;
 		// Запоминаем время в течение которого запрещено обновлять данные
 		this->maxUpdate = 600;
+		// Максимальное количество групп пользователя для PAM
+		this->maxPamGroupsUser = 100;
 		// Считываем данные групп
 		update();
 	}

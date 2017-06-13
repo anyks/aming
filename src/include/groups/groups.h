@@ -127,6 +127,8 @@ class Groups {
 		time_t lastUpdate = 0;
 		// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
 		u_short typeSearch = 0;
+		// Максимальное количество групп пользователя для PAM
+		int maxPamGroupsUser = 0;
 		// Объект лога
 		LogApp * log = NULL;
 		// Конфигурационные данные
@@ -154,15 +156,15 @@ class Groups {
 		 */
 		const Data createDefaultData(const gid_t id, const string name);
 		/**
-		 * readGroupsFromPam Метод чтения данных групп из операционной системы
-		 * @return результат операции
-		 */
-		const bool readGroupsFromPam();
-		/**
 		 * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
 		 * @return результат операции
 		 */
 		const bool readGroupsFromLdap();
+		/**
+		 * readGroupsFromPam Метод чтения данных групп из операционной системы
+		 * @return результат операции
+		 */
+		const bool readGroupsFromPam();
 		/**
 		 * readGroupsFromFile Метод чтения данных групп из файла
 		 * @return результат операции
