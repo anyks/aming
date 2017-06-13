@@ -520,6 +520,27 @@ const bool Groups::update(){
 			case 1: readGroupsFromPam(); break;
 			// Считываем данные групп из LDAP
 			case 2: readGroupsFromLdap(); break;
+			// Считываем данные групп из файлов и системы
+			case 3: {
+				readGroupsFromFile();
+				readGroupsFromPam();
+			} break;
+			// Считываем данные групп из файлов и LDAP
+			case 4: {
+				readGroupsFromFile();
+				readGroupsFromLdap();
+			} break;
+			// Считываем данные групп из системы и LDAP
+			case 5: {
+				readGroupsFromPam();
+				readGroupsFromLdap();
+			} break;
+			// Считываем данные групп из файлов, системы и LDAP
+			case 6: {
+				readGroupsFromFile();
+				readGroupsFromPam();
+				readGroupsFromLdap();
+			} break;
 		}
 		// Сообщаем что все удачно
 		result = true;
