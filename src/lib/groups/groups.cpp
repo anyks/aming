@@ -453,6 +453,8 @@ const bool Groups::readGroupsFromFile(){
 			auto groups = ini.getParamsInSection("groups");
 			// Получаем список паролей
 			auto passwords = ini.getParamsInSection("passwords");
+			// Получаем список описаний
+			auto descriptions = ini.getParamsInSection("descriptions");
 			// Переходим по списку групп
 			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
 				// Создаем блок с данными группы
@@ -486,6 +488,16 @@ const bool Groups::readGroupsFromFile(){
 						if((::isNumber(gp->key)
 						&& (gid_t(::atoi(gp->key.c_str())) == group.id))
 						|| (gp->key.compare(group.name) == 0)) group.pass = gp->value;
+					}
+				}
+				// Если описания групп существуют
+				if(!descriptions.empty()){
+					// Переходим по списку описаний
+					for(auto gd = descriptions.cbegin(); gd != descriptions.cend(); ++gd){
+						// Если группа соответствует текущей, устанавливаем описание
+						if((::isNumber(gd->key)
+						&& (gid_t(::atoi(gd->key.c_str())) == group.id))
+						|| (gd->key.compare(group.name) == 0)) group.desc = gd->value;
 					}
 				}
 				// Переопределяем дефолтные данные из файла конфигурации
