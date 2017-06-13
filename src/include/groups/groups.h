@@ -176,6 +176,11 @@ class Groups {
 		const bool update();
 	public:
 		/**
+		 * getAllGroups Метод получения данных всех групп
+		 * @return      список данных всех групп
+		 */
+		const vector <Data> getAllGroups();
+		/**
 		 * getDataById Метод получения данные группы по идентификатору группы
 		 * @param  gid идентификатор группы
 		 * @return     данные группы

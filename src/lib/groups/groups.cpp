@@ -354,76 +354,79 @@ const bool Groups::readGroupsFromPam(){
 	regex e("\\/(?:sh|bash)$", regex::ECMAScript | regex::icase);
 	// Извлекаем всех пользователей что есть в системе
 	while((pw = getpwent()) != NULL){
-		// Получаем оболочку пользователя
-		string shell = pw->pw_shell;
-		// Выполняем проверку оболочки пользователя
-		regex_search(shell, match, e);
-		// Если оболочка пользователя актуальная
-		if(!match.empty()){
-			// Максимальное количество групп пользователя
-			int maxGroupsUser = this->maxPamGroupsUser;
-			// Создаем список групп пользователя
-			int * userGroups = new int[(const int) maxGroupsUser];
-			// Данные группы
-			struct group * gr = NULL;
-			// Получаем список групп пользователя
-			if(getgrouplist(pw->pw_name, pw->pw_gid, userGroups, &maxGroupsUser) == -1){
-				// Выводим сообщение что группы не созданы
-				this->log->write(LOG_ERROR, 0, "groups from user = %s [%s] not found", pw->pw_name, pw->pw_gecos);
-			// Если группы получены удачно
-			} else {
-				// Переходим по всем группам пользователя
-				for(int i = 0; i < maxGroupsUser; i++){
-					// Извлекаем данные группы
-					gr = getgrgid(userGroups[i]);
-					// Если группа получена
-					if(gr != NULL){
-						// Если группа найдена
-						if(this->data.count(gr->gr_gid)){
-							// Пользователель существует в данной группе
-							bool userExist = false;
-							// Получаем список пользователей
-							vector <uid_t> * users = &this->data.find(gr->gr_gid)->second.users;
-							// Переходим по списку пользователей
-							for(auto it = users->cbegin(); it != users->cend(); ++it){
-								// Если идентификатор пользователя найден
-								if(pw->pw_uid == *it){
-									// Запоминаем что пользователь существует
-									userExist = true;
-									// Выходим из цикла
-									break;
+		// Если это не root
+		if(pw->pw_uid > 0){
+			// Получаем оболочку пользователя
+			string shell = pw->pw_shell;
+			// Выполняем проверку оболочки пользователя
+			regex_search(shell, match, e);
+			// Если оболочка пользователя актуальная
+			if(!match.empty()){
+				// Максимальное количество групп пользователя
+				int maxGroupsUser = this->maxPamGroupsUser;
+				// Создаем список групп пользователя
+				int * userGroups = new int[(const int) maxGroupsUser];
+				// Данные группы
+				struct group * gr = NULL;
+				// Получаем список групп пользователя
+				if(getgrouplist(pw->pw_name, pw->pw_gid, userGroups, &maxGroupsUser) == -1){
+					// Выводим сообщение что группы не созданы
+					this->log->write(LOG_ERROR, 0, "groups from user = %s [%s] not found", pw->pw_name, pw->pw_gecos);
+				// Если группы получены удачно
+				} else {
+					// Переходим по всем группам пользователя
+					for(int i = 0; i < maxGroupsUser; i++){
+						// Извлекаем данные группы
+						gr = getgrgid(userGroups[i]);
+						// Если группа получена
+						if(gr != NULL){
+							// Если группа найдена
+							if(this->data.count(gr->gr_gid)){
+								// Пользователель существует в данной группе
+								bool userExist = false;
+								// Получаем список пользователей
+								vector <uid_t> * users = &this->data.find(gr->gr_gid)->second.users;
+								// Переходим по списку пользователей
+								for(auto it = users->cbegin(); it != users->cend(); ++it){
+									// Если идентификатор пользователя найден
+									if(pw->pw_uid == *it){
+										// Запоминаем что пользователь существует
+										userExist = true;
+										// Выходим из цикла
+										break;
+									}
 								}
+								// Если пользователь не существует то добавляем его в список
+								if(!userExist) users->push_back(pw->pw_uid);
+							// Если группа не найдена, то создаем её
+							} else {
+								// Создаем блок с данными группы
+								Data group = createDefaultData(gr->gr_gid, gr->gr_name);
+								// Устанавливаем тип группы
+								group.type = 1;
+								// Добавляем пароль группы
+								group.pass = gr->gr_passwd;
+								// Добавляем пользователя в список
+								group.users.push_back(pw->pw_uid);
+								// Переопределяем дефолтные данные из файла конфигурации
+								setDataGroupFromFile(group);
+								// Инициализируем модуль управления заголовками
+								if(group.headers.checkAvailable(group.name)){
+									// Присваиваем новый файл конфигурации заголовков
+									group.headers = Headers(this->config, this->log, group.options, group.name);
+								}
+								// Добавляем группу в список групп
+								this->data.insert(pair <gid_t, Data>(group.id, group));
 							}
-							// Если пользователь не существует то добавляем его в список
-							if(!userExist) users->push_back(pw->pw_uid);
-						// Если группа не найдена, то создаем её
-						} else {
-							// Создаем блок с данными группы
-							Data group = createDefaultData(gr->gr_gid, gr->gr_name);
-							// Устанавливаем тип группы
-							group.type = 1;
-							// Добавляем пароль группы
-							group.pass = gr->gr_passwd;
-							// Добавляем пользователя в список
-							group.users.push_back(pw->pw_uid);
-							// Переопределяем дефолтные данные из файла конфигурации
-							setDataGroupFromFile(group);
-							// Инициализируем модуль управления заголовками
-							if(group.headers.checkAvailable(group.name)){
-								// Присваиваем новый файл конфигурации заголовков
-								group.headers = Headers(this->config, this->log, group.options, group.name);
-							}
-							// Добавляем группу в список групп
-							this->data.insert(pair <gid_t, Data>(group.id, group));
-						}
-					// Выводим сообщение что данная группа не найдена
-					} else this->log->write(LOG_ERROR, 0, "group [%i] from user = %s [%s] not found", userGroups[i], pw->pw_name, pw->pw_gecos);
+						// Выводим сообщение что данная группа не найдена
+						} else this->log->write(LOG_ERROR, 0, "group [%i] from user = %s [%s] not found", userGroups[i], pw->pw_name, pw->pw_gecos);
+					}
+					// Сообщаем что все удачно
+					result = true;
 				}
-				// Сообщаем что все удачно
-				result = true;
+				// Удаляем выделенную память для групп
+				delete [] userGroups;
 			}
-			// Удаляем выделенную память для групп
-			delete [] userGroups;
 		}
 	}
 	// Выводим результат
@@ -471,7 +474,7 @@ const bool Groups::readGroupsFromFile(){
 							// Если это не идентификатор то запрашиваем идентификатор пользователя
 							else uid = getUidByName(ut->key);
 							// Добавляем пользователя в список
-							group.users.push_back(uid);
+							if(uid > 0) group.users.push_back(uid);
 						}
 					}
 				}
@@ -544,6 +547,24 @@ const bool Groups::update(){
 		}
 		// Сообщаем что все удачно
 		result = true;
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getAllGroups Метод получения данных всех групп
+ * @return      список данных всех групп
+ */
+const vector <Groups::Data> Groups::getAllGroups(){
+	// Список данных по умолчанию
+	vector <Data> result;
+	// Если данные групп существуют
+	if(!this->data.empty()){
+		// Переходим по всем данным групп
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Добавляем в список данные групп
+			result.push_back(it->second);
+		}
 	}
 	// Выводим результат
 	return result;
@@ -1079,7 +1100,7 @@ Groups::Groups(Config * config, LogApp * log){
 		// Запоминаем конфигурационные данные
 		this->config = config;
 		// Запоминаем тип поиска групп пользователя
-		this->typeSearch = 1;
+		this->typeSearch = 0;
 		// Запоминаем время в течение которого запрещено обновлять данные
 		this->maxUpdate = 600;
 		// Максимальное количество групп пользователя для PAM

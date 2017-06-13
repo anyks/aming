@@ -78,8 +78,12 @@ const string INI::get(const string section, const string key){
 			auto params = this->data.find(section)->second;
 			// Выполняем перебор полученных данных
 			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Получаем ключ 1
+				string key1 = key;
+				// Получаем ключ 2
+				string key2 = it->key;
 				// Если ключ найден, выводим результат
-				if(key.compare(it->key) == 0) return it->value;
+				if(::toCase(key1).compare(::toCase(key2)) == 0) return it->value;
 			}
 		}
 	}
@@ -116,12 +120,21 @@ const vector <INI::Params> INI::getParamsInSection(const string section){
 	if(!section.empty() && !this->data.empty()){
 		// Переходим по всем разделам
 		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
-			// Получаем данные раздела
-			auto params = it->second;
-			// Выполняем перебор полученных данных
-			for(auto it = params.cbegin(); it != params.cend(); ++it){
-				// Добавляем данные в массив результатов
-				result.push_back({it->key, it->value});
+			// Получаем название первого раздела
+			string section1 = section;
+			// Получаем название второго раздела
+			string section2 = it->first;
+			// Если раздел найден
+			if(::toCase(section1).compare(::toCase(section2)) == 0){
+				// Получаем данные раздела
+				auto params = it->second;
+				// Выполняем перебор полученных данных
+				for(auto it = params.cbegin(); it != params.cend(); ++it){
+					// Добавляем данные в массив результатов
+					result.push_back({it->key, it->value});
+				}
+				// Выходим из цикла
+				break;
 			}
 		}
 	}
@@ -321,8 +334,12 @@ const bool INI::checkParam(const string section, const string key){
 		auto params = this->data.find(section)->second;
 		// Выполняем перебор полученных данных
 		for(auto it = params.cbegin(); it != params.cend(); ++it){
+			// Получаем ключ 1
+			string key1 = key;
+			// Получаем ключ 2
+			string key2 = it->key;
 			// Если ключ найден, выводим результат
-			if(key.compare(it->key) == 0){
+			if(::toCase(key1).compare(::toCase(key2)) == 0){
 				// Запоминаем что результат найден
 				result = true;
 				// Выходим из цикла
@@ -392,8 +409,12 @@ const bool INI::delData(const string section, const string key){
 			auto params = this->data.find(section)->second;
 			// Выполняем перебор полученных данных
 			for(auto it = params.cbegin(); it != params.cend(); ++it){
+				// Получаем ключ 1
+				string key1 = key;
+				// Получаем ключ 2
+				string key2 = it->key;
 				// Если ключ найден, выводим результат
-				if(key.compare(it->key) == 0){
+				if(::toCase(key1).compare(::toCase(key2)) == 0){
 					// Сообщаем что все удачно
 					result = true;
 					// Если ключ найден тогда удаляем элемент

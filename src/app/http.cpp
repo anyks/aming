@@ -1747,6 +1747,17 @@ void HttpProxy::run_server(const evutil_socket_t fd, void * ctx){
 		
 		Groups groups = Groups(proxy->server->config, proxy->server->log);
 
+		auto gdata = groups.getAllGroups();
+
+		for(auto it = gdata.cbegin(); it != gdata.cend(); ++it){
+			cout << " =============== " << it->name << endl;
+
+			for(auto ut = it->users.cbegin(); ut != it->users.cend(); ++ut){
+				cout << " ++++++++++++++ " << (* ut) << endl;
+			}
+		}
+
+
 		// Погружаем поток в сон на 500 милисекунд
 		this_thread::sleep_for(chrono::milliseconds(500));
 		// Выводим в консоль информацию
