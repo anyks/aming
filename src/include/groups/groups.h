@@ -8,11 +8,14 @@
 #ifndef _GROUPS_PROXY_ANYKS_
 #define _GROUPS_PROXY_ANYKS_
 
+#include <regex>
 #include <string>
 #include <random>
 #include <vector>
 #include <iostream>
 #include <unordered_map>
+#include <grp.h>
+#include <pwd.h>
 #include <time.h>
 #include <zlib.h>
 #include <stdlib.h>
@@ -103,7 +106,9 @@ class Groups {
 		struct Data {
 			u_int id;				// Идентификатор группы
 			u_short options;		// Основные параметры прокси
+			u_short type;			// Тип группы (0 - файлы, 1 - PAM, 2 - LDAP)
 			string name;			// Название группы
+			string pass;			// Пароль группы (пароль в зашифрованном виде)
 			ID idnt;				// Блок списков идентификации групп
 			IP ipv4;				// Блок ip адресов для протокола версии 4
 			IP ipv6;				// Блок ip адресов для протокола версии 6
@@ -135,6 +140,12 @@ class Groups {
 		 * @param flag         флаг добавления или удаления опции
 		 */
 		void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
+		/**
+		 * setDataGroupFromFile Метод заполнения данных группы из конфигурационного файла
+		 * @param group объект группы
+		 * @param ini   указатель на объект конфигурации
+		 */
+		void setDataGroupFromFile(Data &group, INI * ini = NULL);
 		/**
 		 * createDefaultData Метод создания группы с параметрами по умолчанию
 		 * @param  id   идентификатор групыы
@@ -226,6 +237,18 @@ class Groups {
 		 * @return           результат проверки
 		 */
 		const bool checkUser(const string groupName, const string userName);
+		/**
+		 * checkGroupById Метод проверки на существование группы
+		 * @param  gid идентификатор группы
+		 * @return     данные группы
+		 */
+		const bool checkGroupById(const u_int gid);
+		/**
+		 * checkGroupByName Метод проверки на существование группы
+		 * @param  groupName название группы
+		 * @return           результат проверки
+		 */
+		const bool checkGroupByName(const string groupName);
 		/**
 		 * getUidByName Метод извлечения идентификатора пользователя по его имени
 		 * @param  userName название пользователя

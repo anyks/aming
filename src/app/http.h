@@ -35,6 +35,7 @@
 #include "http/http.h"
 #include "system/system.h"
 #include "general/general.h"
+#include "groups/groups.h"
 
 // Устанавливаем область видимости
 using namespace std;

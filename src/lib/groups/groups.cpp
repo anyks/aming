@@ -12,6 +12,258 @@
 using namespace std;
 
 /**
+ * setProxyOptions Функция добавления опций прокси
+ * @param option       опция для добавления
+ * @param proxyOptions список существующих опций
+ * @param flag         флаг добавления или удаления опции
+ */
+void Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
+	// Формируем параметры
+	u_short options = proxyOptions;
+	// Устанавливаем параметры прокси сервера
+	if(flag) options = options | option;
+	// Если нужно убрать настройку
+	else {
+		// Убираем настройку
+		options = options ^ option;
+		// Если параметры больше стали чем были значит ошибка
+		if(options > proxyOptions) options = proxyOptions;
+	}
+	// Устанавливаем новые параметры
+	proxyOptions = options;
+}
+/**
+ * setDataGroupFromFile Метод заполнения данных группы из конфигурационного файла
+ * @param group объект группы
+ * @param ini   указатель на объект конфигурации
+ */
+void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
+	// Флаг удаления созданного объекта ini конфигурации
+	bool rmINI = false;
+	// Если объект ini не передан то создаем его
+	if(ini == NULL){
+		// Создаем адрес для хранения файла
+		const string filename = addToPath(this->config->proxy.dir, "groups.ini");
+		// Проверяем на существование адреса
+		if(!filename.empty() && isFileExist(filename.c_str())){
+			// Инициализируем парсер ini файла
+			ini = new INI(filename);
+			// Запоминаем что нужно удалить объект конфигурации
+			rmINI = true;
+		// Если объект конфигурации не существует тогда выходим
+		} else return;
+	}
+	// Создаем список идентификаторов группы
+	group.idnt	= {
+		split(ini->getString(group.name + "_idnt", "ip"), "|"),
+		split(ini->getString(group.name + "_idnt", "mac"), "|")
+	};
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "connect")){
+		// Выполняем проверку на доступность опции
+		const bool check = ini->getBoolean(group.name + "_proxy", "connect");
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_CONNECT, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "upgrade")){
+		// Выполняем проверку на доступность опции
+		const bool check = ini->getBoolean(group.name + "_proxy", "upgrade");
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_UPGRADE, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "agent")){
+		// Выполняем проверку на доступность опции
+		const bool check = ini->getBoolean(group.name + "_proxy", "agent");
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_AGENT, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "deblock")){
+		// Выполняем проверку на доступность опции
+		const bool check = ini->getBoolean(group.name + "_proxy", "deblock");
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_DEBLOCK, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "transfer")){
+		// Выполняем проверку на доступность опции
+		const bool check = ini->getBoolean(group.name + "_gzip", "transfer");
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_GZIP, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "response")){
+		// Выполняем проверку на доступность опции
+		const bool check = ini->getBoolean(group.name + "_gzip", "response");
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_PGZIP, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "skill")){
+		// Выполняем проверку на доступность опции
+		const bool check = (ini->getString(group.name + "_proxy", "skill", "dumb").compare("smart") == 0);
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_SMART, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_keepalive", "enabled")){
+		// Выполняем проверку на доступность опции
+		const bool check = ini->getBoolean(group.name + "_keepalive", "enabled");
+		// Устанавливаем или убираем опцию
+		setProxyOptions(OPT_KEEPALIVE, group.options, check);
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_ipv4", "external")){
+		// Устанавливаем список ip адресов
+		group.ipv4.ip = split(ini->getString(group.name + "_ipv4", "external"), "|");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_ipv6", "external")){
+		// Устанавливаем список ip адресов
+		group.ipv6.ip = split(ini->getString(group.name + "_ipv6", "external"), "|");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_ipv4", "resolver")){
+		// Устанавливаем список резолверов
+		group.ipv4.resolver = split(ini->getString(group.name + "_ipv4", "resolver"), "|");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_ipv6", "resolver")){
+		// Устанавливаем список резолверов
+		group.ipv6.resolver = split(ini->getString(group.name + "_ipv6", "resolver"), "|");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_timeouts", "read")){
+		// Устанавливаем параметры
+		group.timeouts.read = (size_t) getSeconds(ini->getString(group.name + "_timeouts", "read"));
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_timeouts", "write")){
+		// Устанавливаем параметры
+		group.timeouts.write = (size_t) getSeconds(ini->getString(group.name + "_timeouts", "write"));
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_timeouts", "upgrade")){
+		// Устанавливаем параметры
+		group.timeouts.upgrade = (size_t) getSeconds(ini->getString(group.name + "_timeouts", "upgrade"));
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_speed", "input")){
+		// Устанавливаем параметры
+		group.buffers.read = getSizeBuffer(ini->getString(group.name + "_speed", "input"));
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_speed", "output")){
+		// Устанавливаем параметры
+		group.buffers.write = getSizeBuffer(ini->getString(group.name + "_speed", "output"));
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_keepalive", "keepcnt")){
+		// Устанавливаем параметры
+		group.keepalive.keepcnt = (int) ini->getNumber(group.name + "_keepalive", "keepcnt");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_keepalive", "keepidle")){
+		// Устанавливаем параметры
+		group.keepalive.keepidle = (int) ini->getNumber(group.name + "_keepalive", "keepidle");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_keepalive", "keepintvl")){
+		// Устанавливаем параметры
+		group.keepalive.keepintvl = (int) ini->getNumber(group.name + "_keepalive", "keepintvl");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_connects", "size")){
+		// Устанавливаем параметры
+		group.connects.size = getBytes(ini->getString(group.name + "_connects", "size"));
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_connects", "connect")){
+		// Устанавливаем параметры
+		group.connects.connect = (u_int) ini->getUNumber(group.name + "_connects", "connect");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "subnet")){
+		// Устанавливаем параметры
+		group.proxy.subnet = ini->getBoolean(group.name + "_proxy", "subnet");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "reverse")){
+		// Устанавливаем параметры
+		group.proxy.reverse = ini->getBoolean(group.name + "_proxy", "reverse");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "forward")){
+		// Устанавливаем параметры
+		group.proxy.forward = ini->getBoolean(group.name + "_proxy", "forward");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "transfer")){
+		// Устанавливаем параметры
+		group.proxy.transfer = ini->getBoolean(group.name + "_proxy", "transfer");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_proxy", "pipelining")){
+		// Устанавливаем параметры
+		group.proxy.pipelining = ini->getBoolean(group.name + "_proxy", "pipelining");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "regex")){
+		// Устанавливаем параметры
+		group.gzip.regex = ini->getString(group.name + "_gzip", "regex");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "vary")){
+		// Устанавливаем параметры
+		group.gzip.vary = ini->getBoolean(group.name + "_gzip", "vary");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "length")){
+		// Устанавливаем параметры
+		group.gzip.length = ini->getNumber(group.name + "_gzip", "length");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "chunk")){
+		// Устанавливаем параметры
+		group.gzip.chunk = getBytes(ini->getString(group.name + "_gzip", "chunk"));
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "vhttp")){
+		// Устанавливаем параметры
+		group.gzip.vhttp = split(ini->getString(group.name + "_gzip", "vhttp"), "|");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "types")){
+		// Устанавливаем параметры
+		group.gzip.types = split(ini->getString(group.name + "_gzip", "types"), "|");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "proxied")){
+		// Устанавливаем параметры
+		group.gzip.proxied = split(ini->getString(group.name + "_gzip", "proxied"), "|");
+	}
+	// Выполняем проверку на существование записи в конфигурационном файле
+	if(ini->checkParam(group.name + "_gzip", "level")){
+		// Уровень сжатия gzip
+		u_int level = 0x00;
+		// Получаем уровень сжатия
+		const string gzipLevel = ini->getString(group.name + "_gzip", "level");
+		// Если размер указан
+		if(!gzipLevel.empty()){
+			// Определяем тип сжатия
+			if(gzipLevel.compare("default") == 0)		level = Z_DEFAULT_COMPRESSION;
+			else if(gzipLevel.compare("best") == 0)		level = Z_BEST_COMPRESSION;
+			else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
+			else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
+		}
+		if(level != 0x00) group.gzip.level = level;
+	}
+	// Удаляем объект конфигурации если это требуется
+	if(rmINI) delete ini;
+}
+/**
  * createDefaultData Метод создания группы с параметрами по умолчанию
  * @param  id   идентификатор групыы
  * @param  name название группы
@@ -78,33 +330,90 @@ const Groups::Data Groups::createDefaultData(const u_int id, const string name){
 	return group;
 }
 /**
- * setProxyOptions Функция добавления опций прокси
- * @param option       опция для добавления
- * @param proxyOptions список существующих опций
- * @param flag         флаг добавления или удаления опции
- */
-void Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
-	// Формируем параметры
-	u_short options = proxyOptions;
-	// Устанавливаем параметры прокси сервера
-	if(flag) options = options | option;
-	// Если нужно убрать настройку
-	else {
-		// Убираем настройку
-		options = options ^ option;
-		// Если параметры больше стали чем были значит ошибка
-		if(options > proxyOptions) options = proxyOptions;
-	}
-	// Устанавливаем новые параметры
-	proxyOptions = options;
-}
-/**
  * readGroupsFromPam Метод чтения данных групп из операционной системы
  * @return результат операции
  */
 const bool Groups::readGroupsFromPam(){
 	// Результат работы функции
 	bool result = false;
+	// Блок данных пользователей
+	struct passwd * pw = NULL;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения для проверки оболочки пользователя
+	regex e("\\/(?:sh|bash)$", regex::ECMAScript | regex::icase);
+	// Извлекаем всех пользователей что есть в системе
+	while((pw = getpwent()) != NULL){
+		// Получаем оболочку пользователя
+		string shell = pw->pw_shell;
+		// Выполняем проверку оболочки пользователя
+		regex_search(shell, match, e);
+		// Если оболочка пользователя актуальная
+		if(!match.empty()){
+			// Максимальное количество групп пользователя
+			int maxGroupsUser = 100;
+			// Создаем список групп пользователя
+			int * userGroups = new int[(const int) maxGroupsUser];
+			// Данные группы
+			struct group * gr = NULL;
+			// Получаем список групп пользователя
+			if(getgrouplist(pw->pw_name, pw->pw_gid, userGroups, &maxGroupsUser) == -1){
+				// Выводим сообщение что группы не созданы
+				this->log->write(LOG_ERROR, 0, "groups from user = %s [%s] not found", pw->pw_name, pw->pw_gecos);
+			// Если группы получены удачно
+			} else {
+				// Переходим по всем группам пользователя
+				for(u_int i = 0; i < maxGroupsUser; i++){
+					// Извлекаем данные группы
+					gr = getgrgid(userGroups[i]);
+					// Если группа получена
+					if(gr != NULL){
+						// Если группа найдена
+						if(this->data.count(gr->gr_gid)){
+							// Пользователель существует в данной группе
+							bool userExist = false;
+							// Получаем список пользователей
+							vector <uid_t> * users = &this->data.find(gr->gr_gid)->second.users;
+							// Переходим по списку пользователей
+							for(auto it = users->cbegin(); it != users->cend(); ++it){
+								// Если идентификатор пользователя найден
+								if(pw->pw_uid == *it){
+									// Запоминаем что пользователь существует
+									userExist = true;
+									// Выходим из цикла
+									break;
+								}
+							}
+							// Если пользователь не существует то добавляем его в список
+							if(!userExist) users->push_back(pw->pw_uid);
+						// Если группа не найдена, то создаем её
+						} else {
+							// Создаем блок с данными группы
+							Data group = createDefaultData(gr->gr_gid, gr->gr_name);
+							// Устанавливаем тип группы
+							group.type = 1;
+							// Добавляем пользователя в список
+							group.users.push_back(pw->pw_uid);
+							// Переопределяем дефолтные данные из файла конфигурации
+							setDataGroupFromFile(group);
+							// Инициализируем модуль управления заголовками
+							if(group.headers.checkAvailable(group.name)){
+								// Присваиваем новый файл конфигурации заголовков
+								group.headers = Headers(this->config, this->log, group.options, group.name);
+							}
+							// Добавляем группу в список групп
+							this->data.insert(pair <u_int, Data>(group.id, group));
+						}
+					// Выводим сообщение что данная группа не найдена
+					} else this->log->write(LOG_ERROR, 0, "group [%i] from user = %s [%s] not found", userGroups[i], pw->pw_name, pw->pw_gecos);
+				}
+				// Сообщаем что все удачно
+				result = true;
+			}
+			// Удаляем выделенную память для групп
+			delete [] userGroups;
+		}
+	}
 	// Выводим результат
 	return result;
 }
@@ -137,10 +446,14 @@ const bool Groups::readGroupsFromFile(){
 			auto users = ini.getParamsInSection("users");
 			// Получаем список групп
 			auto groups = ini.getParamsInSection("groups");
+			// Получаем список паролей
+			auto passwords = ini.getParamsInSection("passwords");
 			// Переходим по списку групп
 			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
 				// Создаем блок с данными группы
 				Data group = createDefaultData(::atoi(it->key.c_str()), it->value);
+				// Устанавливаем тип группы
+				group.type = 0;
 				// Если список пользователей существует
 				if(!users.empty()){
 					// Переходим по списку пользователей
@@ -160,213 +473,18 @@ const bool Groups::readGroupsFromFile(){
 						}
 					}
 				}
-				// Создаем список идентификаторов группы
-				group.idnt	= {
-					split(ini.getString(group.name + "_idnt", "ip"), "|"),
-					split(ini.getString(group.name + "_idnt", "mac"), "|")
-				};
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "connect")){
-					// Выполняем проверку на доступность опции
-					const bool check = ini.getBoolean(group.name + "_proxy", "connect");
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_CONNECT, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "upgrade")){
-					// Выполняем проверку на доступность опции
-					const bool check = ini.getBoolean(group.name + "_proxy", "upgrade");
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_UPGRADE, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "agent")){
-					// Выполняем проверку на доступность опции
-					const bool check = ini.getBoolean(group.name + "_proxy", "agent");
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_AGENT, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "deblock")){
-					// Выполняем проверку на доступность опции
-					const bool check = ini.getBoolean(group.name + "_proxy", "deblock");
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_DEBLOCK, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "transfer")){
-					// Выполняем проверку на доступность опции
-					const bool check = ini.getBoolean(group.name + "_gzip", "transfer");
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_GZIP, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "response")){
-					// Выполняем проверку на доступность опции
-					const bool check = ini.getBoolean(group.name + "_gzip", "response");
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_PGZIP, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "skill")){
-					// Выполняем проверку на доступность опции
-					const bool check = (ini.getString(group.name + "_proxy", "skill", "dumb").compare("smart") == 0);
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_SMART, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_keepalive", "enabled")){
-					// Выполняем проверку на доступность опции
-					const bool check = ini.getBoolean(group.name + "_keepalive", "enabled");
-					// Устанавливаем или убираем опцию
-					setProxyOptions(OPT_KEEPALIVE, group.options, check);
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_ipv4", "external")){
-					// Устанавливаем список ip адресов
-					group.ipv4.ip = split(ini.getString(group.name + "_ipv4", "external"), "|");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_ipv6", "external")){
-					// Устанавливаем список ip адресов
-					group.ipv6.ip = split(ini.getString(group.name + "_ipv6", "external"), "|");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_ipv4", "resolver")){
-					// Устанавливаем список резолверов
-					group.ipv4.resolver = split(ini.getString(group.name + "_ipv4", "resolver"), "|");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_ipv6", "resolver")){
-					// Устанавливаем список резолверов
-					group.ipv6.resolver = split(ini.getString(group.name + "_ipv6", "resolver"), "|");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_timeouts", "read")){
-					// Устанавливаем параметры
-					group.timeouts.read = (size_t) getSeconds(ini.getString(group.name + "_timeouts", "read"));
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_timeouts", "write")){
-					// Устанавливаем параметры
-					group.timeouts.write = (size_t) getSeconds(ini.getString(group.name + "_timeouts", "write"));
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_timeouts", "upgrade")){
-					// Устанавливаем параметры
-					group.timeouts.upgrade = (size_t) getSeconds(ini.getString(group.name + "_timeouts", "upgrade"));
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_speed", "input")){
-					// Устанавливаем параметры
-					group.buffers.read = getSizeBuffer(ini.getString(group.name + "_speed", "input"));
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_speed", "output")){
-					// Устанавливаем параметры
-					group.buffers.write = getSizeBuffer(ini.getString(group.name + "_speed", "output"));
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_keepalive", "keepcnt")){
-					// Устанавливаем параметры
-					group.keepalive.keepcnt = (int) ini.getNumber(group.name + "_keepalive", "keepcnt");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_keepalive", "keepidle")){
-					// Устанавливаем параметры
-					group.keepalive.keepidle = (int) ini.getNumber(group.name + "_keepalive", "keepidle");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_keepalive", "keepintvl")){
-					// Устанавливаем параметры
-					group.keepalive.keepintvl = (int) ini.getNumber(group.name + "_keepalive", "keepintvl");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_connects", "size")){
-					// Устанавливаем параметры
-					group.connects.size = getBytes(ini.getString(group.name + "_connects", "size"));
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_connects", "connect")){
-					// Устанавливаем параметры
-					group.connects.connect = (u_int) ini.getUNumber(group.name + "_connects", "connect");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "subnet")){
-					// Устанавливаем параметры
-					group.proxy.subnet = ini.getBoolean(group.name + "_proxy", "subnet");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "reverse")){
-					// Устанавливаем параметры
-					group.proxy.reverse = ini.getBoolean(group.name + "_proxy", "reverse");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "forward")){
-					// Устанавливаем параметры
-					group.proxy.forward = ini.getBoolean(group.name + "_proxy", "forward");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "transfer")){
-					// Устанавливаем параметры
-					group.proxy.transfer = ini.getBoolean(group.name + "_proxy", "transfer");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_proxy", "pipelining")){
-					// Устанавливаем параметры
-					group.proxy.pipelining = ini.getBoolean(group.name + "_proxy", "pipelining");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "regex")){
-					// Устанавливаем параметры
-					group.gzip.regex = ini.getString(group.name + "_gzip", "regex");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "vary")){
-					// Устанавливаем параметры
-					group.gzip.vary = ini.getBoolean(group.name + "_gzip", "vary");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "length")){
-					// Устанавливаем параметры
-					group.gzip.length = ini.getNumber(group.name + "_gzip", "length");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "chunk")){
-					// Устанавливаем параметры
-					group.gzip.chunk = getBytes(ini.getString(group.name + "_gzip", "chunk"));
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "vhttp")){
-					// Устанавливаем параметры
-					group.gzip.vhttp = split(ini.getString(group.name + "_gzip", "vhttp"), "|");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "types")){
-					// Устанавливаем параметры
-					group.gzip.types = split(ini.getString(group.name + "_gzip", "types"), "|");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "proxied")){
-					// Устанавливаем параметры
-					group.gzip.proxied = split(ini.getString(group.name + "_gzip", "proxied"), "|");
-				}
-				// Выполняем проверку на существование записи в конфигурационном файле
-				if(ini.checkParam(group.name + "_gzip", "level")){
-					// Уровень сжатия gzip
-					u_int level = 0x00;
-					// Получаем уровень сжатия
-					const string gzipLevel = ini.getString(group.name + "_gzip", "level");
-					// Если размер указан
-					if(!gzipLevel.empty()){
-						// Определяем тип сжатия
-						if(gzipLevel.compare("default") == 0)		level = Z_DEFAULT_COMPRESSION;
-						else if(gzipLevel.compare("best") == 0)		level = Z_BEST_COMPRESSION;
-						else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
-						else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
+				// Если пароли групп существуют
+				if(!passwords.empty()){
+					// Переходим по списку паролей
+					for(auto gp = passwords.cbegin(); gp != passwords.cend(); ++gp){
+						// Если группа соответствует текущей, устанавливаем пароль
+						if((::isNumber(gp->key)
+						&& (u_int(::atoi(gp->key.c_str())) == group.id))
+						|| (gp->key.compare(group.name) == 0)) group.pass = gp->value;
 					}
-					if(level != 0x00) group.gzip.level = level;
 				}
+				// Переопределяем дефолтные данные из файла конфигурации
+				setDataGroupFromFile(group, &ini);
 				// Инициализируем модуль управления заголовками
 				if(group.headers.checkAvailable(group.name)){
 					// Присваиваем новый файл конфигурации заголовков
@@ -392,10 +510,10 @@ const bool Groups::update(){
 	if((this->lastUpdate + this->maxUpdate) < curUpdate){
 		// Запоминаем текущее время
 		this->lastUpdate = curUpdate;
-		// Считываем данные групп из файлов
-		readGroupsFromFile();
 		// Определяем тип поиска группы
 		switch(this->typeSearch){
+			// Считываем данные групп из файлов
+			case 0: readGroupsFromFile(); break;
 			// Считываем данные групп из системы
 			case 1: readGroupsFromPam(); break;
 			// Считываем данные групп из LDAP
@@ -625,6 +743,44 @@ const bool Groups::checkUser(const string groupName, const string userName){
 		const u_int uid = getUidByName(userName);
 		// Проверяем принадлежность пользователя
 		result = checkUser(gid, uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkGroupById Метод проверки на существование группы
+ * @param  gid идентификатор группы
+ * @return     данные группы
+ */
+const bool Groups::checkGroupById(const u_int gid){
+	// Результат проверки
+	bool result = false;
+	// Если идентификатор группы передан
+	if(gid && this->data.count(gid)){
+		// Сообщаем что группа существует
+		result = true;
+	// Если группа не найдена
+	} else if(gid && update()) {
+		// Проверяем снова на существование группы
+		result = checkGroupById(gid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkGroupByName Метод проверки на существование группы
+ * @param  groupName название группы
+ * @return           результат проверки
+ */
+const bool Groups::checkGroupByName(const string groupName){
+	// Результат проверки
+	bool result = false;
+	// Если название группы передано
+	if(!groupName.empty()){
+		// Получаем идентификатор группы
+		const u_int gid = getIdByName(groupName);
+		// Выводим результат
+		result = checkGroupById(gid);
 	}
 	// Выводим результат
 	return result;
@@ -900,7 +1056,7 @@ Groups::Groups(Config * config, LogApp * log){
 		// Запоминаем конфигурационные данные
 		this->config = config;
 		// Запоминаем тип поиска групп пользователя
-		this->typeSearch = 0;
+		this->typeSearch = 1;
 		// Запоминаем время в течение которого запрещено обновлять данные
 		this->maxUpdate = 600;
 		// Считываем данные групп
