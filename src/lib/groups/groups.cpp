@@ -457,58 +457,65 @@ const bool Groups::readGroupsFromFile(){
 			auto descriptions = ini.getParamsInSection("descriptions");
 			// Переходим по списку групп
 			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
-				// Создаем блок с данными группы
-				Data group = createDefaultData(::atoi(it->key.c_str()), it->value);
-				// Устанавливаем тип группы
-				group.type = 0;
-				// Если список пользователей существует
-				if(!users.empty()){
-					// Переходим по списку пользователей
-					for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
-						// Если группа соответствует текущей
-						if((::isNumber(ut->value)
-						&& (gid_t(::atoi(ut->value.c_str())) == group.id))
-						|| (ut->value.compare(group.name) == 0)){
-							// Создаем идентификатор пользователя
-							uid_t uid = 0;
-							// Проверяем является ли название пользователя идентификатором
-							if(::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
-							// Если это не идентификатор то запрашиваем идентификатор пользователя
-							else uid = getUidByName(ut->key);
-							// Добавляем пользователя в список
-							if(uid > 0) group.users.push_back(uid);
+				// Если идентификатор группы существует
+				if(::isNumber(it->key) || ::isNumber(it->value)){
+					// Получаем идентификатор группы
+					const gid_t gid = (::isNumber(it->key) ? ::atoi(it->key.c_str()) : ::atoi(it->value.c_str()));
+					// Получаем название группы
+					const string name = (::isNumber(it->key) ? it->value : it->key);
+					// Создаем блок с данными группы
+					Data group = createDefaultData(gid, name);
+					// Устанавливаем тип группы
+					group.type = 0;
+					// Если список пользователей существует
+					if(!users.empty()){
+						// Переходим по списку пользователей
+						for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
+							// Если группа соответствует текущей
+							if((::isNumber(ut->value)
+							&& (gid_t(::atoi(ut->value.c_str())) == group.id))
+							|| (ut->value.compare(group.name) == 0)){
+								// Создаем идентификатор пользователя
+								uid_t uid = 0;
+								// Проверяем является ли название пользователя идентификатором
+								if(::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
+								// Если это не идентификатор то запрашиваем идентификатор пользователя
+								else uid = getUidByName(ut->key);
+								// Добавляем пользователя в список
+								if(uid > 0) group.users.push_back(uid);
+							}
 						}
 					}
-				}
-				// Если пароли групп существуют
-				if(!passwords.empty()){
-					// Переходим по списку паролей
-					for(auto gp = passwords.cbegin(); gp != passwords.cend(); ++gp){
-						// Если группа соответствует текущей, устанавливаем пароль
-						if((::isNumber(gp->key)
-						&& (gid_t(::atoi(gp->key.c_str())) == group.id))
-						|| (gp->key.compare(group.name) == 0)) group.pass = gp->value;
+					// Если пароли групп существуют
+					if(!passwords.empty()){
+						// Переходим по списку паролей
+						for(auto gp = passwords.cbegin(); gp != passwords.cend(); ++gp){
+							// Если группа соответствует текущей, устанавливаем пароль
+							if((::isNumber(gp->key)
+							&& (gid_t(::atoi(gp->key.c_str())) == group.id))
+							|| (gp->key.compare(group.name) == 0)) group.pass = gp->value;
+						}
 					}
-				}
-				// Если описания групп существуют
-				if(!descriptions.empty()){
-					// Переходим по списку описаний
-					for(auto gd = descriptions.cbegin(); gd != descriptions.cend(); ++gd){
-						// Если группа соответствует текущей, устанавливаем описание
-						if((::isNumber(gd->key)
-						&& (gid_t(::atoi(gd->key.c_str())) == group.id))
-						|| (gd->key.compare(group.name) == 0)) group.desc = gd->value;
+					// Если описания групп существуют
+					if(!descriptions.empty()){
+						// Переходим по списку описаний
+						for(auto gd = descriptions.cbegin(); gd != descriptions.cend(); ++gd){
+							// Если группа соответствует текущей, устанавливаем описание
+							if((::isNumber(gd->key)
+							&& (gid_t(::atoi(gd->key.c_str())) == group.id))
+							|| (gd->key.compare(group.name) == 0)) group.desc = gd->value;
+						}
 					}
+					// Переопределяем дефолтные данные из файла конфигурации
+					setDataGroupFromFile(group, &ini);
+					// Инициализируем модуль управления заголовками
+					if(group.headers.checkAvailable(group.name)){
+						// Присваиваем новый файл конфигурации заголовков
+						group.headers = Headers(this->config, this->log, group.options, group.name);
+					}
+					// Добавляем группу в список групп
+					this->data.insert(pair <gid_t, Data>(group.id, group));
 				}
-				// Переопределяем дефолтные данные из файла конфигурации
-				setDataGroupFromFile(group, &ini);
-				// Инициализируем модуль управления заголовками
-				if(group.headers.checkAvailable(group.name)){
-					// Присваиваем новый файл конфигурации заголовков
-					group.headers = Headers(this->config, this->log, group.options, group.name);
-				}
-				// Добавляем группу в список групп
-				this->data.insert(pair <gid_t, Data>(group.id, group));
 			}
 		}
 	}
