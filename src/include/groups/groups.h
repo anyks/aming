@@ -104,7 +104,7 @@ class Groups {
 		 * Data Структура данных группы
 		 */
 		struct Data {
-			u_int id;				// Идентификатор группы
+			gid_t id;				// Идентификатор группы
 			u_short options;		// Основные параметры прокси
 			u_short type;			// Тип группы (0 - файлы, 1 - PAM, 2 - LDAP)
 			string name;			// Название группы
@@ -119,7 +119,7 @@ class Groups {
 			Timeouts timeouts;		// Таймауты подключений
 			BufferSize buffers;		// Размеры буферов передачи данных
 			Keepalive keepalive;	// Постоянное подключение
-			vector <u_int> users;	// Список идентификаторов пользователей
+			vector <uid_t> users;	// Список идентификаторов пользователей
 		};
 		// Время в течение которого обновлять нельзя
 		time_t maxUpdate = 0;
@@ -132,7 +132,7 @@ class Groups {
 		// Конфигурационные данные
 		Config * config = NULL;
 		// Список групп
-		unordered_map <u_int, Data> data;
+		unordered_map <gid_t, Data> data;
 		/**
 		 * setProxyOptions Функция добавления опций прокси
 		 * @param option       опция для добавления
@@ -152,7 +152,7 @@ class Groups {
 		 * @param  name название группы
 		 * @return      созданная группа
 		 */
-		const Data createDefaultData(const u_int id, const string name);
+		const Data createDefaultData(const gid_t id, const string name);
 		/**
 		 * readGroupsFromPam Метод чтения данных групп из операционной системы
 		 * @return результат операции
@@ -178,7 +178,7 @@ class Groups {
 		 * @param  gid идентификатор группы
 		 * @return     данные группы
 		 */
-		const Data getDataById(const u_int gid);
+		const Data getDataById(const gid_t gid);
 		/**
 		 * getDataByName Метод получения данные группы по имени группы
 		 * @param  groupName название группы
@@ -190,19 +190,19 @@ class Groups {
 		 * @param  uid идентификатор пользователя
 		 * @return     идентификатор группы
 		 */
-		const vector <u_int> getGroupIdByUser(const u_int uid);
+		const vector <gid_t> getGroupIdByUser(const uid_t uid);
 		/**
 		 * getGroupIdByUser Метод получения идентификатор группы по имени пользователя
 		 * @param  userName название пользователя
 		 * @return          идентификатор группы
 		 */
-		const vector <u_int> getGroupIdByUser(const string userName);
+		const vector <gid_t> getGroupIdByUser(const string userName);
 		/**
 		 * getGroupNameByUser Метод получения название группы по идентификатору пользователя
 		 * @param  uid идентификатор пользователя
 		 * @return     название группы
 		 */
-		const vector <string> getGroupNameByUser(const u_int uid);
+		const vector <string> getGroupNameByUser(const uid_t uid);
 		/**
 		 * getGroupNameByUser Метод получения название группы по имени пользователя
 		 * @param  userName название пользователя
@@ -215,21 +215,21 @@ class Groups {
 		 * @param  uid идентификатор пользователя
 		 * @return     результат проверки
 		 */
-		const bool checkUser(const u_int gid, const u_int uid);
+		const bool checkUser(const gid_t gid, const uid_t uid);
 		/**
 		 * checkUser Метод проверки принадлежности пользователя к группе
 		 * @param  gid      идентификатор группы
 		 * @param  userName название пользователя
 		 * @return          результат проверки
 		 */
-		const bool checkUser(const u_int gid, const string userName);
+		const bool checkUser(const gid_t gid, const string userName);
 		/**
 		 * checkUser Метод проверки принадлежности пользователя к группе
 		 * @param  groupName название группы
 		 * @param  uid       идентификатор пользователя
 		 * @return           результат проверки
 		 */
-		const bool checkUser(const string groupName, const u_int uid);
+		const bool checkUser(const string groupName, const uid_t uid);
 		/**
 		 * checkUser Метод проверки принадлежности пользователя к группе
 		 * @param  groupName название группы
@@ -242,7 +242,7 @@ class Groups {
 		 * @param  gid идентификатор группы
 		 * @return     данные группы
 		 */
-		const bool checkGroupById(const u_int gid);
+		const bool checkGroupById(const gid_t gid);
 		/**
 		 * checkGroupByName Метод проверки на существование группы
 		 * @param  groupName название группы
@@ -254,31 +254,31 @@ class Groups {
 		 * @param  userName название пользователя
 		 * @return          идентификатор пользователя
 		 */
-		const u_int getUidByName(const string userName);
+		const uid_t getUidByName(const string userName);
 		/**
 		 * getIdByName Метод извлечения идентификатора группы по ее имени
 		 * @param  groupName название группы
 		 * @return           идентификатор группы
 		 */
-		const u_int getIdByName(const string groupName);
+		const gid_t getIdByName(const string groupName);
 		/**
 		 * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
 		 * @param  uid идентификатор пользователя
 		 * @return     название пользователя
 		 */
-		const string getUserNameByUid(const u_int uid);
+		const string getUserNameByUid(const uid_t uid);
 		/**
 		 * getNameById Метод извлечения имени группы по ее идентификатору
 		 * @param  gid идентификатор группы
 		 * @return     название группы
 		 */
-		const string getNameById(const u_int gid);
+		const string getNameById(const gid_t gid);
 		/**
 		 * getNameUsers Метод получения списка пользователей в группе
 		 * @param  gid идентификатор группы
 		 * @return     список имен пользователей
 		 */
-		const vector <string> getNameUsers(const u_int gid);
+		const vector <string> getNameUsers(const gid_t gid);
 		/**
 		 * getNameUsers Метод получения списка пользователей в группе
 		 * @param  groupName название группы
@@ -290,34 +290,34 @@ class Groups {
 		 * @param  gid идентификатор группы
 		 * @return     список идентификаторов пользователей
 		 */
-		const vector <u_int> getIdUsers(const u_int gid);
+		const vector <uid_t> getIdUsers(const gid_t gid);
 		/**
 		 * getIdUsers Метод получения списка пользователей в группе
 		 * @param  groupName название группы
 		 * @return           список идентификаторов пользователей
 		 */
-		const vector <u_int> getIdUsers(const string groupName);
+		const vector <uid_t> getIdUsers(const string groupName);
 		/**
 		 * addUser Метод добавления пользователя
 		 * @param  gid идентификатор группы
 		 * @param  uid идентификатор пользователя
 		 * @return     результат добавления
 		 */
-		const bool addUser(const u_int gid, const u_int uid);
+		const bool addUser(const gid_t gid, const uid_t uid);
 		/**
 		 * addUser Метод добавления пользователя
 		 * @param  gid       идентификатор группы
 		 * @param  userName  название пользователя
 		 * @return           результат добавления
 		 */
-		const bool addUser(const u_int gid, const string userName);
+		const bool addUser(const gid_t gid, const string userName);
 		/**
 		 * addUser Метод добавления пользователя
 		 * @param  groupName название группы
 		 * @param  uid       идентификатор пользователя
 		 * @return           результат добавления
 		 */
-		const bool addUser(const string groupName, const u_int uid);
+		const bool addUser(const string groupName, const uid_t uid);
 		/**
 		 * addUser Метод добавления пользователя
 		 * @param  groupName название группы
@@ -331,7 +331,7 @@ class Groups {
 		 * @param  name название группы
 		 * @return      результат добавления
 		 */
-		const bool addGroup(const u_int id, const string name);
+		const bool addGroup(const gid_t id, const string name);
 		/**
 		 * Groups Конструктор
 		 * @param config конфигурационные данные
