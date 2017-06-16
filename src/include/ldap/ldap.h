@@ -8,6 +8,9 @@
 #ifndef _AUTH_LDAP_ANYKS_
 #define _AUTH_LDAP_ANYKS_
 
+#include <string>
+#include <vector>
+#include <iostream>
 #include <ldap.h>
 #include <stdio.h>
 #include <stdlib.h>

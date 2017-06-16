@@ -108,7 +108,7 @@ const bool AuthLDAP::checkUser(const string user, const string password){
 					return auth;
 				}
 				// Выполняем перебор найденных данных
-				for(e = ldap_first_entry(ld, result ); e != NULL; e = ldap_next_entry(ld, e)){
+				for(e = ldap_first_entry(ld, result); e != NULL; e = ldap_next_entry(ld, e)){
 					// Если DN пользователя найден
 					if((dn = ldap_get_dn(ld, e)) != NULL){
 						// Выполняем инициализацию подключения к серверу
