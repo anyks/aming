@@ -375,7 +375,7 @@ const bool Groups::readGroupsFromLdap(){
 							// Получаем идентификатор пользвоателя
 							uid_t uid = getUidByName(* ut);
 							// Добавляем в список идентификатор пользователя
-							users.push_back(uid);
+							if(uid > 0) users.push_back(uid);
 						}
 					}
 				}
