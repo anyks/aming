@@ -336,6 +336,118 @@ const Groups::Data Groups::createDefaultData(const gid_t id, const string name){
 const bool Groups::readGroupsFromLdap(){
 	// Результат работы функции
 	bool result = false;
+	// Создаем объект подключения LDAP
+	ALDAP ldap(this->config, this->log);
+	// Запрашиваем данные групп
+	auto groups = ldap.data("ou=groups,dc=agro24,dc=dev", "cn,description,gidNumber,Password,memberUid", "one", "(objectClass=posixGroup)");
+	// Запрашиваем данные пользователей
+	auto users = ldap.data("ou=users,dc=agro24,dc=dev", "gidNumber,uidNumber", "one", "(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))");
+	// Если группы получены
+	if(!groups.empty()){
+		// Переходим по всему объекту групп
+		for(auto it = groups.cbegin(); it != groups.cend(); ++it){
+			// Идентификатор группы
+			gid_t gid;
+			// Название группы
+			string name;
+			// Описание группы
+			string description;
+			// Пароль группы
+			string password;
+			// Список пользователей
+			vector <uid_t> users;
+			// Переходим по всему массиву полученных объектов
+			for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
+				// Если список значений существует
+				if(!dt->second.empty()){
+					// Если это идентификатор группы
+					if(dt->first.compare("cn") == 0) name = dt->second[0];
+					// Если это идентификатор группы
+					else if(dt->first.compare("gidNumber") == 0) gid = ::atoi(dt->second[0].c_str());
+					// Если это описание группы
+					else if(dt->first.compare("description") == 0) description = dt->second[0];
+					// Если это пароль группы
+					else if(dt->first.compare("Password") == 0) password = dt->second[0];
+					// Если это список пользователей
+					else if(dt->first.compare("memberUid") == 0){
+						// Переходим по списку пользователей
+						for(auto ut = dt->second.cbegin(); ut != dt->second.cend(); ++ut){
+							// Получаем идентификатор пользвоателя
+							uid_t uid = getUidByName(* ut);
+							// Добавляем в список идентификатор пользователя
+							users.push_back(uid);
+						}
+					}
+				}
+			}
+			// Создаем блок с данными группы
+			Data group = createDefaultData(gid, name);
+			// Устанавливаем тип группы
+			group.type = 2;
+			// Добавляем пароль группы
+			group.pass = password;
+			// Добавляем описание группы
+			group.desc = description;
+			// Добавляем пользователя в список
+			group.users = users;
+			// Переопределяем дефолтные данные из файла конфигурации
+			setDataGroupFromFile(group);
+			// Инициализируем модуль управления заголовками
+			if(group.headers.checkAvailable(group.name)){
+				// Присваиваем новый файл конфигурации заголовков
+				group.headers = Headers(this->config, this->log, group.options, group.name);
+			}
+			// Добавляем группу в список групп
+			this->data.insert(pair <gid_t, Data>(group.id, group));
+			// Сообщаем что все удачно
+			result = true;
+		}
+		// Если пользователи существуют
+		if(!users.empty()){
+			// Переходим по всему объекту пользователей
+			for(auto it = users.cbegin(); it != users.cend(); ++it){
+				// Идентификатор группы
+				gid_t gid;
+				// Идентификатор пользователя
+				uid_t uid;
+				// Переходим по всему массиву полученных объектов
+				for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
+					// Если список значений существует
+					if(!dt->second.empty()){
+						// Если это идентификатор группы
+						if(dt->first.compare("gidNumber") == 0){
+							// Получаем идентификатор группы
+							gid = ::atoi(dt->second[0].c_str());
+						} else if(dt->first.compare("uidNumber") == 0) {
+							// Получаем идентификатор пользователя
+							uid = ::atoi(dt->second[0].c_str());
+						}
+					}
+				}
+				// Если группа найдена
+				if(this->data.count(gid)){
+					// Пользователель существует в данной группе
+					bool userExist = false;
+					// Получаем список пользователей
+					vector <uid_t> * users = &this->data.find(gid)->second.users;
+					// Переходим по списку пользователей
+					for(auto it = users->cbegin(); it != users->cend(); ++it){
+						// Если идентификатор пользователя найден
+						if(uid == *it){
+							// Запоминаем что пользователь существует
+							userExist = true;
+							// Выходим из цикла
+							break;
+						}
+					}
+					// Если пользователь не существует то добавляем его в список
+					if(!userExist) users->push_back(uid);
+					// Сообщаем что все удачно
+					result = true;
+				}
+			}
+		}
+	}
 	// Выводим результат
 	return result;
 }
@@ -1119,7 +1231,7 @@ Groups::Groups(Config * config, LogApp * log){
 		// Запоминаем конфигурационные данные
 		this->config = config;
 		// Запоминаем тип поиска групп пользователя
-		this->typeSearch = 0;
+		this->typeSearch = 2;
 		// Запоминаем время в течение которого запрещено обновлять данные
 		this->maxUpdate = 600;
 		// Максимальное количество групп пользователя для PAM

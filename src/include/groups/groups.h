@@ -23,6 +23,7 @@
 #include "ini/ini.h"
 #include "system/system.h"
 #include "general/general.h"
+#include "ldap2/ldap.h"
 #include "headers/headers.h"
 
 // Устанавливаем область видимости

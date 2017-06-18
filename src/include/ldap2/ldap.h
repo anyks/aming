@@ -67,7 +67,7 @@ class ALDAP {
 		* @param  filter   фильтр поиска
 		* @return          результат проверки авторизации
 		*/
-		const bool checkAuth(const string dn, const string password, const string scope = "", const string filter = "");
+		const bool checkAuth(const string dn, const string password, const string scope = "", const string filter = "(objectClass=top)");
 		/**
 		* data Метод поиска запрашиваемых данных
 		* @param  dn     dn поиска
@@ -76,7 +76,7 @@ class ALDAP {
 		* @param  filter фильтр поиска
 		* @return        искомые данные
 		*/
-		const vector <Data> data(const string dn, const string key, const string scope = "", const string filter = "");
+		const vector <Data> data(const string dn, const string key, const string scope = "", const string filter = "(objectClass=top)");
 		/**
 		 * ALDAP Конструктор
 		 * @param config конфигурационные данные
