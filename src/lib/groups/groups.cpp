@@ -384,12 +384,12 @@ const bool Groups::readGroupsFromLdap(){
 			Data group = createDefaultData(gid, name);
 			// Устанавливаем тип группы
 			group.type = 2;
+			// Добавляем пользователя в список
+			group.users = users;
 			// Добавляем пароль группы
 			group.pass = password;
 			// Добавляем описание группы
 			group.desc = description;
-			// Добавляем пользователя в список
-			group.users = users;
 			// Переопределяем дефолтные данные из файла конфигурации
 			setDataGroupFromFile(group);
 			// Инициализируем модуль управления заголовками
@@ -399,8 +399,6 @@ const bool Groups::readGroupsFromLdap(){
 			}
 			// Добавляем группу в список групп
 			this->data.insert(pair <gid_t, Data>(group.id, group));
-			// Сообщаем что все удачно
-			result = true;
 		}
 		// Если пользователи существуют
 		if(!users.empty()){
@@ -442,11 +440,11 @@ const bool Groups::readGroupsFromLdap(){
 					}
 					// Если пользователь не существует то добавляем его в список
 					if(!userExist) users->push_back(uid);
-					// Сообщаем что все удачно
-					result = true;
 				}
 			}
 		}
+		// Сообщаем что все удачно
+		result = true;
 	}
 	// Выводим результат
 	return result;
