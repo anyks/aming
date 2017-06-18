@@ -35,6 +35,17 @@ using namespace std;
 class Groups {
 	private:
 		/**
+		 * Ldap Структура ldap
+		 */
+		struct Ldap {
+			string gdn;
+			string udn;
+			string gscope;
+			string uscope;
+			string gfilter;
+			string ufilter;
+		};
+		/**
 		 * Timeout Структура таймаутов
 		 */
 		struct Timeouts {
@@ -131,6 +142,8 @@ class Groups {
 		u_short typeSearch = 0;
 		// Максимальное количество групп пользователя для PAM
 		int maxPamGroupsUser = 0;
+		// Объект ldap подклчюения
+		Ldap ldap;
 		// Объект лога
 		LogApp * log = NULL;
 		// Конфигурационные данные

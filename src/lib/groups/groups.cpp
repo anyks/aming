@@ -338,10 +338,10 @@ const bool Groups::readGroupsFromLdap(){
 	bool result = false;
 	// Создаем объект подключения LDAP
 	ALDAP ldap(this->config, this->log);
-	// Запрашиваем данные групп
-	auto groups = ldap.data("ou=groups,dc=agro24,dc=dev", "cn,description,gidNumber,Password,memberUid", "one", "(objectClass=posixGroup)");
 	// Запрашиваем данные пользователей
-	auto users = ldap.data("ou=users,dc=agro24,dc=dev", "gidNumber,uidNumber", "one", "(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))");
+	auto users = ldap.data(this->ldap.udn, "gidNumber,uidNumber", this->ldap.uscope, this->ldap.ufilter);
+	// Запрашиваем данные групп
+	auto groups = ldap.data(this->ldap.gdn, "cn,description,gidNumber,Password,memberUid", this->ldap.gscope, this->ldap.gfilter);
 	// Если группы получены
 	if(!groups.empty()){
 		// Переходим по всему объекту групп
@@ -1236,6 +1236,15 @@ Groups::Groups(Config * config, LogApp * log){
 		this->maxUpdate = 600;
 		// Максимальное количество групп пользователя для PAM
 		this->maxPamGroupsUser = 100;
+		// Устанавливаем параметры подключения LDAP
+		this->ldap = {
+			"ou=groups,dc=agro24,dc=dev",
+			"ou=users,dc=agro24,dc=dev",
+			"one",
+			"one",
+			"(objectClass=posixGroup)",
+			"(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))"
+		};
 		// Считываем данные групп
 		update();
 	}
