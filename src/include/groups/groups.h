@@ -64,7 +64,10 @@ class Groups {
 		 * ID Структура идентификаторов подключений
 		 */
 		struct ID {
-			vector <string> ip;		// Список ip адресов
+			vector <string> ip4;	// Список ip4 адресов
+			vector <string> ip6;	// Список ip6 адресов
+			vector <string> nwk4;	// Список сетей IPv4
+			vector <string> nwk6;	// Список сетей IPv6
 			vector <string> mac;	// Список mac адресов
 		};
 		/**

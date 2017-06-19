@@ -55,7 +55,10 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	}
 	// Создаем список идентификаторов группы
 	group.idnt	= {
-		split(ini->getString(group.name + "_idnt", "ip"), "|"),
+		split(ini->getString(group.name + "_idnt", "ip4"), "|"),
+		split(ini->getString(group.name + "_idnt", "ip6"), "|"),
+		split(ini->getString(group.name + "_idnt", "network4"), "|"),
+		split(ini->getString(group.name + "_idnt", "network6"), "|"),
 		split(ini->getString(group.name + "_idnt", "mac"), "|")
 	};
 	// Выполняем проверку на существование записи в конфигурационном файле
