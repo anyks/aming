@@ -116,10 +116,12 @@ void Headers::rm(const string client){
 void Headers::read(){
 	// Если конфигурационный файл существует
 	if(this->config != NULL){
+		// Получаем название файла конфигурации
+		const string name = getName();
 		// Получаем данные каталога где хранится файл с правилами
 		const string dir = this->config->proxy.dir;
 		// Получаем имя файла
-		const string filename = addToPath(dir, this->name + ".headers");
+		const string filename = addToPath(dir, name + ".headers");
 		// Проверяем на существование адреса
 		if(!filename.empty()
 		// Проверяем существует ли такой каталог
@@ -701,11 +703,47 @@ const bool Headers::checkAvailable(const string name){
 	return result;
 }
 /**
+ * getName Метод получения имени конфига
+ */
+const string Headers::getName(){
+	// Результат
+	string result;
+	// Переходим по всему объекту имен
+	for(auto it = this->names.cbegin(); it != this->names.cend(); ++it){
+		// Проверяем существует ли файл конфигурации
+		if(checkAvailable(* it)){
+			// Запоминаем результат
+			result = * it;
+			// Выходим из цикла
+			break;
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * clear Метод очистки данных
  */
 void Headers::clear(){
 	// Очищаем данные правил
 	this->rules.clear();
+	this->names.clear();
+}
+/**
+ * addName Метод добавления нового имени конфига
+ * @param name название файла с параметрами
+ */
+void Headers::addName(const string name){
+	// Если название существует
+	if(!name.empty()) this->names.push_front(name);
+}
+/**
+ * setOptions Метод установки новых параметров для парсинга http данных
+ * @param options параметры для парсинга http данных
+ */
+void Headers::setOptions(const u_short options){
+	// Запоминаем основные параметры прокси
+	if(options != 0x00) this->options = options;
 }
 /**
  * modify Метод модификации заголовков
@@ -780,12 +818,10 @@ void Headers::modify(const string ip, const string mac, const string server, str
 }
 /**
  * Headers Конструктор
- * @param config  конфигурационные данные
- * @param log     объект лога для вывода информации
- * @param options основные параметры прокси
- * @param name    название конфигурационного файла
+ * @param config конфигурационные данные
+ * @param log    объект лога для вывода информации
  */
-Headers::Headers(Config * config, LogApp * log, const u_short options, const string name){
+Headers::Headers(Config * config, LogApp * log){
 	// Если конфигурационные данные переданы
 	if(config != NULL){
 		// Очищаем все параметры
@@ -794,10 +830,10 @@ Headers::Headers(Config * config, LogApp * log, const u_short options, const str
 		this->log = log;
 		// Запоминаем параметры конфига
 		this->config = config;
-		// Запоминаем название конфигурационного файла
-		this->name = (!name.empty() ? name : this->config->proxy.name);
 		// Запоминаем основные параметры прокси
-		this->options = (options != 0x0 ? options : this->config->options);
+		this->options = this->config->options;
+		// Запоминаем название конфигурационного файла
+		this->names.push_front(this->config->proxy.name);
 		// Выполняем чтение файла конфигурации
 		read();
 	}

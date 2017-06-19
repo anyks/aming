@@ -9,6 +9,7 @@
 #define _HEADERS_AMING_
 
 #include <regex>
+#include <deque>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -51,13 +52,13 @@ class Headers {
 			vector <string> headers;	// Массив заголовков
 		};
 		// Название файла конфигурации
-		string name = "";
+		deque <string> names;
 		// Объект лога
 		LogApp * log = NULL;
 		// Конфигурационные данные
 		Config * config = NULL;
 		// Параметры для парсинга http данных
-		u_short options = 0x0;
+		u_short options = 0x00;
 		// Список правил
 		unordered_map <string, vector <Params>> rules;
 		/**
@@ -151,7 +152,6 @@ class Headers {
 		 * @return       результат проверки
 		 */
 		const bool isLogin(const string login);
-	public:
 		/**
 		 * checkAvailable Метод проверки на существование параметров заголовков
 		 * @param  name название файла с параметрами
@@ -159,9 +159,24 @@ class Headers {
 		 */
 		const bool checkAvailable(const string name);
 		/**
+		 * getName Метод получения имени конфига
+		 */
+		const string getName();
+	public:
+		/**
 		 * clear Метод очистки данных
 		 */
 		void clear();
+		/**
+		 * addName Метод добавления нового имени конфига
+		 * @param name название файла с параметрами
+		 */
+		void addName(const string name);
+		/**
+		* setOptions Метод установки новых параметров для парсинга http данных
+		* @param options параметры для парсинга http данных
+		*/
+		void setOptions(const u_short options = 0x00);
 		/**
 		 * modify Метод модификации заголовков
 		 * @param ip     ip адрес клиента
@@ -180,12 +195,10 @@ class Headers {
 		void modify(const string ip, const string mac, const string server, string &data);
 		/**
 		 * Headers Конструктор
-		 * @param config  конфигурационные данные
-		 * @param log     объект лога для вывода информации
-		 * @param options основные параметры прокси
-		 * @param name    название конфигурационного файла
+		 * @param config конфигурационные данные
+		 * @param log    объект лога для вывода информации
 		 */
-		Headers(Config * config = NULL, LogApp * log = NULL, const u_short options = 0x0, const string name = "");
+		Headers(Config * config = NULL, LogApp * log = NULL);
 };
 
 #endif // _HEADERS_AMING_

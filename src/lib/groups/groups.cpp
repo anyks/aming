@@ -392,11 +392,10 @@ const bool Groups::readGroupsFromLdap(){
 			group.desc = description;
 			// Переопределяем дефолтные данные из файла конфигурации
 			setDataGroupFromFile(group);
-			// Инициализируем модуль управления заголовками
-			if(group.headers.checkAvailable(group.name)){
-				// Присваиваем новый файл конфигурации заголовков
-				group.headers = Headers(this->config, this->log, group.options, group.name);
-			}
+			// Добавляем название файла конфигурации заголовков
+			group.headers.addName(group.name);
+			// Добавляем параметры http парсера
+			group.headers.setOptions(group.options);
 			// Добавляем группу в список групп
 			this->data.insert(pair <gid_t, Data>(group.id, group));
 		}
@@ -520,11 +519,10 @@ const bool Groups::readGroupsFromPam(){
 								group.users.push_back(pw->pw_uid);
 								// Переопределяем дефолтные данные из файла конфигурации
 								setDataGroupFromFile(group);
-								// Инициализируем модуль управления заголовками
-								if(group.headers.checkAvailable(group.name)){
-									// Присваиваем новый файл конфигурации заголовков
-									group.headers = Headers(this->config, this->log, group.options, group.name);
-								}
+								// Добавляем название файла конфигурации заголовков
+								group.headers.addName(group.name);
+								// Добавляем параметры http парсера
+								group.headers.addOptions(group.options);
 								// Добавляем группу в список групп
 								this->data.insert(pair <gid_t, Data>(group.id, group));
 							}
@@ -618,11 +616,10 @@ const bool Groups::readGroupsFromFile(){
 					}
 					// Переопределяем дефолтные данные из файла конфигурации
 					setDataGroupFromFile(group, &ini);
-					// Инициализируем модуль управления заголовками
-					if(group.headers.checkAvailable(group.name)){
-						// Присваиваем новый файл конфигурации заголовков
-						group.headers = Headers(this->config, this->log, group.options, group.name);
-					}
+					// Добавляем название файла конфигурации заголовков
+					group.headers.addName(group.name);
+					// Добавляем параметры http парсера
+					group.headers.addOptions(group.options);
 					// Добавляем группу в список групп
 					this->data.insert(pair <gid_t, Data>(group.id, group));
 				}
@@ -644,6 +641,8 @@ const bool Groups::update(){
 	if((this->lastUpdate + this->maxUpdate) < curUpdate){
 		// Запоминаем текущее время
 		this->lastUpdate = curUpdate;
+		// Очищаем блок данных
+		this->data.clear();
 		// Определяем тип поиска группы
 		switch(this->typeSearch){
 			// Считываем данные групп из файлов
