@@ -260,7 +260,7 @@ void CCache::readDomain(const string filename, DataDNS * data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else printf("Cannot read dns cache file %s\n", filename.c_str());
+			} else printf("Cannot read dns cache file %s\r\n", filename.c_str());
 		}
 	}
 }
@@ -295,7 +295,7 @@ void CCache::readCache(const string filename, DataCache * data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else printf("Cannot read cache file %s\n", filename.c_str());
+			} else printf("Cannot read cache file %s\r\n", filename.c_str());
 		}
 	}
 }
@@ -335,7 +335,7 @@ void CCache::checkDomains(const string filename, void * ctx){
 					// Получаем адрес домена для удаления
 					const string rmDomain = match[1].str();
 					// Выводим сообщение об удаляемом домене в консоль
-					printf("Domain was deleted: %s/\n", rmDomain.c_str());
+					printf("Domain was deleted: %s/\r\n", rmDomain.c_str());
 					// Выполняем удаление домена
 					rmDir(rmDomain.c_str());
 				}
@@ -404,7 +404,7 @@ void CCache::checkCache(const string filename, void * ctx){
 					// Получаем адрес домена для удаления
 					const string rmDomain = match[1].str();
 					// Выводим сообщение об удаляемом кэше в консоль
-					printf("Cache was deleted: %s/\n", rmDomain.c_str());
+					printf("Cache was deleted: %s/\r\n", rmDomain.c_str());
 					// Выполняем удаление домена
 					rmDir(rmDomain.c_str());
 				}
@@ -429,13 +429,13 @@ const short CCache::infoPatch(const string pathName){
 			// Если это каталог
 			if(S_ISDIR(entryInfo.st_mode)){
 				// Выводим название каталога в консоль
-				printf("Catalog name: %s/\n", pathName.c_str());
+				printf("Catalog name: %s/\r\n", pathName.c_str());
 				// Сообщаем что это каталог
 				return 1;
 			// Если это файл
 			} else if(S_ISREG(entryInfo.st_mode)) {
 				// Выводим название файла в консоль
-				printf("\t%s has %lld bytes\n", pathName.c_str(), (long long) entryInfo.st_size);
+				printf("\t%s has %lld bytes\r\n", pathName.c_str(), (long long) entryInfo.st_size);
 				// Выводим результат
 				return 0;
 			// Если это символьная ссылка
@@ -445,14 +445,14 @@ const short CCache::infoPatch(const string pathName){
 				// Считываем данные ссылки
 				if(readlink(pathName.c_str(), targetName, PATH_MAX) != -1){
 					// Выводим название файла в консоль
-					printf("\t%s -> %s\n", pathName.c_str(), targetName);
+					printf("\t%s -> %s\r\n", pathName.c_str(), targetName);
 					// Проверяем содержимое символьной ссылки
 					return infoPatch(targetName);
 				// Если ссылка битая
-				} else printf("\t%s -> (invalid symbolic link!)\n", pathName.c_str());
+				} else printf("\t%s -> (invalid symbolic link!)\r\n", pathName.c_str());
 			}
 		// Если произошла ошибка чтения файла
-		} else printf("Error statting %s: %s\n", pathName.c_str(), strerror(errno));
+		} else printf("Error statting %s: %s\r\n", pathName.c_str(), strerror(errno));
 	}
 	// Выводим результат
 	return result;
@@ -476,7 +476,7 @@ const u_long CCache::processDirectory(const string curDir, handler fn){
 	// Если каталог удачно открыт
 	if(dir == NULL){
 		// Выводим сообщение об ошибке
-		printf("Error opening %s: %s", curDir.c_str(), strerror(errno));
+		printf("Error opening %s: %s\r\n", curDir.c_str(), strerror(errno));
 		// Выходим и говорим что ничего не найдено
 		return 0;
 	}
