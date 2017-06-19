@@ -10,6 +10,9 @@
 # Определяем тип операционной системы
 OS := $(shell uname -s)
 
+# Название приложения
+NAME = aming
+
 # Если это MacOS X (Сборка через make)
 ifeq ($(OS), Darwin)
 	# export MACOSX_DEPLOYMENT_TARGET="10.12";
@@ -65,7 +68,7 @@ INCLUDE =	-I/usr/include \
 			-I./app
 
 # Код для сборки
-SOURCES =	./aming.cpp \
+SOURCES =	./$(NAME).cpp \
 			$(shell find ./app/*.cpp) \
 			$(shell find ./lib/*/*.cpp)
 
@@ -84,12 +87,12 @@ CONFIG = -Wall -Wpedantic -Wstrict-aliasing -Werror=vla -Wno-unused-result -Wno-
 # Правило сборки
 all:
 	# Выполняем сборку проекта
-	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -msse3 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -ggdb -pipe -fomit-frame-pointer -fstrict-aliasing -msse3 $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/$(NAME)
 
 # Правила сборки под Dev
 dev:
 	# Выполняем сборку проекта
-	mkdir -p $(BIN) && $(CC) $(CONFIG) -O1 -ggdb $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O1 -ggdb $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/$(NAME)
 
 # Правила сборки под Dev Tools CCache
 dtcc:
@@ -98,7 +101,7 @@ dtcc:
 # Правила сборки под Prod
 prod:
 	# Выполняем сборку проекта [-mbmi2]
-	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mfma -mrdrnd -mf16c $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/http
+	mkdir -p $(BIN) && $(CC) $(CONFIG) -O2 -pipe -fomit-frame-pointer -fstrict-aliasing -mavx2 -mfma -mrdrnd -mf16c $(SOURCES) $(INCLUDE) $(LIBS) -o $(BIN)/$(NAME)
 
 # Правила сборки под Prod Tools CCache [-mbmi2]
 ptcc:
@@ -106,7 +109,7 @@ ptcc:
 
 # Правило запуска
 start:
-	$(BIN)/http -c ./config.ini
+	$(BIN)/$(NAME) -c ./config.ini
 
 # Правило очистки
 clean:
