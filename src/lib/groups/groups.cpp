@@ -397,7 +397,7 @@ const bool Groups::readGroupsFromLdap(){
 			setDataGroupFromFile(group);
 			// Добавляем название файла конфигурации заголовков
 			group.headers.addName(group.name);
-			// Добавляем параметры http парсера
+			// Устанавливаем параметры http парсера
 			group.headers.setOptions(group.options);
 			// Добавляем группу в список групп
 			this->data.insert(pair <gid_t, Data>(group.id, group));
@@ -524,8 +524,8 @@ const bool Groups::readGroupsFromPam(){
 								setDataGroupFromFile(group);
 								// Добавляем название файла конфигурации заголовков
 								group.headers.addName(group.name);
-								// Добавляем параметры http парсера
-								group.headers.addOptions(group.options);
+								// Устанавливаем параметры http парсера
+								group.headers.setOptions(group.options);
 								// Добавляем группу в список групп
 								this->data.insert(pair <gid_t, Data>(group.id, group));
 							}
@@ -621,8 +621,8 @@ const bool Groups::readGroupsFromFile(){
 					setDataGroupFromFile(group, &ini);
 					// Добавляем название файла конфигурации заголовков
 					group.headers.addName(group.name);
-					// Добавляем параметры http парсера
-					group.headers.addOptions(group.options);
+					// Устанавливаем параметры http парсера
+					group.headers.setOptions(group.options);
 					// Добавляем группу в список групп
 					this->data.insert(pair <gid_t, Data>(group.id, group));
 				}
