@@ -1,12 +1,12 @@
-/* МОДУЛЬ ОПТИМИЗАЦИИ ОПЕРАЦИОННОЙ СИСТЕМЫ ANYKS */
+/* МОДУЛЬ ОПТИМИЗАЦИИ ОПЕРАЦИОННОЙ СИСТЕМЫ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _OS_ANYKS_
-#define _OS_ANYKS_
+#ifndef _OS_AMING_
+#define _OS_AMING_
 
 #include <regex>
 #include <string>
@@ -126,4 +126,4 @@ class Os {
 		Os(Config ** config = NULL, LogApp * log = NULL);
 };
 
-#endif // _OS_ANYKS_
+#endif // _OS_AMING_

@@ -1,12 +1,12 @@
-/* СЕРВЕР HTTP ПРОКСИ ANYKS */
+/* СЕРВЕР HTTP ПРОКСИ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _HTTP_PROXY_ANYKS_
-#define _HTTP_PROXY_ANYKS_
+#ifndef _HTTP_PROXY_AMING_
+#define _HTTP_PROXY_AMING_
 
 #include <mutex>
 #include <thread>
@@ -434,4 +434,4 @@ class HttpProxy {
 		~HttpProxy();
 };
 
-#endif // _HTTP_PROXY_ANYKS_
+#endif // _HTTP_PROXY_AMING_

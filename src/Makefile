@@ -1,4 +1,4 @@
-# ПРАВИЛО СБОРКИ ПРОКСИ СЕРВЕРА ANYKS
+# ПРАВИЛО СБОРКИ ПРОКСИ СЕРВЕРА AMING
 #
 #	автор:				Юрий Николаевич Лобарев
 #	skype:				efrantick
@@ -65,7 +65,7 @@ INCLUDE =	-I/usr/include \
 			-I./app
 
 # Код для сборки
-SOURCES =	./anyks.cpp \
+SOURCES =	./aming.cpp \
 			$(shell find ./app/*.cpp) \
 			$(shell find ./lib/*/*.cpp)
 

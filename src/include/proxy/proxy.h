@@ -1,12 +1,12 @@
-/* МОДУЛЬ ПРОКСИ СЕРВЕРА ANYKS */
+/* МОДУЛЬ ПРОКСИ СЕРВЕРА AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _PROXY_APP_ANYKS_
-#define _PROXY_APP_ANYKS_
+#ifndef _PROXY_APP_AMING_
+#define _PROXY_APP_AMING_
 
 #include <vector>
 #include <string>
@@ -113,4 +113,4 @@ class Proxy {
 		~Proxy();
 };
 
-#endif // _PROXY_APP_ANYKS_
+#endif // _PROXY_APP_AMING_

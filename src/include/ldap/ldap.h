@@ -1,12 +1,12 @@
-/* МОДУЛЬ АВТОРИЗАЦИИ LDAP ANYKS */
+/* МОДУЛЬ АВТОРИЗАЦИИ LDAP AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _AUTH_LDAP_ANYKS_
-#define _AUTH_LDAP_ANYKS_
+#ifndef _AUTH_LDAP_AMING_
+#define _AUTH_LDAP_AMING_
 
 #include <string>
 #include <vector>
@@ -65,4 +65,4 @@ class AuthLDAP {
 		AuthLDAP(Config * config = NULL, LogApp * log = NULL);
 };
 
-#endif // _AUTH_LDAP_ANYKS_
+#endif // _AUTH_LDAP_AMING_

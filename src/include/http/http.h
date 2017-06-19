@@ -1,12 +1,12 @@
-/* HTTP ПАРСЕР ANYKS */
+/* HTTP ПАРСЕР AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _HTTP_PARSER_ANYKS_
-#define _HTTP_PARSER_ANYKS_
+#ifndef _HTTP_PARSER_AMING_
+#define _HTTP_PARSER_AMING_
 
 #include <regex>
 #include <string>
@@ -858,4 +858,4 @@ class Http {
 		~Http();
 };
 
-#endif // _HTTP_PARSER_ANYKS_
+#endif // _HTTP_PARSER_AMING_

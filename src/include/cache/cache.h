@@ -1,12 +1,12 @@
-/* МОДУЛЬ УПРАВЛЕНИЯ КЭШЕМ ANYKS */
+/* МОДУЛЬ УПРАВЛЕНИЯ КЭШЕМ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _CACHE_ANYKS_
-#define _CACHE_ANYKS_
+#ifndef _CACHE_AMING_
+#define _CACHE_AMING_
 
 #include <regex>
 #include <string>
@@ -248,4 +248,4 @@ class Cache {
 		Cache(Config * config = NULL, LogApp * log = NULL);
 };
 
-#endif // _CACHE_ANYKS_
+#endif // _CACHE_AMING_

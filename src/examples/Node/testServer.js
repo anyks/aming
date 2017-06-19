@@ -36,7 +36,7 @@
 				client.end();
 			} break;
 			// Если это редирект
-			case "/anyks": {
+			case "/aming": {
 				// Устанавливаем заголовки
 				client.setHeader('Location', "http://vipmake.com/files/default/css/css_ZEbgsW3PQ8CSHuVoHPvFefbGZwNfubouBXxfMYrp_F0.css");
 				// Сообщаем что страница не найдена

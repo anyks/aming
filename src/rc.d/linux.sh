@@ -1,21 +1,21 @@
 #!/bin/bash
 #
-# Init script for multiplex
+# Init script for aming
 #
 # Author:	Lobarev Yuriy <forman@anyks.com>.
 #
 ### BEGIN INIT INFO
-# Provides:          multiplex
+# Provides:          aming
 # Required-Start:    $syslog $local_fs $remote_fs $time
 # Required-Stop:     $syslog $local_fs $remote_fs
 # Should-Start:      $network
 # Should-Stop:       $network
 # Default-Start:     2 3 4 5
 # Default-Stop:	     0 1 6
-# Short-Description: Proxy server multiplex (C) ANYKS
-# Description:       Proxy server multiplex, a daemon that run in system Linux
-#                    systemctl start multiplex | systemctl stop multiplex
-#                    systemctl restart multiplex | systemctl status multiplex
+# Short-Description: Proxy server aming (C) ANYKS
+# Description:       Proxy server aming, a daemon that run in system Linux
+#                    systemctl start aming | systemctl stop aming
+#                    systemctl restart aming | systemctl status aming
 ### END INIT INFO
 
 
@@ -26,49 +26,49 @@
 logpri='local3.info'
 
 # Varriables
-multiplex_name="anyks"
-multiplex_config="/etc/$multiplex_name/config.ini"
-multiplex_pid="/var/run/$multiplex_name.pid"
+aming_name="aming"
+aming_config="/etc/$aming_name/config.ini"
+aming_pid="/var/run/$aming_name.pid"
 
 export PATH=$PATH:/usr/bin
 
 start(){
-	pid=`cat $multiplex_pid 2>/dev/null`
+	pid=`cat $aming_pid 2>/dev/null`
 	if [ "$pid" != "" ] && kill -s 0 $pid 2>/dev/null; then
-		echo "$multiplex_name is already running"
+		echo "$aming_name is already running"
 	else
-		rm -f $multiplex_pid 2>/dev/null
-		http -c $multiplex_config 2>&1 | logger -p `eval "echo $logpri"` -t `eval "echo $multiplex_name"` &
+		rm -f $aming_pid 2>/dev/null
+		http -c $aming_config 2>&1 | logger -p `eval "echo $logpri"` -t `eval "echo $aming_name"` &
 		sleep 1
-		pid=`cat $multiplex_pid 2>/dev/null`
+		pid=`cat $aming_pid 2>/dev/null`
 		if [ "$pid" != "" ]; then
-			echo "OK: $multiplex_name"
+			echo "OK: $aming_name"
 		else
-			echo "FAILED: $multiplex_name; see logs"
+			echo "FAILED: $aming_name; see logs"
 		fi
 	fi
 	RETVAL=$?
 }
 
 stop(){
-	pid=`cat $multiplex_pid 2>/dev/null`
+	pid=`cat $aming_pid 2>/dev/null`
 	if [ "$pid" = "" ]; then
-		echo "$multiplex_name is not running (pid file is empty)"
+		echo "$aming_name is not running (pid file is empty)"
 	else
 		kill $pid
-		rm -f $multiplex_pid 2>/dev/null
-		echo "OK: $multiplex_name"
+		rm -f $aming_pid 2>/dev/null
+		echo "OK: $aming_name"
 	fi
 	RETVAL=$?
 }
 
 restart(){
-	pid=`cat $multiplex_pid 2>/dev/null`
+	pid=`cat $aming_pid 2>/dev/null`
 	if [ "$pid" = "" ]; then
-		echo "$multiplex_name is not running (pid file is empty)"
+		echo "$aming_name is not running (pid file is empty)"
 	else
 		kill -USR1 $pid
-		echo "OK: $multiplex_name"
+		echo "OK: $aming_name"
 	fi
 	RETVAL=$?
 }

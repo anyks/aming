@@ -1,12 +1,12 @@
-/* МОДУЛЬ УПРАВЛЕНИЯ СИСТЕМНЫМИ НАСТРОЙКАМИ ANYKS */
+/* МОДУЛЬ УПРАВЛЕНИЯ СИСТЕМНЫМИ НАСТРОЙКАМИ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _SYSTEM_PARAMS_ANYKS_
-#define _SYSTEM_PARAMS_ANYKS_
+#ifndef _SYSTEM_PARAMS_AMING_
+#define _SYSTEM_PARAMS_AMING_
 
 #include <regex>
 #include <string>
@@ -92,4 +92,4 @@ class System {
 
 };
 
-#endif // _SYSTEM_PARAMS_ANYKS_
+#endif // _SYSTEM_PARAMS_AMING_

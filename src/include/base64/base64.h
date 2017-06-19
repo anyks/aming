@@ -1,12 +1,12 @@
-/* МОДУЛЬ BASE64 ANYKS */
+/* МОДУЛЬ BASE64 AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _BASE64_ANYKS_
-#define _BASE64_ANYKS_
+#ifndef _BASE64_AMING_
+#define _BASE64_AMING_
 
 #include <string>
 #include <sys/types.h>
@@ -46,4 +46,4 @@ class Base64 {
 		const string decode(const string str);
 };
 
-#endif // _BASE64_ANYKS_
+#endif // _BASE64_AMING_

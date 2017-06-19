@@ -1,4 +1,4 @@
-/* МОДУЛЬ LDAP ANYKS */
+/* МОДУЛЬ LDAP AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick

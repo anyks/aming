@@ -1,12 +1,12 @@
-/* МОДУЛЬ УПРАВЛЕНИЯ ЗАГОЛОВКАМИ ANYKS */
+/* МОДУЛЬ УПРАВЛЕНИЯ ЗАГОЛОВКАМИ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _HEADERS_ANYKS_
-#define _HEADERS_ANYKS_
+#ifndef _HEADERS_AMING_
+#define _HEADERS_AMING_
 
 #include <regex>
 #include <string>
@@ -188,4 +188,4 @@ class Headers {
 		Headers(Config * config = NULL, LogApp * log = NULL, const u_short options = 0x0, const string name = "");
 };
 
-#endif // _HEADERS_ANYKS_
+#endif // _HEADERS_AMING_

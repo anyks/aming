@@ -1,12 +1,12 @@
-/* ГРУППЫ ПОЛЬЗОВАТЕЛЕЙ ПРОКСИ ANYKS */
+/* ГРУППЫ ПОЛЬЗОВАТЕЛЕЙ ПРОКСИ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _GROUPS_PROXY_ANYKS_
-#define _GROUPS_PROXY_ANYKS_
+#ifndef _GROUPS_PROXY_AMING_
+#define _GROUPS_PROXY_AMING_
 
 #include <regex>
 #include <string>
@@ -362,4 +362,4 @@ class Groups {
 		Groups(Config * config = NULL, LogApp * log = NULL);
 };
 
-#endif // _GROUPS_PROXY_ANYKS_
+#endif // _GROUPS_PROXY_AMING_

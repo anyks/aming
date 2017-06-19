@@ -1,13 +1,13 @@
 #!/bin/sh
 
-# PROVIDE: multiplex
+# PROVIDE: aming
 # BEFORE:  LOGIN cleanvar
 # KEYWORD: shutdown
 
 . /etc/rc.subr
 
-name="multiplex"
-rcvar=multiplex_enable
+name="aming"
+rcvar=aming_enable
 
 load_rc_config $name
 
@@ -15,10 +15,10 @@ load_rc_config $name
 logpri='local3.info'
 
 # Varriables
-: ${multiplex_enable="NO"}
-: ${multiplex_name="anyks"}
-: ${multiplex_config="/usr/local/etc/$multiplex_name/config.ini"}
-: ${multiplex_pid="/var/run/$multiplex_name.pid"}
+: ${aming_enable="NO"}
+: ${aming_name="aming"}
+: ${aming_config="/usr/local/etc/$aming_name/config.ini"}
+: ${aming_pid="/var/run/$aming_name.pid"}
 
 # Commands
 start_cmd="start"
@@ -33,42 +33,42 @@ command="/usr/local/bin/http"
 
 # Start command
 start(){
-	pid=`cat $multiplex_pid 2>/dev/null`
+	pid=`cat $aming_pid 2>/dev/null`
 	if [ "$pid" != "" ] && kill -s 0 $pid 2>/dev/null; then
-		echo "$multiplex_name is already running"
+		echo "$aming_name is already running"
 	else
-		rm -f $multiplex_pid 2>/dev/null
-		$command -c $multiplex_config 2>&1 | logger -p `eval "echo $logpri"` -t `eval "echo $multiplex_name"` &
+		rm -f $aming_pid 2>/dev/null
+		$command -c $aming_config 2>&1 | logger -p `eval "echo $logpri"` -t `eval "echo $aming_name"` &
 		sleep 1
-		pid=`cat $multiplex_pid 2>/dev/null`
+		pid=`cat $aming_pid 2>/dev/null`
 		if [ "$pid" != "" ]; then
-			echo "OK: $multiplex_name"
+			echo "OK: $aming_name"
 		else
-			echo "FAILED: $multiplex_name; see logs"
+			echo "FAILED: $aming_name; see logs"
 		fi
 	fi
 }
 
 # Stop command
 stop(){
-	pid=`cat $multiplex_pid 2>/dev/null`
+	pid=`cat $aming_pid 2>/dev/null`
 	if [ "$pid" = "" ]; then
-		echo "$multiplex_name is not running (pid file is empty)"
+		echo "$aming_name is not running (pid file is empty)"
 	else
 		kill $pid
-		rm -f $multiplex_pid 2>/dev/null
-		echo "OK: $multiplex_name"
+		rm -f $aming_pid 2>/dev/null
+		echo "OK: $aming_name"
 	fi
 }
 
 # Restart command
 restart(){
-	pid=`cat $multiplex_pid 2>/dev/null`
+	pid=`cat $aming_pid 2>/dev/null`
 	if [ "$pid" = "" ]; then
-		echo "$multiplex_name is not running (pid file is empty)"
+		echo "$aming_name is not running (pid file is empty)"
 	else
 		kill -USR1 $pid
-		echo "OK: $multiplex_name"
+		echo "OK: $aming_name"
 	fi
 }
 

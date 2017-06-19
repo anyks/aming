@@ -1,12 +1,12 @@
-/* МОДУЛЬ ЛОГОВ ANYKS */
+/* МОДУЛЬ ЛОГОВ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _LOG_ANYKS_
-#define _LOG_ANYKS_
+#ifndef _LOG_AMING_
+#define _LOG_AMING_
 
 #include <regex>
 #include <cstdio>
@@ -113,4 +113,4 @@ class LogApp {
 		LogApp(Config ** config = NULL, u_short type = TOLOG_CONSOLE);
 };
 
-#endif // _LOG_ANYKS_
+#endif // _LOG_AMING_

@@ -65,8 +65,8 @@ int main(int argc, char** argv)
 
 
 
-	openlog("pamtest_anyks", 0, LOG_LOCAL0);
-	syslog(LOG_LOCAL1, "Can not open file \"%s\" for writing.", "pamtest_anyks.conf");
+	openlog("pamtest_aming", 0, LOG_LOCAL0);
+	syslog(LOG_LOCAL1, "Can not open file \"%s\" for writing.", "pamtest_aming.conf");
 	closelog();
 // # more /var/log/messages
 // # more /var/log/system.log

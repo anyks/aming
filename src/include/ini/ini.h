@@ -1,12 +1,12 @@
-/* МОДУЛЬ ЧТЕНИЯ КОНФИГУРАЦИОННЫХ ФАЙЛОВ ANYKS */
+/* МОДУЛЬ ЧТЕНИЯ КОНФИГУРАЦИОННЫХ ФАЙЛОВ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _CONFIG_INI_ANYKS_
-#define _CONFIG_INI_ANYKS_
+#ifndef _CONFIG_INI_AMING_
+#define _CONFIG_INI_AMING_
 
 #include <regex>
 #include <vector>
@@ -177,4 +177,4 @@ class INI {
 		~INI();
 };
 
-#endif // _CONFIG_INI_ANYKS_
+#endif // _CONFIG_INI_AMING_

@@ -1,12 +1,12 @@
-/* МОДУЛЬ ОБЩИХ ФУНКЙИЙ ANYKS */
+/* МОДУЛЬ ОБЩИХ ФУНКЙИЙ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _GENERAL_ANYKS_
-#define _GENERAL_ANYKS_
+#ifndef _GENERAL_AMING_
+#define _GENERAL_AMING_
 
 #include <regex>
 #include <pwd.h>
@@ -189,4 +189,4 @@ const size_t getBytes(const string str);
  */
 const size_t getSeconds(const string str);
 
-#endif // _GENERAL_ANYKS_
+#endif // _GENERAL_AMING_

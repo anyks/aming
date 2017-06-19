@@ -1,4 +1,4 @@
-/* HTTP ПАРСЕР ANYKS */
+/* HTTP ПАРСЕР AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
@@ -1323,7 +1323,7 @@ HttpData::Connect HttpData::getConnection(const string str){
 	if(!match.empty()) data.protocol = ::toCase(match[1].str());
 	// Устанавливаем правило для поиска
 	regex eh(
-		// Стандартная запись домена anyks.com
+		// Стандартная запись домена aming.su
 		"([\\w\\.\\-]+\\.[\\w\\-]+|"
 		// Стандартная запись IPv4 127.0.0.1
 		"\\d{1,3}(?:\\.\\d{1,3}){3}|"

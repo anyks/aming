@@ -1,12 +1,12 @@
-/* МОДУЛЬ РАБОТЫ С СЕТЯМИ ANYKS */
+/* МОДУЛЬ РАБОТЫ С СЕТЯМИ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _NETWORK_ANYKS_
-#define _NETWORK_ANYKS_
+#ifndef _NETWORK_AMING_
+#define _NETWORK_AMING_
 
 #include <regex>
 #include <string>
@@ -344,4 +344,4 @@ class Network {
 		const int isLocal6(const string ip);
 };
 
-#endif // _NETWORK_ANYKS_
+#endif // _NETWORK_AMING_

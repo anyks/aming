@@ -1,12 +1,12 @@
-/* МОДУЛЬ LDAP ANYKS */
+/* МОДУЛЬ LDAP AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _PROXY_LDAP_ANYKS_
-#define _PROXY_LDAP_ANYKS_
+#ifndef _PROXY_LDAP_AMING_
+#define _PROXY_LDAP_AMING_
 
 #include <string>
 #include <vector>
@@ -85,4 +85,4 @@ class ALDAP {
 		ALDAP(Config * config = NULL, LogApp * log = NULL);
 };
 
-#endif // _PROXY_LDAP_ANYKS_
+#endif // _PROXY_LDAP_AMING_

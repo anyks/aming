@@ -1,12 +1,12 @@
-/* DNS РЕСОЛВЕР ДЛЯ ПРОКСИ ANYKS */
+/* DNS РЕСОЛВЕР ДЛЯ ПРОКСИ AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _DNS_RESOLVER_ANYKS_
-#define _DNS_RESOLVER_ANYKS_
+#ifndef _DNS_RESOLVER_AMING_
+#define _DNS_RESOLVER_AMING_
 
 #include <mutex>
 #include <regex>
@@ -111,4 +111,4 @@ class DNSResolver {
 		~DNSResolver();
 };
 
-#endif // _DNS_RESOLVER_ANYKS_
+#endif // _DNS_RESOLVER_AMING_

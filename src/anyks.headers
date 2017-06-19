@@ -1,4 +1,4 @@
-# КОНФИГУРАЦИОННЫЙ ФАЙЛ УПРАВЛЕНИЯ ЗАГОЛОВКАМИ ANYKS
+# КОНФИГУРАЦИОННЫЙ ФАЙЛ УПРАВЛЕНИЯ ЗАГОЛОВКАМИ AMING
 #
 #	автор:				Юрий Николаевич Лобарев
 #	skype:				efrantick
@@ -14,5 +14,5 @@
 
   rm      out    127.0.0.1  get | post     /     vipmake.com  mozilla\/\d\.\d  Accept-Encoding
   rm      in     127.0.0.1  !connect       *     www.vipmake.com  *                Link | Via | X-Generator | Server | X-Drupal-Cache | X-Frame-Options | X-Powered-By | X-UA-Compatible
-  add     in     *          *              *     *            *                Server: Anyks/1.0
-  add     *      *          *              *     *  		  *                Anyks: Proxy | Rembo: server
+  add     in     *          *              *     *            *                Server: Aming/1.0
+  add     *      *          *              *     *  		  *                Aming: Proxy | Rembo: server

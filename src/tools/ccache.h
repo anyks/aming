@@ -1,4 +1,4 @@
-/* УТИЛИТА ЧИСТКИ УСТАРЕВШИХ ФЙЛОВ КЭША ANYKS */
+/* УТИЛИТА ЧИСТКИ УСТАРЕВШИХ ФЙЛОВ КЭША AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
@@ -8,10 +8,10 @@
 /*
 * Example crontab:
 * # crontab -e
-* 47 6 * * 7 root /root/proxy/src/bin/ptcc -c /etc/anyks/config.ini >> /var/log/ptcc.log 2>&1
+* 47 6 * * 7 root /root/proxy/src/bin/ptcc -c /etc/aming/config.ini >> /var/log/ptcc.log 2>&1
 */
-#ifndef _CACHE_CLEANER_ANYKS_
-#define _CACHE_CLEANER_ANYKS_
+#ifndef _CACHE_CLEANER_AMING_
+#define _CACHE_CLEANER_AMING_
 
 #include <map>
 #include <regex>
@@ -187,4 +187,4 @@ class CCache {
 		~CCache();
 };
 
-#endif // _CACHE_CLEANER_ANYKS_
+#endif // _CACHE_CLEANER_AMING_

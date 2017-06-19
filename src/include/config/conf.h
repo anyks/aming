@@ -1,12 +1,12 @@
-/* МОДУЛЬ CONFIG ДЛЯ ПРОКСИ СЕРВЕРА ANYKS */
+/* МОДУЛЬ CONFIG ДЛЯ ПРОКСИ СЕРВЕРА AMING */
 /*
 *	автор:				Юрий Николаевич Лобарев
 *	skype:				efrantick
 *	телефон:			+7(920)672-33-22
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
-#ifndef _CONFIG_ANYKS_
-#define _CONFIG_ANYKS_
+#ifndef _CONFIG_AMING_
+#define _CONFIG_AMING_
 
 #include <string>
 #include <vector>
@@ -18,7 +18,7 @@
 #include "general/general.h"
 
 // Данные приложения
-#define APP_NAME "ANYKS"
+#define APP_NAME "AMING"
 #define APP_VERSION "1.0"
 #define APP_YEAR "2017"
 #define APP_COPYRIGHT "ANYKS LLC"
@@ -325,4 +325,4 @@ class Config {
 		Config(const string filename = "");
 };
 
-#endif // _CONFIG_ANYKS_
+#endif // _CONFIG_AMING_
