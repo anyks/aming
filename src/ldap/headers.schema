@@ -32,66 +32,46 @@ attributeTypes: ( 2.2.2.0.2.5
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
 attributeTypes: ( 2.2.2.0.2.6
-	NAME 'amingHeadersUserMask'
-	DESC 'IPv4-маска в точечно-цифровой нотации, например, 255.255.255.0, без начальных нулей'
+	NAME 'amingHeadersUserNetwork4'
+	DESC 'IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{31} )
 
 attributeTypes: ( 2.2.2.0.2.7
-	NAME 'amingHeadersUserPrefix4'
-	DESC 'IPv4-префикс в точечно-цифровой нотации, например, 32'
-	EQUALITY integerMatch
-	ORDERING integerOrderingMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+	NAME 'amingHeadersUserNetwork6'
+	DESC 'IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64'
+	EQUALITY caseIgnoreIA5Match
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{43} )
 
 attributeTypes: ( 2.2.2.0.2.8
-	NAME 'amingHeadersUserPrefix6'
-	DESC 'IPv6-префикс в точечно-цифровой нотации, например, 64'
-	EQUALITY integerMatch
-	ORDERING integerOrderingMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
-
-attributeTypes: ( 2.2.2.0.2.9
-	NAME 'amingHeadersUserNetwork4'
-	DESC 'IPv4-сеть в точечно-цифровой нотации, например, 192.168, без начальных нулей'
-	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
-
-attributeTypes: ( 2.2.2.0.2.10
-	NAME 'amingHeadersUserNetwork6'
-	DESC 'IPv6-сеть в любой нотации, например, 2001:0db8:11a3::'
-	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
-
-attributeTypes: ( 2.2.2.0.2.11
 	NAME 'amingHeadersUser'
 	DESC 'Имя пользователя или его идентификатор'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{30} )
 
-attributeTypes: ( 2.2.2.0.2.12
+attributeTypes: ( 2.2.2.0.2.9
 	NAME 'amingHeadersGroup'
 	DESC 'Название группы или её идентификатор'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{30} )
 
-attributeTypes: ( 2.2.2.0.2.13
+attributeTypes: ( 2.2.2.0.2.10
 	NAME 'amingHeadersMethod'
 	DESC 'Метод запроса (get, post, put, delete и т.д.), например get'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{30} )
 
-attributetype ( 2.2.2.0.2.14
+attributetype ( 2.2.2.0.2.11
 	NAME 'amingHeadersPath'
 	DESC 'Путь запроса, например /aming.html'
 	EQUALITY caseExactIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.2.15
+attributeTypes: ( 2.2.2.0.2.12
 	NAME 'amingHeadersQuery'
 	DESC 'Параметры запроса, например ?id=12'
 	EQUALITY caseIgnoreMatch
@@ -99,38 +79,38 @@ attributeTypes: ( 2.2.2.0.2.15
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{255}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.2.16
+attributeTypes: ( 2.2.2.0.2.13
 	NAME 'amingHeadersDomainServer'
 	DESC 'Домен удаленного сервера с которым идет работа, например aming.su'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{128} )
 
-attributeTypes: ( 2.2.2.0.2.17
+attributeTypes: ( 2.2.2.0.2.14
 	NAME 'amingHeadersIpServer4'
 	DESC 'IPv4-адрес удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.1.1, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
 
-attributeTypes: ( 2.2.2.0.2.18
+attributeTypes: ( 2.2.2.0.2.15
 	NAME 'amingHeadersIpServer6'
 	DESC 'IPv6-адрес удаленного сервера с которым идет работа в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
-attributeTypes: ( 2.2.2.0.2.19
+attributeTypes: ( 2.2.2.0.2.16
 	NAME 'amingHeadersNetworkServer4'
-	DESC 'IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168, без начальных нулей'
+	DESC 'IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.0.0/255.255.0.0, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{31} )
 
-attributeTypes: ( 2.2.2.0.2.20
+attributeTypes: ( 2.2.2.0.2.17
 	NAME 'amingHeadersNetworkServer6'
-	DESC 'IPv6-сеть удаленного сервера с которым идет работа в любой нотации, например, 2001:0db8:11a3::'
+	DESC 'IPv6-сеть удаленного сервера с которым идет работа в любой нотации, например, 2001:0db8:11a3::/64'
 	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{43} )
 
-attributeTypes: ( 2.2.2.0.2.21
+attributeTypes: ( 2.2.2.0.2.18
 	NAME 'amingHeadersRegex'
 	DESC 'Регулярное выражение для обработки userAgent клиента, например mozilla\/\d\.\d'
 	EQUALITY caseIgnoreMatch
@@ -138,7 +118,7 @@ attributeTypes: ( 2.2.2.0.2.21
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{255}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.2.22
+attributeTypes: ( 2.2.2.0.2.19
 	NAME 'amingHeadersHeaders'
 	DESC 'Заголовки с которыми производятся манипуляции, например Accept-Encoding'
 	EQUALITY caseIgnoreMatch
@@ -150,4 +130,4 @@ objectClass ( 2.2.2.0.2
 	DESC 'Схема конфигурационных данных управления заголовками прокси-сервера Aming'
 	SUP top STRUCTURAL
 	MUST ( amingHeadersAction $ amingHeadersHeaders )
-	MAY ( amingHeadersAction $ amingHeadersRoute $ amingHeadersUserMac $ amingHeadersUserIp4 $ amingHeadersUserIp6 $ amingHeadersUserMask $ amingHeadersUserPrefix4 $ amingHeadersUserPrefix6 $ amingHeadersUserNetwork4 $ amingHeadersUserNetwork6 $ amingHeadersUser $ amingHeadersGroup $ amingHeadersMethod $ amingHeadersPath $ amingHeadersQuery $ amingHeadersDomainServer $ amingHeadersIpServer4 $ amingHeadersIpServer6 $ amingHeadersNetworkServer4 $ amingHeadersNetworkServer6 $ amingHeadersRegex $ amingHeadersHeaders ) )
+	MAY ( amingHeadersAction $ amingHeadersRoute $ amingHeadersUserMac $ amingHeadersUserIp4 $ amingHeadersUserIp6 $ amingHeadersUserNetwork4 $ amingHeadersUserNetwork6 $ amingHeadersUser $ amingHeadersGroup $ amingHeadersMethod $ amingHeadersPath $ amingHeadersQuery $ amingHeadersDomainServer $ amingHeadersIpServer4 $ amingHeadersIpServer6 $ amingHeadersNetworkServer4 $ amingHeadersNetworkServer6 $ amingHeadersRegex $ amingHeadersHeaders ) )
