@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE template SYSTEM "template.dtd">
+
+<template>
+	<askcontainer>1</askcontainer>
+	<description>Конфигурация упрвления http заголовками AMING</description>
+	<icon>schema-big.png</icon>
+	<invalid>0</invalid>
+	<rdn>ah</rdn>
+	<!--<regexp>^ou=People,o=.*,</regexp>-->
+	<title>Управление http заголовками AMING</title>
+	<visible>1</visible>
+
+	<objectClasses>
+		<objectClass id="amingHeaders"></objectClass>
+		<objectClass id="top"></objectClass>   
+	</objectClasses>
+
+	<attributes>
+		<attribute id="amingHeadersAction">
+			<display>Действие (удаление заголовков, добавление заголовков)</display>
+			<icon>light-big.png</icon>
+			<type>select</type>
+			<value id="TRUE">Добавление</value>
+			<value id="FALSE">Удаление</value>
+			<order>1</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingHeadersRoute">
+			<display>Направление трафика (входящий, исходящий)</display>
+			<icon>ldap-o.png</icon>
+			<type>select</type>
+			<value id="TRUE">Входящий</value>
+			<value id="FALSE">Исходящий</value>
+			<order>2</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingHeadersMethod">
+			<display>Метод запроса</display>
+			<icon>network.png</icon>
+			<type>select</type>
+			<default>*</default>
+			<value id="options">OPTIONS</value>
+			<value id="get">GET</value>
+			<value id="post">POST</value>
+			<value id="head">HEAD</value>
+			<value id="put">PUT</value>
+			<value id="patch">PATCH</value>
+			<value id="delete">DELETE</value>
+			<value id="trace">TRACE</value>
+			<value id="connect">CONNECT</value>
+			<value id="*">Любой</value>
+			<order>3</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingHeadersPath">
+			<display>Путь запроса, например /aming.html</display>
+			<icon>folder.png</icon>
+			<order>4</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingHeadersQuery">
+			<display>Параметры запроса, например ?id=12</display>
+			<icon>find.png</icon>
+			<order>5</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingHeadersRegex">
+			<display>Регулярное выражение для обработки userAgent клиента, например mozilla\/\d\.\d</display>
+			<icon>help-big.png</icon>
+			<order>6</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingHeadersHeaders">
+			<display>Заголовки с которыми производятся манипуляции, например Accept-Encoding</display>
+			<icon>schema-big.png</icon>
+			<order>7</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingHeadersGroup">
+			<display>Название группы или её идентификатор</display>
+			<icon>ldap-ou.png</icon>
+			<!-- <onchange>=autoFill(homeDirectory;/home/users/%gidNumber|0-0/T%/%uid|3-%)</onchange> -->
+			<order>8</order>
+			<page>1</page>
+			<value><![CDATA[=php.PickList(/;(&(objectClass=posixGroup));gidNumber;%cn%;;;;cn)]]></value>
+			<!-- <value>1001</value> -->
+		</attribute>
+
+		<attribute id="amingHeadersUser">
+			<display>Имя пользователя или его идентификатор</display>
+			<icon>ldap-user.png</icon>
+			<order>9</order>
+			<page>1</page>
+			<value><![CDATA[=php.PickList(/;(&(objectClass=posixAccount));uidNumber;%uid%;;;;uid)]]></value>
+		</attribute>
+
+		<attribute id="amingHeadersUserMac">
+			<display>MAC-адрес идентификации клиента в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2</display>
+			<icon>ldap-o.png</icon>
+			<order>1</order>
+			<page>2</page>
+		</attribute>
+
+		<attribute id="amingHeadersUserIp4">
+			<display>IPv4-адрес идентификации клиента в точечно-цифровой нотации, например, 192.168.1.1</display>
+			<icon>ldap-o.png</icon>
+			<order>2</order>
+			<page>2</page>
+		</attribute>
+
+		<attribute id="amingHeadersUserNetwork4">
+			<display>IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32</display>
+			<icon>ldap-o.png</icon>
+			<order>3</order>
+			<page>2</page>
+		</attribute>
+
+		<attribute id="amingHeadersUserIp6">
+			<display>IPv6-адрес идентификации клиента в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
+			<icon>ldap-o.png</icon>
+			<order>4</order>
+			<page>2</page>
+		</attribute>
+
+		<attribute id="amingHeadersUserNetwork6">
+			<display>IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64</display>
+			<icon>ldap-o.png</icon>
+			<order>5</order>
+			<page>2</page>
+		</attribute>
+
+		<attribute id="amingHeadersDomainServer">
+			<display>Домен удаленного сервера с которым идет работа, например aming.su</display>
+			<icon>host.png</icon>
+			<order>1</order>
+			<page>3</page>
+		</attribute>
+
+		<attribute id="amingHeadersIpServer4">
+			<display>IPv4-адрес удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.1.1</display>
+			<icon>host.png</icon>
+			<order>2</order>
+			<page>3</page>
+		</attribute>
+
+		<attribute id="amingHeadersNetworkServer4">
+			<display>IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.0.0/255.255.0.0</display>
+			<icon>host.png</icon>
+			<order>3</order>
+			<page>3</page>
+		</attribute>
+
+		<attribute id="amingHeadersIpServer6">
+			<display>IPv6-адрес удаленного сервера с которым идет работа в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
+			<icon>host.png</icon>
+			<order>4</order>
+			<page>3</page>
+		</attribute>
+
+		<attribute id="amingHeadersNetworkServer6">
+			<display>IPv6-сеть удаленного сервера с которым идет работа в любой нотации, например, 2001:0db8:11a3::/64</display>
+			<icon>host.png</icon>
+			<order>5</order>
+			<page>3</page>
+		</attribute>
+	</attributes>
+</template>

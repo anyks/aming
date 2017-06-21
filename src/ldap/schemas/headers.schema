@@ -2,16 +2,13 @@ attributeTypes: ( 2.2.2.0.2.1
 	NAME 'amingHeadersAction'
 	DESC 'Действие (FALSE - удаление, TRUE - добавление), например TRUE'
 	EQUALITY booleanMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
-	SINGLE-VALUE )
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 )
 
 attributeTypes: ( 2.2.2.0.2.2
 	NAME 'amingHeadersRoute'
-	DESC 'Направление трафика (in - входящий, out - исходящий, * - любой), например *'
-	EQUALITY caseIgnoreMatch
-	SUBSTR caseIgnoreSubstringsMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{3}
-	SINGLE-VALUE )
+	DESC 'Направление трафика (TRUE - входящий, FALSE - исходящий), например TRUE'
+	EQUALITY booleanMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 )
 
 attributeTypes: ( 2.2.2.0.2.3
 	NAME 'amingHeadersUserMac'
@@ -100,7 +97,7 @@ attributeTypes: ( 2.2.2.0.2.15
 
 attributeTypes: ( 2.2.2.0.2.16
 	NAME 'amingHeadersNetworkServer4'
-	DESC 'IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.0.0/255.255.0.0, без начальных нулей'
+	DESC 'IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.0.0/255.255.0.0'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{31} )
 
@@ -125,9 +122,17 @@ attributeTypes: ( 2.2.2.0.2.19
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
 
+attributeTypes: ( 2.2.2.0.2.20
+	NAME 'ah'
+	DESC 'Название конфигурации'
+	EQUALITY caseIgnoreMatch
+	SUBSTR caseIgnoreSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{100}
+	SINGLE-VALUE )
+
 objectClass ( 2.2.2.0.2
 	Name 'amingHeaders'
 	DESC 'Схема конфигурационных данных управления заголовками прокси-сервера Aming'
 	SUP top STRUCTURAL
-	MUST ( amingHeadersAction $ amingHeadersHeaders )
-	MAY ( amingHeadersAction $ amingHeadersRoute $ amingHeadersUserMac $ amingHeadersUserIp4 $ amingHeadersUserIp6 $ amingHeadersUserNetwork4 $ amingHeadersUserNetwork6 $ amingHeadersUser $ amingHeadersGroup $ amingHeadersMethod $ amingHeadersPath $ amingHeadersQuery $ amingHeadersDomainServer $ amingHeadersIpServer4 $ amingHeadersIpServer6 $ amingHeadersNetworkServer4 $ amingHeadersNetworkServer6 $ amingHeadersRegex $ amingHeadersHeaders ) )
+	MUST ( ah $ amingHeadersAction $ amingHeadersHeaders )
+	MAY ( amingHeadersAction $ amingHeadersRoute $ amingHeadersUserMac $ amingHeadersUserIp4 $ amingHeadersUserIp6 $ amingHeadersUserNetwork4 $ amingHeadersUserNetwork6 $ amingHeadersUser $ amingHeadersGroup $ amingHeadersMethod $ amingHeadersPath $ amingHeadersQuery $ amingHeadersDomainServer $ amingHeadersIpServer4 $ amingHeadersIpServer6 $ amingHeadersNetworkServer4 $ amingHeadersNetworkServer6 $ amingHeadersRegex $ amingHeadersHeaders $ ah ) )
