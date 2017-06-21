@@ -30,25 +30,25 @@ attributeTypes: ( 2.2.2.0.1.5
 
 attributeTypes: ( 2.2.2.0.1.6
 	NAME 'amingConfigsIpExternal4'
-	DESC 'IPv4-адрес исходящего подключения в точечно-цифровой нотации, например, 192.168.1.1, без начальных нулей'
+	DESC 'IPv4-адрес исходящего подключения в точечно-цифровой нотации, например, 0.0.0.0, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
 
 attributeTypes: ( 2.2.2.0.1.7
 	NAME 'amingConfigsIpResolver4'
-	DESC 'IPv4-адрес резолвера dns в точечно-цифровой нотации, например, 192.168.1.1, без начальных нулей'
+	DESC 'IPv4-адрес резолвера dns в точечно-цифровой нотации, например, 8.8.8.8, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
 
 attributeTypes: ( 2.2.2.0.1.8
 	NAME 'amingConfigsIpExternal6'
-	DESC 'IPv6-адрес исходящего подключения в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d'
+	DESC 'IPv6-адрес исходящего подключения в любой нотации, шестнадцатеричные цифры, например, ::0'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
 attributeTypes: ( 2.2.2.0.1.9
 	NAME 'amingConfigsIpResolver6'
-	DESC 'IPv6-адрес резолвера dns в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d'
+	DESC 'IPv6-адрес резолвера dns в любой нотации, шестнадцатеричные цифры, например, 2001:4860:4860::8888'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
@@ -171,7 +171,7 @@ attributeTypes: ( 2.2.2.0.1.24
 
 attributeTypes: ( 2.2.2.0.1.25
 	NAME 'amingConfigsGzipVhttp'
-	DESC 'Версия http протокола (1.0, 1.1, * или через разделитель "|" перечисления - например 1.0 | 1.1), например 1.1'
+	DESC 'Версия http протокола (1.0, 1.1, *), например 1.1'
 	EQUALITY objectIdentifierMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 )
 
@@ -257,14 +257,14 @@ attributeTypes: ( 2.2.2.0.1.36
 
 attributeTypes: ( 2.2.2.0.1.37
 	NAME 'amingConfigsProxyConnect'
-	DESC 'Разрешить коннект прокси, например TRUE'
+	DESC 'Разрешить событие connect, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
 attributeTypes: ( 2.2.2.0.1.38
 	NAME 'amingConfigsProxyUpgrade'
-	DESC 'Разрешить upgrade (переключение протоколов), например TRUE'
+	DESC 'Разрешить метод upgrade (переключение протоколов), например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
@@ -291,9 +291,31 @@ attributeTypes: ( 2.2.2.0.1.41
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{6}
 	SINGLE-VALUE )
 
+attributeTypes: ( 2.2.2.0.1.42
+	NAME 'amingConfigsGroupId'
+	DESC 'Идентификатор пользователя к которому привязывается конфигурация, например 1001'
+	EQUALITY integerMatch
+	ORDERING integerOrderingMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+
+attributeTypes: ( 2.2.2.0.1.43
+	NAME 'amingConfigsUserId'
+	DESC 'Идентификатор группы к которой привязывается конфигурация, например 1001'
+	EQUALITY integerMatch
+	ORDERING integerOrderingMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+
+attributeTypes: ( 2.2.2.0.1.44
+	NAME 'ac'
+	DESC 'Название конфигурации'
+	EQUALITY caseIgnoreMatch
+	SUBSTR caseIgnoreSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{100}
+	SINGLE-VALUE )
+
 objectClass ( 2.2.2.0.1
 	Name 'amingConfigs'
 	DESC 'Схема конфигурационных данных прокси-сервера Aming'
 	SUP top STRUCTURAL
-	MUST ( amingConfigsType )
-	MAY ( amingConfigsIdntMac $ amingConfigsIdntIp4 $ amingConfigsIdntNetwork4 $ amingConfigsIdntIp6 $ amingConfigsIdntNetwork6 $ amingConfigsIpExternal4 $ amingConfigsIpResolver4 $ amingConfigsIpExternal6 $ amingConfigsIpResolver6 $ amingConfigsTimeoutsRead $ amingConfigsTimeoutsWrite $ amingConfigsTimeoutsUpgrade $ amingConfigsSpeedInput $ amingConfigsSpeedOutput $ amingConfigsKeepAliveEnabled $ amingConfigsKeepAliveCnt $ amingConfigsKeepAliveIdle $ amingConfigsKeepAliveIntvl $ amingConfigsGzipTransfer $ amingConfigsGzipResponse $ amingConfigsGzipLevel $ amingConfigsGzipRegex $ amingConfigsGzipLength $ amingConfigsGzipChunk $ amingConfigsGzipVhttp $ amingConfigsGzipProxied $ amingConfigsGzipTypes $ amingConfigsGzipVary $ amingConfigsConnectsSize $ amingConfigsConnectsConnect $ amingConfigsProxySubnet $ amingConfigsProxySkill $ amingConfigsProxyReverse $ amingConfigsProxyForward $ amingConfigsProxyTransfer $ amingConfigsProxyPipelining $ amingConfigsProxyConnect $ amingConfigsProxyUpgrade $ amingConfigsProxyDeblock $ amingConfigsProxyAgent $ amingConfigsType ) )
+	MUST ( ac $ amingConfigsType )
+	MAY ( amingConfigsIdntMac $ amingConfigsIdntIp4 $ amingConfigsIdntNetwork4 $ amingConfigsIdntIp6 $ amingConfigsIdntNetwork6 $ amingConfigsIpExternal4 $ amingConfigsIpResolver4 $ amingConfigsIpExternal6 $ amingConfigsIpResolver6 $ amingConfigsTimeoutsRead $ amingConfigsTimeoutsWrite $ amingConfigsTimeoutsUpgrade $ amingConfigsSpeedInput $ amingConfigsSpeedOutput $ amingConfigsKeepAliveEnabled $ amingConfigsKeepAliveCnt $ amingConfigsKeepAliveIdle $ amingConfigsKeepAliveIntvl $ amingConfigsGzipTransfer $ amingConfigsGzipResponse $ amingConfigsGzipLevel $ amingConfigsGzipRegex $ amingConfigsGzipLength $ amingConfigsGzipChunk $ amingConfigsGzipVhttp $ amingConfigsGzipProxied $ amingConfigsGzipTypes $ amingConfigsGzipVary $ amingConfigsConnectsSize $ amingConfigsConnectsConnect $ amingConfigsProxySubnet $ amingConfigsProxySkill $ amingConfigsProxyReverse $ amingConfigsProxyForward $ amingConfigsProxyTransfer $ amingConfigsProxyPipelining $ amingConfigsProxyConnect $ amingConfigsProxyUpgrade $ amingConfigsProxyDeblock $ amingConfigsProxyAgent $ amingConfigsType $ amingConfigsGroupId $ amingConfigsUserId $ ac) )

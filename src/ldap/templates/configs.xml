@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE template SYSTEM "template.dtd">
+
+<template>
+	<askcontainer>1</askcontainer>
+	<description>Конфигурационные данные AMING</description>
+	<icon>network.png</icon>
+	<invalid>0</invalid>
+	<rdn>ac</rdn>
+	<!--<regexp>^ou=People,o=.*,</regexp>-->
+	<title>Конфигурация AMING</title>
+	<visible>1</visible>
+
+	<objectClasses>
+		<objectClass id="amingConfigs"></objectClass>
+		<objectClass id="top"></objectClass>   
+	</objectClasses>
+
+	<attributes>
+		<attribute id="amingConfigsTimeoutsRead">
+			<display>Таймаут на чтение (s, m, h, d, M, y)</display>
+			<icon>timeout.png</icon>
+			<default>5s</default>
+			<order>1</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsTimeoutsWrite">
+			<display>Таймаут на запись (s, m, h, d, M, y)</display>
+			<icon>timeout.png</icon>
+			<default>13s</default>
+			<order>2</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsTimeoutsUpgrade">
+			<display>Таймаут ожидания при смене протокола подключения (s, m, h, d, M, y)</display>
+			<icon>timeout.png</icon>
+			<default>300s</default>
+			<order>3</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsSpeedInput">
+			<display>Скорость передачи данных при входящем подключении (bps, kbps, Mbps, Gbps)</display>
+			<icon>server-small.png</icon>
+			<default>300kbps</default>
+			<order>4</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsSpeedOutput">
+			<display>Скорость передачи данных при исходящем подключении (bps, kbps, Mbps, Gbps)</display>
+			<icon>server-small.png</icon>
+			<default>300kbps</default>
+			<order>5</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsKeepAliveEnabled">
+			<display>Активация постоянного подключения</display>
+			<icon>ldap-dc.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>6</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsKeepAliveCnt">
+			<display>Максимальное количество попыток при постоянном подключении</display>
+			<icon>ldap-dc.png</icon>
+			<default>3</default>
+			<order>7</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsKeepAliveIdle">
+			<display>Интервал времени в секундах через которое происходит проверка подключения</display>
+			<icon>ldap-dc.png</icon>
+			<default>1</default>
+			<order>8</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsKeepAliveIntvl">
+			<display>Интервал времени в секундах между попытками</display>
+			<icon>ldap-dc.png</icon>
+			<default>2</default>
+			<order>9</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipLevel">
+			<display>Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)</display>
+			<icon>files.png</icon>
+			<default>default</default>
+			<order>10</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipRegex">
+			<display>Не сжимать контент, UserAgent которого соответсвует регулярному выражению</display>
+			<icon>files.png</icon>
+			<default>msie6</default>
+			<order>11</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipLength">
+			<display>Минимальная длина данных после которых включается сжатие (работает только с Content-Length)</display>
+			<icon>files.png</icon>
+			<default>100</default>
+			<order>12</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipChunk">
+			<display>Максимальный размер чанка в (B, KB, MB, GB)</display>
+			<icon>files.png</icon>
+			<default>1KB</default>
+			<order>13</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipTypes">
+			<display>Разрешает сжатие ответа методом gzip для указанных MIME-типов</display>
+			<icon>files.png</icon>
+			<default>*</default>
+			<order>14</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipTransfer">
+			<display>Обмен сжатыми данными</display>
+			<icon>files.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>15</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipResponse">
+			<display>Сжимать не сжатые данные ответа</display>
+			<icon>files.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>16</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipVary">
+			<display>Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”</display>
+			<icon>files.png</icon>
+			<type>select</type>
+			<default>FALSE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>17</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipVhttp">
+			<display>Версия http протокола</display>
+			<icon>files.png</icon>
+			<type>select</type>
+			<default>1.1</default>
+			<value id="1.0">v1.0</value>
+			<value id="1.1">v1.1</value>
+			<order>18</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGzipProxied">
+			<display>Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов</display>
+			<icon>files.png</icon>
+			<type>select</type>
+			<default>any</default>
+			<value id="off">Off</value>
+			<value id="any">Any</value>
+			<value id="auth">Auth</value>
+			<value id="expired">Expired</value>
+			<value id="private">Private</value>
+			<value id="no_etag">No etag</value>
+			<value id="no-cache">No cache</value>
+			<value id="no-store">No store</value>
+			<value id="no_last_modified">No last modified</value>
+			<order>19</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsConnectsSize">
+			<display>Максимальный размер скачиваемых данных в (B, KB, MB, GB)</display>
+			<icon>children.png</icon>
+			<default>10MB</default>
+			<order>20</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsConnectsConnect">
+			<display>Максимальное количество подключений (одного клиента к прокси серверу)</display>
+			<icon>children.png</icon>
+			<default>auto</default>
+			<order>21</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxySubnet">
+			<display>Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>22</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxySkill">
+			<display>Скил прокси-сервера - smart (умный) или dumb (глупый)</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>smart</default>
+			<value id="smart">Умный</value>
+			<value id="dumb">Глупый</value>
+			<order>23</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyReverse">
+			<display>Обратный прокси (доступ из сети в локальную сеть)</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>24</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyForward">
+			<display>Прямой прокси (доступ во внешнюю сеть)</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>25</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyTransfer">
+			<display>Активация поддержки прокси листа</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>26</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyPipelining">
+			<display>Активация конвеерной обработки</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>27</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyConnect">
+			<display>Разрешить событие connect</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>28</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyUpgrade">
+			<display>Разрешить метод upgrade</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>29</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyDeblock">
+			<display>Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно)</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>FALSE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>30</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsProxyAgent">
+			<display>Вставлять заголовок название агента прокси сервера в заголовках http</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>TRUE</default>
+			<value id="TRUE">Включено</value>
+			<value id="FALSE">Отключено</value>
+			<order>31</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsType">
+			<display>Тип владельца которому принадлежат настройки</display>
+			<icon>server-settings.png</icon>
+			<type>select</type>
+			<default>groups</default>
+			<value id="groups">Группы</value>
+			<value id="users">Пользователи</value>
+			<order>32</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsGroupId">
+			<display>Идентификатор группы к которой привязывается конфигурация</display>
+			<icon>ldap-ou.png</icon>
+			<!-- <onchange>=autoFill(homeDirectory;/home/users/%gidNumber|0-0/T%/%uid|3-%)</onchange> -->
+			<order>33</order>
+			<page>1</page>
+			<value><![CDATA[=php.PickList(/;(&(objectClass=posixGroup));gidNumber;%cn%;;;;cn)]]></value>
+			<!-- <value>1001</value> -->
+		</attribute>
+
+		<attribute id="amingConfigsUserId">
+			<display>Идентификатор пользователя к которому привязывается конфигурация</display>
+			<icon>ldap-user.png</icon>
+			<order>34</order>
+			<page>1</page>
+			<value><![CDATA[=php.PickList(/;(&(objectClass=posixAccount));uidNumber;%uid%;;;;uid)]]></value>
+		</attribute>
+
+		<attribute id="amingConfigsIdntMac">
+			<display>MAC-адрес идентификации клиента в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>35</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIdntIp4">
+			<display>IPv4-адрес идентификации клиента в точечно-цифровой нотации, например, 192.168.1.1</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>36</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIdntNetwork4">
+			<display>IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>37</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIdntIp6">
+			<display>IPv6-адрес идентификации клиента в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>38</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIdntNetwork6">
+			<display>IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>39</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIpExternal4">
+			<display>IPv4-адрес исходящего подключения в точечно-цифровой нотации, например, 0.0.0.0</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>40</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIpResolver4">
+			<display>IPv4-адрес резолвера dns в точечно-цифровой нотации, например, 8.8.8.8</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>41</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIpExternal6">
+			<display>IPv6-адрес исходящего подключения в любой нотации, шестнадцатеричные цифры, например, ::0</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>42</order>
+			<page>1</page>
+		</attribute>
+
+		<attribute id="amingConfigsIpResolver6">
+			<display>IPv6-адрес резолвера dns в любой нотации, шестнадцатеричные цифры, например, 2001:4860:4860::8888</display>
+			<icon>ldap-o.png</icon>
+			<default>auto</default>
+			<order>43</order>
+			<page>1</page>
+		</attribute>
+	</attributes>
+</template>
