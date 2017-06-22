@@ -395,8 +395,6 @@ const bool Groups::readGroupsFromLdap(){
 			group.desc = description;
 			// Переопределяем дефолтные данные из файла конфигурации
 			setDataGroupFromFile(group);
-			// Добавляем название файла конфигурации заголовков
-			group.headers.addName(group.name);
 			// Устанавливаем параметры http парсера
 			group.headers.setOptions(group.options);
 			// Добавляем группу в список групп
@@ -522,8 +520,6 @@ const bool Groups::readGroupsFromPam(){
 								group.users.push_back(pw->pw_uid);
 								// Переопределяем дефолтные данные из файла конфигурации
 								setDataGroupFromFile(group);
-								// Добавляем название файла конфигурации заголовков
-								group.headers.addName(group.name);
 								// Устанавливаем параметры http парсера
 								group.headers.setOptions(group.options);
 								// Добавляем группу в список групп
@@ -619,8 +615,6 @@ const bool Groups::readGroupsFromFile(){
 					}
 					// Переопределяем дефолтные данные из файла конфигурации
 					setDataGroupFromFile(group, &ini);
-					// Добавляем название файла конфигурации заголовков
-					group.headers.addName(group.name);
 					// Устанавливаем параметры http парсера
 					group.headers.setOptions(group.options);
 					// Добавляем группу в список групп
