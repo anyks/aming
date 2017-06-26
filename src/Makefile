@@ -24,8 +24,8 @@ ifeq ($(OS), Darwin)
 			-lldap \
 			-lstdc++ \
 			-lpthread \
-			-I/usr/local/Cellar/openssl@1.1/1.1.0e/include \
-			/usr/local/Cellar/openssl@1.1/1.1.0e/lib/libcrypto.a \
+			-I/usr/local/Cellar/openssl/1.0.2l/include \
+			/usr/local/Cellar/openssl/1.0.2l/lib/libcrypto.a \
 			/usr/local/opt/libevent/lib/libevent.a
 endif
 

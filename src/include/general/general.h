@@ -21,6 +21,16 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 
+// Типы данных системы
+#define AMING_NULL 0x00
+#define AMING_IPV4 0x01
+#define AMING_IPV6 0x02
+#define AMING_DOMAIN 0x03
+#define AMING_MAC 0x04
+#define AMING_ACTION 0x05;
+#define AMING_METHOD 0x06;
+#define AMING_ROUTE 0x07;
+
 // Устанавливаем область видимости
 using namespace std;
 
