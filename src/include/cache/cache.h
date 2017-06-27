@@ -141,9 +141,9 @@ class Cache {
 			vector <u_char> http;
 		};
 		// Объект лога
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Конфигурационные данные
-		Config * config = NULL;
+		Config * config = nullptr;
 		/**
 		 * getPathDomain Метод создания пути из доменного имени
 		 * @param  domain название домена
@@ -245,7 +245,7 @@ class Cache {
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		Cache(Config * config = NULL, LogApp * log = NULL);
+		Cache(Config * config = nullptr, LogApp * log = nullptr);
 };
 
 #endif // _CACHE_AMING_

@@ -55,21 +55,21 @@ class LogApp {
 		// Размер максимального лог файла в килобайтах
 		size_t size;
 		// Конфигурационные данные
-		Config ** config = NULL;
+		Config ** config = nullptr;
 		/**
 		 * write_data_to_file Функция записи в лога полученных данных в файл
 		 * @param id   идентификатор записи
 		 * @param data полученные данные
 		 * @param ctx  указатель на объект модуля логов
 		 */
-		static void write_data_to_file(const string id, const string data, void * ctx = NULL);
+		static void write_data_to_file(const string id, const string data, void * ctx = nullptr);
 		/**
 		 * write_to_file Функция записи лога в файл
 		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
 		 * @param message сообщение для записи
 		 * @param ctx     указатель на объект модуля логов
 		 */
-		static void write_to_file(u_short type, const char * message, void * ctx = NULL);
+		static void write_to_file(u_short type, const char * message, void * ctx = nullptr);
 		/**
 		 * write_to_console Функция записи лога в консоль
 		 * @param type    тип лога (1 - Ошибка, 2 - Доступ, 3 - Сообщение)
@@ -110,7 +110,7 @@ class LogApp {
 		 * @param config  конфигурационные данные
 		 * @param type    тип логов (TOLOG_FILES - запись в файл, TOLOG_CONSOLE - запись в коносль)
 		 */
-		LogApp(Config ** config = NULL, u_short type = TOLOG_CONSOLE);
+		LogApp(Config ** config = nullptr, u_short type = TOLOG_CONSOLE);
 };
 
 #endif // _LOG_AMING_

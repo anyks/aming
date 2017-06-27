@@ -35,7 +35,7 @@ void LogApp::write_data_to_file(const string id, const string data, void * ctx){
 		// Создаем буфер для хранения даты
 		char datefile[80], date[80];
 		// Определяем количество секунд
-		time_t seconds = time(NULL);
+		time_t seconds = time(nullptr);
 		// Получаем структуру локального времени
 		struct tm * timeinfo = localtime(&seconds);
 		// Создаем формат полученного времени
@@ -106,7 +106,7 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 			case 4: filename = (path + string("/") + "message.log"); break;
 		}
 		// Файловый дескриптор
-		FILE * file = NULL;
+		FILE * file = nullptr;
 		// Проверяем существует ли файл лога
 		if(isFileExist(filename.c_str())){
 			// Устанавливаем права на файл лога
@@ -126,7 +126,7 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 					// Создаем буфер для хранения даты
 					char datefile[80];
 					// Определяем количество секунд
-					time_t seconds = time(NULL);
+					time_t seconds = time(nullptr);
 					// Получаем структуру локального времени
 					struct tm * timeinfo = localtime(&seconds);
 					// Создаем формат полученного времени
@@ -245,7 +245,7 @@ void LogApp::write(u_short type, u_int sec, const char * message, ...){
 		// Создаем буфер
 		char buffer[1024 * 16];
 		// Получаем текущее время
-		time_t seconds = time(NULL);
+		time_t seconds = time(nullptr);
 		// Получаем структуру времени
 		struct tm * timeinfo = localtime(&seconds);
 		// Получаем данные времени
@@ -330,7 +330,7 @@ void LogApp::welcome(){
 		// Создаем буфер для хранения даты
 		char year[5], date[80];
 		// Определяем количество секунд
-		time_t seconds = time(NULL);
+		time_t seconds = time(nullptr);
 		// Получаем структуру локального времени
 		struct tm * timeinfo = localtime(&seconds);
 		// Создаем формат года

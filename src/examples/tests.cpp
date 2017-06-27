@@ -138,6 +138,51 @@ map <T, E> compose(T a, E b){
    return data;
 }
 
+template <typename T>
+struct DD {
+	T val;
+};
+
+void getDomain(const string str){
+	// Если строка передана
+	if(!str.empty()){
+		// Ключ и значение
+		string key, value;
+		// Значение домена
+		map <string, string> data;
+
+		//map <string, DD> k;
+		
+		
+		
+		// Получаем список параметров домена
+		auto domain = split(str, ".");
+		// Переходим по всему массиву
+		for(u_int i = 0; i < domain.size(); i++){
+			// Если значение не установлено
+			if(value.empty()) value = domain[i];
+			// Если ключ не установлен
+			else if(key.empty()) key = domain[i];
+			// Если пройдены два элемента и значения заполнены
+			if(i > 1){
+				// Формируем новый объект данных
+				auto b = compose(domain[i], data);
+
+				
+				auto print = [b](int value){
+					cout << value << "\n";
+				};
+
+				print(3);
+
+			// Если ключ и значения заполнены
+			} else if(!value.empty() && !key.empty()) {
+				// Запоминаем данные объекта
+				data = compose(key, value);
+			}
+		}
+	}
+}
 
 int main(int len, char * buff[]){
 
@@ -147,7 +192,12 @@ int main(int len, char * buff[]){
 	auto b = compose("co", a);
 	auto c = compose("com", b);
 
+
+
+
 	int* p2 = nullptr;
+
+	getDomain("www.rambler.co.com");
 
 	cout << " ++++++++ " << c["com"]["co"]["anyks"] << endl;
 	// auto d = getDomain("www.rambler.com");

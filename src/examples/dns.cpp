@@ -14,7 +14,7 @@
 #include <iostream>
 
 int n_pending_requests = 0;
-struct event_base *base = NULL;
+struct event_base *base = nullptr;
 
 struct user_data {
     char *name; /* the name we're resolving */
@@ -36,7 +36,7 @@ void callback(int errcode, struct evutil_addrinfo *addr, void *ptr)
         puts("");
         for (ai = addr; ai; ai = ai->ai_next) {
             char buf[128];
-            const char *s = NULL;
+            const char *s = nullptr;
             if (ai->ai_family == AF_INET) {
                 struct sockaddr_in *sin = (struct sockaddr_in *)ai->ai_addr;
                 s = evutil_inet_ntop(AF_INET, &sin->sin_addr, buf, 128);
@@ -52,7 +52,7 @@ void callback(int errcode, struct evutil_addrinfo *addr, void *ptr)
     free(data->name);
     delete data;
     if (--n_pending_requests == 0)
-        event_base_loopexit(base, NULL);
+        event_base_loopexit(base, nullptr);
 }
 
 /* Take a list of domain names from the command line and resolve them in
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 
         ++n_pending_requests;
         req = evdns_getaddrinfo(
-                          dnsbase, argv[i], NULL /* no service name given */,
+                          dnsbase, argv[i], nullptr /* no service name given */,
                           &hints, callback, user_data);
         if (req == NULL) {
           printf("    [request for %s returned immediately]\n", argv[i]);

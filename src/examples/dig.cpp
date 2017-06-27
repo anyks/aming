@@ -36,7 +36,7 @@ int main (int argc, char *argv[])
             l = ns_msg_count (msg, ns_s_an);
             for (j = 0; j < l; j++) {
                 ns_parserr (&msg, ns_s_an, j, &rr);
-                ns_sprintrr (&msg, &rr, NULL, NULL, dispbuf, sizeof (dispbuf));
+                ns_sprintrr (&msg, &rr, nullptr, nullptr, dispbuf, sizeof (dispbuf));
                 printf ("%s\n", dispbuf);
             }
 #endif

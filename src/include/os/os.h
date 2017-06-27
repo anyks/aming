@@ -38,9 +38,9 @@ class Os {
 			u_int	type;	// Тип операционной системы
 		};
 		// Объект лога
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Объект конфигурационного файла
-		Config ** config = NULL;
+		Config ** config = nullptr;
 // Если это не Linux
 #ifndef __linux__
 		/**
@@ -123,7 +123,7 @@ class Os {
 		 * @param config  объект конфигурационных файлов
 		 * @param log     объект лога для вывода информации
 		 */
-		Os(Config ** config = NULL, LogApp * log = NULL);
+		Os(Config ** config = nullptr, LogApp * log = nullptr);
 };
 
 #endif // _OS_AMING_

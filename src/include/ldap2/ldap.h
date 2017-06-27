@@ -35,9 +35,9 @@ class ALDAP {
 			unordered_map <string, vector <string>> vals;
 		};
         // Объект лога
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Конфигурационные данные
-		Config * config = NULL;
+		Config * config = nullptr;
 		// Активация модуля
 		bool enabled = false;
 		// Версия LDAP протокола
@@ -82,7 +82,7 @@ class ALDAP {
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		ALDAP(Config * config = NULL, LogApp * log = NULL);
+		ALDAP(Config * config = nullptr, LogApp * log = nullptr);
 };
 
 #endif // _PROXY_LDAP_AMING_

@@ -136,11 +136,11 @@ void BufferHttpProxy::free_socket(evutil_socket_t * fd){
  */
 void BufferHttpProxy::free_event(struct bufferevent ** event){
 	// Удаляем событие
-	if(* event != NULL){
+	if(* event != nullptr){
 		// Удаляем буфер события
 		bufferevent_free(*event);
 		// Устанавливаем что событие удалено
-		* event = NULL;
+		* event = nullptr;
 	}
 }
 /**
@@ -286,12 +286,12 @@ void BufferHttpProxy::setTimeout(const u_short type, const bool read, const bool
 	// Устанавливаем таймауты для сервера
 	if((type & TM_SERVER) && this->events.server){
 		// Устанавливаем таймауты
-		bufferevent_set_timeouts(this->events.server, (readValue ? &readTimeout : NULL), (writeValue ? &writeTimeout : NULL));
+		bufferevent_set_timeouts(this->events.server, (readValue ? &readTimeout : nullptr), (writeValue ? &writeTimeout : nullptr));
 	}
 	// Устанавливаем таймауты для клиента
 	if((type & TM_CLIENT) && this->events.client){
 		// Устанавливаем таймауты
-		bufferevent_set_timeouts(this->events.client, (readValue ? &readTimeout : NULL), (writeValue ? &writeTimeout : NULL));
+		bufferevent_set_timeouts(this->events.client, (readValue ? &readTimeout : nullptr), (writeValue ? &writeTimeout : nullptr));
 	}
 	// Освобождаем мютекс
 	this->mtx.unlock();
@@ -517,7 +517,7 @@ const int HttpProxy::nosigpipe(LogApp * log){
 	// Устанавливаем флаг перезагрузки
 	act.sa_flags = SA_RESTART;
 	// Устанавливаем блокировку сигнала
-	if(sigaction(SIGPIPE, &act, NULL)){
+	if(sigaction(SIGPIPE, &act, nullptr)){
 		// Выводим в лог информацию
 		log->write(LOG_ERROR, 0, "cannot set SIG_IGN on signal SIGPIPE");
 		// Выходим
@@ -829,13 +829,13 @@ const int HttpProxy::connect_server(void * ctx){
 	// Если подключение не передано
 	if(http){
 		// Если сервер еще не подключен
-		if(http->events.server == NULL){
+		if(http->events.server == nullptr){
 			// Адрес сервера для биндинга
 			string bindhost;
 			// Размер структуры подключения
 			socklen_t sinlen = 0, sotlen = 0;
 			// Структура сервера для биндинга
-			struct sockaddr * sin = NULL, * sot = NULL;
+			struct sockaddr * sin = nullptr, * sot = nullptr;
 			// Структуры серверного и локального подключений
 			struct sockaddr_in server4_addr, client4_addr;
 			// Структуры серверного и локального подключений
@@ -992,7 +992,7 @@ const int HttpProxy::connect_server(void * ctx){
 			// Устанавливаем водяной знак на 1 байт (чтобы считывать данные когда они действительно приходят)
 			// bufferevent_setwatermark(http->events.server, EV_READ | EV_WRITE, 1, 0);
 			// Устанавливаем коллбеки
-			bufferevent_setcb(http->events.server, &HttpProxy::read_server_cb, NULL, &HttpProxy::event_cb, http);
+			bufferevent_setcb(http->events.server, &HttpProxy::read_server_cb, nullptr, &HttpProxy::event_cb, http);
 			// Очищаем буферы событий при завершении работы
 			bufferevent_flush(http->events.server, EV_READ | EV_WRITE, BEV_FINISHED);
 			// Активируем буферы событий на чтение и запись
@@ -1643,7 +1643,7 @@ const evutil_socket_t HttpProxy::create_server(){
 	// Размер структуры подключения
 	socklen_t sinlen = 0;
 	// Структура сервера для биндинга
-	struct sockaddr * sin = NULL;
+	struct sockaddr * sin = nullptr;
 	// Структура для сервера
 	struct sockaddr_in server4_addr;
 	// Структура для сервера
@@ -1767,7 +1767,7 @@ void HttpProxy::run_server(const evutil_socket_t fd, void * ctx){
 		// Добавляем событие в базу
 		struct event * evnt = event_new(proxy->base, fd, EV_READ | EV_PERSIST, &HttpProxy::accept_cb, proxy);
 		// Активируем событие
-		event_add(evnt, NULL);
+		event_add(evnt, nullptr);
 		// Активируем перебор базы событий
 		event_base_loop(proxy->base, EVLOOP_NO_EXIT_ON_EMPTY);
 		// Отключаем подключение для сокета

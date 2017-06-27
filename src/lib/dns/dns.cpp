@@ -38,7 +38,7 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 				// Создаем буфер для получения ip адреса
 				char buf[128];
 				// IP адрес
-				const char * ip = NULL;
+				const char * ip = nullptr;
 				// Если это искомый тип интернет протокола
 				if((ai->ai_family == domainData->family) || (domainData->family == AF_UNSPEC)){
 					// Получаем структуру для указанного интернет протокола
@@ -135,9 +135,9 @@ void DNSResolver::resolve(const string domain, const int family, handler fn, voi
 				// Устанавливаем тип протокола интернета
 				domainData->family = family;
 				// Выполняем dns запрос
-				struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), NULL, &hints, &DNSResolver::callback, domainData);
+				struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), nullptr, &hints, &DNSResolver::callback, domainData);
 				// Выводим в лог сообщение
-				if((req == NULL) && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
+				if((req == nullptr) && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
 			}
 		// Если передан домен то возвращаем его
 		} else fn(match[1].str(), ctx);
@@ -242,7 +242,7 @@ DNSResolver::~DNSResolver(){
 		// Очищаем базу данных dns
 		evdns_base_free(this->dnsbase, 0);
 		// Обнуляем указатель
-		this->dnsbase = NULL;
+		this->dnsbase = nullptr;
 	}
 	// Освобождаем поток
 	this->mtx.unlock();

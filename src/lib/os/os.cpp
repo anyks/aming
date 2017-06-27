@@ -104,9 +104,9 @@ long Os::getNumberParam(string name){
 	// Получаем размер искомого параметра
 	size_t len = sizeof(param);
 	// Запрашиваем искомые данные
-	if(sysctlbyname(name.c_str(), &param, &len, NULL, 0) < 0){
+	if(sysctlbyname(name.c_str(), &param, &len, nullptr, 0) < 0){
 		// Выводим сообщение в консоль
-		if(this->log != NULL) this->log->write(LOG_ERROR, 0, "filed get param: %s", name.c_str());
+		if(this->log) this->log->write(LOG_ERROR, 0, "filed get param: %s", name.c_str());
 	}
 	// Выводим результат
 	return param;
@@ -124,9 +124,9 @@ string Os::getStringParam(string name){
 	// Заполняем буфер нулями
 	memset(buffer, 0, len);
 	// Запрашиваем искомые данные
-	if(sysctlbyname(name.c_str(), &buffer, &len, NULL, 0) < 0){
+	if(sysctlbyname(name.c_str(), &buffer, &len, nullptr, 0) < 0){
 		// Выводим сообщение в консоль
-		if(this->log != NULL) this->log->write(LOG_ERROR, 0, "filed get param: %s", name.c_str());
+		if(this->log) this->log->write(LOG_ERROR, 0, "filed get param: %s", name.c_str());
 	}
 	// Выводим результат
 	return buffer;
@@ -138,9 +138,9 @@ string Os::getStringParam(string name){
  */
 void Os::setParam(string name, int param){
 	// Устанавливаем новые параметры настройки ядра
-	if(sysctlbyname(name.c_str(), NULL, 0, &param, sizeof(param)) < 0){
+	if(sysctlbyname(name.c_str(), nullptr, 0, &param, sizeof(param)) < 0){
 		// Выводим сообщение в консоль
-		if(this->log != NULL) this->log->write(LOG_ERROR, 0, "filed set param: %s -> %i", name.c_str(), param);
+		if(this->log) this->log->write(LOG_ERROR, 0, "filed set param: %s -> %i", name.c_str(), param);
 	}
 }
 /**
@@ -152,9 +152,9 @@ void Os::setParam(string name, string param){
 	// Получаем значение параметра для установки
 	const char * value = param.c_str();
 	// Устанавливаем новые параметры настройки ядра
-	if(sysctlbyname(name.c_str(), NULL, 0, (void *) value, param.size()) < 0){
+	if(sysctlbyname(name.c_str(), nullptr, 0, (void *) value, param.size()) < 0){
 		// Выводим сообщение в консоль
-		if(this->log != NULL) this->log->write(LOG_ERROR, 0, "filed set param: %s -> %s", name.c_str(), param.c_str());
+		if(this->log) this->log->write(LOG_ERROR, 0, "filed set param: %s -> %s", name.c_str(), param.c_str());
 	}
 }
 #endif
@@ -232,7 +232,7 @@ string Os::exec(string cmd, bool multiline){
 		// Закрываем пайп
 		pclose(stream);
 		// Если данные в буфере существуют
-		if(result.empty() && (this->log != NULL)) this->log->write(LOG_ERROR, 0, "filed set param: %s", buffer);
+		if(result.empty() && this->log) this->log->write(LOG_ERROR, 0, "filed set param: %s", buffer);
 	}
 	// Выводим результат
 	return result;
@@ -430,7 +430,7 @@ void Os::optimos(){
  */
 Os::Os(Config ** config, LogApp * log){
 	// Если конфигурационный файл передан
-	if(config != NULL){
+	if(config){
 		// Запоминаем настройки системы
 		this->log		= log;
 		this->config	= config;

@@ -115,7 +115,7 @@ void Headers::rm(const string client){
  */
 void Headers::read(){
 	// Если конфигурационный файл существует
-	if(this->config != NULL){
+	if(this->config){
 		// Получаем название файла конфигурации
 		const string name = getName();
 		// Получаем данные каталога где хранится файл с правилами
@@ -218,7 +218,7 @@ void Headers::read(){
 				file.close();
 			}
 		// Выводим сообщение в лог
-		} else if(!filename.empty() && (this->log != NULL)){
+		} else if(!filename.empty() && this->log){
 			// Выводим сообщение в лог, что файл не найден
 			this->log->write(LOG_WARNING, 0, "headers file (%s) is not found", filename.c_str());
 		}
@@ -823,7 +823,7 @@ void Headers::modify(const string ip, const string mac, const string server, str
  */
 Headers::Headers(Config * config, LogApp * log){
 	// Если конфигурационные данные переданы
-	if(config != NULL){
+	if(config){
 		// Очищаем все параметры
 		clear();
 		// Запоминаем объект логов

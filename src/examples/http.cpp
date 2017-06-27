@@ -93,7 +93,7 @@ inline void BufferHttpProxy::unlock(){
  */
 Connects * ClientConnects::get(const string client){
 	// Указатель на объект подключения
-	Connects * connect = NULL;
+	Connects * connect = nullptr;
 	// Лочим мютекс
 	this->mtx.lock();
 	// Если такое подключение найдено
@@ -150,7 +150,7 @@ void BufferHttpProxy::appconn(const bool flag){
 	// Получаем объект текущего коннекта
 	Connects * connect = (* this->connects).get(this->client.ip);
 	// Если такое подключение найдено
-	if(connect != NULL){
+	if(connect){
 		// Если нужно добавить подключение
 		if(flag) connect->inc();
 		// Если нужно удалить подключение
@@ -188,13 +188,13 @@ void BufferHttpProxy::free_socket(evutil_socket_t * fd){
  */
 void BufferHttpProxy::free_event(struct bufferevent ** event){
 	// Удаляем событие
-	if(*event != NULL){
+	if(*event){
 		// Очищаем таймауты
-		bufferevent_set_timeouts(*event, NULL, NULL);
+		bufferevent_set_timeouts(*event, nullptr, nullptr);
 		// Удаляем буфер события
 		bufferevent_free(*event);
 		// Устанавливаем что событие удалено
-		*event = NULL;
+		*event = nullptr;
 	}
 }
 /**
@@ -204,7 +204,7 @@ void BufferHttpProxy::blockconnect(){
 	// Получаем объект текущего коннекта
 	Connects * connect = (* this->connects).get(this->client.ip);
 	// Если такое подключение найдено
-	if(connect != NULL){
+	if(connect){
 		// Запоминаем количество подключений пользователя
 		this->myconns = connect->get();
 		// Если количество подключений достигло предела
@@ -255,7 +255,7 @@ void BufferHttpProxy::close(){
 	// Удаляем из списока подключений
 	appconn(false);
 	// Удаляем базу событий
-	event_base_loopexit(this->base, NULL);
+	event_base_loopexit(this->base, nullptr);
 	// Отпускаем поток
 	this->unlock();
 }
@@ -274,13 +274,13 @@ void BufferHttpProxy::set_timeout(const u_short type, bool read, bool write){
 	if(this->proxy->config->timeouts.read < 1)	read	= false;
 	if(this->proxy->config->timeouts.write < 1)	write	= false;
 	// Устанавливаем таймауты для сервера
-	if((type & TM_SERVER) && (this->events.server != NULL))
+	if((type & TM_SERVER) && this->events.server)
 		// Устанавливаем таймауты
-		bufferevent_set_timeouts(this->events.server, (read ? &_read : NULL), (write ? &_write : NULL));
+		bufferevent_set_timeouts(this->events.server, (read ? &_read : nullptr), (write ? &_write : nullptr));
 	// Устанавливаем таймауты для клиента
-	if((type & TM_CLIENT) && (this->events.client != NULL))
+	if((type & TM_CLIENT) && this->events.client)
 		// Устанавливаем таймауты
-		bufferevent_set_timeouts(this->events.client, (read ? &_read : NULL), (write ? &_write : NULL));
+		bufferevent_set_timeouts(this->events.client, (read ? &_read : nullptr), (write ? &_write : nullptr));
 }
 /**
  * sleep Метод усыпления потока на время необходимое для соблюдения скоростного ограничения сети
@@ -602,7 +602,7 @@ bool HttpProxy::check_auth(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Логин
 		const char * username = "zdD786KeuS";
 		// Проль
@@ -626,7 +626,7 @@ bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Создаем объект сети
 		Network nwk;
 		// Результат проверки
@@ -660,15 +660,15 @@ int HttpProxy::connect_server(void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Если сервер еще не подключен
-		if(http->events.server == NULL){
+		if(!http->events.server){
 			// Адрес сервера для биндинга
 			string bindhost;
 			// Размер структуры подключения
 			socklen_t sinlen = 0, sotlen = 0;
 			// Структура сервера для биндинга
-			struct sockaddr * sin = NULL, * sot = NULL;
+			struct sockaddr * sin = nullptr, * sot = nullptr;
 			// Структуры серверного и локального подключений
 			struct sockaddr_in server4_addr, client4_addr;
 			// Структуры серверного и локального подключений
@@ -795,7 +795,7 @@ int HttpProxy::connect_server(void * ctx){
 			// Устанавливаем водяной знак на 1 байт (чтобы считывать данные когда они действительно приходят)
 			bufferevent_setwatermark(http->events.server, EV_READ | EV_WRITE, 1, 0);
 			// Устанавливаем коллбеки
-			bufferevent_setcb(http->events.server, &HttpProxy::read_server_cb, NULL, &HttpProxy::event_cb, http);
+			bufferevent_setcb(http->events.server, &HttpProxy::read_server_cb, nullptr, &HttpProxy::event_cb, http);
 			// Активируем буферы событий на чтение и запись
 			bufferevent_enable(http->events.server, EV_READ | EV_WRITE);
 			// Очищаем буферы событий при завершении работы
@@ -862,7 +862,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, short events, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Блокируем поток
 		http->lock();
 		// Получаем текущий сокет
@@ -934,7 +934,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Получаем буферы входящих данных и исходящих
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
@@ -975,9 +975,9 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				// Считываем строки из буфера
 				const char * line = evbuffer_readln(input, &len, EVBUFFER_EOL_CRLF_STRICT);
 				// Проверяем дошли ли мы до конца
-				if((line != NULL) && !strlen(line)) http->headers.setFullHeaders();
+				if(line && !strlen(line)) http->headers.setFullHeaders();
 				// Если данные не найдены тогда выходим
-				if((line == NULL) || !strlen(line)) break;
+				if(!line || !strlen(line)) break;
 				// Добавляем заголовки в запрос
 				http->headers.addHeader(line);
 			}
@@ -1029,7 +1029,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Получаем первый элемент из массива
 		auto httpData = http->parser.httpData.begin();
 		// Если дарес домена найден
@@ -1054,7 +1054,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					// Получаем порт сервера
 					u_int port = http->httpData.getPort();
 					// Если хост и порт сервера не совпадают тогда очищаем данные
-					if((http->events.server != NULL)
+					if(http->events.server
 					&& ((http->server.host.compare(ip) != 0)
 					|| (http->server.port != port))) http->close_server();
 					// Запоминаем хост и порт сервера
@@ -1156,7 +1156,7 @@ void HttpProxy::do_request(void * ctx, bool flag){
 	// Получаем объект подключения
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	// Если подключение не передано
-	if(http != NULL){
+	if(http){
 		// Если данные еще не заполнены, но они есть в массиве
 		if(!http->parser.httpData.empty() && (!http->httpData.size() || flag)){
 			// Очищаем таймеры для клиента

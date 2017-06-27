@@ -19,7 +19,7 @@ using namespace std;
  * @param  mode режим работы (false - кодирование, true - декодирование)
  * @return      размер полученных данных
  */
-const int Base64::base64(const unsigned char * in, char * out, u_int lin, u_int lout, const bool mode){
+const int Base64::base64(const u_char * in, char * out, u_int lin, u_int lout, const bool mode){
 	// Результат
 	int result = 0;
 	// Инициализируем объекты
@@ -64,7 +64,7 @@ const string Base64::encode(const string str){
 		// Буфер для кодирования
 		char out[256];
 		// Выполняем кодирование
-		const int len = this->base64(reinterpret_cast <const unsigned char *> (str.c_str()), out, str.length(), sizeof(out), false);
+		const int len = this->base64(reinterpret_cast <const u_char *> (str.c_str()), out, str.length(), sizeof(out), false);
 		// Выводим результат
 		if(len) result = string(out, len);
 	}
@@ -84,7 +84,7 @@ const string Base64::decode(const string str){
 		// Буфер для декодирования
 		char out[256];
 		// Выполняем декодирование
-		const int len = this->base64(reinterpret_cast <const unsigned char *> (str.c_str()), out, str.length(), sizeof(out), true);
+		const int len = this->base64(reinterpret_cast <const u_char *> (str.c_str()), out, str.length(), sizeof(out), true);
 		// Выводим результат
 		if(len) result = string(out, len);
 	}

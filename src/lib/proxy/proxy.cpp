@@ -141,7 +141,7 @@ void Proxy::sigchld_cb(evutil_socket_t fd, short event, void * ctx){
 		// Логируем сообщение о сигнале
 		signal_log(buffer->signal, buffer->proxy);
 		// Избавляемся от зависших процессов
-		while(waitpid(-1, NULL, WNOHANG) > 0);
+		while(waitpid(-1, nullptr, WNOHANG) > 0);
 	}
 	// Выходим
 	return;
@@ -380,7 +380,7 @@ Proxy::Proxy(string configfile){
 				// Активируем ловушки сигналов
 				for(u_int i = 0; i < this->signals.size(); i++)
 					// Активируем ловушку
-					evsignal_add(this->signals[i], NULL);
+					evsignal_add(this->signals[i], nullptr);
 				// Активируем перебор базы событий
 				event_base_loop(this->base, EVLOOP_NO_EXIT_ON_EMPTY);
 			}

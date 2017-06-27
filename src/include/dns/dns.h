@@ -48,13 +48,13 @@ class DNSResolver {
 		// Мютекс для захвата потока
 		mutex mtx;
 		// Объект ведения логов
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Объект управления кэшем
-		Cache * cache = NULL;
+		Cache * cache = nullptr;
 		// База событий
-		struct event_base * base = NULL;
+		struct event_base * base = nullptr;
 		// База dns
-		struct evdns_base * dnsbase = NULL;
+		struct evdns_base * dnsbase = nullptr;
 		// Адреса серверов dns
 		vector <string> servers;
 		/**
@@ -76,7 +76,7 @@ class DNSResolver {
 		 * @param fn     функция обратного вызова срабатывающая при получении данных
 		 * @param ctx    указатель на объект передаваемый пользователем
 		 */
-		void resolve(const string domain, const int family, handler fn, void * ctx = NULL);
+		void resolve(const string domain, const int family, handler fn, void * ctx = nullptr);
 		/**
 		 * setLog Метод установки объекта лога
 		 * @param log объект лога
@@ -104,7 +104,7 @@ class DNSResolver {
 		 * @param base    база данных событий
 		 * @param servers массив dns серверов
 		 */
-		DNSResolver(LogApp * log = NULL, Cache * cache = NULL, struct event_base * base = NULL, vector <string> servers = {});
+		DNSResolver(LogApp * log = nullptr, Cache * cache = nullptr, struct event_base * base = nullptr, vector <string> servers = {});
 		/**
 		 * ~DNSResolver Деструктор
 		 */

@@ -54,9 +54,9 @@ class Headers {
 		// Название файла конфигурации
 		deque <string> names;
 		// Объект лога
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Конфигурационные данные
-		Config * config = NULL;
+		Config * config = nullptr;
 		// Параметры для парсинга http данных
 		u_short options = 0x00;
 		// Список правил
@@ -198,7 +198,7 @@ class Headers {
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		Headers(Config * config = NULL, LogApp * log = NULL);
+		Headers(Config * config = nullptr, LogApp * log = nullptr);
 };
 
 #endif // _HEADERS_AMING_

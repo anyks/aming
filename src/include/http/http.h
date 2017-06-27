@@ -169,7 +169,7 @@ class HttpData {
 					 * @param data данные для присваивания
 					 * @param size размер данных
 					 */
-					Chunk(const char * data = NULL, const size_t size = 0);
+					Chunk(const char * data = nullptr, const size_t size = 0);
 				};
 				// Уровень сжатия
 				u_int levelGzip;
@@ -395,7 +395,7 @@ class HttpData {
 		// Заголовки http запроса
 		HttpHeaders headers;
 		// Параметры GZip
-		Gzip * gzipParams = NULL;
+		Gzip * gzipParams = nullptr;
 		// Шаблоны ответов
 		unordered_map <u_short, Http> response;
 		/**
@@ -694,7 +694,7 @@ class HttpData {
 		 * setGzipParams Метод установки параметров сжатия gzip
 		 * @param params параметры сжатия
 		 */
-		void setGzipParams(void * params = NULL);
+		void setGzipParams(void * params = nullptr);
 		/**
 		 * setOptions Метод установки настроек прокси сервера
 		 * @param options данные для установки
@@ -753,7 +753,7 @@ class HttpData {
 		 * addHeader Метод добавления нового заголовка
 		 * @param buffer буфер с данными заголовка
 		 */
-		void addHeader(const char * buffer = NULL);
+		void addHeader(const char * buffer = nullptr);
 		/**
 		 * largeRequest Метод генерации ответа (слишком большой размер файла)
 		 */

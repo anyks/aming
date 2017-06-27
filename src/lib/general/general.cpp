@@ -188,7 +188,7 @@ uid_t getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
-	if(pwd == NULL){
+	if(pwd == nullptr){
 		// Выводим сообщение об ошибке
 		printf("failed to get userId from username [%s]\r\n", name);
 		// Сообщаем что ничего не найдено
@@ -206,7 +206,7 @@ gid_t getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
-	if(grp == NULL){
+	if(grp == nullptr){
 		// Выводим сообщение об ошибке
 		printf("failed to get groupId from groupname [%s]\r\n", name);
 		// Сообщаем что ничего не найдено
@@ -245,7 +245,7 @@ void mkDir(const char * path){
 	// Буфер с названием каталога
 	char tmp[256];
 	// Указатель на сепаратор
-	char * p = NULL;
+	char * p = nullptr;
 	// Копируем переданный адрес в буфер
 	snprintf(tmp, sizeof(tmp), "%s", path);
 	// Определяем размер адреса

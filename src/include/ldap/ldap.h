@@ -26,9 +26,9 @@ using namespace std;
 class AuthLDAP {
 	private:
 		// Объект лога
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Конфигурационные данные
-		Config * config = NULL;
+		Config * config = nullptr;
 		// Активация модуля
 		bool enabled = false;
 		// Версия LDAP протокола
@@ -62,7 +62,7 @@ class AuthLDAP {
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		AuthLDAP(Config * config = NULL, LogApp * log = NULL);
+		AuthLDAP(Config * config = nullptr, LogApp * log = nullptr);
 };
 
 #endif // _AUTH_LDAP_AMING_

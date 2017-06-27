@@ -41,7 +41,7 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	// Флаг удаления созданного объекта ini конфигурации
 	bool rmINI = false;
 	// Если объект ini не передан то создаем его
-	if(ini == NULL){
+	if(!ini){
 		// Создаем адрес для хранения файла
 		const string filename = addToPath(this->config->proxy.dir, "groups.ini");
 		// Проверяем на существование адреса
@@ -457,13 +457,13 @@ const bool Groups::readGroupsFromPam(){
 	// Результат работы функции
 	bool result = false;
 	// Блок данных пользователей
-	struct passwd * pw = NULL;
+	struct passwd * pw = nullptr;
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения для проверки оболочки пользователя
 	regex e("\\/(?:sh|bash)$", regex::ECMAScript | regex::icase);
 	// Извлекаем всех пользователей что есть в системе
-	while((pw = getpwent()) != NULL){
+	while((pw = getpwent()) != nullptr){
 		// Если это не root
 		if(pw->pw_uid > 0){
 			// Получаем оболочку пользователя
@@ -477,7 +477,7 @@ const bool Groups::readGroupsFromPam(){
 				// Создаем список групп пользователя
 				int * userGroups = new int[(const int) maxGroupsUser];
 				// Данные группы
-				struct group * gr = NULL;
+				struct group * gr = nullptr;
 				// Получаем список групп пользователя
 				if(getgrouplist(pw->pw_name, pw->pw_gid, userGroups, &maxGroupsUser) == -1){
 					// Выводим сообщение что группы не созданы
@@ -489,7 +489,7 @@ const bool Groups::readGroupsFromPam(){
 						// Извлекаем данные группы
 						gr = getgrgid(userGroups[i]);
 						// Если группа получена
-						if(gr != NULL){
+						if(gr != nullptr){
 							// Если группа найдена
 							if(this->data.count(gr->gr_gid)){
 								// Пользователель существует в данной группе
@@ -633,7 +633,7 @@ const bool Groups::update(){
 	// Результат проверки
 	bool result = false;
 	// Создаем текущее время генерации
-	time_t curUpdate = time(NULL);
+	time_t curUpdate = time(nullptr);
 	// Если время ожидания уже вышло, выполняем обновление данных
 	if((this->lastUpdate + this->maxUpdate) < curUpdate){
 		// Запоминаем текущее время
@@ -1219,7 +1219,7 @@ const bool Groups::addGroup(const gid_t id, const string name){
  */
 Groups::Groups(Config * config, LogApp * log){
 	// Если конфигурационные данные переданы
-	if(config != NULL){
+	if(config){
 		// Запоминаем данные логов
 		this->log = log;
 		// Запоминаем конфигурационные данные

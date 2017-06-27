@@ -133,7 +133,7 @@ class CCache {
 				~DataCache();
 		};
 		// Объект конфигурационных данных
-		Config * config = NULL;
+		Config * config = nullptr;
 		/**
 		 * handler Прототип колбека
 		 */

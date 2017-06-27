@@ -148,9 +148,9 @@ class Groups {
 		// Объект ldap подклчюения
 		Ldap ldap;
 		// Объект лога
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Конфигурационные данные
-		Config * config = NULL;
+		Config * config = nullptr;
 		// Список групп
 		unordered_map <gid_t, Data> data;
 		/**
@@ -165,7 +165,7 @@ class Groups {
 		 * @param group объект группы
 		 * @param ini   указатель на объект конфигурации
 		 */
-		void setDataGroupFromFile(Data &group, INI * ini = NULL);
+		void setDataGroupFromFile(Data &group, INI * ini = nullptr);
 		/**
 		 * createDefaultData Метод создания группы с параметрами по умолчанию
 		 * @param  id   идентификатор групыы
@@ -362,7 +362,7 @@ class Groups {
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		Groups(Config * config = NULL, LogApp * log = NULL);
+		Groups(Config * config = nullptr, LogApp * log = nullptr);
 };
 
 #endif // _GROUPS_PROXY_AMING_

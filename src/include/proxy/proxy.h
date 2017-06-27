@@ -43,9 +43,9 @@ class Proxy {
 		// Пид воркера поднимающего балансер
 		pid_t mpid = 0;
 		// Объект управления системными настройками
-		System * sys = NULL;
+		System * sys = nullptr;
 		// База данных событий
-		struct event_base * base = NULL;
+		struct event_base * base = nullptr;
 		// Буферы сигналов
 		vector <SignalBuffer> siginfo;
 		vector <SignalBuffer> sigexit;

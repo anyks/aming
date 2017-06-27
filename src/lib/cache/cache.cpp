@@ -299,7 +299,7 @@ void Cache::readDomain(const string domain, DataDNS * data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+			} else if(this->log) this->log->write(LOG_ERROR, 0, "cannot read dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
 	}
 }
@@ -348,7 +348,7 @@ void Cache::readCache(HttpData &http, DataCache * data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot read cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
+			} else if(this->log) this->log->write(LOG_ERROR, 0, "cannot read cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
 		}
 	}
 }
@@ -373,7 +373,7 @@ void Cache::writeDomain(const string domain, DataDNS data){
 			// Проверяем существует ли нужный нам каталог
 			if(!makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
 				// Выводим в лог информацию
-				if(this->log != NULL) this->log->write(LOG_ERROR, 0, "unable to create directory for dns cache file %s for domain %s", dir.c_str(), domain.c_str());
+				if(this->log) this->log->write(LOG_ERROR, 0, "unable to create directory for dns cache file %s for domain %s", dir.c_str(), domain.c_str());
 				// Выходим
 				return;
 			}
@@ -386,7 +386,7 @@ void Cache::writeDomain(const string domain, DataDNS data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot write dns cache file %s for domain %s", filename.c_str(), domain.c_str());
+			} else if(this->log) this->log->write(LOG_ERROR, 0, "cannot write dns cache file %s for domain %s", filename.c_str(), domain.c_str());
 		}
 	}
 }
@@ -417,7 +417,7 @@ void Cache::writeCache(HttpData &http, DataCache data){
 			// Проверяем существует ли нужный нам каталог
 			if(!makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
 				// Выводим в лог информацию
-				if(this->log != NULL) this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), http.getHost().c_str());
+				if(this->log) this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), http.getHost().c_str());
 				// Выходим
 				return;
 			}
@@ -430,7 +430,7 @@ void Cache::writeCache(HttpData &http, DataCache data){
 				// Закрываем файл
 				file.close();
 			// Выводим сообщение в лог
-			} else if(this->log != NULL) this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
+			} else if(this->log) this->log->write(LOG_ERROR, 0, "cannot write cache file %s for domain %s", filename.c_str(), http.getHost().c_str());
 		}
 	}
 }
@@ -495,7 +495,7 @@ const bool Cache::checkEnabledCache(HttpData &http){
 		if(((status > 199) && (status < 300))
 		|| ((status > 399) && (status < 599))){
 			// Генерируем текущую дату
-			time_t cdate = time(NULL), ldate = 0, expires = 0;
+			time_t cdate = time(nullptr), ldate = 0, expires = 0;
 			// Определяем дату сервера
 			const string dt = http.getHeader("date");
 			// Определяем время жизни
@@ -593,7 +593,7 @@ const string Cache::getDomain(const string domain){
 			// Считываем данные домена
 			readDomain(domain, &data);
 			// Получаем текущее количество секунд
-			time_t seconds = time(NULL);
+			time_t seconds = time(nullptr);
 			// Если время жизни не истекло тогда отдаем результат
 			if((data.ttl + this->config->cache.dttl) > seconds){
 				// Создаем объект сети
@@ -636,7 +636,7 @@ Cache::ResultData Cache::getCache(HttpData &http){
 				// Результат проверки валидности кэша
 				bool check = false;
 				// Получаем текущую дату
-				time_t date = time(NULL);
+				time_t date = time(nullptr);
 				// Если дата жизни кэша указана
 				if(cache.expires){
 					// Если дата смерти кэша меньше текущей даты
@@ -712,7 +712,7 @@ void Cache::setDomain(const string domain, const string ip){
 				} break;
 			}
 			// Определяем количество секунд
-			data.ttl = time(NULL);
+			data.ttl = time(nullptr);
 			// Выполняем запись домена в кэш
 			writeDomain(domain, data);
 		}
@@ -776,7 +776,7 @@ void Cache::setCache(HttpData &http){
 			// Обязательная валидация данных
 			bool valid = false;
 			// Возраст жизни кэша
-			time_t age = 0, expires = 0, modified = 0, date = time(NULL);
+			time_t age = 0, expires = 0, modified = 0, date = time(nullptr);
 			// Если дата сервера установлена
 			if(!dt.empty()) date = strToTime(dt.c_str());
 			// Если дата модификации данных указана
@@ -869,7 +869,7 @@ void Cache::rmAllCache(){
  */
 Cache::Cache(Config * config, LogApp * log){
 	// Если данные пришли
-	if(config != NULL){
+	if(config){
 		// Запоминаем объект логов
 		this->log = log;
 		// Запоминаем параметры конфига

@@ -2403,9 +2403,9 @@ void HttpData::clear(){
  */
 void HttpData::initBody(){
 	// Получаем уровень сжатия
-	int level = (this->gzipParams != NULL ? this->gzipParams->level : Z_DEFAULT_COMPRESSION);
+	int level = (this->gzipParams ? this->gzipParams->level : Z_DEFAULT_COMPRESSION);
 	// Получаем размер чанков
-	size_t chunk = (this->gzipParams != NULL ? this->gzipParams->chunk : MOD_GZIP_ZLIB_CHUNK);
+	size_t chunk = (this->gzipParams ? this->gzipParams->chunk : MOD_GZIP_ZLIB_CHUNK);
 	// Выполняем создание объекта body
 	HttpBody body = HttpBody(chunk, level, this->intGzip, this->extGzip);
 	// Запоминаем строку body

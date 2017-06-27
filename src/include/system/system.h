@@ -47,15 +47,15 @@ class System {
 			int len;
 		};
 		// Объект log модуля
-		LogApp * log = NULL;
+		LogApp * log = nullptr;
 		// Объект конфигурационного файла
-		Config * config = NULL;
+		Config * config = nullptr;
 		// Объект взаимодействия с ОС
-		Os * os = NULL;
+		Os * os = nullptr;
 		// Объект управления кэшем
-		Cache * cache = NULL;
+		Cache * cache = nullptr;
 		// Объект управления заголовками
-		Headers * headers = NULL;
+		Headers * headers = nullptr;
 		/**
 		 * clearMsgPids Метод очистки процесса передачи данных пидов между воркерами
 		 */

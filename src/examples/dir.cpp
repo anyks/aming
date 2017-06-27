@@ -14,21 +14,21 @@
 
 unsigned process_directory( char * theDir )
 {
-	DIR *dir = NULL;
+	DIR *dir = nullptr;
 	struct dirent entry;
-	struct dirent *entryPtr = NULL;
+	struct dirent *entryPtr = nullptr;
 	int retval = 0;
 	unsigned count = 0;
 	char pathName[PATH_MAX + 1];
 
 	/* открыть указанный каталог, если возможно. */
 	dir = opendir( theDir );
-	if( dir == NULL ) {
+	if( !dir ) {
 		printf( "Error opening %s: %s", theDir, strerror( errno ) );
 		return 0;
 	}
 	retval = readdir_r( dir, &entry, &entryPtr );
-	while( entryPtr != NULL ) {
+	while( entryPtr ) {
 		struct stat entryInfo;
 		
 		if( ( strncmp( entry.d_name, ".", PATH_MAX ) == 0 ) ||

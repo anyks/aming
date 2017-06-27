@@ -233,7 +233,7 @@ CCache::DataCache::~DataCache(){
  */
 void CCache::readDomain(const string filename, DataDNS * data){
 	// Если объект DNS существует
-	if(data != NULL){
+	if(data){
 		// Проверяем на существование адреса
 		if(!filename.empty() && isFileExist(filename.c_str())){
 			// Открываем файл на чтение
@@ -271,7 +271,7 @@ void CCache::readDomain(const string filename, DataDNS * data){
  */
 void CCache::readCache(const string filename, DataCache * data){
 	// Если блок данных кэша существует
-	if(data != NULL){
+	if(data){
 		// Проверяем на существование адреса
 		if(!filename.empty() && isFileExist(filename.c_str())){
 			// Открываем файл на чтение
@@ -322,7 +322,7 @@ void CCache::checkDomains(const string filename, void * ctx){
 			// Считываем данные домена
 			ccache->readDomain(filename, &data);
 			// Получаем текущее количество секунд
-			time_t seconds = time(NULL);
+			time_t seconds = time(nullptr);
 			// Если время жизни домена истекло то удаляем его
 			if((data.ttl + ccache->config->cache.dttl) <= seconds){
 				/* Определяем название домена */
@@ -370,7 +370,7 @@ void CCache::checkCache(const string filename, void * ctx){
 			// Если заголовки получены
 			if(!cache.http.empty()){
 				// Получаем текущую дату
-				time_t date = time(NULL);
+				time_t date = time(nullptr);
 				// Если дата жизни кэша указана
 				if(cache.expires){
 					// Если дата смерти кэша меньше текущей даты
@@ -466,7 +466,7 @@ const short CCache::infoPatch(const string pathName){
 const u_long CCache::processDirectory(const string curDir, handler fn){
 	// Основные структуры
 	struct dirent entry;
-	struct dirent * entryPtr = NULL;
+	struct dirent * entryPtr = nullptr;
 	// Количество найденных файлов
 	u_long count = 0;
 	// Адрес файла
@@ -474,7 +474,7 @@ const u_long CCache::processDirectory(const string curDir, handler fn){
 	// Открываем текущий каталог
 	DIR * dir = opendir(curDir.c_str());
 	// Если каталог удачно открыт
-	if(dir == NULL){
+	if(dir == nullptr){
 		// Выводим сообщение об ошибке
 		printf("Error opening %s: %s\r\n", curDir.c_str(), strerror(errno));
 		// Выходим и говорим что ничего не найдено
@@ -483,7 +483,7 @@ const u_long CCache::processDirectory(const string curDir, handler fn){
 	// Считываем содержимое каталога
 	int retval = readdir_r(dir, &entry, &entryPtr);
 	// Если указатель на каталог существует
-	while(entryPtr != NULL){
+	while(entryPtr != nullptr){
 		// Определяем внешний или текущий каталог
 		if((strncmp(entry.d_name, ".", PATH_MAX) == 0)
 		|| (strncmp(entry.d_name, "..", PATH_MAX) == 0)){

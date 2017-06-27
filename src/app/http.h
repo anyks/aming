@@ -121,8 +121,8 @@ class BufferHttpProxy {
 		 * Events Буферы событий
 		 */
 		struct Events {
-			struct bufferevent * client = NULL;	// Буфер событий клиента
-			struct bufferevent * server = NULL;	// Буфер событий сервера
+			struct bufferevent * client = nullptr;	// Буфер событий клиента
+			struct bufferevent * server = nullptr;	// Буфер событий сервера
 		};
 		/**
 		 * Request Буфер данных
@@ -172,7 +172,7 @@ class BufferHttpProxy {
 		void free_event(struct bufferevent ** event);
 	public:
 		// Блокиратор лишнего потока
-		void * frze = NULL;
+		void * frze = nullptr;
 		// Флаг авторизации
 		bool auth = false;
 		// Объект парсера
@@ -190,13 +190,13 @@ class BufferHttpProxy {
 		// Данные http запроса
 		HttpData httpRequest;
 		// LDAP проверка авторизации
-		AuthLDAP * ldap = NULL;
+		AuthLDAP * ldap = nullptr;
 		// Параметры прокси сервера
-		System * proxy = NULL;
+		System * proxy = nullptr;
 		// DNS резолвер
-		DNSResolver * dns = NULL;
+		DNSResolver * dns = nullptr;
 		// База событий
-		struct event_base * base = NULL;
+		struct event_base * base = nullptr;
 		// Данные кэша
 		vector <u_char> cache;
 		// Коллбек для удаления текущего подключения
@@ -275,13 +275,13 @@ class HttpProxy {
 		// Список подключенных клиентов к прокси серверу
 		ConnectClients clients;
 		// Идентификаторы процессов
-		pid_t * pids = NULL;
+		pid_t * pids = nullptr;
 		// LDAP проверка авторизации
-		AuthLDAP * ldap = NULL;
+		AuthLDAP * ldap = nullptr;
 		// Параметры прокси сервера
-		System * server = NULL;
+		System * server = nullptr;
 		// Создаем новую базу
-		struct event_base * base = NULL;
+		struct event_base * base = nullptr;
 		/**
 		 * create_client Метод создания нового клиента
 		 * @param ip  адрес интернет протокола клиента
@@ -468,7 +468,7 @@ class HttpProxy {
 		 * HttpProxy Конструктор
 		 * @param proxy объект параметров прокси сервера
 		 */
-		HttpProxy(System * proxy = NULL);
+		HttpProxy(System * proxy = nullptr);
 		/**
 		 * ~HttpProxy Деструктор
 		 */

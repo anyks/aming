@@ -34,62 +34,60 @@ using namespace std;
 class Headers {
 	private:
 		/**
+ 		* Servers Структура данных сервера
+ 		*/
+		struct Servers {
+			u_int prefix;	// Префикс сети
+			string mac;		// Мак адрес сервера
+			string ip4;		// IP адрес протокола версии 4
+			string ip6;		// IP адрес протокола версии 6
+			string path;	// Путь запроса на сервере
+			string query;	// Параметры запроса
+			string domain;	// Домен сервера (домены могут быть с маской вида www.domain.com, *.domain.com, domain.com, *.domain.*, *.com, *.*)
+		};
+		/**
+ 		* Client Структура данных клиента
+ 		*/
+		struct Client {
+			u_int prefix;	// Префикс сети
+			string mac;		// Мак адрес клиента
+			string ip4;		// IP адрес протокола версии 4
+			string ip6;		// IP адрес протокола версии 6
+			string agent;	// UserAgent пользователя
+		};
+		/**
  		* Rules Структура правил заголовков
  		*/
 		struct Rules {
-			string agent;
-			string query;
-			vector <string> headers;
+			Client client;				// Данные клиента
+			Servers server;				// Данные сервера
+			vector <string> headers;	// Список заголовков
 		};
 		/*
-		* Список правил (server -> ID -> action -> traffic -> method -> path -> {query, agent, headers})
-		*
-		* server может быть
-		* mac
-		* ip
-		* network
-		* domain (домены могут быть с маской вида www.domain.com, *.domain.com, domain.com, *.domain.*, *.com, *.*)
-		*
-		* ID Может быть
-		* group
-		* user
-		* ident
-		*
-		* ident может быть
-		* mac
-		* ip
-		* network
+		* Список правил (gid -> uid -> action -> traffic -> method -> {client, server, headers})
 		*/
 		/*
-		* id_server ->
-		*             | name ->
-		*             |        | id_user ->
-		*             |        |           | name ->
-		*             |        |           |        | action ->
-		*             |        |           |        |          | traffic ->
-		*             |        |           |        |          |           | method ->
-		*             |        |           |        |          |           |          | path ->
-		*             |        |           |        |          |           |          |        | rules
+		* gid ->
+		*       | uid ->
+		*       |       | action ->
+		*       |       |          | traffic ->
+		*       |       |          |           | method ->
+		*       |       |          |           |          | rules
+		* -------------------------------------------------------
 		*/
 		map <
-			u_int,
-			unordered_map <
-				string,
+			gid_t,
+			map <
+				uid_t,
 				map <
-					u_int,
-					unordered_map <
-						string,
-						map <
-							bool,
-							map <
-								bool,
-								unordered_map <
-									string,
-									unordered_map <
-										string,
-										Rules
-									>
-								>
+					bool,
+					map <
+						bool,
+						unordered_map <
+							string,
+							unordered_map <
+								string,
+								Rules
 							>
 						>
 					>
@@ -102,7 +100,7 @@ class Headers {
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		Headers(Config * config = NULL, LogApp * log = NULL);
+		Headers(Config * config = nullptr, LogApp * log = nullptr);
 };
 
 #endif // _HEADERS2_AMING_
