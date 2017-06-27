@@ -23,13 +23,17 @@
 
 // Типы данных системы
 #define AMING_NULL 0x00
-#define AMING_IPV4 0x01
-#define AMING_IPV6 0x02
-#define AMING_DOMAIN 0x03
-#define AMING_MAC 0x04
-#define AMING_ACTION 0x05
-#define AMING_METHOD 0x06
-#define AMING_ROUTE 0x07
+#define AMING_IP 0x01
+#define AMING_NETWORK 0x02
+#define AMING_IPV4 0x03
+#define AMING_IPV6 0x04
+#define AMING_DOMAIN 0x05
+#define AMING_MAC 0x06
+#define AMING_USER 0x07
+#define AMING_GROUP 0x08
+#define AMING_HTTP_ACTION 0x09
+#define AMING_HTTP_METHOD 0x10
+#define AMING_HTTP_TRAFFIC 0x11
 
 // Устанавливаем область видимости
 using namespace std;
@@ -198,5 +202,24 @@ const size_t getBytes(const string str);
  * @return     размер в секундах
  */
 const size_t getSeconds(const string str);
+/**
+ * isAddress Метод проверки на то является ли строка адресом
+ * @param  address строка адреса для проверки
+ * @return         результат проверки
+ */
+const bool isAddress(const string address);
+/**
+ * getTypeAmingByString Метод определения типа данных из строки
+ * @param  str строка с данными
+ * @return     определенный тип данных
+ */
+const u_int getTypeAmingByString(const string str);
+/**
+ * checkDomain Метод определения определения соответствия домена маски
+ * @param  domain название домена
+ * @param  mask   маска домена для проверки
+ * @return        результат проверки
+ */
+const bool checkDomainByMask(const string domain, const string mask);
 
 #endif // _GENERAL_AMING_

@@ -551,3 +551,135 @@ const size_t getSeconds(const string str){
 	// Выводим результат
 	return seconds;
 }
+/**
+ * isAddress Метод проверки на то является ли строка адресом
+ * @param  address строка адреса для проверки
+ * @return         результат проверки
+ */
+const bool isAddress(const string address){
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения
+	regex e(
+		// Определение домена
+		"(?:[\\w\\-\\.]+\\.[\\w\\-]+|"
+		// Определение мак адреса
+		"[A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5}|"
+		// Определение ip адреса
+		"\\d{1,3}(?:\\.\\d{1,3}){3}|"
+		// Определение ip6 адреса (в полном формате)
+		"[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7})",
+		regex::ECMAScript | regex::icase
+	);
+	// Выполняем проверку
+	regex_search(address, match, e);
+	// Выводим результат
+	return !match.empty();
+}
+/**
+ * getTypeAmingByString Метод определения типа данных из строки
+ * @param  str строка с данными
+ * @return     определенный тип данных
+ */
+const u_int getTypeAmingByString(const string str){
+	// Результат полученных данных
+	u_int result = AMING_NULL;
+	// Если строка передана
+	if(!str.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			// Определение домена
+			"^(?:([\\w\\-\\.]+\\.[\\w\\-]+)|"
+			// Определение мак адреса
+			"([A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5})|"
+			// Определение ip4 адреса
+			"(\\d{1,3}(?:\\.\\d{1,3}){3})|"
+			// Определение ip6 адреса (в полном формате)
+			"([A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7})|"
+			// Если это сеть
+			"((?:\\d{1,3}(?:\\.\\d{1,3}){3}|[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7})\\/(?:\\d{1,3}(?:\\.\\d{1,3}){3}|\\d+))|"
+			// Если это экшен
+			"(add|rm)|"
+			// Если это метод
+			"(get|post|options|head|put|patch|delete|trace|connect)|"
+			// Если это направление трафика
+			"(in|out))$",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем проверку
+		regex_search(str, match, e);
+		// Если результат найден
+		if(!match.empty()){
+			// Извлекаем полученные данные
+			const string domain = match[1].str();
+			const string mac = match[2].str();
+			const string ip4 = match[3].str();
+			const string ip6 = match[4].str();
+			const string network = match[5].str();
+			const string action = match[6].str();
+			const string method = match[7].str();
+			const string traffic = match[8].str();
+			// Определяем тип данных
+			if(!domain.empty())			result = AMING_DOMAIN;
+			else if(!mac.empty())		result = AMING_MAC;
+			else if(!ip4.empty())		result = AMING_IPV4;
+			else if(!ip6.empty())		result = AMING_IPV6;
+			else if(!network.empty())	result = AMING_NETWORK;
+			else if(!action.empty())	result = AMING_HTTP_ACTION;
+			else if(!method.empty())	result = AMING_HTTP_METHOD;
+			else if(!traffic.empty())	result = AMING_HTTP_TRAFFIC;
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkDomain Метод определения определения соответствия домена маски
+ * @param  domain название домена
+ * @param  mask   маска домена для проверки
+ * @return        результат проверки
+ */
+const bool checkDomainByMask(const string domain, const string mask){
+	// Результат проверки домена
+	bool result = false;
+	// Если и домен и маска переданы
+	if(!domain.empty() && !mask.empty()){
+		// Итератор
+		string itm = "";
+		// Выполняем разбиение домена на составляющие
+		vector <string> dom = split(::toCase(domain), ".");
+		// Выполняем разбиение маски
+		vector <string> msk = split(::toCase(mask), ".");
+		// Выполняем реверс данных
+		reverse(begin(dom), end(dom));
+		reverse(begin(msk), end(msk));
+		// Запоминаем размеры массивов
+		const size_t dl = dom.size(), ml = msk.size();
+		// Запоминаем максимальный размер массива
+		const size_t max = (dl > ml ? dl : ml);
+		// Запоминаем минимальный размер массива
+		const size_t min = (dl < ml ? dl : ml);
+		// Переходим по максимальному массиву
+		for(u_int i = 0; i < max; i++){
+			// Если мы не вышли за границу массива
+			if(i < min){
+				// Запоминаем значение маски
+				itm = msk[i];
+				// Сравниваем поэлементно
+				if((itm.compare("*") == 0)
+				|| (itm.compare(dom[i]) == 0)) result = true;
+				// Если сравнение не сработало тогда выходим
+				else result = false;
+			// Если сравнение получилось
+			} else if(itm.compare("*") == 0) result = true;
+			// Если сравнение не сработало тогда выходим
+			else result = false;
+			// Если сравнение не удачно то выходим
+			if(!result) break;
+		}
+	}
+	// Выводим результат
+	return result;
+}
