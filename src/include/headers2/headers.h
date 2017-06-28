@@ -21,6 +21,7 @@
 #include "nwk/nwk.h"
 #include "log/log.h"
 #include "http/http.h"
+#include "groups/groups.h"
 #include "general/general.h"
 
 // Устанавливаем область видимости
@@ -94,13 +95,25 @@ class Headers {
 				>
 			>
 		> rules;
+		// Системные параметры
+		LogApp * log = nullptr;
+		Config * config = nullptr;
+		Groups * groups = nullptr;
+		/**
+		 * readFromLDAP Метод чтения данных из LDAP сервера
+		 */
+		void readFromLDAP();
+		/**
+		 * readFromFile Метод чтения данных из файла
+		 */
+		void readFromFile();
 	public:
 		/**
 		 * Headers Конструктор
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		Headers(Config * config = nullptr, LogApp * log = nullptr);
+		Headers(Config * config = nullptr, LogApp * log = nullptr, Groups * groups = nullptr);
 };
 
 #endif // _HEADERS2_AMING_
