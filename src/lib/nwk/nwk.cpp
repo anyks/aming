@@ -287,13 +287,13 @@ bool Network::checkIPByNetwork6(const string ip, const string nwk){
 	// Если данные найдены
 	if(!match.empty()){
 		// Преобразуем сеть в полный вид
-		string network = toCase(setLowIp6(match[1].str()));
+		string network = Anyks::toCase(setLowIp6(match[1].str()));
 		// Накладываем на ip адрес префикс сети
 		string ipv6 = imposePrefix6(ip, ::atoi(match[2].str().c_str()));
 		// Преобразуем ip адрес в полный вид
-		ipv6 = toCase(setLowIp6(ipv6));
+		ipv6 = Anyks::toCase(setLowIp6(ipv6));
 		// Формируем вектор данных ip адреса
-		vector <string> mip = split(ipv6, ":");
+		vector <string> mip = Anyks::split(ipv6, ":");
 		// Если данные получены
 		if(!mip.empty()){
 			// Если первый хекстет нулевой значит это локальный адрес
@@ -301,7 +301,7 @@ bool Network::checkIPByNetwork6(const string ip, const string nwk){
 			// Выполняем сравнение по хекстетам
 			else {
 				// Формируем вектор данных сети
-				vector <string> nwk = split(network, ":");
+				vector <string> nwk = Anyks::split(network, ":");
 				// Начинаем проверять совпадения
 				for(u_int j = 0; j < mip.size(); j++){
 					// Если значение в маске совпадает тогда продолжаем проверку
@@ -928,13 +928,13 @@ const int Network::isLocal6(const string ip){
 			compare = checkRange6(ip, this->locals6[i].ip, this->locals6[i].eip);
 		else {
 			// Преобразуем сеть в полный вид
-			string network = toCase(setLowIp6(this->locals6[i].ip));
+			string network = Anyks::toCase(setLowIp6(this->locals6[i].ip));
 			// Накладываем на ip адрес префикс сети
 			string ipv6 = imposePrefix6(ip, this->locals6[i].prefix);
 			// Преобразуем ip адрес в полный вид
-			ipv6 = toCase(setLowIp6(ipv6));
+			ipv6 = Anyks::toCase(setLowIp6(ipv6));
 			// Формируем вектор данных ip адреса
-			vector <string> mip = split(ipv6, ":");
+			vector <string> mip = Anyks::split(ipv6, ":");
 			// Если данные получены
 			if(!mip.empty()){
 				// Если первый хекстет нулевой значит это локальный адрес
@@ -942,7 +942,7 @@ const int Network::isLocal6(const string ip){
 				// Выполняем сравнение по хекстетам
 				else {
 					// Формируем вектор данных сети
-					vector <string> nwk = split(network, ":");
+					vector <string> nwk = Anyks::split(network, ":");
 					// Начинаем проверять совпадения
 					for(u_int j = 0; j < mip.size(); j++){
 						// Если значение в маске совпадает тогда продолжаем проверку

@@ -36,11 +36,11 @@ HttpData::HttpHeaders::Header HttpData::HttpHeaders::getHeader(const string key)
 	// Присваиваем значения строк
 	string ckey = key;
 	// Убираем пробелы
-	ckey = ::toCase(::trim(ckey));
+	ckey = Anyks::toCase(Anyks::trim(ckey));
 	// Переходим по всему массиву и ищем там нужный нам заголовок
 	for(auto it = this->headers.begin(); it != this->headers.end(); it++){
 		// Если заголовок найден
-		if(::toCase(it->head).compare(ckey) == 0) return (* it);
+		if(Anyks::toCase(it->head).compare(ckey) == 0) return (* it);
 	}
 	// Сообщаем что ничего не найдено
 	return {"", ""};
@@ -59,17 +59,17 @@ const u_char * HttpData::HttpHeaders::data(){
 		// Переходим по всему фектору заголовков
 		for(size_t i = 0; i < size; i++){
 			// Если это не заголовок Age
-			if((toCase(this->headers[i].head).compare("age") != 0)
-			&& (toCase(this->headers[i].head).compare("content-length") != 0)
-			&& (toCase(this->headers[i].head).compare("transfer-encoding") != 0)
-			&& !((toCase(this->headers[i].head).compare("content-encoding") == 0)
-			&& (toCase(this->headers[i].value).find("gzip") != string::npos))){
+			if((Anyks::toCase(this->headers[i].head).compare("age") != 0)
+			&& (Anyks::toCase(this->headers[i].head).compare("content-length") != 0)
+			&& (Anyks::toCase(this->headers[i].head).compare("transfer-encoding") != 0)
+			&& !((Anyks::toCase(this->headers[i].head).compare("content-encoding") == 0)
+			&& (Anyks::toCase(this->headers[i].value).find("gzip") != string::npos))){
 				// Получаем название заголовка
 				string header = this->headers[i].head;
 				// Получаем значение заголовка
 				string value = this->headers[i].value;
 				// Если это ETag
-				if(toCase(header).compare("etag") == 0){
+				if(Anyks::toCase(header).compare("etag") == 0){
 					// Выполняем поиск экранируемого символа
 					size_t pos = value.find("W/");
 					// Если найден экранируемный символ то удаляем его
@@ -104,7 +104,7 @@ void HttpData::HttpHeaders::set(const u_char * data, size_t size){
 		// Выполняем разбивки на чанки
 		vector <string> data;
 		// Выполняем получение заголовков
-		split(headers, "<-|heads|->", data);
+		Anyks::split(headers, "<-|heads|->", data);
 		// Если данные существуют
 		if(!data.empty()){
 			// Переходим по всему массиву заголовков
@@ -112,7 +112,7 @@ void HttpData::HttpHeaders::set(const u_char * data, size_t size){
 				// Выполняем разбор заголовка
 				vector <string> header;
 				// Выполняем получение заголовка
-				split(* it, "<-|params|->", header);
+				Anyks::split(* it, "<-|params|->", header);
 				// Добавляем заголовок в список
 				if(!header.empty()) append(* header.begin(), * (header.end() - 1));
 			}
@@ -140,11 +140,11 @@ void HttpData::HttpHeaders::remove(const string key){
 	// Присваиваем значения строк
 	string ckey = key;
 	// Убираем пробелы
-	ckey = ::toCase(::trim(ckey));
+	ckey = Anyks::toCase(Anyks::trim(ckey));
 	// Ищем такой ключ
 	for(auto it = this->headers.begin(); it != this->headers.end(); it++){
 		// Если найшли наш ключ
-		if(::toCase(it->head).compare(ckey) == 0){
+		if(Anyks::toCase(it->head).compare(ckey) == 0){
 			// Удаляем указанный заголовок
 			this->headers.erase(it);
 			// Выходим из цикла
@@ -162,10 +162,10 @@ void HttpData::HttpHeaders::append(const string key, const string val){
 	string ckey = key;
 	string cval = val;
 	// Убираем пробелы
-	ckey = ::trim(ckey);
-	cval = ::trim(cval);
+	ckey = Anyks::trim(ckey);
+	cval = Anyks::trim(cval);
 	// Приводим к нижнему регистру ключ для удаления
-	string rkey = ::toCase(ckey);
+	string rkey = Anyks::toCase(ckey);
 	// Удаляем сначала исходный заголовок
 	if((rkey.compare("cookie") != 0)
 	&& (rkey.compare("set-cookie") != 0)) remove(rkey);
@@ -207,7 +207,7 @@ const bool HttpData::HttpHeaders::create(const char * buffer){
 		// Массив строк
 		vector <string> strings;
 		// Выполняем разбиение строк
-		split(str, "\r\n", strings);
+		Anyks::split(str, "\r\n", strings);
 		// Если строки найдены
 		if(!strings.empty()){
 			// Переходим по всему массиву строк
@@ -942,11 +942,11 @@ void HttpData::genDataConnect(){
 	// Если данные найдены
 	if(!match.empty()){
 		// Запоминаем метод запроса
-		this->method = ::toCase(match[1].str());
+		this->method = Anyks::toCase(match[1].str());
 		// Запоминаем путь запроса
 		this->path = match[2].str();
 		// Запоминаем протокол запроса
-		this->protocol = ::toCase(match[3].str());
+		this->protocol = Anyks::toCase(match[3].str());
 		// Запоминаем версию протокола
 		this->version = match[4].str();
 		// Извлекаем данные хоста
@@ -973,7 +973,7 @@ void HttpData::genDataConnect(){
 				// Уделяем предпочтение 443 порту
 				this->port = scon.port;
 			// Запоминаем порт такой какой он есть
-			} else if(::checkPort(gcon.port)) {
+			} else if(Anyks::checkPort(gcon.port)) {
 				// Запоминаем протокол
 				this->protocol = gcon.protocol;
 				// Запоминаем порт
@@ -993,12 +993,12 @@ void HttpData::genDataConnect(){
 			// Определяем путь
 			if(((this->protocol.compare("http") == 0)
 			|| (this->protocol.compare("https") == 0))
-			&& ((::toCase(this->method).compare("connect") != 0)
-			&& ((::toCase(this->path).compare(::toCase(host)) == 0)
-			|| (::toCase(this->path).compare(::toCase(fulladdr1)) == 0)
-			|| (::toCase(this->path).compare(::toCase(fulladdr2)) == 0)
-			|| (::toCase(this->path).compare(::toCase(fulladdr3)) == 0)
-			|| (::toCase(this->path).compare(::toCase(fulladdr4)) == 0)))) this->path = "/";
+			&& ((Anyks::toCase(this->method).compare("connect") != 0)
+			&& ((Anyks::toCase(this->path).compare(Anyks::toCase(host)) == 0)
+			|| (Anyks::toCase(this->path).compare(Anyks::toCase(fulladdr1)) == 0)
+			|| (Anyks::toCase(this->path).compare(Anyks::toCase(fulladdr2)) == 0)
+			|| (Anyks::toCase(this->path).compare(Anyks::toCase(fulladdr3)) == 0)
+			|| (Anyks::toCase(this->path).compare(Anyks::toCase(fulladdr4)) == 0)))) this->path = "/";
 			// Выполняем удаление из адреса доменного имени
 			else this->path = gcon.path;
 			// Запоминаем хост
@@ -1013,7 +1013,7 @@ void HttpData::genDataConnect(){
 			// Если данные найдены
 			if(!match.empty()){
 				// Запоминаем тип авторизации
-				this->auth = ::toCase(match[1].str());
+				this->auth = Anyks::toCase(match[1].str());
 				// Если это тип авторизация basic, тогда выполняем декодирования данных авторизации
 				if(this->auth.compare("basic") == 0){
 					// Создаем объект base64
@@ -1096,7 +1096,7 @@ const string HttpData::createHeadResponse(){
 		// Определяем значение
 		string value = it->value;
 		// Фильтруем заголовки
-		if(agent && (::toCase(head).compare("via") == 0)){
+		if(agent && (Anyks::toCase(head).compare("via") == 0)){
 			// Добавляем стандартный заголовок проксирования
 			value += (string(", ") + this->version + string(" ")
 			+ this->appName + string(" (") + string(APP_NAME)
@@ -1105,9 +1105,9 @@ const string HttpData::createHeadResponse(){
 			via = true;
 		}
 		// Если указанные заголовки не найдены
-		if((::toCase(head).compare("connection") != 0)
-		&& (::toCase(head).compare("proxy-authorization") != 0)
-		&& (!smart || (smart && (::toCase(head).compare("proxy-connection") != 0)))){
+		if((Anyks::toCase(head).compare("connection") != 0)
+		&& (Anyks::toCase(head).compare("proxy-authorization") != 0)
+		&& (!smart || (smart && (Anyks::toCase(head).compare("proxy-connection") != 0)))){
 			// Добавляем оставшиеся заголовки
 			response.append(head + string(": ") + value + string("\r\n"));
 		}
@@ -1154,7 +1154,7 @@ const string HttpData::createHeadRequest(){
 	bool via = false;
 	// Создаем строку запроса
 	string request = (
-		::toCase(this->method, true)
+		Anyks::toCase(this->method, true)
 		+ string(" ") + this->path
 		+ string(" ") + string("HTTP/")
 		+ this->version + string("\r\n")
@@ -1179,7 +1179,7 @@ const string HttpData::createHeadRequest(){
 		// Определяем значение
 		string value = it->value;
 		// Фильтруем заголовки
-		if(agent && (::toCase(head).compare("via") == 0)){
+		if(agent && (Anyks::toCase(head).compare("via") == 0)){
 			// Добавляем стандартный заголовок проксирования
 			value += (string(", ") + this->version + string(" ")
 			+ this->appName + string(" (") + string(APP_NAME)
@@ -1188,12 +1188,12 @@ const string HttpData::createHeadRequest(){
 			via = true;
 		}
 		// Фильтруем заголовки
-		if((::toCase(head).compare("host") != 0)
-		&& (::toCase(head).compare("user-agent") != 0)
-		&& (::toCase(head).compare("connection") != 0)
-		&& (::toCase(head).compare("proxy-authorization") != 0)
-		&& (gzip || (!gzip && (::toCase(head).compare("accept-encoding") != 0)))
-		&& (!smart || (smart && (::toCase(head).compare("proxy-connection") != 0)))){
+		if((Anyks::toCase(head).compare("host") != 0)
+		&& (Anyks::toCase(head).compare("user-agent") != 0)
+		&& (Anyks::toCase(head).compare("connection") != 0)
+		&& (Anyks::toCase(head).compare("proxy-authorization") != 0)
+		&& (gzip || (!gzip && (Anyks::toCase(head).compare("accept-encoding") != 0)))
+		&& (!smart || (smart && (Anyks::toCase(head).compare("proxy-connection") != 0)))){
 			// Добавляем оставшиеся заголовки
 			request.append(head + string(": ") + value + string("\r\n"));
 		}
@@ -1320,7 +1320,7 @@ HttpData::Connect HttpData::getConnection(const string str){
 	// Выполняем поиск протокола
 	regex_search(query, match, ep);
 	// Если протокол найден
-	if(!match.empty()) data.protocol = ::toCase(match[1].str());
+	if(!match.empty()) data.protocol = Anyks::toCase(match[1].str());
 	// Устанавливаем правило для поиска
 	regex eh(
 		// Стандартная запись домена aming.su
@@ -1336,7 +1336,7 @@ HttpData::Connect HttpData::getConnection(const string str){
 	// Если протокол найден
 	if(!match.empty()){
 		// Запоминаем хост
-		data.host = ::toCase(match[1].str());
+		data.host = Anyks::toCase(match[1].str());
 		// Если порт найден, тогда запоминаем его
 		if(match.size() == 3) data.port = match[2].str();
 	}
@@ -1382,7 +1382,7 @@ const bool HttpData::isExtGzip(){
 const bool HttpData::isUpgrade(){
 	// Сообщаем является ли запрос, желанием смены протокола
 	return (!getHeader("upgrade").empty()
-	&& (::toCase(getHeader("connection")).find("upgrade") != string::npos));
+	&& (Anyks::toCase(getHeader("connection")).find("upgrade") != string::npos));
 }
 /**
  * isConnect Метод проверяет является ли метод, методом connect
@@ -1398,7 +1398,7 @@ const bool HttpData::isConnect(){
  */
 const bool HttpData::isClose(){
 	// Сообщаем должно ли быть закрыто подключение
-	return (::toCase(getHeader("connection")).find("close") != string::npos);
+	return (Anyks::toCase(getHeader("connection")).find("close") != string::npos);
 }
 /**
  * isHttps Метод проверяет является ли подключение защищенным
@@ -1414,7 +1414,7 @@ const bool HttpData::isHttps(){
  */
 const bool HttpData::isAlive(){
 	// Получаем тип подключения
-	string connection = ::toCase(getHeader("connection"));
+	string connection = Anyks::toCase(getHeader("connection"));
 	// Если это версия протокола 1.1 и подключение установлено постоянное для прокси
 	if(getVersion() > 1){
 		// Выводим результат провери
@@ -1554,7 +1554,7 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 							// Получаем наличие заголовка Cache-Control
 							string cc = getHeader("cache-control");
 							// Если заголовок существует
-							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
+							if(!cc.empty() && (Anyks::toCase(cc).find(param) != string::npos)) gzip = true;
 							// Если проверка не пройдена
 							else {
 								// Запрещаем сжатие
@@ -1567,7 +1567,7 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 							// Получаем наличие заголовка Cache-Control
 							string cc = getHeader("cache-control");
 							// Если заголовок существует
-							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
+							if(!cc.empty() && (Anyks::toCase(cc).find(param) != string::npos)) gzip = true;
 							// Если проверка не пройдена
 							else {
 								// Запрещаем сжатие
@@ -1580,7 +1580,7 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 							// Получаем наличие заголовка Cache-Control
 							string cc = getHeader("cache-control");
 							// Если заголовок существует
-							if(!cc.empty() && (toCase(cc).find(param) != string::npos)) gzip = true;
+							if(!cc.empty() && (Anyks::toCase(cc).find(param) != string::npos)) gzip = true;
 							// Если проверка не пройдена
 							else {
 								// Запрещаем сжатие
@@ -1641,7 +1641,7 @@ const bool HttpData::compressIsAllowed(const string userAgent){
 					// Считываем заголовок
 					string vary = getHeader("vary");
 					// Проверяем наличие
-					if(!vary.empty() && (toCase(vary)
+					if(!vary.empty() && (Anyks::toCase(vary)
 					.find("accept-encoding") != string::npos)) rmHeader("vary");
 				}
 			}
@@ -1892,7 +1892,7 @@ const size_t HttpData::setEntitybody(const char * buffer, const size_t size){
 		// Проверяем есть ли размер вложений
 		string cl = getHeader("content-length");
 		// Определяем размер вложений
-		if(!cl.empty() && ::isNumber(cl)) length = ::atoi(cl.c_str());
+		if(!cl.empty() && Anyks::isNumber(cl)) length = ::atoi(cl.c_str());
 		// Если вложения не найдены
 		else {
 			// Проверяем есть ли чанкование
@@ -2306,33 +2306,33 @@ void HttpData::set(const u_char * data, size_t size){
 					// Определяем тип извлекаемых данных
 					switch(j){
 						// Если это статус запроса
-						case 0: cpydata(data, size_data, size_it, &this->status); break;
+						case 0: Anyks::cpydata(data, size_data, size_it, &this->status); break;
 						// Если это настройки
-						case 1: cpydata(data, size_data, size_it, &this->options); break;
+						case 1: Anyks::cpydata(data, size_data, size_it, &this->options); break;
 						// Если это http запрос
-						case 2: cpydata(data, size_data, size_it, this->http); break;
+						case 2: Anyks::cpydata(data, size_data, size_it, this->http); break;
 						// Если это тип авторизации
-						case 3: cpydata(data, size_data, size_it, this->auth); break;
+						case 3: Anyks::cpydata(data, size_data, size_it, this->auth); break;
 						// Если это путь запроса
-						case 4: cpydata(data, size_data, size_it, this->path); break;
+						case 4: Anyks::cpydata(data, size_data, size_it, this->path); break;
 						// Если это хост запроса
-						case 5: cpydata(data, size_data, size_it, this->host); break;
+						case 5: Anyks::cpydata(data, size_data, size_it, this->host); break;
 						// Если это порт запроса
-						case 6: cpydata(data, size_data, size_it, this->port); break;
+						case 6: Anyks::cpydata(data, size_data, size_it, this->port); break;
 						// Если это логин пользователя
-						case 7: cpydata(data, size_data, size_it, this->login); break;
+						case 7: Anyks::cpydata(data, size_data, size_it, this->login); break;
 						// Если это метод запроса
-						case 8: cpydata(data, size_data, size_it, this->method); break;
+						case 8: Anyks::cpydata(data, size_data, size_it, this->method); break;
 						// Если это название приложения
-						case 9: cpydata(data, size_data, size_it, this->appName); break;
+						case 9: Anyks::cpydata(data, size_data, size_it, this->appName); break;
 						// Если это версия протокола
-						case 10: cpydata(data, size_data, size_it, this->version); break;
+						case 10: Anyks::cpydata(data, size_data, size_it, this->version); break;
 						// Если это протокол запроса
-						case 11: cpydata(data, size_data, size_it, this->protocol); break;
+						case 11: Anyks::cpydata(data, size_data, size_it, this->protocol); break;
 						// Если это пароль пользователя
-						case 12: cpydata(data, size_data, size_it, this->password); break;
+						case 12: Anyks::cpydata(data, size_data, size_it, this->password); break;
 						// Если это версия приложения
-						case 13: cpydata(data, size_data, size_it, this->appVersion); break;
+						case 13: Anyks::cpydata(data, size_data, size_it, this->appVersion); break;
 						// Если это заголовки запроса
 						case 14: {
 							// Выделяем динамически память
@@ -2517,7 +2517,7 @@ void HttpData::setData(const char * buffer, const size_t size){
 			// Получаем строку запроса
 			this->http = match[1].str();
 			// Запоминаем http запрос
-			this->http = ::trim(this->http);
+			this->http = Anyks::trim(this->http);
 			// Запоминаем статус запроса
 			this->status = ::atoi(match[4].str().c_str());
 			// Создаем объект с заголовками
@@ -2655,7 +2655,7 @@ void HttpData::addHeader(const char * buffer){
 				// Добавляем новый заголовок
 				this->headers.append(key, val);
 				// Если сжатие активировано
-				if((::toCase(key).compare("content-encoding") == 0)
+				if((Anyks::toCase(key).compare("content-encoding") == 0)
 				&& (val.find("gzip") != string::npos)) this->extGzip = true;
 			// Запоминаем результат запроса или ответа
 			} else {
@@ -2862,7 +2862,7 @@ const bool Http::isHttp(const string buffer){
 		// Устанавливаем завершающий символ
 		buf[3] = '\0';
 		// Переходим по всему массиву команд
-		for(u_short i = 0; i < 8; i++) if(::toCase(buf).compare(cmds[i]) == 0) return true;
+		for(u_short i = 0; i < 8; i++) if(Anyks::toCase(buf).compare(cmds[i]) == 0) return true;
 	}
 	// Сообщаем что это не http
 	return false;

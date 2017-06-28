@@ -33,7 +33,7 @@ const INI::Params INI::getParams(const string str){
 			// Получаем значение
 			params.value = match[2].str();
 			// Исправляем значения
-			params.value = ::trim(params.value);
+			params.value = Anyks::trim(params.value);
 		}
 	}
 	// Выводим результат
@@ -83,7 +83,7 @@ const string INI::get(const string section, const string key){
 				// Получаем ключ 2
 				string key2 = it->key;
 				// Если ключ найден, выводим результат
-				if(::toCase(key1).compare(::toCase(key2)) == 0) return it->value;
+				if(Anyks::toCase(key1).compare(Anyks::toCase(key2)) == 0) return it->value;
 			}
 		}
 	}
@@ -125,7 +125,7 @@ const vector <INI::Params> INI::getParamsInSection(const string section){
 			// Получаем название второго раздела
 			string section2 = it->first;
 			// Если раздел найден
-			if(::toCase(section1).compare(::toCase(section2)) == 0){
+			if(Anyks::toCase(section1).compare(Anyks::toCase(section2)) == 0){
 				// Получаем данные раздела
 				auto params = it->second;
 				// Выполняем перебор полученных данных
@@ -172,7 +172,7 @@ const double INI::getFloat(const string section, const string key, const double 
 				// Получаем данные зачения
 				string value = match[1].str();
 				// Определяем булевое значение
-				if(::toCase(value).compare("true") == 0)
+				if(Anyks::toCase(value).compare("true") == 0)
 					return 1.0;
 				else return 0.0;
 			}
@@ -212,7 +212,7 @@ const int64_t INI::getNumber(const string section, const string key, const int64
 				// Получаем данные зачения
 				string value = match[1].str();
 				// Определяем булевое значение
-				if(::toCase(value).compare("true") == 0)
+				if(Anyks::toCase(value).compare("true") == 0)
 					return 1;
 				else return 0;
 			}
@@ -252,7 +252,7 @@ const size_t INI::getUNumber(const string section, const string key, const size_
 				// Получаем данные зачения
 				string value = match[1].str();
 				// Определяем булевое значение
-				if(::toCase(value).compare("true") == 0)
+				if(Anyks::toCase(value).compare("true") == 0)
 					return 1;
 				else return 0;
 			}
@@ -297,7 +297,7 @@ const bool INI::getBoolean(const string section, const string key, const bool de
 				// Получаем данные зачения
 				string value = match[1].str();
 				// Определяем булевое значение
-				if(::toCase(value).compare("true") == 0)
+				if(Anyks::toCase(value).compare("true") == 0)
 					return true;
 				else return false;
 			}
@@ -339,7 +339,7 @@ const bool INI::checkParam(const string section, const string key){
 			// Получаем ключ 2
 			string key2 = it->key;
 			// Если ключ найден, выводим результат
-			if(::toCase(key1).compare(::toCase(key2)) == 0){
+			if(Anyks::toCase(key1).compare(Anyks::toCase(key2)) == 0){
 				// Запоминаем что результат найден
 				result = true;
 				// Выходим из цикла
@@ -414,7 +414,7 @@ const bool INI::delData(const string section, const string key){
 				// Получаем ключ 2
 				string key2 = it->key;
 				// Если ключ найден, выводим результат
-				if(::toCase(key1).compare(::toCase(key2)) == 0){
+				if(Anyks::toCase(key1).compare(Anyks::toCase(key2)) == 0){
 					// Сообщаем что все удачно
 					result = true;
 					// Если ключ найден тогда удаляем элемент
@@ -482,7 +482,7 @@ const bool INI::isError(){
  */
 void INI::read(const string filename){
 	// Если файл передан
-	if(!filename.empty() && isFileExist(filename.c_str())){
+	if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 		// Открываем файл на чтение
 		ifstream config(filename.c_str());
 		// Если файл открыт

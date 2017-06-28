@@ -43,9 +43,9 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	// Если объект ini не передан то создаем его
 	if(!ini){
 		// Создаем адрес для хранения файла
-		const string filename = addToPath(this->config->proxy.dir, "groups.ini");
+		const string filename = Anyks::addToPath(this->config->proxy.dir, "groups.ini");
 		// Проверяем на существование адреса
-		if(!filename.empty() && isFileExist(filename.c_str())){
+		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			// Инициализируем парсер ini файла
 			ini = new INI(filename);
 			// Запоминаем что нужно удалить объект конфигурации
@@ -55,11 +55,11 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	}
 	// Создаем список идентификаторов группы
 	group.idnt	= {
-		split(ini->getString(group.name + "_idnt", "ip4"), "|"),
-		split(ini->getString(group.name + "_idnt", "ip6"), "|"),
-		split(ini->getString(group.name + "_idnt", "network4"), "|"),
-		split(ini->getString(group.name + "_idnt", "network6"), "|"),
-		split(ini->getString(group.name + "_idnt", "mac"), "|")
+		Anyks::split(ini->getString(group.name + "_idnt", "ip4"), "|"),
+		Anyks::split(ini->getString(group.name + "_idnt", "ip6"), "|"),
+		Anyks::split(ini->getString(group.name + "_idnt", "network4"), "|"),
+		Anyks::split(ini->getString(group.name + "_idnt", "network6"), "|"),
+		Anyks::split(ini->getString(group.name + "_idnt", "mac"), "|")
 	};
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_proxy", "connect")){
@@ -120,47 +120,47 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_ipv4", "external")){
 		// Устанавливаем список ip адресов
-		group.ipv4.ip = split(ini->getString(group.name + "_ipv4", "external"), "|");
+		group.ipv4.ip = Anyks::split(ini->getString(group.name + "_ipv4", "external"), "|");
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_ipv6", "external")){
 		// Устанавливаем список ip адресов
-		group.ipv6.ip = split(ini->getString(group.name + "_ipv6", "external"), "|");
+		group.ipv6.ip = Anyks::split(ini->getString(group.name + "_ipv6", "external"), "|");
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_ipv4", "resolver")){
 		// Устанавливаем список резолверов
-		group.ipv4.resolver = split(ini->getString(group.name + "_ipv4", "resolver"), "|");
+		group.ipv4.resolver = Anyks::split(ini->getString(group.name + "_ipv4", "resolver"), "|");
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_ipv6", "resolver")){
 		// Устанавливаем список резолверов
-		group.ipv6.resolver = split(ini->getString(group.name + "_ipv6", "resolver"), "|");
+		group.ipv6.resolver = Anyks::split(ini->getString(group.name + "_ipv6", "resolver"), "|");
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_timeouts", "read")){
 		// Устанавливаем параметры
-		group.timeouts.read = (size_t) getSeconds(ini->getString(group.name + "_timeouts", "read"));
+		group.timeouts.read = (size_t) Anyks::getSeconds(ini->getString(group.name + "_timeouts", "read"));
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_timeouts", "write")){
 		// Устанавливаем параметры
-		group.timeouts.write = (size_t) getSeconds(ini->getString(group.name + "_timeouts", "write"));
+		group.timeouts.write = (size_t) Anyks::getSeconds(ini->getString(group.name + "_timeouts", "write"));
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_timeouts", "upgrade")){
 		// Устанавливаем параметры
-		group.timeouts.upgrade = (size_t) getSeconds(ini->getString(group.name + "_timeouts", "upgrade"));
+		group.timeouts.upgrade = (size_t) Anyks::getSeconds(ini->getString(group.name + "_timeouts", "upgrade"));
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_speed", "input")){
 		// Устанавливаем параметры
-		group.buffers.read = getSizeBuffer(ini->getString(group.name + "_speed", "input"));
+		group.buffers.read = Anyks::getSizeBuffer(ini->getString(group.name + "_speed", "input"));
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_speed", "output")){
 		// Устанавливаем параметры
-		group.buffers.write = getSizeBuffer(ini->getString(group.name + "_speed", "output"));
+		group.buffers.write = Anyks::getSizeBuffer(ini->getString(group.name + "_speed", "output"));
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_keepalive", "keepcnt")){
@@ -180,7 +180,7 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_connects", "size")){
 		// Устанавливаем параметры
-		group.connects.size = getBytes(ini->getString(group.name + "_connects", "size"));
+		group.connects.size = Anyks::getBytes(ini->getString(group.name + "_connects", "size"));
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_connects", "connect")){
@@ -230,22 +230,22 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_gzip", "chunk")){
 		// Устанавливаем параметры
-		group.gzip.chunk = getBytes(ini->getString(group.name + "_gzip", "chunk"));
+		group.gzip.chunk = Anyks::getBytes(ini->getString(group.name + "_gzip", "chunk"));
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_gzip", "vhttp")){
 		// Устанавливаем параметры
-		group.gzip.vhttp = split(ini->getString(group.name + "_gzip", "vhttp"), "|");
+		group.gzip.vhttp = Anyks::split(ini->getString(group.name + "_gzip", "vhttp"), "|");
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_gzip", "types")){
 		// Устанавливаем параметры
-		group.gzip.types = split(ini->getString(group.name + "_gzip", "types"), "|");
+		group.gzip.types = Anyks::split(ini->getString(group.name + "_gzip", "types"), "|");
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_gzip", "proxied")){
 		// Устанавливаем параметры
-		group.gzip.proxied = split(ini->getString(group.name + "_gzip", "proxied"), "|");
+		group.gzip.proxied = Anyks::split(ini->getString(group.name + "_gzip", "proxied"), "|");
 	}
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_gzip", "level")){
@@ -281,7 +281,7 @@ const Groups::Data Groups::createDefaultData(const gid_t id, const string name){
 		string groupName = name;
 		// Заполняем данные группы
 		group.id		= id;
-		group.name		= ::toCase(groupName);
+		group.name		= Anyks::toCase(groupName);
 		group.options	= this->config->options;
 		group.ipv4		= {this->config->ipv4.external, this->config->ipv4.resolver};
 		group.ipv6		= {this->config->ipv6.external, this->config->ipv6.resolver};
@@ -547,9 +547,9 @@ const bool Groups::readGroupsFromFile(){
 	// Результат работы функции
 	bool result = false;
 	// Создаем адрес для хранения файла
-	const string filename = addToPath(this->config->proxy.dir, "groups.ini");
+	const string filename = Anyks::addToPath(this->config->proxy.dir, "groups.ini");
 	// Проверяем на существование адреса
-	if(!filename.empty() && isFileExist(filename.c_str())){
+	if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 		// Инициализируем парсер ini файла
 		INI ini(filename);
 		// Если во время чтения файла ошибок не возникло
@@ -565,11 +565,11 @@ const bool Groups::readGroupsFromFile(){
 			// Переходим по списку групп
 			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
 				// Если идентификатор группы существует
-				if(::isNumber(it->key) || ::isNumber(it->value)){
+				if(Anyks::isNumber(it->key) || Anyks::isNumber(it->value)){
 					// Получаем идентификатор группы
-					const gid_t gid = (::isNumber(it->key) ? ::atoi(it->key.c_str()) : ::atoi(it->value.c_str()));
+					const gid_t gid = (Anyks::isNumber(it->key) ? ::atoi(it->key.c_str()) : ::atoi(it->value.c_str()));
 					// Получаем название группы
-					const string name = (::isNumber(it->key) ? it->value : it->key);
+					const string name = (Anyks::isNumber(it->key) ? it->value : it->key);
 					// Создаем блок с данными группы
 					Data group = createDefaultData(gid, name);
 					// Устанавливаем тип группы
@@ -579,13 +579,13 @@ const bool Groups::readGroupsFromFile(){
 						// Переходим по списку пользователей
 						for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
 							// Если группа соответствует текущей
-							if((::isNumber(ut->value)
+							if((Anyks::isNumber(ut->value)
 							&& (gid_t(::atoi(ut->value.c_str())) == group.id))
 							|| (ut->value.compare(group.name) == 0)){
 								// Создаем идентификатор пользователя
 								uid_t uid = 0;
 								// Проверяем является ли название пользователя идентификатором
-								if(::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
+								if(Anyks::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
 								// Если это не идентификатор то запрашиваем идентификатор пользователя
 								else uid = getUidByName(ut->key);
 								// Добавляем пользователя в список
@@ -598,7 +598,7 @@ const bool Groups::readGroupsFromFile(){
 						// Переходим по списку паролей
 						for(auto gp = passwords.cbegin(); gp != passwords.cend(); ++gp){
 							// Если группа соответствует текущей, устанавливаем пароль
-							if((::isNumber(gp->key)
+							if((Anyks::isNumber(gp->key)
 							&& (gid_t(::atoi(gp->key.c_str())) == group.id))
 							|| (gp->key.compare(group.name) == 0)) group.pass = gp->value;
 						}
@@ -608,7 +608,7 @@ const bool Groups::readGroupsFromFile(){
 						// Переходим по списку описаний
 						for(auto gd = descriptions.cbegin(); gd != descriptions.cend(); ++gd){
 							// Если группа соответствует текущей, устанавливаем описание
-							if((::isNumber(gd->key)
+							if((Anyks::isNumber(gd->key)
 							&& (gid_t(::atoi(gd->key.c_str())) == group.id))
 							|| (gd->key.compare(group.name) == 0)) group.desc = gd->value;
 						}
@@ -984,7 +984,7 @@ const gid_t Groups::getIdByName(const string groupName){
 			// Запоминаем полученное название группы
 			string name = groupName;
 			// Сравниваем группы в базе
-			if(it->second.name.compare(::toCase(name)) == 0){
+			if(it->second.name.compare(Anyks::toCase(name)) == 0){
 				// Запоминаем полученный идентификатор
 				result = it->first;
 				// Выходим из цикла

@@ -111,12 +111,6 @@ class Headers {
 		 */
 		const u_short checkTypeId(const string str);
 		/**
-		 * isAddress Метод проверки на то является ли строка адресом
-		 * @param  address строка адреса для проверки
-		 * @return         результат проверки
-		 */
-		const bool isAddress(const string address);
-		/**
 		 * isIpV4 Метод проверки на ip адрес, интернет протокола версии 4
 		 * @param  ip строка ip адреса для проверки
 		 * @return    результат проверки

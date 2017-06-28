@@ -22,11 +22,11 @@ void LogApp::write_data_to_file(const string id, const string data, void * ctx){
 	// Если объект передан
 	if(log && log->dataEnabled){
 		// Адрес каталога для хранения логов
-		string path = addToPath((* log->config)->logs.dir, (* log->config)->proxy.name);
+		string path = Anyks::addToPath((* log->config)->logs.dir, (* log->config)->proxy.name);
 		// Адрес каталога для хранения логов
-		path = addToPath(path, "data");
+		path = Anyks::addToPath(path, "data");
 		// Проверяем существует ли нужный нам каталог
-		if(!makePath(path.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group)){
+		if(!Anyks::makePath(path.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group)){
 			// Сообщаем что каталог не может быть создан
 			perror("Unable to create directory for log files");
 			// Выходим из приложения
@@ -84,9 +84,9 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 	// Если объект передан
 	if(log){
 		// Адрес каталога для хранения логов
-		string path = addToPath((* log->config)->logs.dir, (* log->config)->proxy.name);
+		string path = Anyks::addToPath((* log->config)->logs.dir, (* log->config)->proxy.name);
 		// Проверяем существует ли нужный нам каталог
-		if(!makePath(path.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group)){
+		if(!Anyks::makePath(path.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group)){
 			// Сообщаем что каталог не может быть создан
 			perror("Unable to create directory for log files");
 			// Выходим из приложения
@@ -108,9 +108,9 @@ void LogApp::write_to_file(u_short type, const char * message, void * ctx){
 		// Файловый дескриптор
 		FILE * file = nullptr;
 		// Проверяем существует ли файл лога
-		if(isFileExist(filename.c_str())){
+		if(Anyks::isFileExist(filename.c_str())){
 			// Устанавливаем права на файл лога
-			setOwner(filename.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group);
+			Anyks::setOwner(filename.c_str(), (* log->config)->proxy.user, (* log->config)->proxy.group);
 			// Открываем файл на чтение в бинарном виде
 			file = fopen(filename.c_str(), "rb");
 			// Если файл открыт

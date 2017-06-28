@@ -72,11 +72,11 @@ void CCache::DataDNS::set(const u_char * data, size_t size){
 					// Определяем тип извлекаемых данных
 					switch(j){
 						// Если это время жизни
-						case 0: cpydata(data, size_data, size_it, &this->ttl); break;
+						case 0: Anyks::(data, size_data, size_it, &this->ttl); break;
 						// Если это адрес ipv4
-						case 1: cpydata(data, size_data, size_it, this->ipv4); break;
+						case 1: Anyks::cpydata(data, size_data, size_it, this->ipv4); break;
 						// Если это адрес ipv6
-						case 2: cpydata(data, size_data, size_it, this->ipv6); break;
+						case 2: Anyks::cpydata(data, size_data, size_it, this->ipv6); break;
 					}
 				}
 			}
@@ -185,19 +185,19 @@ void CCache::DataCache::set(const u_char * data, size_t size){
 					// Определяем тип извлекаемых данных
 					switch(j){
 						// Если это версия интернет протокола
-						case 0: cpydata(data, size_data, size_it, &this->ipv); break;
+						case 0: Anyks::(data, size_data, size_it, &this->ipv); break;
 						// Если это время жизни
-						case 1: cpydata(data, size_data, size_it, &this->age); break;
+						case 1: Anyks::cpydata(data, size_data, size_it, &this->age); break;
 						// Если это дата записи кэша прокси сервером
-						case 2: cpydata(data, size_data, size_it, &this->date); break;
+						case 2: Anyks::cpydata(data, size_data, size_it, &this->date); break;
 						// Если это дата смерти кэша
-						case 3: cpydata(data, size_data, size_it, &this->expires); break;
+						case 3: Anyks::cpydata(data, size_data, size_it, &this->expires); break;
 						// Если это дата последней модификации
-						case 4: cpydata(data, size_data, size_it, &this->modified); break;
+						case 4: Anyks::cpydata(data, size_data, size_it, &this->modified); break;
 						// Если это обязательная ревалидация
-						case 5: cpydata(data, size_data, size_it, &this->valid); break;
+						case 5: Anyks::cpydata(data, size_data, size_it, &this->valid); break;
 						// Если это идентификатор ETag
-						case 6: cpydata(data, size_data, size_it, this->etag); break;
+						case 6: Anyks::cpydata(data, size_data, size_it, this->etag); break;
 						// Если это данные кэша
 						case 7: {
 							// Выделяем динамически память
@@ -235,7 +235,7 @@ void CCache::readDomain(const string filename, DataDNS * data){
 	// Если объект DNS существует
 	if(data){
 		// Проверяем на существование адреса
-		if(!filename.empty() && isFileExist(filename.c_str())){
+		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			// Открываем файл на чтение
 			ifstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
@@ -273,7 +273,7 @@ void CCache::readCache(const string filename, DataCache * data){
 	// Если блок данных кэша существует
 	if(data){
 		// Проверяем на существование адреса
-		if(!filename.empty() && isFileExist(filename.c_str())){
+		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			// Открываем файл на чтение
 			ifstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
@@ -337,7 +337,7 @@ void CCache::checkDomains(const string filename, void * ctx){
 					// Выводим сообщение об удаляемом домене в консоль
 					printf("Domain was deleted: %s/\r\n", rmDomain.c_str());
 					// Выполняем удаление домена
-					rmDir(rmDomain.c_str());
+					Anyks::rmDir(rmDomain.c_str());
 				}
 			}
 		}
@@ -406,7 +406,7 @@ void CCache::checkCache(const string filename, void * ctx){
 					// Выводим сообщение об удаляемом кэше в консоль
 					printf("Cache was deleted: %s/\r\n", rmDomain.c_str());
 					// Выполняем удаление домена
-					rmDir(rmDomain.c_str());
+					Anyks::rmDir(rmDomain.c_str());
 				}
 			}
 		}
@@ -527,9 +527,9 @@ CCache::CCache(const string config){
 	// Создаем объект конфигурации
 	this->config = new Config(config);
 	// Получаем каталог с адресом кэша доменов
-	const string dns = addToPath(this->config->cache.dir, "dns");
+	const string dns = Anyks::addToPath(this->config->cache.dir, "dns");
 	// Получаем каталог с адресом кэша данных
-	const string cache = addToPath(this->config->cache.dir, "cache");
+	const string cache = Anyks::addToPath(this->config->cache.dir, "cache");
 	// Выполняем проверку доменов
 	processDirectory(dns, &CCache::checkDomains);
 	// Выполняем проверку кэша

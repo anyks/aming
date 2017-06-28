@@ -72,11 +72,11 @@ void Cache::DataDNS::set(const u_char * data, size_t size){
 					// Определяем тип извлекаемых данных
 					switch(j){
 						// Если это время жизни
-						case 0: cpydata(data, size_data, size_it, &this->ttl); break;
+						case 0: Anyks::cpydata(data, size_data, size_it, &this->ttl); break;
 						// Если это адрес ipv4
-						case 1: cpydata(data, size_data, size_it, this->ipv4); break;
+						case 1: Anyks::cpydata(data, size_data, size_it, this->ipv4); break;
 						// Если это адрес ipv6
-						case 2: cpydata(data, size_data, size_it, this->ipv6); break;
+						case 2: Anyks::cpydata(data, size_data, size_it, this->ipv6); break;
 					}
 				}
 			}
@@ -185,19 +185,19 @@ void Cache::DataCache::set(const u_char * data, size_t size){
 					// Определяем тип извлекаемых данных
 					switch(j){
 						// Если это версия интернет протокола
-						case 0: cpydata(data, size_data, size_it, &this->ipv); break;
+						case 0: Anyks::cpydata(data, size_data, size_it, &this->ipv); break;
 						// Если это время жизни
-						case 1: cpydata(data, size_data, size_it, &this->age); break;
+						case 1: Anyks::cpydata(data, size_data, size_it, &this->age); break;
 						// Если это дата записи кэша прокси сервером
-						case 2: cpydata(data, size_data, size_it, &this->date); break;
+						case 2: Anyks::cpydata(data, size_data, size_it, &this->date); break;
 						// Если это дата смерти кэша
-						case 3: cpydata(data, size_data, size_it, &this->expires); break;
+						case 3: Anyks::cpydata(data, size_data, size_it, &this->expires); break;
 						// Если это дата последней модификации
-						case 4: cpydata(data, size_data, size_it, &this->modified); break;
+						case 4: Anyks::cpydata(data, size_data, size_it, &this->modified); break;
 						// Если это обязательная ревалидация
-						case 5: cpydata(data, size_data, size_it, &this->valid); break;
+						case 5: Anyks::cpydata(data, size_data, size_it, &this->valid); break;
 						// Если это идентификатор ETag
-						case 6: cpydata(data, size_data, size_it, this->etag); break;
+						case 6: Anyks::cpydata(data, size_data, size_it, this->etag); break;
 						// Если это данные кэша
 						case 7: {
 							// Выделяем динамически память
@@ -268,13 +268,13 @@ void Cache::readDomain(const string domain, DataDNS * data){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "dns");
+		dir = Anyks::addToPath(dir, "dns");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(domain));
+		dir = Anyks::addToPath(dir, getPathDomain(domain));
 		// Создаем адрес для хранения файла
-		const string filename = addToPath(dir, "data");
+		const string filename = Anyks::addToPath(dir, "data");
 		// Проверяем на существование адреса
-		if(!filename.empty() && isFileExist(filename.c_str())){
+		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			// Открываем файл на чтение
 			ifstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
@@ -314,19 +314,19 @@ void Cache::readCache(HttpData &http, DataCache * data){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "cache");
+		dir = Anyks::addToPath(dir, "cache");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(http.getHost()));
+		dir = Anyks::addToPath(dir, getPathDomain(http.getHost()));
 		// Добавляем порт
-		dir = addToPath(dir, to_string(http.getPort()));
+		dir = Anyks::addToPath(dir, to_string(http.getPort()));
 		// Добавляем метод
-		dir = addToPath(dir, http.getMethod());
+		dir = Anyks::addToPath(dir, http.getMethod());
 		// Добавляем тип подключения
-		dir = addToPath(dir, (http.isAlive() ? "a" : "c"));
+		dir = Anyks::addToPath(dir, (http.isAlive() ? "a" : "c"));
 		// Создаем адрес для хранения файла
-		const string filename = addToPath(dir, md5(http.getPath()));
+		const string filename = Anyks::addToPath(dir, md5(http.getPath()));
 		// Проверяем на существование адреса
-		if(!filename.empty() && isFileExist(filename.c_str())){
+		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			// Открываем файл на чтение
 			ifstream file(filename.c_str(), ios::binary);
 			// Если файл открыт
@@ -363,15 +363,15 @@ void Cache::writeDomain(const string domain, DataDNS data){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "dns");
+		dir = Anyks::addToPath(dir, "dns");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(domain));
+		dir = Anyks::addToPath(dir, getPathDomain(domain));
 		// Создаем адрес для хранения файла
-		const string filename = addToPath(dir, "data");
+		const string filename = Anyks::addToPath(dir, "data");
 		// Проверяем на существование адреса
 		if(!filename.empty()){
 			// Проверяем существует ли нужный нам каталог
-			if(!makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
+			if(!Anyks::makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
 				// Выводим в лог информацию
 				if(this->log) this->log->write(LOG_ERROR, 0, "unable to create directory for dns cache file %s for domain %s", dir.c_str(), domain.c_str());
 				// Выходим
@@ -401,21 +401,21 @@ void Cache::writeCache(HttpData &http, DataCache data){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "cache");
+		dir = Anyks::addToPath(dir, "cache");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(http.getHost()));
+		dir = Anyks::addToPath(dir, getPathDomain(http.getHost()));
 		// Добавляем порт
-		dir = addToPath(dir, to_string(http.getPort()));
+		dir = Anyks::addToPath(dir, to_string(http.getPort()));
 		// Добавляем метод
-		dir = addToPath(dir, http.getMethod());
+		dir = Anyks::addToPath(dir, http.getMethod());
 		// Добавляем тип подключения
-		dir = addToPath(dir, (http.isAlive() ? "a" : "c"));
+		dir = Anyks::addToPath(dir, (http.isAlive() ? "a" : "c"));
 		// Создаем адрес для хранения файла
-		const string filename = addToPath(dir, md5(http.getPath()));
+		const string filename = Anyks::addToPath(dir, md5(http.getPath()));
 		// Проверяем на существование адреса
 		if(!filename.empty()){
 			// Проверяем существует ли нужный нам каталог
-			if(!makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
+			if(!Anyks::makePath(dir.c_str(), this->config->proxy.user, this->config->proxy.group)){
 				// Выводим в лог информацию
 				if(this->log) this->log->write(LOG_ERROR, 0, "unable to create directory for cache file %s for domain %s", dir.c_str(), http.getHost().c_str());
 				// Выходим
@@ -511,11 +511,11 @@ const bool Cache::checkEnabledCache(HttpData &http){
 			// Получаем дату последней модификации
 			const string lm = http.getHeader("last-modified");
 			// Определяем дату сервера
-			if(!dt.empty()) cdate = strToTime(dt.c_str());
+			if(!dt.empty()) cdate = Anyks::strToTime(dt.c_str());
 			// Определяем дату последней модификации
-			if(!lm.empty()) ldate = strToTime(lm.c_str());
+			if(!lm.empty()) ldate = Anyks::strToTime(lm.c_str());
 			// Определяем время жизни кэша
-			if(!ex.empty()) expires = strToTime(ex.c_str());
+			if(!ex.empty()) expires = Anyks::strToTime(ex.c_str());
 			// Если прагма запрещает кэш то отключаем его
 			if(!pr.empty() && (pr.find("no-cache") != string::npos)) result = false;
 			// Если время жизни кэша истекло тогда запрещаем кэширование
@@ -541,7 +541,7 @@ const bool Cache::checkEnabledCache(HttpData &http){
 					// Возраст жизни кэша
 					size_t age = 0;
 					// Получаем параметры кэша
-					auto control = split(cc, ",");
+					auto control = Anyks::split(cc, ",");
 					// Переходим по всему массиву
 					for(auto it = control.begin(); it != control.end(); it++){
 						// Получаем строку кэша
@@ -658,7 +658,7 @@ Cache::ResultData Cache::getCache(HttpData &http){
 					// Запоминаем etag
 					if(!cache.etag.empty()) result.etag = cache.etag;
 					// Запоминаем дату последней модификации
-					if(cache.modified) result.modified = timeToStr(cache.modified);
+					if(cache.modified) result.modified = Anyks::timeToStr(cache.modified);
 					// Запоминаем версию интернет протокола
 					result.ipv = cache.ipv;
 					// Указываем что данные нужно ревалидировать
@@ -728,11 +728,11 @@ void Cache::rmDomain(const string domain){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "dns");
+		dir = Anyks::addToPath(dir, "dns");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(domain));
+		dir = Anyks::addToPath(dir, getPathDomain(domain));
 		// Проверяем на существование адреса, если существует то удаляем
-		if(!dir.empty() && isDirExist(dir.c_str())) rmDir(dir.c_str());
+		if(!dir.empty() && Anyks::isDirExist(dir.c_str())) Anyks::rmDir(dir.c_str());
 	}
 }
 /**
@@ -744,9 +744,9 @@ void Cache::rmAllDomains(){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "dns");
+		dir = Anyks::addToPath(dir, "dns");
 		// Проверяем на существование адреса, если существует то удаляем
-		if(!dir.empty() && isDirExist(dir.c_str())) rmDir(dir.c_str());
+		if(!dir.empty() && Anyks::isDirExist(dir.c_str())) Anyks::rmDir(dir.c_str());
 	}
 }
 /**
@@ -778,15 +778,15 @@ void Cache::setCache(HttpData &http){
 			// Возраст жизни кэша
 			time_t age = 0, expires = 0, modified = 0, date = time(nullptr);
 			// Если дата сервера установлена
-			if(!dt.empty()) date = strToTime(dt.c_str());
+			if(!dt.empty()) date = Anyks::strToTime(dt.c_str());
 			// Если дата модификации данных указана
-			if(!lm.empty()) modified = strToTime(lm.c_str());
+			if(!lm.empty()) modified = Anyks::strToTime(lm.c_str());
 			// Если дата смерти кэша указана
-			if(!ex.empty()) expires = strToTime(ex.c_str());
+			if(!ex.empty()) expires = Anyks::strToTime(ex.c_str());
 			// Если управление кэшем существует
 			if(!cc.empty()){
 				// Получаем параметры кэша
-				auto control = split(cc, ",");
+				auto control = Anyks::split(cc, ",");
 				// Переходим по всему массиву
 				for(auto it = control.begin(); it != control.end(); it++){
 					// Получаем строку кэша
@@ -841,11 +841,11 @@ void Cache::rmCache(HttpData &http){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "cache");
+		dir = Anyks::addToPath(dir, "cache");
 		// Добавляем основной путь
-		dir = addToPath(dir, getPathDomain(http.getHost()));
+		dir = Anyks::addToPath(dir, getPathDomain(http.getHost()));
 		// Проверяем на существование адреса, если существует то удаляем
-		if(!dir.empty() && isDirExist(dir.c_str())) rmDir(dir.c_str());
+		if(!dir.empty() && Anyks::isDirExist(dir.c_str())) Anyks::rmDir(dir.c_str());
 	}
 }
 /**
@@ -857,9 +857,9 @@ void Cache::rmAllCache(){
 		// Получаем данные каталога где хранится кэш
 		string dir = this->config->cache.dir;
 		// Получаем имя файла
-		dir = addToPath(dir, "cache");
+		dir = Anyks::addToPath(dir, "cache");
 		// Проверяем на существование адреса, если существует то удаляем
-		if(!dir.empty() && isDirExist(dir.c_str())) rmDir(dir.c_str());
+		if(!dir.empty() && Anyks::isDirExist(dir.c_str())) Anyks::rmDir(dir.c_str());
 	}
 }
 /**

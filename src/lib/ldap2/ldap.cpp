@@ -199,7 +199,7 @@ const vector <ALDAP::Data> ALDAP::data(const string dn, const string key, const 
 					// Массив значений
 					unordered_map <string, vector <string>> vals;
 					// Выполняем разбор ключей
-					vector <string> keys = split(key, ",");
+					vector <string> keys = Anyks::split(key, ",");
 					// Переходим по всем ключам
 					for(auto it = keys.cbegin(); it != keys.cend(); ++it){
 						// Получаем название ключа

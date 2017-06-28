@@ -17,7 +17,7 @@ using namespace std;
  * @param it     смещение
  * @param result результат куда копируются данные
  */
-void cpydata(const u_char * data, size_t size, size_t &it, void * result){
+void Anyks::cpydata(const u_char * data, size_t size, size_t &it, void * result){
 	// Извлекаем данные
 	memcpy(result, data + it, size);
 	// Определяем смещение
@@ -30,7 +30,7 @@ void cpydata(const u_char * data, size_t size, size_t &it, void * result){
  * @param it     смещение
  * @param result результат куда копируются данные
  */
-void cpydata(const u_char * data, size_t size, size_t &it, string &result){
+void Anyks::cpydata(const u_char * data, size_t size, size_t &it, string &result){
 	// Выделяем динамически память
 	char * buffer = new char [size];
 	// Извлекаем данные адреса
@@ -48,7 +48,7 @@ void cpydata(const u_char * data, size_t size, size_t &it, string &result){
  * @param  flag флаг указания типа регистра
  * @return      результирующая строка
  */
-const string toCase(string str, bool flag){
+const string Anyks::toCase(string str, bool flag){
 	// Переводим в указанный регистр
 	transform(str.begin(), str.end(), str.begin(), (flag ? ::toupper : ::tolower));
 	// Выводим результат
@@ -59,7 +59,7 @@ const string toCase(string str, bool flag){
  * @param  str строка для проверки
  * @return     результат проверки
  */
-const bool isNumber(const string &str){
+const bool Anyks::isNumber(const string &str){
 	return !str.empty() && find_if(str.begin(), str.end(), [](char c){
 		return !isdigit(c);
 	}) == str.end();
@@ -70,7 +70,7 @@ const bool isNumber(const string &str){
  * @param  t   список символов для усечения
  * @return     результирующая строка
  */
-string & rtrim(string &str, const char * t){
+string & Anyks::rtrim(string &str, const char * t){
 	str.erase(str.find_last_not_of(t) + 1);
 	return str;
 }
@@ -80,7 +80,7 @@ string & rtrim(string &str, const char * t){
  * @param  t   список символов для усечения
  * @return     результирующая строка
  */
-string & ltrim(string &str, const char * t){
+string & Anyks::ltrim(string &str, const char * t){
 	str.erase(0, str.find_first_not_of(t));
 	return str;
 }
@@ -90,19 +90,19 @@ string & ltrim(string &str, const char * t){
  * @param  t   список символов для усечения
  * @return     результирующая строка
  */
-string & trim(string &str, const char * t){
-	return ltrim(rtrim(str, t), t);
+string & Anyks::trim(string &str, const char * t){
+	return Anyks::ltrim(Anyks::rtrim(str, t), t);
 }
 /**
  * checkPort Функция проверки на качество порта
  * @param  port входная строка якобы содержащая порт
  * @return      результат проверки
  */
-const bool checkPort(string str){
+const bool Anyks::checkPort(string str){
 	// Если строка существует
 	if(!str.empty()){
 		// Преобразуем строку в цифры
-		if(isNumber(str)){
+		if(Anyks::isNumber(str)){
 			// Получаем порт
 			u_int port = ::atoi(str.c_str());
 			// Проверяем диапазон портов
@@ -118,7 +118,7 @@ const bool checkPort(string str){
  * @param f искомая строка
  * @param r строка на замену
  */
-void replace(string &s, const string f, const string r){
+void Anyks::replace(string &s, const string f, const string r){
 	// Переходим по всем найденным элементам и заменяем в них искомые фразы
 	for(string::size_type n = 0; (n = s.find(f, n)) != string::npos; ++n){
 		// Заменяем искомую фразу указанной
@@ -131,7 +131,7 @@ void replace(string &s, const string f, const string r){
  * @param delim разделитель
  * @param v     результирующий вектор
  */
-void split(const string &str, const string delim, vector <string> &v){
+void Anyks::split(const string &str, const string delim, vector <string> &v){
 	string::size_type i = 0;
 	string::size_type j = str.find(delim);
 	size_t len = delim.length();
@@ -149,13 +149,13 @@ void split(const string &str, const string delim, vector <string> &v){
  * @param  delim разделитель
  * @return       массив составляющих строки
  */
-vector <string> split(const string str, const string delim){
+vector <string> Anyks::split(const string str, const string delim){
 	// Результат данных
 	vector <string> result;
 	// Создаем новую строку
 	string value = str;
 	// Убираем пробелы в строке
-	value = trim(value);
+	value = Anyks::trim(value);
 	// Если строка передана
 	if(!value.empty()){
 		string data;
@@ -165,12 +165,12 @@ vector <string> split(const string str, const string delim){
 		// Выполняем разбиение строк
 		while(j != string::npos){
 			data = value.substr(i, j - i);
-			result.push_back(trim(data));
+			result.push_back(Anyks::trim(data));
 			i = ++j + (len - 1);
 			j = value.find(delim, j);
 			if(j == string::npos){
 				data = value.substr(i, value.length());
-				result.push_back(trim(data));
+				result.push_back(Anyks::trim(data));
 			}
 		}
 		// Если данные не существуют то устанавливаем строку по умолчанию
@@ -184,7 +184,7 @@ vector <string> split(const string str, const string delim){
  * @param  name имя пользователя
  * @return      полученный идентификатор пользователя
  */
-uid_t getUid(const char * name){
+uid_t Anyks::getUid(const char * name){
 	// Получаем идентификатор имени пользователя
 	struct passwd * pwd = getpwnam(name);
 	// Если идентификатор пользователя не найден
@@ -202,7 +202,7 @@ uid_t getUid(const char * name){
  * @param  name название группы пользователя
  * @return      полученный идентификатор группы пользователя
  */
-gid_t getGid(const char * name){
+gid_t Anyks::getGid(const char * name){
 	// Получаем идентификатор группы пользователя
 	struct group * grp = getgrnam(name);
 	// Если идентификатор группы не найден
@@ -221,19 +221,19 @@ gid_t getGid(const char * name){
  * @param user  данные пользователя
  * @param group идентификатор группы
  */
-void setOwner(const char * path, const string user, const string group){
+void Anyks::setOwner(const char * path, const string user, const string group){
 	uid_t uid;	// Идентификатор пользователя
 	gid_t gid;	// Идентификатор группы
 	// Размер строкового типа данных
 	string::size_type sz;
 	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber(user)) uid = stoi(user, &sz);
+	if(Anyks::isNumber(user)) uid = stoi(user, &sz);
 	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid(user.c_str());
+	else uid = Anyks::getUid(user.c_str());
 	// Если идентификатор группы пришел в виде числа
-	if(isNumber(group)) gid = stoi(group, &sz);
+	if(Anyks::isNumber(group)) gid = stoi(group, &sz);
 	// Если идентификатор группы пришел в виде названия
-	else gid = getGid(group.c_str());
+	else gid = Anyks::getGid(group.c_str());
 	// Устанавливаем права на каталог
 	if(uid && gid) chown(path, uid, gid);
 }
@@ -241,7 +241,7 @@ void setOwner(const char * path, const string user, const string group){
  * mkDir Метод рекурсивного создания каталогов
  * @param path адрес каталогов
  */
-void mkDir(const char * path){
+void Anyks::mkDir(const char * path){
 	// Буфер с названием каталога
 	char tmp[256];
 	// Указатель на сепаратор
@@ -272,7 +272,7 @@ void mkDir(const char * path){
  * @param  path путь до каталога
  * @return      количество дочерних элементов
  */
-const int rmDir(const char * path){
+const int Anyks::rmDir(const char * path){
 	// Открываем указанный каталог
 	DIR * d = opendir(path);
 	// Получаем длину адреса
@@ -304,7 +304,7 @@ const int rmDir(const char * path){
 				// Если статистика извлечена
 				if(!stat(buf, &statbuf)){
 					// Если дочерний элемент является дирректорией
-					if(S_ISDIR(statbuf.st_mode)) r2 = rmDir(buf);
+					if(S_ISDIR(statbuf.st_mode)) r2 = Anyks::rmDir(buf);
 					// Если дочерний элемент является файлом то удаляем его
 					else r2 = ::unlink(buf);
 				}
@@ -329,13 +329,13 @@ const int rmDir(const char * path){
  * @param  group идентификатор группы
  * @return       результат создания каталога
  */
-bool makePath(const char * path, const string user, const string group){
+bool Anyks::makePath(const char * path, const string user, const string group){
 	// Проверяем существует ли нужный нам каталог
-	if(!isDirExist(path)){
+	if(!Anyks::isDirExist(path)){
 		// Создаем каталог
-		mkDir(path);
+		Anyks::mkDir(path);
 		// Устанавливаем права на каталог
-		setOwner(path, user, group);
+		Anyks::setOwner(path, user, group);
 		// Сообщаем что все удачно
 		return true;
 	}
@@ -347,7 +347,7 @@ bool makePath(const char * path, const string user, const string group){
  * @param  path адрес каталога
  * @return      результат проверки
  */
-bool isDirExist(const char * path){
+bool Anyks::isDirExist(const char * path){
 	// Структура проверка статистики
 	struct stat info;
 	// Проверяем переданный нам адрес
@@ -360,7 +360,7 @@ bool isDirExist(const char * path){
  * @param  path адрес каталога
  * @return      результат проверки
  */
-bool isFileExist(const char * path){
+bool Anyks::isFileExist(const char * path){
 	// Структура проверка статистики
 	struct stat info;
 	// Проверяем переданный нам адрес
@@ -374,7 +374,7 @@ bool isFileExist(const char * path){
  * @param  file название файла
  * @return      сформированный путь
  */
-const string addToPath(const string path, const string file){
+const string Anyks::addToPath(const string path, const string file){
 	// Результирующий адрес
 	string result;
 	// Если параметры переданы
@@ -392,7 +392,7 @@ const string addToPath(const string path, const string file){
  * @param  date строка даты
  * @return      timestamp
  */
-const time_t strToTime(const char * date){
+const time_t Anyks::strToTime(const char * date){
 	// Создаем структуру времени
 	struct tm tm;
 	// Зануляем структуру
@@ -407,7 +407,7 @@ const time_t strToTime(const char * date){
  * @param  date дата в timestamp
  * @return      строка содержащая дату
  */
-const string timeToStr(const time_t date){
+const string Anyks::timeToStr(const time_t date){
 	// Создаем структуру времени
 	struct tm * tm = gmtime(&date);
 	// Буфер с данными
@@ -424,7 +424,7 @@ const string timeToStr(const time_t date){
  * @param  str пропускная способность сети (bps, kbps, Mbps, Gbps)
  * @return     размер буфера в байтах
  */
-const long getSizeBuffer(const string str){
+const long Anyks::getSizeBuffer(const string str){
 	/*
 	* Help - http://www.securitylab.ru/analytics/243414.php
 	*
@@ -474,7 +474,7 @@ const long getSizeBuffer(const string str){
  * @param  str строка обозначения размерности
  * @return     размер в байтах
  */
-const size_t getBytes(const string str){
+const size_t Anyks::getBytes(const string str){
 	// Размер количество байт
 	size_t size = 0;
 	// Результат работы регулярного выражения
@@ -514,7 +514,7 @@ const size_t getBytes(const string str){
  * @param  str строка обозначения размерности
  * @return     размер в секундах
  */
-const size_t getSeconds(const string str){
+const size_t Anyks::getSeconds(const string str){
 	// Количество секунд
 	size_t seconds = 0;
 	// Результат работы регулярного выражения
@@ -556,7 +556,7 @@ const size_t getSeconds(const string str){
  * @param  address строка адреса для проверки
  * @return         результат проверки
  */
-const bool isAddress(const string address){
+const bool Anyks::isAddress(const string address){
 	// Результат работы регулярного выражения
 	smatch match;
 	// Устанавливаем правило регулярного выражения
@@ -581,7 +581,7 @@ const bool isAddress(const string address){
  * @param  str строка с данными
  * @return     определенный тип данных
  */
-const u_int getTypeAmingByString(const string str){
+const u_int Anyks::getTypeAmingByString(const string str){
 	// Результат полученных данных
 	u_int result = AMING_NULL;
 	// Если строка передана
@@ -641,7 +641,7 @@ const u_int getTypeAmingByString(const string str){
  * @param  mask   маска домена для проверки
  * @return        результат проверки
  */
-const bool checkDomainByMask(const string domain, const string mask){
+const bool Anyks::checkDomainByMask(const string domain, const string mask){
 	// Результат проверки домена
 	bool result = false;
 	// Если и домен и маска переданы
@@ -649,9 +649,9 @@ const bool checkDomainByMask(const string domain, const string mask){
 		// Итератор
 		string itm = "";
 		// Выполняем разбиение домена на составляющие
-		vector <string> dom = split(::toCase(domain), ".");
+		vector <string> dom = Anyks::split(Anyks::toCase(domain), ".");
 		// Выполняем разбиение маски
-		vector <string> msk = split(::toCase(mask), ".");
+		vector <string> msk = Anyks::split(Anyks::toCase(mask), ".");
 		// Выполняем реверс данных
 		reverse(begin(dom), end(dom));
 		reverse(begin(msk), end(msk));

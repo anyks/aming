@@ -18,7 +18,7 @@ Config::Config(const string filename){
 	// Запоминаем адрес файла с конфигурационным файлом
 	this->filename = filename;
 	// Если каталог с конфигурационным файлом не найден
-	if(this->filename.empty() || !isFileExist(this->filename.c_str())){
+	if(this->filename.empty() || !Anyks::isFileExist(this->filename.c_str())){
 		// Запоминаем адрес конфигурационного файла MacOS X и FreeBSD
 		this->filename = (string(CONFIG_DIR) + string("/") + string(PROXY_NAME) + string("/config.ini"));
 	}
@@ -37,7 +37,7 @@ Config::Config(const string filename){
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port;
 		// Массив протоколов
-		auto ipVx = split(PROXY_IPV, "->");
+		auto ipVx = Anyks::split(PROXY_IPV, "->");
 		// Запоминаем внешнюю версию интернет протокола
 		const u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
 		// Запоминаем внутреннюю версию интернет протокола
@@ -104,7 +104,7 @@ Config::Config(const string filename){
 			// Кэширование часто-запрашиваемых страниц
 			CACHE_RESPONSE,
 			// Время жизни dns кэша в секундах
-			(time_t) getSeconds(CACHE_DTTL),
+			(time_t) Anyks::getSeconds(CACHE_DTTL),
 			// Каталог хранения кэш файлов
 			CACHE_DIR
 		};
@@ -117,7 +117,7 @@ Config::Config(const string filename){
 			// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
 			GZIP_LENGTH,
 			// Максимальный размер чанка в байтах
-			getBytes(GZIP_CHUNK),
+			Anyks::getBytes(GZIP_CHUNK),
 			// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
 			GZIP_REGEX,
 			// Версия http протокола
@@ -164,7 +164,7 @@ Config::Config(const string filename){
 			// Разрешить ведение логов
 			LOGS_ENABLED,
 			// Размер файла лога
-			getBytes(LOGS_SIZE),
+			Anyks::getBytes(LOGS_SIZE),
 			// Адрес хранения логов
 			LOGS_DIR
 		};
@@ -179,7 +179,7 @@ Config::Config(const string filename){
 			// Общее количество одновременных подключений к прокси серверу
 			CONNECTS_TOTAL,
 			// Максимальный размер скачиваемых данных в байтах
-			getBytes(CONNECTS_SIZE)
+			Anyks::getBytes(CONNECTS_SIZE)
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
@@ -221,18 +221,18 @@ Config::Config(const string filename){
 		// Заполняем структуру timeouts
 		this->timeouts = {
 			// Таймаут времени на чтение
-			(size_t) getSeconds(TIMEOUTS_READ),
+			(size_t) Anyks::getSeconds(TIMEOUTS_READ),
 			// Таймаут времени на запись
-			(size_t) getSeconds(TIMEOUTS_WRITE),
+			(size_t) Anyks::getSeconds(TIMEOUTS_WRITE),
 			// Таймаут на работу в режиме переключения протоколов
-			(size_t) getSeconds(TIMEOUTS_UPGRADE)
+			(size_t) Anyks::getSeconds(TIMEOUTS_UPGRADE)
 		};
 		// Заполняем структуру buffers
 		this->buffers = {
 			// Скорость входящего подключения
-			getSizeBuffer(BUFFER_READ_SIZE),
+			Anyks::getSizeBuffer(BUFFER_READ_SIZE),
 			// Скорость исходящего подключения
-			getSizeBuffer(BUFFER_WRITE_SIZE)
+			Anyks::getSizeBuffer(BUFFER_WRITE_SIZE)
 		};
 		// Заполняем структуру постоянного подключения keepalive
 		this->keepalive = {
@@ -276,7 +276,7 @@ Config::Config(const string filename){
 			else if(gzipLevel.compare("no") == 0)		glevel = Z_NO_COMPRESSION;
 		}
 		// Тип ключа определения коннектов к прокси
-		u_int connect_key = (toCase(ini.getString("connects", "key", CONNECTS_KEY)).compare("mac") == 0 ? 1 : 0);
+		u_int connect_key = (Anyks::toCase(ini.getString("connects", "key", CONNECTS_KEY)).compare("mac") == 0 ? 1 : 0);
 		// Тип прокси сервера
 		u_int proxy_type, proxy_port;
 		// Получаем тип прокси сервера
@@ -298,19 +298,19 @@ Config::Config(const string filename){
 		// Получаем данные режима мульти-сетевого взаимодействия
 		bool proxy_subnet = ini.getBoolean("proxy", "subnet", PROXY_SUBNET);
 		// Массив протоколов
-		auto ipVx = split(ini.getString("proxy", "ipv", PROXY_IPV), "->");
+		auto ipVx = Anyks::split(ini.getString("proxy", "ipv", PROXY_IPV), "->");
 		// Массив внешних ip адресов
-		auto externalIPv4 = split(ini.getString("ipv4", "external"), "|");
-		auto externalIPv6 = split(ini.getString("ipv6", "external"), "|");
+		auto externalIPv4 = Anyks::split(ini.getString("ipv4", "external"), "|");
+		auto externalIPv6 = Anyks::split(ini.getString("ipv6", "external"), "|");
 		// Массив dns серверов
-		auto resolver4 = split(ini.getString("ipv4", "resolver"), "|");
-		auto resolver6 = split(ini.getString("ipv6", "resolver"), "|");
+		auto resolver4 = Anyks::split(ini.getString("ipv4", "resolver"), "|");
+		auto resolver6 = Anyks::split(ini.getString("ipv6", "resolver"), "|");
 		// Массив параметров сжатия для проксированных запросов
-		auto gproxied = split(ini.getString("gzip", "proxied"), "|");
+		auto gproxied = Anyks::split(ini.getString("gzip", "proxied"), "|");
 		// Массив версий http протоколов
-		auto gvhttp = split(ini.getString("gzip", "vhttp"), "|");
+		auto gvhttp = Anyks::split(ini.getString("gzip", "vhttp"), "|");
 		// Массив параметров сжатия для типов данных
-		auto gtypes = split(ini.getString("gzip", "types"), "|");
+		auto gtypes = Anyks::split(ini.getString("gzip", "types"), "|");
 		// Запоминаем внешнюю и внутреннюю версию интернет протокола
 		u_int proxy_intIPv = ::atoi(ipVx[0].c_str());
 		u_int proxy_extIPv = ::atoi(ipVx[1].c_str());
@@ -381,7 +381,7 @@ Config::Config(const string filename){
 			// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
 			ini.getNumber("gzip", "length", GZIP_LENGTH),
 			// Максимальный размер чанка в байтах
-			getBytes(ini.getString("gzip", "chunk", GZIP_CHUNK)),
+			Anyks::getBytes(ini.getString("gzip", "chunk", GZIP_CHUNK)),
 			// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
 			ini.getString("gzip", "regex", GZIP_REGEX),
 			// Версия http протокола
@@ -398,7 +398,7 @@ Config::Config(const string filename){
 			// Кэширование часто-запрашиваемых страниц
 			ini.getBoolean("cache", "dat", CACHE_RESPONSE),
 			// Время жизни dns кэша в секундах
-			(time_t) getSeconds(ini.getString("cache", "dttl", CACHE_DTTL)),
+			(time_t) Anyks::getSeconds(ini.getString("cache", "dttl", CACHE_DTTL)),
 			// Каталог хранения кэш файлов
 			ini.getString("cache", "dir", CACHE_DIR)
 		};
@@ -439,7 +439,7 @@ Config::Config(const string filename){
 			// Разрешить ведение логов
 			ini.getBoolean("logs", "enabled", LOGS_ENABLED),
 			// Размер файла лога
-			getBytes(ini.getString("logs", "size", LOGS_SIZE)),
+			Anyks::getBytes(ini.getString("logs", "size", LOGS_SIZE)),
 			// Адрес хранения логов
 			ini.getString("logs", "dir", LOGS_DIR)
 		};
@@ -454,7 +454,7 @@ Config::Config(const string filename){
 			// Общее количество одновременных подключений к прокси серверу
 			(int) ini.getNumber("connects", "total", CONNECTS_TOTAL),
 			// Максимальный размер скачиваемых данных в байтах
-			getBytes(ini.getString("connects", "size", CONNECTS_SIZE))
+			Anyks::getBytes(ini.getString("connects", "size", CONNECTS_SIZE))
 		};
 		// Заполняем структуру ipv4
 		this->ipv4 = {
@@ -496,18 +496,18 @@ Config::Config(const string filename){
 		// Заполняем структуру timeouts
 		this->timeouts = {
 			// Таймаут времени на чтение
-			(size_t) getSeconds(ini.getString("timeouts", "read", TIMEOUTS_READ)),
+			(size_t) Anyks::getSeconds(ini.getString("timeouts", "read", TIMEOUTS_READ)),
 			// Таймаут времени на запись
-			(size_t) getSeconds(ini.getString("timeouts", "write", TIMEOUTS_WRITE)),
+			(size_t) Anyks::getSeconds(ini.getString("timeouts", "write", TIMEOUTS_WRITE)),
 			// Таймаут на работу в режиме переключения протоколов
-			(size_t) getSeconds(ini.getString("timeouts", "upgrade", TIMEOUTS_UPGRADE))
+			(size_t) Anyks::getSeconds(ini.getString("timeouts", "upgrade", TIMEOUTS_UPGRADE))
 		};
 		// Заполняем структуру buffers
 		this->buffers = {
 			// Скорость входящего подключения
-			getSizeBuffer(ini.getString("speed", "input", BUFFER_READ_SIZE)),
+			Anyks::getSizeBuffer(ini.getString("speed", "input", BUFFER_READ_SIZE)),
 			// Скорость исходящего подключения
-			getSizeBuffer(ini.getString("speed", "output", BUFFER_WRITE_SIZE))
+			Anyks::getSizeBuffer(ini.getString("speed", "output", BUFFER_WRITE_SIZE))
 		};
 		// Заполняем структуру постоянного подключения keepalive
 		this->keepalive = {

@@ -186,17 +186,17 @@ void Os::privBind(){
 	// Размер строкового типа данных
 	string::size_type sz;
 	// Если идентификатор пользователя пришел в виде числа
-	if(isNumber((* config)->proxy.user))
+	if(Anyks::isNumber((* config)->proxy.user))
 		// Получаем идентификатор пользователя
 		uid = stoi((* config)->proxy.user, &sz);
 	// Если идентификатор пользователя пришел в виде названия
-	else uid = getUid((* config)->proxy.user.c_str());
+	else uid = Anyks::getUid((* config)->proxy.user.c_str());
 	// Если идентификатор группы пришел в виде числа
-	if(isNumber((* config)->proxy.group))
+	if(Anyks::isNumber((* config)->proxy.group))
 		// Получаем идентификатор группы пользователя
 		gid = stoi((* config)->proxy.group, &sz);
 	// Если идентификатор группы пришел в виде названия
-	else gid = getGid((* config)->proxy.group.c_str());
+	else gid = Anyks::getGid((* config)->proxy.group.c_str());
 	// Устанавливаем идентификатор пользователя
 	setuid(uid);
 	// Устанавливаем идентификатор группы

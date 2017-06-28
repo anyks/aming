@@ -26,7 +26,7 @@ vector <Headers::Params> Headers::get(const string client, bool addGeneral){
 		// Выполняем проверку на инверсию
 		auto check = isNot(client);
 		// Получаем идентификатор пользователя
-		string userId = toCase(check.str);
+		string userId = Anyks::toCase(check.str);
 		// Получаем типы идентификаторов
 		u_short utype = checkTypeId(userId);
 		// Если это ip адреса то преобразуем их
@@ -69,7 +69,7 @@ void Headers::add(const string client, Headers::Params params){
 		// Создаем объект сети
 		Network nwk;
 		// Получаем идентификатор пользователя
-		string userId = toCase(client);
+		string userId = Anyks::toCase(client);
 		// Получаем типы идентификаторов
 		u_short utype = checkTypeId(userId);
 		// Если это ip адреса то преобразуем их
@@ -99,7 +99,7 @@ void Headers::rm(const string client){
 		// Создаем объект сети
 		Network nwk;
 		// Получаем идентификатор пользователя
-		string userId = toCase(client);
+		string userId = Anyks::toCase(client);
 		// Получаем типы идентификаторов
 		u_short utype = checkTypeId(userId);
 		// Если это ip адреса то преобразуем их
@@ -121,15 +121,15 @@ void Headers::read(){
 		// Получаем данные каталога где хранится файл с правилами
 		const string dir = this->config->proxy.dir;
 		// Получаем имя файла
-		const string filename = addToPath(dir, name + ".headers");
+		const string filename = Anyks::addToPath(dir, name + ".headers");
 		// Проверяем на существование адреса
 		if(!filename.empty()
 		// Проверяем существует ли такой каталог
-		&& isDirExist(dir.c_str())
+		&& Anyks::isDirExist(dir.c_str())
 		// Проверяем существует ли такой файл
-		&& isFileExist(filename.c_str())){
+		&& Anyks::isFileExist(filename.c_str())){
 			// Устанавливаем права на файл
-			setOwner(filename.c_str(), this->config->proxy.user, this->config->proxy.group);
+			Anyks::setOwner(filename.c_str(), this->config->proxy.user, this->config->proxy.group);
 			// Строка чтения из файла
 			string filedata;
 			// Открываем файл на чтение
@@ -175,9 +175,9 @@ void Headers::read(){
 							// Создаем объект сети
 							Network nwk;
 							// Получаем идентификатор пользователя
-							string userId = toCase(match[3].str());
+							string userId = Anyks::toCase(match[3].str());
 							// Получаем идентификатор сервера
-							string serverId = toCase(match[6].str());
+							string serverId = Anyks::toCase(match[6].str());
 							// Получаем типы идентификаторов
 							u_short utype = checkTypeId(userId);
 							u_short stype = checkTypeId(serverId);
@@ -195,19 +195,19 @@ void Headers::read(){
 								// Тип идентификатора сервера
 								stype,
 								// Метод запроса
-								toCase(match[1].str()),
+								Anyks::toCase(match[1].str()),
 								// Направление трафика
-								toCase(match[2].str()),
+								Anyks::toCase(match[2].str()),
 								// Данные сервера
-								toCase(serverId),
+								Anyks::toCase(serverId),
 								// Путь запроса
 								match[5].str(),
 								// Регулярные выражения
 								match[7].str(),
 								// Методы
-								split(toCase(match[4].str()), "|"),
+								Anyks::split(Anyks::toCase(match[4].str()), "|"),
 								// Заголовки
-								split(match[8].str(), "|")
+								Anyks::split(match[8].str(), "|")
 							};
 							// Добавляем полученные параметры в список
 							add(userId, params);
@@ -294,7 +294,7 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 								case 1:
 								case 2: if(check.str.compare(server) == 0) result = false; break;
 								// Если поиск идет по домену
-								case 4: if(toCase(check.str).compare(toCase(http.getHost())) == 0) result = false; break;
+								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) == 0) result = false; break;
 								// Метод по умолчанию
 								default: result = false;
 							}
@@ -306,7 +306,7 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 								case 1:
 								case 2: if(check.str.compare(server) != 0) result = false; break;
 								// Если поиск идет по домену
-								case 4: if(toCase(check.str).compare(toCase(http.getHost())) != 0) result = false; break;
+								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) != 0) result = false; break;
 								// Метод по умолчанию
 								default: result = false;
 							}
@@ -321,13 +321,13 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 							// Если это инверсия, и адрес запроса совпадает, запрещаем дальнейшие действия
 							if(check.inv){
 								// Проверяем совпадает ли адрес
-								if(toCase(check.str)
-								.compare(toCase(http.getPath())) == 0) result = false;
+								if(Anyks::toCase(check.str)
+								.compare(Anyks::toCase(http.getPath())) == 0) result = false;
 							// Если это не инверсия, и адрес запроса совпадает, тогда разрешаем дальнейшие действия
 							} else {
 								// Проверяем совпадает ли адрес
-								if(toCase(check.str)
-								.compare(toCase(http.getPath())) != 0) result = false;
+								if(Anyks::toCase(check.str)
+								.compare(Anyks::toCase(http.getPath())) != 0) result = false;
 							}
 						}
 						// Если фильтр сработал и это исходящий трафик
@@ -451,7 +451,7 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 								case 1:
 								case 2: if(check.str.compare(server) == 0) result = false; break;
 								// Если поиск идет по домену
-								case 4: if(toCase(check.str).compare(toCase(http.getHost())) == 0) result = false; break;
+								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) == 0) result = false; break;
 								// Метод по умолчанию
 								default: result = false;
 							}
@@ -463,7 +463,7 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 								case 1:
 								case 2: if(check.str.compare(server) != 0) result = false; break;
 								// Если поиск идет по домену
-								case 4: if(toCase(check.str).compare(toCase(http.getHost())) != 0) result = false; break;
+								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) != 0) result = false; break;
 								// Метод по умолчанию
 								default: result = false;
 							}
@@ -478,13 +478,13 @@ void Headers::modifyHeaders(const string server, vector <Headers::Params> rules,
 							// Если это инверсия, и адрес запроса совпадает, запрещаем дальнейшие действия
 							if(check.inv){
 								// Проверяем совпадает ли адрес
-								if(toCase(check.str)
-								.compare(toCase(http.getPath())) == 0) result = false;
+								if(Anyks::toCase(check.str)
+								.compare(Anyks::toCase(http.getPath())) == 0) result = false;
 							// Если это не инверсия, и адрес запроса совпадает, тогда разрешаем дальнейшие действия
 							} else {
 								// Проверяем совпадает ли адрес
-								if(toCase(check.str)
-								.compare(toCase(http.getPath())) != 0) result = false;
+								if(Anyks::toCase(check.str)
+								.compare(Anyks::toCase(http.getPath())) != 0) result = false;
 							}
 						}
 						// Если фильтр сработал и это исходящий трафик
@@ -568,31 +568,6 @@ const u_short Headers::checkTypeId(const string str){
 	else if(isDomain(str)) type = 4;
 	// Выводим результат
 	return type;
-}
-/**
- * isAddress Метод проверки на то является ли строка адресом
- * @param  address строка адреса для проверки
- * @return         результат проверки
- */
-const bool Headers::isAddress(const string address){
-	// Результат работы регулярного выражения
-	smatch match;
-	// Устанавливаем правило регулярного выражения
-	regex e(
-		// Определение домена
-		"(?:[\\w\\-\\.]+\\.[\\w\\-]+|"
-		// Определение мак адреса
-		"[A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5}|"
-		// Определение ip адреса
-		"\\d{1,3}(?:\\.\\d{1,3}){3}|"
-		// Определение ip6 адреса (в полном формате)
-		"[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7})",
-		regex::ECMAScript | regex::icase
-	);
-	// Выполняем проверку
-	regex_search(address, match, e);
-	// Выводим результат
-	return !match.empty();
 }
 /**
  * isIpV4 Метод проверки на ip адрес, интернет протокола версии 4
@@ -680,7 +655,7 @@ const bool Headers::isDomain(const string domain){
  */
 const bool Headers::isLogin(const string login){
 	// Выводим результат проверки
-	return !isAddress(login);
+	return !Anyks::isAddress(login);
 }
 /**
  * checkAvailable Метод проверки на существование параметров заголовков
@@ -695,9 +670,9 @@ const bool Headers::checkAvailable(const string name){
 		// Получаем данные каталога где хранится файл с правилами
 		const string dir = this->config->proxy.dir;
 		// Получаем имя файла
-		const string filename = addToPath(dir, name + ".headers");
+		const string filename = Anyks::addToPath(dir, name + ".headers");
 		// Проверяем существуют ли параметры заголовков
-		if(isDirExist(dir.c_str()) && isFileExist(filename.c_str())) result = true;
+		if(Anyks::isDirExist(dir.c_str()) && Anyks::isFileExist(filename.c_str())) result = true;
 	}
 	// Выводим результат
 	return result;
@@ -758,7 +733,7 @@ void Headers::modify(const string ip, const string mac, const string server, Htt
 		// Создаем объект сети
 		Network nwk;
 		// Получаем идентификатор сервера
-		string serverId = toCase(server);
+		string serverId = Anyks::toCase(server);
 		// Получаем типы идентификаторов
 		u_short stype = checkTypeId(serverId);
 		// Если это ip адреса то преобразуем их
@@ -794,7 +769,7 @@ void Headers::modify(const string ip, const string mac, const string server, str
 			// Создаем объект сети
 			Network nwk;
 			// Получаем идентификатор сервера
-			string serverId = toCase(server);
+			string serverId = Anyks::toCase(server);
 			// Получаем типы идентификаторов
 			u_short stype = checkTypeId(serverId);
 			// Если это ip адреса то преобразуем их
