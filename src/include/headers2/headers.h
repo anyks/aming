@@ -32,7 +32,7 @@ using namespace std;
  * Параметры в файле заголовков
  * [action traffic server method path query agent user group headers]
  */
-class Headers {
+class Headers2 {
 	private:
 		/**
  		* Servers Структура данных сервера
@@ -49,7 +49,7 @@ class Headers {
 		/**
  		* Client Структура данных клиента
  		*/
-		struct Client {
+		struct Clients {
 			u_int prefix;	// Префикс сети
 			string mac;		// Мак адрес клиента
 			string ip4;		// IP адрес протокола версии 4
@@ -60,7 +60,7 @@ class Headers {
  		* Rules Структура правил заголовков
  		*/
 		struct Rules {
-			Client client;				// Данные клиента
+			Clients client;				// Данные клиента
 			Servers server;				// Данные сервера
 			vector <string> headers;	// Список заголовков
 		};
@@ -95,10 +95,18 @@ class Headers {
 				>
 			>
 		> rules;
+		// Название файла конфигурации
+		deque <string> names;
 		// Системные параметры
 		LogApp * log = nullptr;
 		Config * config = nullptr;
 		Groups * groups = nullptr;
+		// Время в течение которого обновлять нельзя
+		time_t maxUpdate = 0;
+		// Время последнего обновления данных
+		time_t lastUpdate = 0;
+		// Тип поиска параметров заголовков (0 - Из файла, 1 - из LDAP)
+		u_short typeSearch = 0;
 		/**
 		 * readFromLDAP Метод чтения данных из LDAP сервера
 		 */
@@ -109,11 +117,34 @@ class Headers {
 		void readFromFile();
 	public:
 		/**
+		 * checkAvailable Метод проверки на существование параметров заголовков
+		 * @param  name название файла с параметрами
+		 * @return      результат проверки
+		 */
+		const bool checkAvailable(const string name);
+		/**
+		 * getName Метод получения имени конфига
+		 */
+		const string getName();
+		/**
+		 * read Метод чтения из параметров
+		 */
+		void read();
+		/**
+		 * clear Метод очистки данных
+		 */
+		void clear();
+		/**
+		 * addName Метод добавления нового имени конфига
+		 * @param name название файла с параметрами
+		 */
+		void addName(const string name);
+		/**
 		 * Headers Конструктор
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
 		 */
-		Headers(Config * config = nullptr, LogApp * log = nullptr, Groups * groups = nullptr);
+		Headers2(Config * config = nullptr, LogApp * log = nullptr, Groups * groups = nullptr);
 };
 
 #endif // _HEADERS2_AMING_
