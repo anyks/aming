@@ -809,6 +809,34 @@ const string Network::setLowIp6(const string ip){
 	return setLow1Ip6(str);
 }
 /**
+ * getIPByNetwork Функция извлечения данных ip адреса из сети
+ * @param  nwk строка содержащая адрес сети
+ * @return     восстановленный вид ip адреса
+ */
+const string Network::getIPByNetwork(const string nwk){
+	// Результат работы функции
+	string result;
+	// Если сеть передана
+	if(!nwk.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			// Если это ip4 адрес
+			"((?:\\d{1,3}(?:\\.\\d{1,3}){3})|"
+			// Если это ip6 адрес
+			"(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем проверку
+		regex_search(nwk, match, e);
+		// Если результат найден
+		if(!match.empty()) result = match[1].str();
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * strIp6ToHex64 Функция преобразования строки ip адреса в 16-й вид
  * @param  ip данные ip адреса интернет протокола версии 6
  * @return    результат в 16-м виде
@@ -864,6 +892,44 @@ const u_int Network::checkNetworkByIp(const string ip){
 		// Сообщаем что протокол не определен
 		else return 0;
 	}
+}
+/**
+ * getPrefixByNetwork Функция извлечения данных префикса из строки адреса сети
+ * @param  nwk строка содержащая адрес сети
+ * @return     восстановленный вид префикса сети
+ */
+const u_int Network::getPrefixByNetwork(const string nwk){
+	// Результат работы функции
+	u_int result = 0;
+	// Если сеть передана
+	if(!nwk.empty()){
+		// Результат работы регулярного выражения
+		smatch match;
+		// Устанавливаем правило регулярного выражения
+		regex e(
+			// Если это ip4 адрес
+			"(?:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))\\/(\\d{1,3}(?:\\.\\d{1,3}){3}|\\d+)",
+			regex::ECMAScript | regex::icase
+		);
+		// Выполняем проверку
+		regex_search(nwk, match, e);
+		// Если результат найден
+		if(!match.empty()){
+			// Получаем значение маски
+			string mask = match[1].str();
+			// Если это число
+			if(Anyks::isNumber(mask)) result = ::atoi(mask.c_str());
+			// Если это не число то преобразуем маску
+			else {
+				// Получаем данные маски
+				NTdata data = getMaskByString(mask);
+				// Запоминаем результат
+				result = data.number;
+			}
+		}
+	}
+	// Выводим результат
+	return result;
 }
 /**
  * isLocal Метод проверки на то является ли ip адрес локальным

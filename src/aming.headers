@@ -15,4 +15,4 @@
     rm          out        vipmake.com    get | post      /         *     mozilla\/\d\.\d   1        admins   Accept-Encoding
     rm          in         *.vipmake.com  !connect       *          *          *            *          *      Link | Via | X-Generator | Server | X-Drupal-Cache | X-Frame-Options | X-Powered-By | X-UA-Compatible
     add         in             *             *           *          *          *            *          *      Server: Aming/1.0
-    add         *              *             *           *          *  		     *            *          *      Aming: Proxy | Rembo: server
+    add         *              *             *           *          *  		   *            *          *      Aming: Proxy | Rembo: server

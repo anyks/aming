@@ -42,8 +42,6 @@ class Headers2 {
 			string mac;		// Мак адрес сервера
 			string ip4;		// IP адрес протокола версии 4
 			string ip6;		// IP адрес протокола версии 6
-			string path;	// Путь запроса на сервере
-			string query;	// Параметры запроса
 			string domain;	// Домен сервера (домены могут быть с маской вида www.domain.com, *.domain.com, domain.com, *.domain.*, *.com, *.*)
 		};
 		/**
@@ -54,14 +52,16 @@ class Headers2 {
 			string mac;		// Мак адрес клиента
 			string ip4;		// IP адрес протокола версии 4
 			string ip6;		// IP адрес протокола версии 6
-			string agent;	// UserAgent пользователя
 		};
 		/**
  		* Rules Структура правил заголовков
  		*/
 		struct Rules {
-			Clients client;				// Данные клиента
-			Servers server;				// Данные сервера
+			vector <Clients> client;	// Данные клиента
+			vector <Servers> server;	// Данные сервера
+			vector <string> path;		// Путь запроса на сервере
+			vector <string> query;		// Параметры запроса
+			vector <string> agent;		// UserAgent пользователя
 			vector <string> headers;	// Список заголовков
 		};
 		/*

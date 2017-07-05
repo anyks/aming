@@ -102,6 +102,63 @@ void Headers2::readFromFile(){
 							auto raw_groups = Anyks::split(match[9].str(), "|");
 							// Получаем блок данных заголовков
 							auto raw_headers = Anyks::split(match[10].str(), "|");
+							/* Начинаем извлечение данных */
+							// Получаем список всех групп
+							auto data_groups = this->groups->getAllGroups();
+							// Если группы существуют
+							if(!data_groups.empty()){
+								// Список клиентов
+								vector <Clients> clients;
+								// Список серверов
+								vector <Servers> servers;
+								// Список заголовков
+								vector <string> headers;
+								// Заполняем данные заголовков
+								headers.assign(raw_headers.cbegin(), raw_headers.cend());
+								// Переходим по списку пользователей
+								for(auto it = raw_users.cbegin(); it != raw_users.cend(); ++it){
+									// Извлекаем строку с типом
+									string str = * it;
+									// Объект клиента
+									Clients client;
+									// Если это не звездочка
+									if(str.compare("*") != 0){
+										// Определяем тип записи
+										const u_int type = Anyks::getTypeAmingByString(* it);
+										// Определяем что нужно выполнить для данного типа
+										switch(type){
+											// Запоминаем mac адрес
+											case AMING_MAC: client.mac = str; break;
+											// Если это ip адрес версии протокола 4
+											case AMING_IPV4: client.ip4 = str; break;
+											// Если это ip адрес версии протокола 6
+											case AMING_IPV6: client.ip6 = str; break;
+											// Если это сеть
+											case AMING_NETWORK: {
+												// Создаем объект сети
+												Network nwk;
+												// Получаем данные сети
+												string ipNwk = nwk.getIPByNetwork(str);
+												// Получаем версию протокола
+												u_int version = nwk.checkNetworkByIp(ipNwk);
+												// Запоминаем данные префикса
+												client.prefix = nwk.getPrefixByNetwork(str);
+												// Проверяем тип ip адреса
+												switch(version){
+													case 4: client.ip4 = ipNwk; break;
+													case 6: client.ip6 = ipNwk; break;
+												}
+											}
+										}
+									// Если это звездочка
+									} else {
+
+									}
+								}
+
+
+
+							}
 						}
 					}
 				}

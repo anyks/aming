@@ -319,6 +319,12 @@ class Network {
 		 */
 		const string setLowIp6(const string ip);
 		/**
+		 * getIPByNetwork Функция извлечения данных ip адреса из сети
+		 * @param  nwk строка содержащая адрес сети
+		 * @return     восстановленный вид ip адреса
+		 */
+		const string getIPByNetwork(const string nwk);
+		/**
 		 * strIp6ToHex64 Функция преобразования строки ip адреса в 16-й вид
 		 * @param  ip данные ip адреса интернет протокола версии 6
 		 * @return    результат в 16-м виде
@@ -330,6 +336,12 @@ class Network {
 		 * @return    тип сети в 10-м виде
 		 */
 		const u_int checkNetworkByIp(const string ip);
+		/**
+		 * getPrefixByNetwork Функция извлечения данных префикса из строки адреса сети
+		 * @param  nwk строка содержащая адрес сети
+		 * @return     восстановленный вид префикса сети
+		 */
+		const u_int getPrefixByNetwork(const string nwk);
 		/**
 		 * isLocal Метод проверки на то является ли ip адрес локальным
 		 * @param  ip адрес подключения ip
