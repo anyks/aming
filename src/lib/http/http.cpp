@@ -192,7 +192,7 @@ const bool HttpData::HttpHeaders::create(const char * buffer){
 	smatch match;
 	// Устанавливаем правило регулярного выражения
 	regex e(
-		"^(?:(?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+		"^(?:(?:(?:(?:" PROXY_HTTP_METHODS ")"
 		"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
 		"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
 		"\\s*[^\\r\\n]+\\r\\n)+)\\r\\n)",
@@ -1665,7 +1665,7 @@ const bool HttpData::rmHeaderInString(const string header, string &headers){
 		smatch match;
 		// Устанавливаем правило регулярного выражения
 		regex e(
-			"(?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"(?:(?:(?:" PROXY_HTTP_METHODS ")"
 			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
 			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
 			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n",
@@ -1712,7 +1712,7 @@ const bool HttpData::addHeaderToString(const string header, const string value, 
 		smatch match;
 		// Устанавливаем правило регулярного выражения
 		regex e(
-			"(?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"(?:(?:(?:" PROXY_HTTP_METHODS ")"
 			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
 			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
 			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n",
@@ -1829,7 +1829,7 @@ const size_t HttpData::parse(const char * buffer, const size_t size, const strin
 		string str(buffer, size);
 		// Устанавливаем правило регулярного выражения
 		regex e(
-			"^([^\\r\\n\\s]*)((?:(?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"^([^\\r\\n\\s]*)((?:(?:(?:" PROXY_HTTP_METHODS ")"
 			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+\\r\\n)|(?:[A-Za-z]+"
 			"\\/[\\d\\.]+\\s+\\d+(?:\\s+[^\\r\\n]+)?\\r\\n))(?:[\\w\\-]+\\s*\\:"
 			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
@@ -1905,7 +1905,7 @@ const size_t HttpData::setEntitybody(const char * buffer, const size_t size){
 				smatch match;
 				// Устанавливаем правило регулярного выражения
 				regex e(
-					"^(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+					"^(?:" PROXY_HTTP_METHODS ")"
 					"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/[\\d\\.]+",
 					regex::ECMAScript | regex::icase
 				);
@@ -2498,7 +2498,7 @@ void HttpData::setData(const char * buffer, const size_t size){
 		string str(buffer, size);
 		// Устанавливаем правило регулярного выражения
 		regex e(
-			"^((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"^((?:(?:" PROXY_HTTP_METHODS ")"
 			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+)\\r\\n)|(?:[A-Za-z]+"
 			"\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[^\\r\\n]+)?\\r\\n))((?:[\\w\\-]+\\s*\\:"
 			"\\s*[^\\r\\n]+\\r\\n)+\\r\\n)",
@@ -2635,7 +2635,7 @@ void HttpData::addHeader(const char * buffer){
 		smatch match;
 		// Устанавливаем правило регулярного выражения
 		regex e(
-			"((?:(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT)"
+			"((?:(?:" PROXY_HTTP_METHODS ")"
 			"\\s+[^\\r\\n\\s]+\\s+[A-Za-z]+\\/([\\d\\.]+))|"
 			"(?:[A-Za-z]+\\/([\\d\\.]+)\\s+(\\d+)(?:\\s+[A-Za-z\\s\\-]+)?))|"
 			"(?:([\\w\\-]+)\\s*\\:\\s*([^\\r\\n]+))",

@@ -35,6 +35,9 @@
 #define AMING_HTTP_METHOD 0x10
 #define AMING_HTTP_TRAFFIC 0x11
 
+// Параметры прокси-сервера
+#define PROXY_HTTP_METHODS "OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT"
+
 // Устанавливаем область видимости
 using namespace std;
 

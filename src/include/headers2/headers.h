@@ -35,33 +35,24 @@ using namespace std;
 class Headers2 {
 	private:
 		/**
- 		* Servers Структура данных сервера
+ 		* Node Структура данных рабочей ноды
  		*/
-		struct Servers {
+		struct Node {
 			u_int prefix;	// Префикс сети
-			string mac;		// Мак адрес сервера
+			string mac;		// Мак адрес ноды
 			string ip4;		// IP адрес протокола версии 4
 			string ip6;		// IP адрес протокола версии 6
-			string domain;	// Домен сервера (домены могут быть с маской вида www.domain.com, *.domain.com, domain.com, *.domain.*, *.com, *.*)
-		};
-		/**
- 		* Client Структура данных клиента
- 		*/
-		struct Clients {
-			u_int prefix;	// Префикс сети
-			string mac;		// Мак адрес клиента
-			string ip4;		// IP адрес протокола версии 4
-			string ip6;		// IP адрес протокола версии 6
+			string domain;	// Домен ноды (домены могут быть с маской вида www.domain.com, *.domain.com, domain.com, *.domain.*, *.com, *.*)
 		};
 		/**
  		* Rules Структура правил заголовков
  		*/
 		struct Rules {
-			vector <Clients> client;	// Данные клиента
-			vector <Servers> server;	// Данные сервера
-			vector <string> path;		// Путь запроса на сервере
-			vector <string> query;		// Параметры запроса
-			vector <string> agent;		// UserAgent пользователя
+			string agent;				// UserAgent пользователя
+			vector <Node> clients;		// Данные клиента
+			vector <Node> servers;		// Данные сервера
+			vector <string> paths;		// Путь запроса на сервере
+			vector <string> queries;	// Параметры запроса
 			vector <string> headers;	// Список заголовков
 		};
 		/*
@@ -86,10 +77,7 @@ class Headers2 {
 						bool,
 						unordered_map <
 							string,
-							unordered_map <
-								string,
-								Rules
-							>
+							Rules
 						>
 					>
 				>

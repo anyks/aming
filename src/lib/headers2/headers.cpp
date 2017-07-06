@@ -60,10 +60,12 @@ void Headers2::readFromFile(){
 							"((?:ADD|RM|\\*)(?:\\s*\\|\\s*(?:ADD|RM|\\*))*)(?:\\s+|\\t+)"
 							// Traffic
 							"((?:IN|OUT|\\*)(?:\\s*\\|\\s*(?:IN|OUT|\\*))*)(?:\\s+|\\t+)"
+							// Client
+							"((?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*)(?:\\s*\\|\\s*(?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*))*)(?:\\s+|\\t+)"
 							// Server
 							"((?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*)(?:\\s*\\|\\s*(?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*))*)(?:\\s+|\\t+)"
 							// Method
-							"(\\!?(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT|\\*)(?:\\s*\\|\\s*\\!?(?:OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT|\\*))*)(?:\\s+|\\t+)"
+							"(\\!?(?:" PROXY_HTTP_METHODS "|\\*)(?:\\s*\\|\\s*\\!?(?:" PROXY_HTTP_METHODS "|\\*))*)(?:\\s+|\\t+)"
 							// Path
 							"((?:\\!?\\/[\\w\\-\\_]*(?:\\/[\\w\\-\\_]*)*|\\*)(?:\\s*\\|\\s*(?:\\!?\\/[\\w\\-\\_]*(?:\\/[\\w\\-\\_]*)*|\\*))*)(?:\\s+|\\t+)"
 							// Query
@@ -71,9 +73,9 @@ void Headers2::readFromFile(){
 							// Agent
 							"([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)"
 							// User
-							"((?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*)(?:\\s*\\|\\s*(?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*))*)(?:\\s+|\\t+)"
+							"(\\!?[\\w]{1,30})(?:\\s+|\\t+)"
 							// Group
-							"((?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*)(?:\\s*\\|\\s*(?:\\!?[\\w\\.\\-\\@\\:\\!\\/]+|\\*))*)(?:\\s+|\\t+)"
+							"(\\!?[\\w]{1,30})(?:\\s+|\\t+)"
 							// Headers
 							"([^\\r\\n\\t]+)$",
 							regex::ECMAScript | regex::icase
@@ -86,75 +88,138 @@ void Headers2::readFromFile(){
 							auto raw_actions = Anyks::split(match[1].str(), "|");
 							// Получаем блок данных направления трафика
 							auto raw_traffic = Anyks::split(match[2].str(), "|");
+							// Получаем блок данных клиентов
+							auto raw_clients = Anyks::split(match[3].str(), "|");
 							// Получаем блок данных серверов
-							auto raw_servers = Anyks::split(match[3].str(), "|");
+							auto raw_servers = Anyks::split(match[4].str(), "|");
 							// Получаем блок данных методов
-							auto raw_methods = Anyks::split(match[4].str(), "|");
+							auto raw_methods = Anyks::split(match[5].str(), "|");
 							// Получаем блок данных путей
-							auto raw_paths = Anyks::split(match[5].str(), "|");
+							auto raw_paths = Anyks::split(match[6].str(), "|");
 							// Получаем блок данных запросов
-							auto raw_queries = Anyks::split(match[6].str(), "|");
+							auto raw_queries = Anyks::split(match[7].str(), "|");
 							// Получаем блок данных агента
-							auto raw_agent = match[7].str();
+							auto raw_agent = match[8].str();
 							// Получаем блок данных пользователей
-							auto raw_users = Anyks::split(match[8].str(), "|");
+							auto raw_users = Anyks::split(match[9].str(), "|");
 							// Получаем блок данных групп
-							auto raw_groups = Anyks::split(match[9].str(), "|");
+							auto raw_groups = Anyks::split(match[10].str(), "|");
 							// Получаем блок данных заголовков
-							auto raw_headers = Anyks::split(match[10].str(), "|");
+							auto raw_headers = Anyks::split(match[11].str(), "|");
 							/* Начинаем извлечение данных */
 							// Получаем список всех групп
 							auto data_groups = this->groups->getAllGroups();
 							// Если группы существуют
 							if(!data_groups.empty()){
-								// Список клиентов
-								vector <Clients> clients;
-								// Список серверов
-								vector <Servers> servers;
-								// Список заголовков
-								vector <string> headers;
-								// Заполняем данные заголовков
-								headers.assign(raw_headers.cbegin(), raw_headers.cend());
-								// Переходим по списку пользователей
-								for(auto it = raw_users.cbegin(); it != raw_users.cend(); ++it){
-									// Извлекаем строку с типом
-									string str = * it;
-									// Объект клиента
-									Clients client;
-									// Если это не звездочка
-									if(str.compare("*") != 0){
-										// Определяем тип записи
-										const u_int type = Anyks::getTypeAmingByString(* it);
-										// Определяем что нужно выполнить для данного типа
-										switch(type){
-											// Запоминаем mac адрес
-											case AMING_MAC: client.mac = str; break;
-											// Если это ip адрес версии протокола 4
-											case AMING_IPV4: client.ip4 = str; break;
-											// Если это ip адрес версии протокола 6
-											case AMING_IPV6: client.ip6 = str; break;
-											// Если это сеть
-											case AMING_NETWORK: {
-												// Создаем объект сети
-												Network nwk;
-												// Получаем данные сети
-												string ipNwk = nwk.getIPByNetwork(str);
-												// Получаем версию протокола
-												u_int version = nwk.checkNetworkByIp(ipNwk);
-												// Запоминаем данные префикса
-												client.prefix = nwk.getPrefixByNetwork(str);
-												// Проверяем тип ip адреса
-												switch(version){
-													case 4: client.ip4 = ipNwk; break;
-													case 6: client.ip6 = ipNwk; break;
+								// Любые пользователи и группы
+								bool allUsers = false, allGroups = false;
+								/**
+								 * createNode Функция создания списка нод
+								 * @param [Array] список значений которые необходимо обработать
+								 * @return        список созданных нод
+								 */
+								auto createNode = [](vector <string> list){
+									// Список клиентов
+									vector <Node> nodes;
+									// Переходим по списку
+									for(auto it = list.cbegin(); it != list.cend(); ++it){
+										// Извлекаем строку с типом
+										string str = * it;
+										// Объект клиента
+										Node node;
+										// Если это не звездочка
+										if(str.compare("*") != 0){
+											// Определяем тип записи
+											const u_int type = Anyks::getTypeAmingByString(* it);
+											// Если тип данных определен
+											if(type != AMING_NULL){
+												// Определяем что нужно выполнить для данного типа
+												switch(type){
+													// Запоминаем mac адрес
+													case AMING_MAC: node.mac = str; break;
+													// Если это ip адрес версии протокола 4
+													case AMING_IPV4: node.ip4 = str; break;
+													// Если это ip адрес версии протокола 6
+													case AMING_IPV6: node.ip6 = str; break;
+													// Если это домен
+													case AMING_DOMAIN: node.domain = str; break;
+													// Если это сеть
+													case AMING_NETWORK: {
+														// Создаем объект сети
+														Network nwk;
+														// Получаем данные сети
+														string ipNwk = nwk.getIPByNetwork(str);
+														// Получаем версию протокола
+														u_int version = nwk.checkNetworkByIp(ipNwk);
+														// Запоминаем данные префикса
+														node.prefix = nwk.getPrefixByNetwork(str);
+														// Проверяем тип ip адреса
+														switch(version){
+															case 4: node.ip4 = ipNwk; break;
+															case 6: node.ip6 = ipNwk; break;
+														}
+													} break;
 												}
+												// Добавляем в список нод
+												nodes.push_back(node);
 											}
 										}
-									// Если это звездочка
+									}
+									// Выводим результат
+									return nodes;
+								};
+								// Создаем объект с правилами
+								const Rules rules = {
+									// Запоминаем данные агента
+									raw_agent,
+									// Список клиентов
+									createNode(raw_clients),
+									// Список серверов
+									createNode(raw_servers),
+									// Список путей
+									raw_paths,
+									// Список запросов
+									raw_queries,
+									// Список заголовков
+									raw_headers
+								};
+								// Объект со списком методов
+								unordered_map <string, Rules> methods = {
+									{"get", {}},
+									{"put", {}},
+									{"head", {}},
+									{"post", {}},
+									{"patch", {}},
+									{"trace", {}},
+									{"delete", {}},
+									{"connect", {}},
+									{"options", {}}
+								};
+								// Переходим по всему списку методов
+								for(auto it = raw_methods.cbegin(); it != raw_methods.cend(); ++it){
+									// Определяем метод
+									string method = * it;
+									// Приводим к нижнему регистру
+									method = Anyks::toCase(method);
+									// Если метод не является звездочкой
+									if(method.compare("*") != 0){
+										// Получаем нужный нам метод и добавляем туда правила
+										methods.at(method) = rules;
+									// Если найдена звездочка то добавляем во все методы
 									} else {
-
+										// Переходим по всему списку методов
+										for(auto mt = methods.cbegin(); mt != methods.cend(); ++mt){
+											// Добавляем правила
+											methods.at(mt->first) = rules;
+										}
+										// Выходим из цикла
+										break;
 									}
 								}
+
+							
+
+								
 
 
 
