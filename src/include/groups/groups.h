@@ -13,6 +13,7 @@
 #include <random>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include <unordered_map>
 #include <grp.h>
 #include <pwd.h>
@@ -316,6 +317,11 @@ class Groups {
 		 * @return     список идентификаторов пользователей
 		 */
 		const vector <uid_t> getIdUsers(const gid_t gid);
+		/**
+		 * getIdAllUsers Метод получения списка всех пользователей
+		 * @return список идентификаторов пользователей
+		 */
+		const vector <uid_t> getIdAllUsers();
 		/**
 		 * getIdUsers Метод получения списка пользователей в группе
 		 * @param  groupName название группы

@@ -1072,6 +1072,30 @@ const vector <string> Groups::getNameUsers(const string groupName){
 	return result;
 }
 /**
+ * getIdAllUsers Метод получения списка всех пользователей
+ * @return список идентификаторов пользователей
+ */
+const vector <uid_t> Groups::getIdAllUsers(){
+	// Результат работы функции
+	vector <uid_t> result;
+	// Получаем список групп
+	auto groups = getAllGroups();
+	// Если группы существуют то переходим по ним
+	if(!groups.empty()){
+		// Переходим по всем группам
+		for(auto it = groups.cbegin(); it != groups.cend(); ++it){
+			// Копируем весь список пользователей
+			copy(it->users.cbegin(), it->users.cend(), back_inserter(result));
+		}
+		// Сортируем
+		sort(result.cbegin(), result.cend());
+		// Удаляем дубликаты
+		result.resize(unique(result.cbegin(), result.cend()) - result.cbegin());
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * getIdUsers Метод получения списка пользователей в группе
  * @param  gid идентификатор группы
  * @return     список идентификаторов пользователей

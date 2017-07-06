@@ -73,9 +73,9 @@ void Headers2::readFromFile(){
 							// Agent
 							"([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)"
 							// User
-							"(\\!?[\\w]{1,30})(?:\\s+|\\t+)"
+							"(\\!?[\\w]{1,30}(?:\\s*\\|\\s*(?:\\!?[\\w]{1,30}|\\*))*)(?:\\s+|\\t+)"
 							// Group
-							"(\\!?[\\w]{1,30})(?:\\s+|\\t+)"
+							"(\\!?[\\w]{1,30}(?:\\s*\\|\\s*(?:\\!?[\\w]{1,30}|\\*))*)(?:\\s+|\\t+)"
 							// Headers
 							"([^\\r\\n\\t]+)$",
 							regex::ECMAScript | regex::icase
@@ -111,8 +111,6 @@ void Headers2::readFromFile(){
 							auto data_groups = this->groups->getAllGroups();
 							// Если группы существуют
 							if(!data_groups.empty()){
-								// Любые пользователи и группы
-								bool allUsers = false, allGroups = false;
 								/**
 								 * createNode Функция создания списка нод
 								 * @param [Array] список значений которые необходимо обработать
@@ -195,6 +193,12 @@ void Headers2::readFromFile(){
 									{"connect", {}},
 									{"options", {}}
 								};
+								// Объект со списком направлений траффика
+								map <bool, unordered_map <string, Rules>> traffics = {{true, {}}, {false, {}}};
+								// Объект со списком экшенов
+								map <bool, map <bool, unordered_map <string, Rules>>> actions = {{true, {}}, {false, {}}};
+								// Объект со списком пользователей
+								map <uid_t, map <bool, map <bool, unordered_map <string, Rules>>>> users;
 								// Переходим по всему списку методов
 								for(auto it = raw_methods.cbegin(); it != raw_methods.cend(); ++it){
 									// Определяем метод
@@ -216,10 +220,63 @@ void Headers2::readFromFile(){
 										break;
 									}
 								}
-
-							
-
-								
+								// Переходим по всему списку направлений трафика
+								for(auto it = raw_traffic.cbegin(); it != raw_traffic.cend(); ++it){
+									// Определяем трафик
+									string traffic = * it;
+									// Приводим к нижнему регистру
+									traffic = Anyks::toCase(traffic);
+									// Если метод не является звездочкой
+									if(traffic.compare("*") != 0){
+										// Если это входящий трафик
+										if(traffic.compare("in") == 0) traffics.at(true) = methods;
+										// Если это исходящий трафик
+										if(traffic.compare("out") == 0) traffics.at(false) = methods;
+									// Если найдена звездочка то добавляем во все методы
+									} else {
+										// Запоминаем параметры для всех видов трафика
+										traffics.at(true)	= methods;
+										traffics.at(false)	= methods;
+										// Выходим из цикла
+										break;
+									}
+								}
+								// Переходим по всему списку экшенов
+								for(auto it = raw_actions.cbegin(); it != raw_actions.cend(); ++it){
+									// Определяем экшен
+									string action = * it;
+									// Приводим к нижнему регистру
+									action = Anyks::toCase(action);
+									// Если метод не является звездочкой
+									if(action.compare("*") != 0){
+										// Если это добавление заголовков
+										if(action.compare("add") == 0) actions.at(true) = traffics;
+										// Если это удаление заголовков
+										if(action.compare("rm") == 0) actions.at(false) = traffics;
+									// Если найдена звездочка то добавляем во все экшены
+									} else {
+										// Запоминаем параметры для всех видов экшенов
+										actions.at(true)	= traffics;
+										actions.at(false)	= traffics;
+										// Выходим из цикла
+										break;
+									}
+								}
+								// Переходим по всему списку пользователей
+								for(auto it = raw_users.cbegin(); it != raw_users.cend(); ++it){
+									// Определяем пользователя
+									string user = * it;
+									// Если метод не является звездочкой
+									if(user.compare("*") != 0){
+										// Определяем идентификатор это или логин
+										if(Anyks::isNumber(user)) users.emplace(::atoi(user.c_str()), actions);
+										// Если это логин то определяем идентификатор логина
+										else users.emplace(this->groups->getUidByName(user.c_str()), actions);
+									// Если найдена звездочка то добавляем во все экшены
+									} else {
+									
+									}
+								}
 
 
 
