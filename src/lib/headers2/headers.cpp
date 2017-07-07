@@ -168,10 +168,12 @@ void Headers2::readFromFile(){
 									// Выводим результат
 									return nodes;
 								};
+								// Получаем данные регулярное выражение юзер-агента
+								const string userAgent = (!raw_agent.empty() && (raw_agent.compare("*") != 0) ? raw_agent : string(""));
 								// Создаем объект с правилами
 								const Rules rules = {
 									// Запоминаем данные агента
-									raw_agent,
+									userAgent,
 									// Список клиентов
 									createNode(raw_clients),
 									// Список серверов
