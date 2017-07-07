@@ -326,8 +326,10 @@ void Headers2::readFromFile(){
 										break;
 									}
 								}
-							}
-						}
+							// Если группы не найдены, выводим сообщение об ошибке
+							} else if(this->log) this->log->write(LOG_ERROR, 0, "groups not found for headers file (%s)", filename.c_str());
+						// Если синтаксис файла заголовков не верный
+						} else if(this->log) this->log->write(LOG_ERROR, 0, "Invalid syntax for header file (%s)", filename.c_str());
 					}
 				}
 				// Закрываем файл
