@@ -1088,9 +1088,9 @@ const vector <uid_t> Groups::getIdAllUsers(){
 			copy(it->users.cbegin(), it->users.cend(), back_inserter(result));
 		}
 		// Сортируем
-		sort(result.cbegin(), result.cend());
+		sort(result.begin(), result.end());
 		// Удаляем дубликаты
-		result.resize(unique(result.cbegin(), result.cend()) - result.cbegin());
+		result.resize(unique(result.begin(), result.end()) - result.begin());
 	}
 	// Выводим результат
 	return result;

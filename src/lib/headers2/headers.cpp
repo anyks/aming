@@ -226,7 +226,7 @@ void Headers2::readFromFile(){
 									string traffic = * it;
 									// Приводим к нижнему регистру
 									traffic = Anyks::toCase(traffic);
-									// Если метод не является звездочкой
+									// Если трафик не является звездочкой
 									if(traffic.compare("*") != 0){
 										// Если это входящий трафик
 										if(traffic.compare("in") == 0) traffics.at(true) = methods;
@@ -247,7 +247,7 @@ void Headers2::readFromFile(){
 									string action = * it;
 									// Приводим к нижнему регистру
 									action = Anyks::toCase(action);
-									// Если метод не является звездочкой
+									// Если экшен не является звездочкой
 									if(action.compare("*") != 0){
 										// Если это добавление заголовков
 										if(action.compare("add") == 0) actions.at(true) = traffics;
@@ -262,24 +262,70 @@ void Headers2::readFromFile(){
 										break;
 									}
 								}
-								// Переходим по всему списку пользователей
-								for(auto it = raw_users.cbegin(); it != raw_users.cend(); ++it){
-									// Определяем пользователя
-									string user = * it;
-									// Если метод не является звездочкой
-									if(user.compare("*") != 0){
-										// Определяем идентификатор это или логин
-										if(Anyks::isNumber(user)) users.emplace(::atoi(user.c_str()), actions);
-										// Если это логин то определяем идентификатор логина
-										else users.emplace(this->groups->getUidByName(user.c_str()), actions);
-									// Если найдена звездочка то добавляем во все экшены
+								/**
+								 * createRules Функция создания правил
+								 * @param [gid_t] идентификатор группы
+								 */
+								auto createRules = [&users, &actions, &raw_users, this](gid_t gid){
+									// Переходим по всему списку пользователей
+									for(auto it = raw_users.cbegin(); it != raw_users.cend(); ++it){
+										// Определяем пользователя
+										string user = * it;
+										// Если пользователь не является звездочкой
+										if(user.compare("*") != 0){
+											// Идентификатор пользователя
+											uid_t uid = 0;
+											// Определяем идентификатор пользователя
+											if(Anyks::isNumber(user)) uid = ::atoi(user.c_str());
+											// Если это название пользователя
+											else uid = this->groups->getUidByName(user);
+											// Если пользователь принадлежит группе
+											if(this->groups->checkUser(gid, uid)){
+												// Добавляем список экшенов к пользователю
+												users.emplace(uid, actions);
+											}
+										// Если найдена звездочка то добавляем во все экшены
+										} else {
+											// Очищаем список пользователей
+											users.clear();
+											// Запрашиваем список всех пользователей группы
+											auto uids = this->groups->getIdUsers(gid);
+											// Переходим по всем идентификаторам пользователей и добавляем туда экшены
+											for(auto it = uids.cbegin(); it != uids.cend(); ++it) users.emplace(* it, actions);
+											// Выходим из цикла
+											break;
+										}
+									}
+									// Добавляем в список правил
+									this->rules.emplace(gid, users);
+								};
+								// Переходим по всему массиву групп
+								for(auto it = raw_groups.cbegin(); it != raw_groups.cend(); ++it){
+									// Определяем группу
+									string group = * it;
+									// Очищаем список пользователей
+									users.clear();
+									// Если группа не является звездочкой
+									if(group.compare("*") != 0){
+										// Идентификатор группы
+										gid_t gid = 0;
+										// Если это идентификатор группы
+										if(Anyks::isNumber(group)) gid = ::atoi(group.c_str());
+										// Если это название группы
+										else gid = this->groups->getIdByName(group);
+										// Выполняем создание правила
+										if(this->groups->checkGroupById(gid)) createRules(gid);
+									// Если найдена звездочка то добавляем во все группы
 									} else {
-									
+										// Переходим по всему списку групп
+										for(auto it = data_groups.cbegin(); it != data_groups.cend(); ++it){
+											// Выполняем создание правила
+											createRules(it->id);
+										}
+										// Выходим из цикла
+										break;
 									}
 								}
-
-
-
 							}
 						}
 					}

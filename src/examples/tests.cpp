@@ -185,7 +185,7 @@ void getDomain(const string str){
 }
 
 int main(int len, char * buff[]){
-
+	/*
 	auto a = compose(string("rambler"), string("www"));
 	a.insert(pair <string, string> (string("anyks"), string("ws")));
 
@@ -201,6 +201,72 @@ int main(int len, char * buff[]){
 
 	cout << " ++++++++ " << c["com"]["co"]["anyks"] << endl;
 	// auto d = getDomain("www.rambler.com");
+	*/
+
+	vector <int> result = {34, 15, 24, 1, 10, 92, 34, 11, 10, 15, 15, 24};
+
+	cout << endl;
+
+	for(auto it = result.cbegin(); it != result.cend(); ++it){
+		cout << " (1): " << (* it) << " ";
+	}
+
+	cout << endl;
+
+	// Сортируем
+	sort(result.begin(), result.end());
+	
+	for(auto it = result.cbegin(); it != result.cend(); ++it){
+		cout << " (2): " << (* it) << " ";
+	}
+
+	cout << endl;
+
+	// Удаляем дубликаты
+	result.resize(unique(result.begin(), result.end()) - result.begin());
+
+	for(auto it = result.cbegin(); it != result.cend(); ++it){
+		cout << " (3): " << (* it) << " ";
+	}
+
+	cout << endl;
+
+	if(find(result.begin(), result.end(), 92) != result.end())
+		cout << " ++++++++ YES +++++++++++ " << endl;
+	else cout << " ++++++++ NO +++++++++++ " << endl;
+
+	cout << endl;
+
+
+	struct DD1 {
+		int id;
+		int dd = 2;
+	};
+
+
+
+	struct find_id : unary_function<DD1, bool> {
+		int id;
+		find_id(int id):id(id) { }
+		bool operator()(DD1 const& m) const {
+			return m.id == id;
+		}
+	};
+
+	vector <DD1> data;
+
+	for(int i = 0; i < 1000; i++){
+		DD1 dd1;
+		dd1.id = i;
+		data.push_back(dd1);
+	}
+
+	auto it = find_if(data.begin(), data.end(), find_id(999));
+
+	cout << " ---------- " << it->id << " == " << it->dd << endl;
+
+	cout << endl;
+
 
 	return 0;
 }

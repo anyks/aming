@@ -312,16 +312,16 @@ class Groups {
 		 */
 		const vector <string> getNameUsers(const string groupName);
 		/**
+		 * getIdAllUsers Метод получения списка всех пользователей
+		 * @return список идентификаторов пользователей
+		 */
+		const vector <uid_t> getIdAllUsers();
+		/**
 		 * getIdUsers Метод получения списка пользователей в группе
 		 * @param  gid идентификатор группы
 		 * @return     список идентификаторов пользователей
 		 */
 		const vector <uid_t> getIdUsers(const gid_t gid);
-		/**
-		 * getIdAllUsers Метод получения списка всех пользователей
-		 * @return список идентификаторов пользователей
-		 */
-		const vector <uid_t> getIdAllUsers();
 		/**
 		 * getIdUsers Метод получения списка пользователей в группе
 		 * @param  groupName название группы
