@@ -42,6 +42,8 @@ void Headers2::readFromFile(){
 			ifstream file(filename.c_str());
 			// Если файл открыт
 			if(file.is_open()){
+				// Очищаем блок с правилами
+				this->rules.clear();
 				// Считываем до тех пор пока все удачно
 				while(file.good()){
 					// Считываем строку из файла
