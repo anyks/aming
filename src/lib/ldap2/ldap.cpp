@@ -215,7 +215,7 @@ const vector <ALDAP::Data> ALDAP::data(const string dn, const string key, const 
 									// Добавляем в уже существующих список остальные ключи
 									vals.find(key)->second.push_back(params[i]);
 								// Добавляем в список найденные значения
-								} else vals.insert(pair <string, vector <string>>(key, {params[i]}));	
+								} else vals.insert(pair <string, vector <string>>(key, {params[i]}));
 							}
 						}
 					}

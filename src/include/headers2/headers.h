@@ -21,6 +21,7 @@
 #include "nwk/nwk.h"
 #include "log/log.h"
 #include "http/http.h"
+#include "ldap2/ldap.h"
 #include "groups/groups.h"
 #include "general/general.h"
 
@@ -34,6 +35,21 @@ using namespace std;
  */
 class Headers2 {
 	private:
+		/**
+		 * IsNot Структура результата проверки на инверсию
+		 */
+		struct IsNot {
+			bool inv;	// Результат проверки
+			string str;	// Строка в чистом виде
+		};
+		/**
+		 * Ldap Структура ldap
+		 */
+		struct Ldap {
+			string dn;
+			string scope;
+			string filter;
+		};
 		/**
  		* Node Структура данных рабочей ноды
  		*/
@@ -53,6 +69,22 @@ class Headers2 {
 			vector <Node> servers;		// Данные сервера
 			vector <string> paths;		// Путь запроса на сервере
 			vector <string> queries;	// Параметры запроса
+			vector <string> headers;	// Список заголовков
+		};
+		/**
+ 		* Params Структура списков параметров для создания правил
+ 		*/
+		struct Params {
+			string userAgent;			// Регулярное выражение юзер-агента
+			vector <string> actions;	// Список экшенов
+			vector <string> traffic;	// Список направлений трафика
+			vector <string> clients;	// Список клиентов
+			vector <string> servers;	// Список серверов
+			vector <string> methods;	// Список методов
+			vector <string> paths;		// Список путей
+			vector <string> queries;	// Список параметров запроса
+			vector <string> users;		// Список пользователей
+			vector <string> groups;		// Список групп
 			vector <string> headers;	// Список заголовков
 		};
 		/*
@@ -83,6 +115,8 @@ class Headers2 {
 				>
 			>
 		> rules;
+		// Объект ldap подклчюения
+		Ldap ldap;
 		// Название файла конфигурации
 		deque <string> names;
 		// Системные параметры
@@ -95,6 +129,17 @@ class Headers2 {
 		time_t lastUpdate = 0;
 		// Тип поиска параметров заголовков (0 - Из файла, 1 - из LDAP)
 		u_short typeSearch = 0;
+		/**
+		 * isNot Метод проверки на инверсию
+		 * @param  str строка для проверки
+		 * @return     результат проверки
+		 */
+		const IsNot isNot(const string str);
+		/**
+		 * createRulesList Метод созданий списка правил
+		 * @param params список параметров
+		 */
+		void createRulesList(const Params params);
 		/**
 		 * readFromLDAP Метод чтения данных из LDAP сервера
 		 */
@@ -114,6 +159,32 @@ class Headers2 {
 		 * getName Метод получения имени конфига
 		 */
 		const string getName();
+		/**
+		 * get Метод получения правил клиента
+		 * @param gid     идентификатор группы
+		 * @param uid     идентификатор пользователя
+		 * @param action  экшен
+		 * @param traffic направление трафика
+		 * @param method  метод запроса
+		 * @return        сформированный список правил
+		 */
+		const unordered_map <string, Rules> get(const gid_t gid, const uid_t uid, const bool action = false, const bool traffic = false, const string method = "*");
+		/**
+		 * add Метод добавления новых параметров фильтрации заголовков
+		 * @param gid     идентификатор группы
+		 * @param uid     идентификатор пользователя
+		 * @param action  экшен
+		 * @param traffic направление трафика
+		 * @param method  метод запроса
+		 * @param ctx     правила работы с заголовками
+		 */
+		void add(const gid_t gid, const uid_t uid, const bool action = false, const bool traffic = false, const string method = "*", void * ctx = nullptr);
+		/**
+		 * rm Метод удаления параметров фильтрации заголовков
+		 * @param gid идентификатор группы
+		 * @param uid идентификатор пользователя
+		 */
+		void rm(const gid_t gid, const uid_t uid);
 		/**
 		 * read Метод чтения из параметров
 		 */

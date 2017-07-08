@@ -5,70 +5,77 @@ attributeTypes: ( 2.2.2.0.2.1
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 )
 
 attributeTypes: ( 2.2.2.0.2.2
-	NAME 'amingHeadersRoute'
+	NAME 'amingHeadersTraffic'
 	DESC 'Направление трафика (TRUE - входящий, FALSE - исходящий), например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 )
 
 attributeTypes: ( 2.2.2.0.2.3
-	NAME 'amingHeadersUserMac'
+	NAME 'amingHeadersClientDomain'
+	DESC 'Домен клиента с которого идет работа, например aming.su'
+	EQUALITY caseIgnoreMatch
+	SUBSTR caseIgnoreSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{128} )
+
+attributeTypes: ( 2.2.2.0.2.4
+	NAME 'amingHeadersClientMac'
 	DESC 'MAC-адрес идентификации клиента в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{17} )
 
-attributeTypes: ( 2.2.2.0.2.4
-	NAME 'amingHeadersUserIp4'
+attributeTypes: ( 2.2.2.0.2.5
+	NAME 'amingHeadersClientIp4'
 	DESC 'IPv4-адрес идентификации клиента в точечно-цифровой нотации, например, 192.168.1.1, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
 
-attributeTypes: ( 2.2.2.0.2.5
-	NAME 'amingHeadersUserIp6'
+attributeTypes: ( 2.2.2.0.2.6
+	NAME 'amingHeadersClientIp6'
 	DESC 'IPv6-адрес идентификации клиента в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
-attributeTypes: ( 2.2.2.0.2.6
-	NAME 'amingHeadersUserNetwork4'
+attributeTypes: ( 2.2.2.0.2.7
+	NAME 'amingHeadersClientNetwork4'
 	DESC 'IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{31} )
 
-attributeTypes: ( 2.2.2.0.2.7
-	NAME 'amingHeadersUserNetwork6'
+attributeTypes: ( 2.2.2.0.2.8
+	NAME 'amingHeadersClientNetwork6'
 	DESC 'IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{43} )
 
-attributeTypes: ( 2.2.2.0.2.8
+attributeTypes: ( 2.2.2.0.2.9
 	NAME 'amingHeadersUser'
 	DESC 'Имя пользователя или его идентификатор'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{30} )
 
-attributeTypes: ( 2.2.2.0.2.9
+attributeTypes: ( 2.2.2.0.2.10
 	NAME 'amingHeadersGroup'
 	DESC 'Название группы или её идентификатор'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{30} )
 
-attributeTypes: ( 2.2.2.0.2.10
+attributeTypes: ( 2.2.2.0.2.11
 	NAME 'amingHeadersMethod'
 	DESC 'Метод запроса (get, post, put, delete и т.д.), например get'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{30} )
 
-attributetype ( 2.2.2.0.2.11
+attributetype ( 2.2.2.0.2.12
 	NAME 'amingHeadersPath'
 	DESC 'Путь запроса, например /aming.html'
 	EQUALITY caseExactIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.2.12
+attributeTypes: ( 2.2.2.0.2.13
 	NAME 'amingHeadersQuery'
 	DESC 'Параметры запроса, например ?id=12'
 	EQUALITY caseIgnoreMatch
@@ -76,53 +83,59 @@ attributeTypes: ( 2.2.2.0.2.12
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{255}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.2.13
-	NAME 'amingHeadersDomainServer'
+attributeTypes: ( 2.2.2.0.2.14
+	NAME 'amingHeadersServerDomain'
 	DESC 'Домен удаленного сервера с которым идет работа, например aming.su'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{128} )
 
-attributeTypes: ( 2.2.2.0.2.14
-	NAME 'amingHeadersIpServer4'
+attributeTypes: ( 2.2.2.0.2.15
+	NAME 'amingHeadersServerMac'
+	DESC 'MAC-адрес идентификации сервера в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2'
+	EQUALITY caseIgnoreIA5Match
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{17} )
+
+attributeTypes: ( 2.2.2.0.2.16
+	NAME 'amingHeadersServerIp4'
 	DESC 'IPv4-адрес удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.1.1, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
 
-attributeTypes: ( 2.2.2.0.2.15
-	NAME 'amingHeadersIpServer6'
+attributeTypes: ( 2.2.2.0.2.17
+	NAME 'amingHeadersServerIp6'
 	DESC 'IPv6-адрес удаленного сервера с которым идет работа в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
-attributeTypes: ( 2.2.2.0.2.16
-	NAME 'amingHeadersNetworkServer4'
+attributeTypes: ( 2.2.2.0.2.18
+	NAME 'amingHeadersServerNetwork4'
 	DESC 'IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.0.0/255.255.0.0'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{31} )
 
-attributeTypes: ( 2.2.2.0.2.17
-	NAME 'amingHeadersNetworkServer6'
+attributeTypes: ( 2.2.2.0.2.19
+	NAME 'amingHeadersServerNetwork6'
 	DESC 'IPv6-сеть удаленного сервера с которым идет работа в любой нотации, например, 2001:0db8:11a3::/64'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{43} )
 
-attributeTypes: ( 2.2.2.0.2.18
-	NAME 'amingHeadersRegex'
+attributeTypes: ( 2.2.2.0.2.20
+	NAME 'amingHeadersAgent'
 	DESC 'Регулярное выражение для обработки userAgent клиента, например mozilla\/\d\.\d'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{255}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.2.19
+attributeTypes: ( 2.2.2.0.2.21
 	NAME 'amingHeadersHeaders'
 	DESC 'Заголовки с которыми производятся манипуляции, например Accept-Encoding'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
 
-attributeTypes: ( 2.2.2.0.2.20
+attributeTypes: ( 2.2.2.0.2.22
 	NAME 'ah'
 	DESC 'Название конфигурации'
 	EQUALITY caseIgnoreMatch
@@ -135,4 +148,4 @@ objectClass ( 2.2.2.0.2
 	DESC 'Схема конфигурационных данных управления заголовками прокси-сервера Aming'
 	SUP top STRUCTURAL
 	MUST ( ah $ amingHeadersAction $ amingHeadersHeaders )
-	MAY ( amingHeadersAction $ amingHeadersRoute $ amingHeadersUserMac $ amingHeadersUserIp4 $ amingHeadersUserIp6 $ amingHeadersUserNetwork4 $ amingHeadersUserNetwork6 $ amingHeadersUser $ amingHeadersGroup $ amingHeadersMethod $ amingHeadersPath $ amingHeadersQuery $ amingHeadersDomainServer $ amingHeadersIpServer4 $ amingHeadersIpServer6 $ amingHeadersNetworkServer4 $ amingHeadersNetworkServer6 $ amingHeadersRegex $ amingHeadersHeaders $ ah ) )
+	MAY ( amingHeadersAction $ amingHeadersTraffic $ amingHeadersClientDomain $ amingHeadersClientMac $ amingHeadersClientIp4 $ amingHeadersClientIp6 $ amingHeadersClientNetwork4 $ amingHeadersClientNetwork6 $ amingHeadersUser $ amingHeadersGroup $ amingHeadersMethod $ amingHeadersPath $ amingHeadersQuery $ amingHeadersServerDomain $ amingHeadersServerMac $ amingHeadersServerIp4 $ amingHeadersServerIp6 $ amingHeadersServerNetwork4 $ amingHeadersServerNetwork6 $ amingHeadersAgent $ amingHeadersHeaders $ ah ) )

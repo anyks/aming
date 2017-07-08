@@ -13,7 +13,7 @@
 
 	<objectClasses>
 		<objectClass id="amingHeaders"></objectClass>
-		<objectClass id="top"></objectClass>   
+		<objectClass id="top"></objectClass>
 	</objectClasses>
 
 	<attributes>
@@ -27,7 +27,7 @@
 			<page>1</page>
 		</attribute>
 
-		<attribute id="amingHeadersRoute">
+		<attribute id="amingHeadersTraffic">
 			<display>Направление трафика (входящий, исходящий)</display>
 			<icon>ldap-o.png</icon>
 			<type>select</type>
@@ -70,7 +70,7 @@
 			<page>1</page>
 		</attribute>
 
-		<attribute id="amingHeadersRegex">
+		<attribute id="amingHeadersAgent">
 			<display>Регулярное выражение для обработки userAgent клиента, например mozilla\/\d\.\d</display>
 			<icon>help-big.png</icon>
 			<order>6</order>
@@ -102,73 +102,87 @@
 			<value><![CDATA[=php.PickList(/;(&(objectClass=posixAccount));uidNumber;%uid%;;;;uid)]]></value>
 		</attribute>
 
-		<attribute id="amingHeadersUserMac">
-			<display>MAC-адрес идентификации клиента в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2</display>
-			<icon>ldap-o.png</icon>
+		<attribute id="amingHeadersClientDomain">
+			<display>Домен клиента с которого идет работа, например aming.su</display>
+			<icon>host.png</icon>
 			<order>1</order>
 			<page>2</page>
 		</attribute>
 
-		<attribute id="amingHeadersUserIp4">
-			<display>IPv4-адрес идентификации клиента в точечно-цифровой нотации, например, 192.168.1.1</display>
+		<attribute id="amingHeadersClientMac">
+			<display>MAC-адрес идентификации клиента в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2</display>
 			<icon>ldap-o.png</icon>
 			<order>2</order>
 			<page>2</page>
 		</attribute>
 
-		<attribute id="amingHeadersUserNetwork4">
-			<display>IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32</display>
+		<attribute id="amingHeadersClientIp4">
+			<display>IPv4-адрес идентификации клиента в точечно-цифровой нотации, например, 192.168.1.1</display>
 			<icon>ldap-o.png</icon>
 			<order>3</order>
 			<page>2</page>
 		</attribute>
 
-		<attribute id="amingHeadersUserIp6">
-			<display>IPv6-адрес идентификации клиента в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
+		<attribute id="amingHeadersClientNetwork4">
+			<display>IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32</display>
 			<icon>ldap-o.png</icon>
 			<order>4</order>
 			<page>2</page>
 		</attribute>
 
-		<attribute id="amingHeadersUserNetwork6">
-			<display>IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64</display>
+		<attribute id="amingHeadersClientIp6">
+			<display>IPv6-адрес идентификации клиента в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
 			<icon>ldap-o.png</icon>
 			<order>5</order>
 			<page>2</page>
 		</attribute>
 
-		<attribute id="amingHeadersDomainServer">
+		<attribute id="amingHeadersClientNetwork6">
+			<display>IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64</display>
+			<icon>ldap-o.png</icon>
+			<order>6</order>
+			<page>2</page>
+		</attribute>
+
+		<attribute id="amingHeadersServerDomain">
 			<display>Домен удаленного сервера с которым идет работа, например aming.su</display>
 			<icon>host.png</icon>
 			<order>1</order>
 			<page>3</page>
 		</attribute>
 
-		<attribute id="amingHeadersIpServer4">
-			<display>IPv4-адрес удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.1.1</display>
-			<icon>host.png</icon>
+		<attribute id="amingHeadersServerMac">
+			<display>MAC-адрес идентификации сервера в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2</display>
+			<icon>ldap-o.png</icon>
 			<order>2</order>
 			<page>3</page>
 		</attribute>
 
-		<attribute id="amingHeadersNetworkServer4">
-			<display>IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.0.0/255.255.0.0</display>
+		<attribute id="amingHeadersServerIp4">
+			<display>IPv4-адрес удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.1.1</display>
 			<icon>host.png</icon>
 			<order>3</order>
 			<page>3</page>
 		</attribute>
 
-		<attribute id="amingHeadersIpServer6">
-			<display>IPv6-адрес удаленного сервера с которым идет работа в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
+		<attribute id="amingHeadersServerNetwork4">
+			<display>IPv4-сеть удаленного сервера с которым идет работа в точечно-цифровой нотации, например, 192.168.0.0/255.255.0.0</display>
 			<icon>host.png</icon>
 			<order>4</order>
 			<page>3</page>
 		</attribute>
 
-		<attribute id="amingHeadersNetworkServer6">
-			<display>IPv6-сеть удаленного сервера с которым идет работа в любой нотации, например, 2001:0db8:11a3::/64</display>
+		<attribute id="amingHeadersServerIp6">
+			<display>IPv6-адрес удаленного сервера с которым идет работа в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
 			<icon>host.png</icon>
 			<order>5</order>
+			<page>3</page>
+		</attribute>
+
+		<attribute id="amingHeadersServerNetwork6">
+			<display>IPv6-сеть удаленного сервера с которым идет работа в любой нотации, например, 2001:0db8:11a3::/64</display>
+			<icon>host.png</icon>
+			<order>6</order>
 			<page>3</page>
 		</attribute>
 	</attributes>
