@@ -33,6 +33,232 @@ void Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const 
 	proxyOptions = options;
 }
 /**
+ * setDataGroupFromLdap Метод заполнения данных группы из LDAP
+ * @param group объект группы
+ */
+void Groups::setDataGroupFromLdap(Groups::Data &group){
+	// Параметр для поиска
+	const char * key = "%g";
+	// Выполняем поиск ключа
+	size_t pos = this->ldap.filterConfig.find(key);
+	// Если ключ найден
+	if(pos != string::npos){
+		// Создаем объект подключения LDAP
+		ALDAP ldap(this->config, this->log);
+		// Формируем наш фильтр
+		string filter = this->ldap.filterConfig;
+		// Заменяем ключ на логин пользователя
+		filter = filter.replace(pos, strlen(key), to_string(group.id));
+		// Создаем dn
+		const string dn = (string("ac=") + this->config->proxy.name + string(",") + this->ldap.dnConfig);
+		// Формируем параметры запроса
+		const string params =	"amingConfigsConnectsConnect,amingConfigsConnectsSize,amingConfigsGzipChunk,"
+								"amingConfigsGzipLength,amingConfigsGzipLevel,amingConfigsGzipProxied,"
+								"amingConfigsGzipRegex,amingConfigsGzipResponse,amingConfigsGzipTransfer,"
+								"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,"
+								"amingConfigsIdntIp4,amingConfigsIdntIp6,amingConfigsIdntMac,amingConfigsIdntNetwork4,"
+								"amingConfigsIdntNetwork6,amingConfigsIpExternal4,amingConfigsIpExternal6,"
+								"amingConfigsIpResolver4,amingConfigsIpResolver6,amingConfigsKeepAliveCnt,"
+								"amingConfigsKeepAliveEnabled,amingConfigsKeepAliveIdle,amingConfigsKeepAliveIntvl,"
+								"amingConfigsProxyAgent,amingConfigsProxyConnect,amingConfigsProxyDeblock,"
+								"amingConfigsProxyForward,amingConfigsProxyPipelining,amingConfigsProxyReverse,"
+								"amingConfigsProxySkill,amingConfigsProxySubnet,amingConfigsProxyTransfer,"
+								"amingConfigsProxyUpgrade,amingConfigsSpeedInput,amingConfigsSpeedOutput,"
+								"amingConfigsTimeoutsRead,amingConfigsTimeoutsUpgrade,amingConfigsTimeoutsWrite";
+		// Запрашиваем данные параметров
+		auto groups = ldap.data(dn, params, this->ldap.scopeConfig, filter);
+		// Если параметры получены
+		if(!groups.empty()){
+			/**
+			* getBoolean Метод получения булевых данных из строки
+			* @param value строковое значение булевых данных
+			* @return      булевое значение
+			*/
+			auto getBoolean = [](const string value){
+				// Выполняем проверку на доступность опции
+				bool check = false;
+				// Получаем значение параметра
+				string param = value;
+				// Приводим к нижнему регистру
+				param = Anyks::toCase(param);
+				// Определяем тип параметра
+				if(param.compare("true") == 0) check = true;
+				// Выводим результат
+				return check;
+			};
+			// Переходим по всему объекту параметров
+			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
+				// Списки данных идентификации
+				vector <string> idnt_ip4, idnt_ip6, idnt_mac, idnt_network4, idnt_network6;
+				// Переходим по всему массиву полученных объектов
+				for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
+					// Если список значений существует
+					if(!dt->second.empty()){
+						// Если это идентификатор IPv4
+						if(dt->first.compare("amingConfigsIdntIp4") == 0) idnt_ip4 = dt->second;
+						// Если это идентификатор IPv6
+						else if(dt->first.compare("amingConfigsIdntIp6") == 0) idnt_ip6 = dt->second;
+						// Если это идентификатор MAC
+						else if(dt->first.compare("amingConfigsIdntMac") == 0) idnt_mac = dt->second;
+						// Если это идентификатор Network IPv4
+						else if(dt->first.compare("amingConfigsIdntNetwork4") == 0) idnt_network4 = dt->second;
+						// Если это идентификатор Network IPv6
+						else if(dt->first.compare("amingConfigsIdntNetwork6") == 0) idnt_network6 = dt->second;
+						// Если это External IPv4
+						else if(dt->first.compare("amingConfigsIpExternal4") == 0) group.ipv4.ip = dt->second;
+						// Если это External IPv6
+						else if(dt->first.compare("amingConfigsIpExternal6") == 0) group.ipv6.ip = dt->second;
+						// Если это Resolver IPv4
+						else if(dt->first.compare("amingConfigsIpResolver4") == 0) group.ipv4.resolver = dt->second;
+						// Если это Resolver IPv6
+						else if(dt->first.compare("amingConfigsIpResolver6") == 0) group.ipv6.resolver = dt->second;
+						// Если это параметры прокси Connect
+						else if(dt->first.compare("amingConfigsProxyConnect") == 0){
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_CONNECT, group.options, getBoolean(dt->second[0]));
+						// Если это параметры прокси Upgrade
+						} else if(dt->first.compare("amingConfigsProxyUpgrade") == 0){
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_UPGRADE, group.options, getBoolean(dt->second[0]));
+						// Если это параметры прокси Agent
+						} else if(dt->first.compare("amingConfigsProxyAgent") == 0){
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_AGENT, group.options, getBoolean(dt->second[0]));
+						// Если это параметры прокси Deblock
+						} else if(dt->first.compare("amingConfigsProxyDeblock") == 0){
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_DEBLOCK, group.options, getBoolean(dt->second[0]));
+						// Если это параметры gzip Transfer
+						} else if(dt->first.compare("amingConfigsGzipTransfer") == 0){
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_GZIP, group.options, getBoolean(dt->second[0]));
+						// Если это параметры gzip Response
+						} else if(dt->first.compare("amingConfigsGzipResponse") == 0){
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_PGZIP, group.options, getBoolean(dt->second[0]));
+						// Если это параметры keepalive Enabled
+						} else if(dt->first.compare("amingConfigsKeepAliveEnabled") == 0){
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_KEEPALIVE, group.options, getBoolean(dt->second[0]));
+						// Если это параметры прокси Skill
+						} else if(dt->first.compare("amingConfigsProxySkill") == 0){
+							// Выполняем проверку на доступность опции
+							const bool check = (dt->second[0].compare("smart") == 0);
+							// Устанавливаем или убираем опцию
+							setProxyOptions(OPT_SMART, group.options, check);
+						// Если это параметры таймауты read
+						} else if(dt->first.compare("amingConfigsTimeoutsRead") == 0){
+							// Устанавливаем параметры
+							group.timeouts.read = (size_t) Anyks::getSeconds(dt->second[0]);
+						// Если это параметры таймауты write
+						} else if(dt->first.compare("amingConfigsTimeoutsWrite") == 0){
+							// Устанавливаем параметры
+							group.timeouts.write = (size_t) Anyks::getSeconds(dt->second[0]);
+						// Если это параметры таймауты upgrade
+						} else if(dt->first.compare("amingConfigsTimeoutsUpgrade") == 0){
+							// Устанавливаем параметры
+							group.timeouts.upgrade = (size_t) Anyks::getSeconds(dt->second[0]);
+						// Если это параметры speed input
+						} else if(dt->first.compare("amingConfigsSpeedInput") == 0){
+							// Устанавливаем параметры
+							group.buffers.read = Anyks::getSizeBuffer(dt->second[0]);
+						// Если это параметры speed output
+						} else if(dt->first.compare("amingConfigsSpeedOutput") == 0){
+							// Устанавливаем параметры
+							group.buffers.write = Anyks::getSizeBuffer(dt->second[0]);
+						// Если это параметры keepalive keepcnt
+						} else if(dt->first.compare("amingConfigsKeepAliveCnt") == 0){
+							// Устанавливаем параметры
+							group.keepalive.keepcnt = (int) ::atoi(dt->second[0].c_str());
+						// Если это параметры keepalive keepidle
+						} else if(dt->first.compare("amingConfigsKeepAliveIdle") == 0){
+							// Устанавливаем параметры
+							group.keepalive.keepidle = (int) ::atoi(dt->second[0].c_str());
+						// Если это параметры keepalive keepintvl
+						} else if(dt->first.compare("amingConfigsKeepAliveIntvl") == 0){
+							// Устанавливаем параметры
+							group.keepalive.keepintvl = (int) ::atoi(dt->second[0].c_str());
+						// Если это параметры connects size
+						} else if(dt->first.compare("amingConfigsConnectsSize") == 0){
+							// Устанавливаем параметры
+							group.connects.size = Anyks::getBytes(dt->second[0]);
+						// Если это параметры connects connect
+						} else if(dt->first.compare("amingConfigsConnectsConnect") == 0){
+							// Устанавливаем параметры
+							group.connects.connect = (u_int) ::atoi(dt->second[0].c_str());
+						// Если это параметры proxy subnet
+						} else if(dt->first.compare("amingConfigsProxySubnet") == 0){
+							// Устанавливаем параметры
+							group.proxy.subnet = getBoolean(dt->second[0]);
+						// Если это параметры proxy reverse
+						} else if(dt->first.compare("amingConfigsProxyReverse") == 0){
+							// Устанавливаем параметры
+							group.proxy.reverse = getBoolean(dt->second[0]);
+						// Если это параметры proxy forward
+						} else if(dt->first.compare("amingConfigsProxyForward") == 0){
+							// Устанавливаем параметры
+							group.proxy.forward = getBoolean(dt->second[0]);
+						// Если это параметры proxy transfer
+						} else if(dt->first.compare("amingConfigsProxyTransfer") == 0){
+							// Устанавливаем параметры
+							group.proxy.transfer = getBoolean(dt->second[0]);
+						// Если это параметры proxy pipelining
+						} else if(dt->first.compare("amingConfigsProxyPipelining") == 0){
+							// Устанавливаем параметры
+							group.proxy.pipelining = getBoolean(dt->second[0]);
+						// Если это параметры gzip regex
+						} else if(dt->first.compare("amingConfigsGzipRegex") == 0){
+							// Устанавливаем параметры
+							group.gzip.regex = dt->second[0];
+						// Если это параметры gzip vary
+						} else if(dt->first.compare("amingConfigsGzipVary") == 0){
+							// Устанавливаем параметры
+							group.gzip.vary = getBoolean(dt->second[0]);
+						// Если это параметры gzip length
+						} else if(dt->first.compare("amingConfigsGzipLength") == 0){
+							// Устанавливаем параметры
+							group.gzip.length = (int) ::atoi(dt->second[0].c_str());
+						// Если это параметры gzip chunk
+						} else if(dt->first.compare("amingConfigsGzipChunk") == 0){
+							// Устанавливаем параметры
+							group.gzip.chunk = Anyks::getBytes(dt->second[0]);
+						// Если это параметры gzip vhttp
+						} else if(dt->first.compare("amingConfigsGzipVhttp") == 0){
+							// Устанавливаем параметры
+							group.gzip.vhttp = dt->second;
+						// Если это параметры gzip types
+						} else if(dt->first.compare("amingConfigsGzipTypes") == 0){
+							// Устанавливаем параметры
+							group.gzip.types = dt->second;
+						// Если это параметры gzip proxied
+						} else if(dt->first.compare("amingConfigsGzipProxied") == 0){
+							// Устанавливаем параметры
+							group.gzip.proxied = dt->second;
+						// Если это параметры gzip level
+						} else if(dt->first.compare("amingConfigsGzipLevel") == 0){
+							// Уровень сжатия gzip
+							u_int level = 0x00;
+							// Получаем уровень сжатия
+							const string gzipLevel = dt->second[0];
+							// Если размер указан
+							if(!gzipLevel.empty()){
+								// Определяем тип сжатия
+								if(gzipLevel.compare("default") == 0)		level = Z_DEFAULT_COMPRESSION;
+								else if(gzipLevel.compare("best") == 0)		level = Z_BEST_COMPRESSION;
+								else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
+								else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
+							}
+							if(level != 0x00) group.gzip.level = level;
+						}
+					}
+				}
+				// Создаем список идентификаторов группы
+				group.idnt = {idnt_ip4, idnt_ip6, idnt_network4, idnt_network6, idnt_mac};
+			}
+		}
+	}
+}
+/**
  * setDataGroupFromFile Метод заполнения данных группы из конфигурационного файла
  * @param group объект группы
  * @param ini   указатель на объект конфигурации
@@ -267,6 +493,20 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	if(rmINI) delete ini;
 }
 /**
+ * setDataGroup Метод заполнения данных группы
+ * @param group объект группы
+ * @param ini   указатель на объект конфигурации
+ */
+void Groups::setDataGroup(Groups::Data &group, INI * ini){
+	// Определяем тип системы откуда нужно получить конфигурационные файлы
+	switch(this->typeConfigs){
+		// Переопределяем дефолтные данные из файла конфигурации
+		case 0: setDataGroupFromFile(group, ini); break;
+		// Переопределяем дефолтные данные из LDAP
+		case 1: setDataGroupFromLdap(group); break;
+	}
+}
+/**
  * createDefaultData Метод создания группы с параметрами по умолчанию
  * @param  id   идентификатор групыы
  * @param  name название группы
@@ -342,9 +582,9 @@ const bool Groups::readGroupsFromLdap(){
 	// Создаем объект подключения LDAP
 	ALDAP ldap(this->config, this->log);
 	// Запрашиваем данные пользователей
-	auto users = ldap.data(this->ldap.udn, "gidNumber,uidNumber", this->ldap.uscope, this->ldap.ufilter);
+	auto users = ldap.data(this->ldap.dnUser, "gidNumber,uidNumber", this->ldap.scopeUser, this->ldap.filterUser);
 	// Запрашиваем данные групп
-	auto groups = ldap.data(this->ldap.gdn, "cn,description,gidNumber,Password,memberUid", this->ldap.gscope, this->ldap.gfilter);
+	auto groups = ldap.data(this->ldap.dnGroup, "cn,description,gidNumber,Password,memberUid", this->ldap.scopeGroup, this->ldap.filterGroup);
 	// Если группы получены
 	if(!groups.empty()){
 		// Переходим по всему объекту групп
@@ -394,7 +634,7 @@ const bool Groups::readGroupsFromLdap(){
 			// Добавляем описание группы
 			group.desc = description;
 			// Переопределяем дефолтные данные из файла конфигурации
-			setDataGroupFromFile(group);
+			setDataGroup(group);
 			// Устанавливаем параметры http парсера
 			group.headers.setOptions(group.options);
 			// Добавляем группу в список групп
@@ -519,7 +759,7 @@ const bool Groups::readGroupsFromPam(){
 								// Добавляем пользователя в список
 								group.users.push_back(pw->pw_uid);
 								// Переопределяем дефолтные данные из файла конфигурации
-								setDataGroupFromFile(group);
+								setDataGroup(group);
 								// Устанавливаем параметры http парсера
 								group.headers.setOptions(group.options);
 								// Добавляем группу в список групп
@@ -614,7 +854,7 @@ const bool Groups::readGroupsFromFile(){
 						}
 					}
 					// Переопределяем дефолтные данные из файла конфигурации
-					setDataGroupFromFile(group, &ini);
+					setDataGroup(group, &ini);
 					// Устанавливаем параметры http парсера
 					group.headers.setOptions(group.options);
 					// Добавляем группу в список групп
@@ -1250,6 +1490,8 @@ Groups::Groups(Config * config, LogApp * log){
 		this->config = config;
 		// Запоминаем тип поиска групп пользователя
 		this->typeSearch = 6;
+		// Заполняем тип извлечения конфигурационных данных
+		this->typeConfigs = 1;
 		// Запоминаем время в течение которого запрещено обновлять данные
 		this->maxUpdate = 600;
 		// Максимальное количество групп пользователя для PAM
@@ -1258,10 +1500,13 @@ Groups::Groups(Config * config, LogApp * log){
 		this->ldap = {
 			"ou=groups,dc=agro24,dc=dev",
 			"ou=users,dc=agro24,dc=dev",
+			"ou=configs,ou=aming,dc=agro24,dc=dev",
+			"one",
 			"one",
 			"one",
 			"(objectClass=posixGroup)",
-			"(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))"
+			"(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))",
+			"(&(amingConfigsGroupId=%g)(amingConfigsType=groups)(objectClass=amingConfigs))"
 		};
 		// Считываем данные групп
 		update();

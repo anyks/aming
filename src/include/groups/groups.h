@@ -39,12 +39,15 @@ class Groups {
 		 * Ldap Структура ldap
 		 */
 		struct Ldap {
-			string gdn;
-			string udn;
-			string gscope;
-			string uscope;
-			string gfilter;
-			string ufilter;
+			string dnGroup;
+			string dnUser;
+			string dnConfig;
+			string scopeGroup;
+			string scopeUser;
+			string scopeConfig;
+			string filterGroup;
+			string filterUser;
+			string filterConfig;
 		};
 		/**
 		 * Timeout Структура таймаутов
@@ -144,6 +147,8 @@ class Groups {
 		time_t lastUpdate = 0;
 		// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
 		u_short typeSearch = 0;
+		// Тип поиска конфигурационных данных
+		u_short typeConfigs = 0; // (0 - Из файла, 1 - из LDAP)
 		// Максимальное количество групп пользователя для PAM
 		int maxPamGroupsUser = 0;
 		// Объект ldap подклчюения
@@ -162,11 +167,22 @@ class Groups {
 		 */
 		void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
 		/**
+		 * setDataGroupFromLdap Метод заполнения данных группы из LDAP
+		 * @param group объект группы
+		 */
+		void setDataGroupFromLdap(Data &group);
+		/**
 		 * setDataGroupFromFile Метод заполнения данных группы из конфигурационного файла
 		 * @param group объект группы
 		 * @param ini   указатель на объект конфигурации
 		 */
 		void setDataGroupFromFile(Data &group, INI * ini = nullptr);
+		/**
+		 * setDataGroup Метод заполнения данных группы
+		 * @param group объект группы
+		 * @param ini   указатель на объект конфигурации
+		 */
+		void setDataGroup(Data &group, INI * ini = nullptr);
 		/**
 		 * createDefaultData Метод создания группы с параметрами по умолчанию
 		 * @param  id   идентификатор групыы
