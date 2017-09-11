@@ -803,8 +803,6 @@ const bool Groups::readGroupsFromFile(){
 			auto groups = ini.getParamsInSection("groups");
 			// Получаем список паролей
 			auto passwords = ini.getParamsInSection("passwords");
-			// Получаем список типов авторизаций
-			auto auths = ini.getParamsInSection("auths");
 			// Получаем список описаний
 			auto descriptions = ini.getParamsInSection("descriptions");
 			// Переходим по списку групп
@@ -836,16 +834,6 @@ const bool Groups::readGroupsFromFile(){
 								// Добавляем пользователя в список
 								if(uid > 0) group.users.push_back(uid);
 							}
-						}
-					}
-					// Если список авторизаций групп существуют
-					if(!auths.empty()){
-						// Переходим по списку паролей
-						for(auto gp = auths.cbegin(); gp != auths.cend(); ++gp){
-							// Если группа соответствует текущей, устанавливаем пароль
-							if((Anyks::isNumber(gp->key)
-							&& (gid_t(::atoi(gp->key.c_str())) == group.id))
-							|| (gp->key.compare(group.name) == 0)) group.auth = gp->value;
 						}
 					}
 					// Если пароли групп существуют
