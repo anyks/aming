@@ -55,7 +55,7 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 		const string params =	"amingConfigsConnectsConnect,amingConfigsConnectsSize,amingConfigsGzipChunk,"
 								"amingConfigsGzipLength,amingConfigsGzipLevel,amingConfigsGzipProxied,"
 								"amingConfigsGzipRegex,amingConfigsGzipResponse,amingConfigsGzipTransfer,"
-								"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,"
+								"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,amingConfigsAuth,"
 								"amingConfigsIdntIp4,amingConfigsIdntIp6,amingConfigsIdntMac,amingConfigsIdntNetwork4,"
 								"amingConfigsIdntNetwork6,amingConfigsIpExternal4,amingConfigsIpExternal6,"
 								"amingConfigsIpResolver4,amingConfigsIpResolver6,amingConfigsKeepAliveCnt,"
