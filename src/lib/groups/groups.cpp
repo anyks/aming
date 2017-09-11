@@ -112,6 +112,8 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 						else if(dt->first.compare("amingConfigsIpResolver4") == 0) group.ipv4.resolver = dt->second;
 						// Если это Resolver IPv6
 						else if(dt->first.compare("amingConfigsIpResolver6") == 0) group.ipv6.resolver = dt->second;
+						// Если это тип авторизации клиента
+						else if(dt->first.compare("amingConfigsAuth") == 0) group.auth = Anyks::toCase(dt->second[0]);
 						// Если это параметры прокси Connect
 						else if(dt->first.compare("amingConfigsProxyConnect") == 0){
 							// Устанавливаем или убираем опцию
@@ -522,6 +524,7 @@ const Groups::Data Groups::createDefaultData(const gid_t id, const string name){
 		// Заполняем данные группы
 		group.id		= id;
 		group.name		= Anyks::toCase(groupName);
+		group.auth		= this->config->auth.auth;
 		group.options	= this->config->options;
 		group.ipv4		= {this->config->ipv4.external, this->config->ipv4.resolver};
 		group.ipv6		= {this->config->ipv6.external, this->config->ipv6.resolver};
@@ -800,6 +803,8 @@ const bool Groups::readGroupsFromFile(){
 			auto groups = ini.getParamsInSection("groups");
 			// Получаем список паролей
 			auto passwords = ini.getParamsInSection("passwords");
+			// Получаем список типов авторизаций
+			auto auths = ini.getParamsInSection("auths");
 			// Получаем список описаний
 			auto descriptions = ini.getParamsInSection("descriptions");
 			// Переходим по списку групп
@@ -831,6 +836,16 @@ const bool Groups::readGroupsFromFile(){
 								// Добавляем пользователя в список
 								if(uid > 0) group.users.push_back(uid);
 							}
+						}
+					}
+					// Если список авторизаций групп существуют
+					if(!auths.empty()){
+						// Переходим по списку паролей
+						for(auto gp = auths.cbegin(); gp != auths.cend(); ++gp){
+							// Если группа соответствует текущей, устанавливаем пароль
+							if((Anyks::isNumber(gp->key)
+							&& (gid_t(::atoi(gp->key.c_str())) == group.id))
+							|| (gp->key.compare(group.name) == 0)) group.auth = gp->value;
 						}
 					}
 					// Если пароли групп существуют

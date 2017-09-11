@@ -146,6 +146,8 @@ Config::Config(const string filename){
 		};
 		// Заполняем структуру auth
 		this->auth = {
+			// Тип авторизации клиента
+			AUTH_CLIENT_TYPE,
 			// Активировать авторизацию через пользователей в операционной системе
 			AUTH_OS_USERS,
 			// Активировать авторизацию через файл со списком пользователей и ip/mac адресами
@@ -421,6 +423,8 @@ Config::Config(const string filename){
 		};
 		// Заполняем структуру auth
 		this->auth = {
+			// Тип авторизации клиента
+			Anyks::toCase(ini.getString("authorization", "auth", AUTH_CLIENT_TYPE)),
 			// Активировать авторизацию через пользователей в операционной системе
 			ini.getBoolean("authorization", "osusers", AUTH_OS_USERS),
 			// Активировать авторизацию через файл со списком пользователей и ip/mac адресами

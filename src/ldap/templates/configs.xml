@@ -210,6 +210,22 @@
 			<page>2</page>
 		</attribute>
 
+		<attribute id="amingConfigsAuth">
+			<display>Тип авторизации клиента</display>
+			<icon>home-big.png</icon>
+			<type>select</type>
+			<default>basic</default>
+			<value id="basic">Basic</value>
+			<value id="bearer">Bearer</value>
+			<value id="digest">Digest</value>
+			<value id="hmac">HMAC</value>
+			<value id="hoba">HOBA</value>
+			<value id="mutual">Mutual</value>
+			<value id="aws4-hmac-sha256">AWS4-HMAC-SHA256</value>
+			<order>13</order>
+			<page>2</page>
+		</attribute>
+
 		<attribute id="amingConfigsProxySubnet">
 			<display>Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть</display>
 			<icon>server-settings.png</icon>

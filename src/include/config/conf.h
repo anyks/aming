@@ -129,6 +129,7 @@
 #define KEEPALIVE_INTVL 2
 
 // Модуль авторизаций
+#define AUTH_CLIENT_TYPE "basic"
 #define AUTH_OS_USERS true
 #define AUTH_FILE_USERS false
 #define AUTH_ENABLED false
@@ -218,6 +219,7 @@ class Config {
 		 * Authorization Структура параметров авторизации
 		 */
 		struct Authorization {
+			string auth;	// Тип авторизации клиента
 			bool osusers;	// Активировать авторизацию через пользователей в операционной системе
 			bool listusers;	// Активировать авторизацию через файл со списком пользователей и ip/mac адресами
 			bool enabled;	// Разрешить авторизацию пользователя
