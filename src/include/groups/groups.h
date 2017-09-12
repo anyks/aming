@@ -127,7 +127,7 @@ class Groups {
 			u_short options;		// Основные параметры прокси
 			u_short type;			// Тип группы (0 - файлы, 1 - PAM, 2 - LDAP)
 			string name;			// Название группы
-			string pass;			// Пароль группы (пароль в зашифрованном виде)
+			string pass;			// Пароль группы
 			string auth;			// Тип авторизации клиентов
 			string desc;			// Описание групп
 			ID idnt;				// Блок списков идентификации групп
@@ -215,19 +215,19 @@ class Groups {
 		 * getAllGroups Метод получения данных всех групп
 		 * @return      список данных всех групп
 		 */
-		const vector <Data> getAllGroups();
+		const vector <const Data *> getAllGroups();
 		/**
 		 * getDataById Метод получения данные группы по идентификатору группы
 		 * @param  gid идентификатор группы
 		 * @return     данные группы
 		 */
-		const Data getDataById(const gid_t gid);
+		const Data * getDataById(const gid_t gid);
 		/**
 		 * getDataByName Метод получения данные группы по имени группы
 		 * @param  groupName название группы
 		 * @return           данные группы
 		 */
-		const Data getDataByName(const string groupName);
+		const Data * getDataByName(const string groupName);
 		/**
 		 * getGroupIdByUser Метод получения идентификатор группы по идентификатору пользователя
 		 * @param  uid идентификатор пользователя
@@ -283,7 +283,7 @@ class Groups {
 		/**
 		 * checkGroupById Метод проверки на существование группы
 		 * @param  gid идентификатор группы
-		 * @return     данные группы
+		 * @return     результат проверки
 		 */
 		const bool checkGroupById(const gid_t gid);
 		/**

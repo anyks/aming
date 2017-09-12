@@ -241,7 +241,7 @@ void Headers2::createRulesList(const Headers2::Params params){
 				// Переходим по всему списку групп
 				for(auto it = data_groups.cbegin(); it != data_groups.cend(); ++it){
 					// Выполняем создание правила
-					createRules(it->id);
+					createRules((* it)->id);
 				}
 				// Выходим из цикла
 				break;

@@ -1751,9 +1751,9 @@ void HttpProxy::run_server(const evutil_socket_t fd, void * ctx){
 
 		for(auto it = gdata.cbegin(); it != gdata.cend(); ++it){
 			
-			printf(" =============== %s %s\r\n", it->name.c_str(), (!it->desc.empty() ? string("[") + it->desc + string("]") : "").c_str());
+			printf(" =============== %s %s\r\n", (* it)->name.c_str(), (!(* it)->desc.empty() ? string("[") + (* it)->desc + string("]") : "").c_str());
 
-			for(auto ut = it->users.cbegin(); ut != it->users.cend(); ++ut){
+			for(auto ut = (* it)->users.cbegin(); ut != (* it)->users.cend(); ++ut){
 				cout << " ++++++++++++++ " << (* ut) << endl;
 			}
 		}

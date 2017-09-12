@@ -510,7 +510,7 @@ void Groups::setDataGroup(Groups::Data &group, INI * ini){
 }
 /**
  * createDefaultData Метод создания группы с параметрами по умолчанию
- * @param  id   идентификатор групыы
+ * @param  id   идентификатор группы
  * @param  name название группы
  * @return      созданная группа
  */
@@ -824,7 +824,7 @@ const bool Groups::readGroupsFromFile(){
 							// Если группа соответствует текущей
 							if((Anyks::isNumber(ut->value)
 							&& (gid_t(::atoi(ut->value.c_str())) == group.id))
-							|| (ut->value.compare(group.name) == 0)){
+							|| (Anyks::toCase(ut->value).compare(group.name) == 0)){
 								// Создаем идентификатор пользователя
 								uid_t uid = 0;
 								// Проверяем является ли название пользователя идентификатором
@@ -843,7 +843,7 @@ const bool Groups::readGroupsFromFile(){
 							// Если группа соответствует текущей, устанавливаем пароль
 							if((Anyks::isNumber(gp->key)
 							&& (gid_t(::atoi(gp->key.c_str())) == group.id))
-							|| (gp->key.compare(group.name) == 0)) group.pass = gp->value;
+							|| (Anyks::toCase(gp->key).compare(group.name) == 0)) group.pass = gp->value;
 						}
 					}
 					// Если описания групп существуют
@@ -853,7 +853,7 @@ const bool Groups::readGroupsFromFile(){
 							// Если группа соответствует текущей, устанавливаем описание
 							if((Anyks::isNumber(gd->key)
 							&& (gid_t(::atoi(gd->key.c_str())) == group.id))
-							|| (gd->key.compare(group.name) == 0)) group.desc = gd->value;
+							|| (Anyks::toCase(gd->key).compare(group.name) == 0)) group.desc = gd->value;
 						}
 					}
 					// Переопределяем дефолтные данные из файла конфигурации
@@ -923,15 +923,15 @@ const bool Groups::update(){
  * getAllGroups Метод получения данных всех групп
  * @return      список данных всех групп
  */
-const vector <Groups::Data> Groups::getAllGroups(){
+const vector <const Groups::Data *> Groups::getAllGroups(){
 	// Список данных по умолчанию
-	vector <Data> result;
+	vector <const Data *> result;
 	// Если данные групп существуют
 	if(!this->data.empty()){
 		// Переходим по всем данным групп
 		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
 			// Добавляем в список данные групп
-			result.push_back(it->second);
+			result.push_back(&(it->second));
 		}
 	}
 	// Выводим результат
@@ -942,38 +942,34 @@ const vector <Groups::Data> Groups::getAllGroups(){
  * @param  gid идентификатор группы
  * @return     данные группы
  */
-const Groups::Data Groups::getDataById(const gid_t gid){
-	// Результат работы функции
-	Data result;
+const Groups::Data * Groups::getDataById(const gid_t gid){
 	// Если идентификатор группы передан
 	if(gid && this->data.count(gid)){
 		// Получаем данные группы
-		result = this->data.find(gid)->second;
+		return &(this->data.find(gid)->second);
 	// Если группа не найдена
 	} else if(gid && update()) {
 		// Получаем данные группы
-		result = getDataById(gid);
+		return getDataById(gid);
 	}
 	// Выводим результат
-	return result;
+	return nullptr;
 }
 /**
  * getDataByName Метод получения данные группы по имени группы
  * @param  groupName название группы
  * @return           данные группы
  */
-const Groups::Data Groups::getDataByName(const string groupName){
-	// Результат работы функции
-	Data result;
+const Groups::Data * Groups::getDataByName(const string groupName){
 	// Если название группы передано
 	if(!groupName.empty()){
 		// Получаем идентификатор группы
 		const gid_t gid = getIdByName(groupName);
 		// Выводим результат
-		result = getDataById(gid);
+		return getDataById(gid);
 	}
 	// Выводим результат
-	return result;
+	return nullptr;
 }
 /**
  * getGroupIdByUser Метод получения идентификатор группы по идентификатору пользователя
@@ -1328,7 +1324,7 @@ const vector <uid_t> Groups::getIdAllUsers(){
 		// Переходим по всем группам
 		for(auto it = groups.cbegin(); it != groups.cend(); ++it){
 			// Копируем весь список пользователей
-			copy(it->users.cbegin(), it->users.cend(), back_inserter(result));
+			copy((* it)->users.cbegin(), (* it)->users.cend(), back_inserter(result));
 		}
 		// Сортируем
 		sort(result.begin(), result.end());
