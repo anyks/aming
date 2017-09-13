@@ -234,7 +234,7 @@ void Users::setDataUserFromLdap(Users::Data &user){
 						// Если это параметры gzip level
 						} else if(dt->first.compare("amingConfigsGzipLevel") == 0){
 							// Уровень сжатия gzip
-							u_int level = 0x00;
+							u_int level = OPT_NULL;
 							// Получаем уровень сжатия
 							const string gzipLevel = dt->second[0];
 							// Если размер указан
@@ -245,7 +245,7 @@ void Users::setDataUserFromLdap(Users::Data &user){
 								else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
 								else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
 							}
-							if(level != 0x00) user.gzip.level = level;
+							if(level != OPT_NULL) user.gzip.level = level;
 						}
 					}
 				}
@@ -471,7 +471,7 @@ void Users::setDataUserFromFile(Users::Data &user, INI * ini){
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(user.name + "_gzip", "level")){
 		// Уровень сжатия gzip
-		u_int level = 0x00;
+		u_int level = OPT_NULL;
 		// Получаем уровень сжатия
 		const string gzipLevel = ini->getString(user.name + "_gzip", "level");
 		// Если размер указан
@@ -482,7 +482,7 @@ void Users::setDataUserFromFile(Users::Data &user, INI * ini){
 			else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
 			else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
 		}
-		if(level != 0x00) user.gzip.level = level;
+		if(level != OPT_NULL) user.gzip.level = level;
 	}
 	// Удаляем объект конфигурации если это требуется
 	if(rmINI) delete ini;
@@ -721,6 +721,170 @@ const bool Users::update(){
 		}
 		// Сообщаем что все удачно
 		result = true;
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getAllUsers Метод получения данных всех пользователей
+ * @return     список данных всех пользователей
+ */
+const vector <const Users::Data *> Users::getAllUsers(){
+	// Список данных по умолчанию
+	vector <const Data *> result;
+	// Если данные пользователей существуют
+	if(!this->data.empty()){
+		// Переходим по всем данным пользователей
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Добавляем в список данные пользователей
+			result.push_back(&(it->second));
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * createUser Метод создания пользователя
+ * @param ip  адрес интернет протокола клиента
+ * @param mac аппаратный адрес сетевого интерфейса клиента
+ * @return    данные пользователя
+ */
+const Users::Data * Users::createUser(const string ip, const string mac){
+	return nullptr;
+}
+/**
+ * getDataById Метод получения данные пользователя по идентификатору
+ * @param  uid идентификатор пользователя
+ * @return     данные пользователя
+ */
+const Users::Data * Users::getDataById(const uid_t uid){
+	// Если данные пользователей существуют
+	if(uid && !this->data.empty()){
+		// Выполняем поиск данных пользователя
+		if(this->data.count(uid)){
+			// Получаем название пользователя
+			return &(this->data.find(uid)->second);
+		// Если пользователь не найден
+		} else if(update()) {
+			// Получаем имя пользователя
+			return getDataById(uid);
+		}
+	}
+	// Выводим результат
+	return nullptr;
+}
+/**
+ * getDataByName Метод получения данные пользователя по имени
+ * @param  groupName название пользователя
+ * @return           данные пользователя
+ */
+const Users::Data * Users::getDataByName(const string userName){
+	// Если данные пользователей существуют
+	if(!userName.empty() && !this->data.empty()){
+		// Приводим имя пользователя к нужному виду
+		string name = Anyks::toCase(userName);
+		// Переходим по всем данным пользователей
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Если нашли имя пользователя
+			if(it->second.name.compare(name) == 0){
+				// Запоминаем идентификатор пользователя
+				return &(it->second);
+			}
+		}
+		// Если пользователь не найден
+		if(update()) return getDataByName(userName);
+	}
+	// Выводим результат
+	return nullptr;
+}
+/**
+ * checkUserById Метод проверки на существование пользователя
+ * @param  uid идентификатор пользователя
+ * @return     результат проверки
+ */
+const bool Users::checkUserById(const uid_t uid){
+	// Если данные пользователей существуют
+	if(uid && !this->data.empty()){
+		// Выводим результат проверки
+		return (this->data.count(uid) ? true : false);
+	}
+	// Сообщаем что ничего не найдено
+	return false;
+}
+/**
+ * checkGroupByName Метод проверки на существование пользователя
+ * @param  userName название пользователя
+ * @return          результат проверки
+ */
+const bool Users::checkUserByName(const string userName){
+	// Выполняем проверку на существование пользователя
+	return (getIdByName(userName) > -1 ? true : false);
+}
+/**
+ * getIdByName Метод извлечения идентификатора пользователя по его имени
+ * @param  userName название пользователя
+ * @return          идентификатор пользователя
+ */
+const uid_t Users::getIdByName(const string userName){
+	// Если данные пользователей существуют
+	if(!userName.empty() && !this->data.empty()){
+		// Приводим имя пользователя к нужному виду
+		string name = Anyks::toCase(userName);
+		// Переходим по всем данным пользователей
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Если нашли имя пользователя
+			if(it->second.name.compare(name) == 0){
+				// Запоминаем идентификатор пользователя
+				return it->first;
+			}
+		}
+		// Если пользователь не найден
+		if(update()) return getIdByName(userName);
+	}
+	// Выводим результат
+	return -1;
+}
+/**
+ * getNameById Метод извлечения имени пользователя по его идентификатору
+ * @param  uid идентификатор пользователя
+ * @return     название пользователя
+ */
+const string Users::getNameById(const uid_t uid){
+	// Если данные пользователей существуют
+	if(uid && !this->data.empty()){
+		// Выполняем поиск данных пользователя
+		if(this->data.count(uid)){
+			// Получаем название пользователя
+			return this->data.find(uid)->second.name;
+		// Если пользователь не найден
+		} else if(update()) {
+			// Получаем имя пользователя
+			return getNameById(uid);
+		}
+	}
+	// Выводим результат
+	return string();
+}
+/**
+ * getIdAllUsers Метод получения списка всех пользователей
+ * @return список идентификаторов пользователей
+ */
+const vector <uid_t> Users::getIdAllUsers(){
+	// Результат работы функции
+	vector <uid_t> result;
+	// Получаем список пользователей
+	auto users = getAllUsers();
+	// Если пользователи существуют то переходим по ним
+	if(!users.empty()){
+		// Переходим по всем пользователям
+		for(auto it = users.cbegin(); it != users.cend(); ++it){
+			// Копируем весь список пользователей
+			result.push_back((* it)->id);
+		}
+		// Сортируем
+		sort(result.begin(), result.end());
+		// Удаляем дубликаты
+		result.resize(unique(result.begin(), result.end()) - result.begin());
 	}
 	// Выводим результат
 	return result;

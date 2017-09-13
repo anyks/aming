@@ -208,69 +208,63 @@ class Users {
 	public:
 		/**
 		 * getAllUsers Метод получения данных всех пользователей
-		 * @return      список данных всех пользователей
+		 * @return     список данных всех пользователей
 		 */
-		 const vector <const Data *> getAllUsers();
+		const vector <const Data *> getAllUsers();
 		/**
-		  * createUser Метод создания пользователя
-		  * @param ip  адрес интернет протокола клиента
-		  * @param mac аппаратный адрес сетевого интерфейса клиента
-		  * @return    данные пользователя
-		  */
-		 const Data * createUser(const string ip, const string mac);
-		 /**
-		  * getDataById Метод получения данные пользователя по идентификатору
-		  * @param  uid идентификатор пользователя
-		  * @return     данные пользователя
-		  */
-		 const Data * getDataById(const uid_t uid);
-		 /**
-		  * getDataByName Метод получения данные пользователя по имени
-		  * @param  groupName название пользователя
-		  * @return           данные пользователя
-		  */
-		 const Data * getDataByName(const string userName);
-		 /**
-		  * checkUserById Метод проверки на существование пользователя
-		  * @param  uid идентификатор пользователя
-		  * @return     результат проверки
-		  */
-		 const bool checkUserById(const uid_t uid);
-		 /**
-		  * checkGroupByName Метод проверки на существование пользователя
-		  * @param  userName название пользователя
-		  * @return          результат проверки
-		  */
-		 const bool checkUserByName(const string userName);
-		 /**
-		  * getUidByName Метод извлечения идентификатора пользователя по его имени
-		  * @param  userName название пользователя
-		  * @return          идентификатор пользователя
-		  */
-		 const uid_t getUidByName(const string userName);
-		 /**
-		  * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
-		  * @param  uid идентификатор пользователя
-		  * @return     название пользователя
-		  */
-		 const string getUserNameByUid(const uid_t uid);
-		 /**
-		  * getIdAllUsers Метод получения списка всех пользователей
-		  * @return список идентификаторов пользователей
-		  */
-		 const vector <uid_t> getIdAllUsers();
-		 /**
-		  * addUser Метод добавления пользователя
-		  * @param  user данные пользователя
-		  * @return      результат добавления
-		  */
-		 const bool addUser(const Data &user);
-		 /**
-		  * Users Конструктор
-		  * @param config конфигурационные данные
-		  * @param log    объект лога для вывода информации
-		  * @param groups объект групп пользователей
-		  */
+		 * createUser Метод создания пользователя
+		 * @param ip  адрес интернет протокола клиента
+		 * @param mac аппаратный адрес сетевого интерфейса клиента
+		 * @return    данные пользователя
+		 */
+		const Data * createUser(const string ip, const string mac);
+		/**
+		 * getDataById Метод получения данные пользователя по идентификатору
+		 * @param  uid идентификатор пользователя
+		 * @return     данные пользователя
+		 */
+		const Data * getDataById(const uid_t uid);
+		/**
+		 * getDataByName Метод получения данные пользователя по имени
+		 * @param  groupName название пользователя
+		 * @return           данные пользователя
+		 */
+		const Data * getDataByName(const string userName);
+		/**
+		 * checkUserById Метод проверки на существование пользователя
+		 * @param  uid идентификатор пользователя
+		 * @return     результат проверки
+		 */
+		const bool checkUserById(const uid_t uid);
+		/**
+		 * checkGroupByName Метод проверки на существование пользователя
+		 * @param  userName название пользователя
+		 * @return          результат проверки
+		 */
+		const bool checkUserByName(const string userName);
+		/**
+		 * getIdByName Метод извлечения идентификатора пользователя по его имени
+		 * @param  userName название пользователя
+		 * @return          идентификатор пользователя
+		 */
+		const uid_t getIdByName(const string userName);
+		/**
+		 * getNameById Метод извлечения имени пользователя по его идентификатору
+		 * @param  uid идентификатор пользователя
+		 * @return     название пользователя
+		 */
+		const string getNameById(const uid_t uid);
+		/**
+		 * getIdAllUsers Метод получения списка всех пользователей
+		 * @return список идентификаторов пользователей
+		 */
+		const vector <uid_t> getIdAllUsers();
+		/**
+		 * Users Конструктор
+		 * @param config конфигурационные данные
+		 * @param log    объект лога для вывода информации
+		 * @param groups объект групп пользователей
+		 */
 		Users(Config * config = nullptr, LogApp * log = nullptr, Groups * groups = nullptr);
 };
 

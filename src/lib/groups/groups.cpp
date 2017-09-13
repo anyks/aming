@@ -239,7 +239,7 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 						// Если это параметры gzip level
 						} else if(dt->first.compare("amingConfigsGzipLevel") == 0){
 							// Уровень сжатия gzip
-							u_int level = 0x00;
+							u_int level = OPT_NULL;
 							// Получаем уровень сжатия
 							const string gzipLevel = dt->second[0];
 							// Если размер указан
@@ -250,7 +250,7 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 								else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
 								else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
 							}
-							if(level != 0x00) group.gzip.level = level;
+							if(level != OPT_NULL) group.gzip.level = level;
 						}
 					}
 				}
@@ -478,7 +478,7 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_gzip", "level")){
 		// Уровень сжатия gzip
-		u_int level = 0x00;
+		u_int level = OPT_NULL;
 		// Получаем уровень сжатия
 		const string gzipLevel = ini->getString(group.name + "_gzip", "level");
 		// Если размер указан
@@ -489,7 +489,7 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 			else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
 			else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
 		}
-		if(level != 0x00) group.gzip.level = level;
+		if(level != OPT_NULL) group.gzip.level = level;
 	}
 	// Удаляем объект конфигурации если это требуется
 	if(rmINI) delete ini;
@@ -621,7 +621,7 @@ const bool Groups::readGroupsFromLdap(){
 							// Получаем идентификатор пользвоателя
 							uid_t uid = getUidByName(* ut);
 							// Добавляем в список идентификатор пользователя
-							if(uid > 0) users.push_back(uid);
+							if(uid > -1) users.push_back(uid);
 						}
 					}
 				}
@@ -826,13 +826,13 @@ const bool Groups::readGroupsFromFile(){
 							&& (gid_t(::atoi(ut->value.c_str())) == group.id))
 							|| (Anyks::toCase(ut->value).compare(group.name) == 0)){
 								// Создаем идентификатор пользователя
-								uid_t uid = 0;
+								uid_t uid = -1;
 								// Проверяем является ли название пользователя идентификатором
 								if(Anyks::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
 								// Если это не идентификатор то запрашиваем идентификатор пользователя
 								else uid = getUidByName(ut->key);
 								// Добавляем пользователя в список
-								if(uid > 0) group.users.push_back(uid);
+								if(uid > -1) group.users.push_back(uid);
 							}
 						}
 					}
@@ -943,14 +943,17 @@ const vector <const Groups::Data *> Groups::getAllGroups(){
  * @return     данные группы
  */
 const Groups::Data * Groups::getDataById(const gid_t gid){
-	// Если идентификатор группы передан
-	if(gid && this->data.count(gid)){
-		// Получаем данные группы
-		return &(this->data.find(gid)->second);
-	// Если группа не найдена
-	} else if(gid && update()) {
-		// Получаем данные группы
-		return getDataById(gid);
+	// Если данные групп существуют
+	if(gid && !this->data.empty()){
+		// Выполняем поиск данных групп
+		if(this->data.count(gid)){
+			// Получаем название группы
+			return &(this->data.find(gid)->second);
+		// Если группа не найдена
+		} else if(update()) {
+			// Получаем имя группы
+			return getDataById(gid);
+		}
 	}
 	// Выводим результат
 	return nullptr;
@@ -961,12 +964,20 @@ const Groups::Data * Groups::getDataById(const gid_t gid){
  * @return           данные группы
  */
 const Groups::Data * Groups::getDataByName(const string groupName){
-	// Если название группы передано
-	if(!groupName.empty()){
-		// Получаем идентификатор группы
-		const gid_t gid = getIdByName(groupName);
-		// Выводим результат
-		return getDataById(gid);
+	// Если данные групп существуют
+	if(!groupName.empty() && !this->data.empty()){
+		// Приводим имя группы к нужному виду
+		string name = Anyks::toCase(groupName);
+		// Переходим по всем данным групп
+		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			// Если нашли имя группы
+			if(it->second.name.compare(name) == 0){
+				// Запоминаем идентификатор группы
+				return &(it->second);
+			}
+		}
+		// Если группа не найдена
+		if(update()) return getDataByName(groupName);
 	}
 	// Выводим результат
 	return nullptr;
@@ -1200,10 +1211,10 @@ const bool Groups::checkGroupByName(const string groupName){
  */
 const uid_t Groups::getUidByName(const string userName){
 	// Результат работы функции
-	uid_t result = 0;
+	uid_t result = -1;
 	// Если идентификатор пользователя передан
 	if(!userName.empty()){
-		result = 0;
+		result = -1;
 	}
 	// Выводим результат
 	return result;
@@ -1214,25 +1225,21 @@ const uid_t Groups::getUidByName(const string userName){
  * @return           идентификатор группы
  */
 const gid_t Groups::getIdByName(const string groupName){
-	// Результат работы функции
-	gid_t result = 0;
 	// Если идентификатор группы передан
-	if(!groupName.empty()){
+	if(!groupName.empty() && !this->data.empty()){
+		// Запоминаем полученное название группы
+		string name = Anyks::toCase(groupName);
 		// Переходим по всему списку групп
 		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
-			// Запоминаем полученное название группы
-			string name = groupName;
 			// Сравниваем группы в базе
-			if(it->second.name.compare(Anyks::toCase(name)) == 0){
+			if(it->second.name.compare(name) == 0){
 				// Запоминаем полученный идентификатор
-				result = it->first;
-				// Выходим из цикла
-				break;
+				return it->first;
 			}
 		}
 	}
 	// Выводим результат
-	return result;
+	return -1;
 }
 /**
  * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
@@ -1251,19 +1258,20 @@ const string Groups::getUserNameByUid(const uid_t uid){
  * @return     название группы
  */
 const string Groups::getNameById(const gid_t gid){
-	// Результат работы функции
-	string result;
-	// Если идентификатор группы передан
-	if(gid && this->data.count(gid)){
-		// Получаем название группы
-		result = this->data.find(gid)->second.name;
-	// Если группа не найдена
-	} else if(gid && update()) {
-		// Получаем имя группы
-		result = getNameById(gid);
+	// Если данные пользователей существуют
+	if(gid && !this->data.empty()){
+		// Если идентификатор группы передан
+		if(this->data.count(gid)){
+			// Получаем название группы
+			return this->data.find(gid)->second.name;
+		// Если группа не найдена
+		} else if(update()) {
+			// Получаем имя группы
+			return getNameById(gid);
+		}
 	}
 	// Выводим результат
-	return result;
+	return string();
 }
 /**
  * getNameUsers Метод получения списка пользователей в группе
