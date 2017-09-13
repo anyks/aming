@@ -25,6 +25,7 @@
 #include "system/system.h"
 #include "general/general.h"
 #include "ldap2/ldap.h"
+// #include "users/users.h"
 #include "headers/headers.h"
 
 // Устанавливаем область видимости
@@ -293,11 +294,11 @@ class Groups {
 		 */
 		const bool checkGroupByName(const string groupName);
 		/**
-		 * getUidByName Метод извлечения идентификатора пользователя по его имени
+		 * getUidByUserName Метод извлечения идентификатора пользователя по его имени
 		 * @param  userName название пользователя
 		 * @return          идентификатор пользователя
 		 */
-		const uid_t getUidByName(const string userName);
+		const uid_t getUidByUserName(const string userName);
 		/**
 		 * getIdByName Метод извлечения идентификатора группы по ее имени
 		 * @param  groupName название группы
@@ -306,10 +307,11 @@ class Groups {
 		const gid_t getIdByName(const string groupName);
 		/**
 		 * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
-		 * @param  uid идентификатор пользователя
-		 * @return     название пользователя
+		 * @param  uid   идентификатор пользователя
+		 * @param  users объект пользователей
+		 * @return       название пользователя
 		 */
-		const string getUserNameByUid(const uid_t uid);
+		// const string getUserNameByUid(const uid_t uid, Users * users = nullptr);
 		/**
 		 * getNameById Метод извлечения имени группы по ее идентификатору
 		 * @param  gid идентификатор группы
@@ -318,16 +320,18 @@ class Groups {
 		const string getNameById(const gid_t gid);
 		/**
 		 * getNameUsers Метод получения списка пользователей в группе
-		 * @param  gid идентификатор группы
-		 * @return     список имен пользователей
+		 * @param  gid   идентификатор группы
+		 * @param  users объект пользователей
+		 * @return       список имен пользователей
 		 */
-		const vector <string> getNameUsers(const gid_t gid);
+		// const vector <string> getNameUsers(const gid_t gid, Users * users = nullptr);
 		/**
 		 * getNameUsers Метод получения списка пользователей в группе
 		 * @param  groupName название группы
+		 * @param  users     объект пользователей
 		 * @return           список имен пользователей
 		 */
-		const vector <string> getNameUsers(const string groupName);
+		// const vector <string> getNameUsers(const string groupName, Users * users = nullptr);
 		/**
 		 * getIdAllUsers Метод получения списка всех пользователей
 		 * @return список идентификаторов пользователей

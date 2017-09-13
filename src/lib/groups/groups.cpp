@@ -619,7 +619,7 @@ const bool Groups::readGroupsFromLdap(){
 						// Переходим по списку пользователей
 						for(auto ut = dt->second.cbegin(); ut != dt->second.cend(); ++ut){
 							// Получаем идентификатор пользвоателя
-							uid_t uid = getUidByName(* ut);
+							uid_t uid = getUidByUserName(* ut);
 							// Добавляем в список идентификатор пользователя
 							if(uid > -1) users.push_back(uid);
 						}
@@ -830,7 +830,7 @@ const bool Groups::readGroupsFromFile(){
 								// Проверяем является ли название пользователя идентификатором
 								if(Anyks::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
 								// Если это не идентификатор то запрашиваем идентификатор пользователя
-								else uid = getUidByName(ut->key);
+								else uid = getUidByUserName(ut->key);
 								// Добавляем пользователя в список
 								if(uid > -1) group.users.push_back(uid);
 							}
@@ -1022,9 +1022,9 @@ const vector <gid_t> Groups::getGroupIdByUser(const string userName){
 	// Если название пользователя передано
 	if(!userName.empty()){
 		// Получаем идентификатор пользователя
-		const uid_t uid = getUidByName(userName);
+		const uid_t uid = getUidByUserName(userName);
 		// Получаем идентификаторы группы
-		result = getGroupIdByUser(uid);
+		if(uid > -1) result = getGroupIdByUser(uid);
 	}
 	// Выводим результат
 	return result;
@@ -1069,9 +1069,9 @@ const vector <string> Groups::getGroupNameByUser(const string userName){
 	// Если название пользователя передано
 	if(!userName.empty()){
 		// Получаем идентификатор пользователя
-		const uid_t uid = getUidByName(userName);
+		const uid_t uid = getUidByUserName(userName);
 		// Получаем название группы
-		result = getGroupNameByUser(uid);
+		if(uid > -1) result = getGroupNameByUser(uid);
 	}
 	// Выводим результат
 	return result;
@@ -1119,9 +1119,9 @@ const bool Groups::checkUser(const gid_t gid, const string userName){
 	// Если данные для проверки переданы
 	if(gid && !userName.empty()){
 		// Получаем идентификатор пользователя
-		const uid_t uid = getUidByName(userName);
+		const uid_t uid = getUidByUserName(userName);
 		// Проверяем принадлежность пользователя
-		result = checkUser(gid, uid);
+		if(uid > -1) result = checkUser(gid, uid);
 	}
 	// Выводим результат
 	return result;
@@ -1159,9 +1159,9 @@ const bool Groups::checkUser(const string groupName, const string userName){
 		// Получаем идентификатор группы
 		const gid_t gid = getIdByName(groupName);
 		// Получаем идентификатор пользователя
-		const uid_t uid = getUidByName(userName);
+		const uid_t uid = getUidByUserName(userName);
 		// Проверяем принадлежность пользователя
-		result = checkUser(gid, uid);
+		if((gid > -1) && (uid > -1)) result = checkUser(gid, uid);
 	}
 	// Выводим результат
 	return result;
@@ -1172,19 +1172,20 @@ const bool Groups::checkUser(const string groupName, const string userName){
  * @return     данные группы
  */
 const bool Groups::checkGroupById(const gid_t gid){
-	// Результат проверки
-	bool result = false;
-	// Если идентификатор группы передан
-	if(gid && this->data.count(gid)){
-		// Сообщаем что группа существует
-		result = true;
-	// Если группа не найдена
-	} else if(gid && update()) {
-		// Проверяем снова на существование группы
-		result = checkGroupById(gid);
+	// Если данные групп существуют
+	if(gid && !this->data.empty()){
+		// Выполняем поиск данных группы
+		if(this->data.count(gid)){
+			// Сообщаем что группа существует
+			return true;
+		// Если группы не найдены
+		} else if(update()) {
+			// Проверяем снова на существование группы
+			return checkGroupById(gid);
+		}
 	}
 	// Выводим результат
-	return result;
+	return false;
 }
 /**
  * checkGroupByName Метод проверки на существование группы
@@ -1192,24 +1193,15 @@ const bool Groups::checkGroupById(const gid_t gid){
  * @return           результат проверки
  */
 const bool Groups::checkGroupByName(const string groupName){
-	// Результат проверки
-	bool result = false;
-	// Если название группы передано
-	if(!groupName.empty()){
-		// Получаем идентификатор группы
-		const gid_t gid = getIdByName(groupName);
-		// Выводим результат
-		result = checkGroupById(gid);
-	}
-	// Выводим результат
-	return result;
+	// Выполняем проверку на существование пользователя
+	return (getIdByName(groupName) > -1 ? true : false);
 }
 /**
- * getUidByName Метод извлечения идентификатора пользователя по его имени
+ * getUidByUserName Метод извлечения идентификатора пользователя по его имени
  * @param  userName название пользователя
  * @return          идентификатор пользователя
  */
-const uid_t Groups::getUidByName(const string userName){
+const uid_t Groups::getUidByUserName(const string userName){
 	// Результат работы функции
 	uid_t result = -1;
 	// Если идентификатор пользователя передан
@@ -1237,21 +1229,31 @@ const gid_t Groups::getIdByName(const string groupName){
 				return it->first;
 			}
 		}
+		// Если пользователь не найден
+		if(update()) return getIdByName(groupName);
 	}
 	// Выводим результат
 	return -1;
 }
 /**
  * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
- * @param  uid идентификатор пользователя
- * @return     название пользователя
+ * @param  uid   идентификатор пользователя
+ * @param  users объект пользователей
+ * @return       название пользователя
  */
-const string Groups::getUserNameByUid(const uid_t uid){
+/*
+const string Groups::getUserNameByUid(const uid_t uid, Users * users){
 	// Результат работы функции
 	string result;
+	// Если идентификатор передан и объект пользователей
+	if((uid > -1) && (users != nullptr)){
+		// Извлекаем имя пользователя
+		result = users->getNameById(uid);
+	}
 	// Выводим результат
 	return result;
 }
+*/
 /**
  * getNameById Метод извлечения имени группы по ее идентификатору
  * @param  gid идентификатор группы
@@ -1275,22 +1277,24 @@ const string Groups::getNameById(const gid_t gid){
 }
 /**
  * getNameUsers Метод получения списка пользователей в группе
- * @param  gid идентификатор группы
- * @return     список имен пользователей
+ * @param  gid   идентификатор группы
+ * @param  users объект пользователей
+ * @return       список имен пользователей
  */
-const vector <string> Groups::getNameUsers(const gid_t gid){
+ /*
+const vector <string> Groups::getNameUsers(const gid_t gid, Users * users){
 	// Результат работы функции
 	vector <string> result;
 	// Если идентификатор группы передан
-	if(gid && this->data.count(gid)){
+	if((gid > -1) && (users != nullptr) && this->data.count(gid)){
 		// Получаем список пользователей
 		auto users = this->data.find(gid)->second.users;
 		// Переходим по списку пользователей
 		for(auto it = users.cbegin(); it != users.cend(); ++it){
 			// Получаем имя пользователя
-			const string userName = getUserNameByUid(*it);
+			const string userName = getUserNameByUid(* it, users);
 			// Добавляем имя пользователя в список
-			result.push_back(userName);
+			if(!userName.empty()) result.push_back(userName);
 		}
 	// Если группа не найдена
 	} else if(gid && update()) {
@@ -1300,24 +1304,28 @@ const vector <string> Groups::getNameUsers(const gid_t gid){
 	// Выводим результат
 	return result;
 }
+*/
 /**
  * getNameUsers Метод получения списка пользователей в группе
  * @param  groupName название группы
+ * @param  users     объект пользователей
  * @return           список имен пользователей
  */
-const vector <string> Groups::getNameUsers(const string groupName){
+ /*
+const vector <string> Groups::getNameUsers(const string groupName, Users * users){
 	// Результат работы функции
 	vector <string> result;
 	// Если идентификатор группы передан
-	if(!groupName.empty()){
+	if((users != nullptr) && !groupName.empty()){
 		// Получаем идентификатор группы
 		const gid_t gid = getIdByName(groupName);
 		// Получаем список имен пользователей
-		result = getNameUsers(gid);
+		if(gid > -1) result = getNameUsers(gid, users);
 	}
 	// Выводим результат
 	return result;
 }
+*/
 /**
  * getIdAllUsers Метод получения списка всех пользователей
  * @return список идентификаторов пользователей
@@ -1375,7 +1383,7 @@ const vector <uid_t> Groups::getIdUsers(const string groupName){
 		// Получаем идентификатор группы
 		const gid_t gid = getIdByName(groupName);
 		// Получаем список идентификаторов пользователей
-		result = getIdUsers(gid);
+		if(gid > -1) result = getIdUsers(gid);
 	}
 	// Выводим результат
 	return result;
@@ -1415,9 +1423,9 @@ const bool Groups::addUser(const gid_t gid, const string userName){
 	// Если входящие параметры верные
 	if(gid && !userName.empty()){
 		// Получаем идентификатор пользователя
-		const uid_t uid = getUidByName(userName);
+		const uid_t uid = getUidByUserName(userName);
 		// Добавляем нового пользователя
-		result = addUser(gid, uid);
+		if(uid > -1) result = addUser(gid, uid);
 	}
 	// Выводим результат
 	return result;
@@ -1455,9 +1463,9 @@ const bool Groups::addUser(const string groupName, const string userName){
 		// Получаем идентификатор группы
 		const gid_t gid = getIdByName(groupName);
 		// Получаем идентификатор пользователя
-		const uid_t uid = getUidByName(userName);
+		const uid_t uid = getUidByUserName(userName);
 		// Добавляем нового пользователя
-		result = addUser(gid, uid);
+		if((gid > -1) && (uid > -1)) result = addUser(gid, uid);
 	}
 	// Выводим результат
 	return result;

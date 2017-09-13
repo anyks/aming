@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include "ini/ini.h"
+#include "nwk/nwk.h"
 #include "system/system.h"
 #include "general/general.h"
 #include "ldap2/ldap.h"
@@ -212,12 +213,12 @@ class Users {
 		 */
 		const vector <const Data *> getAllUsers();
 		/**
-		 * createUser Метод создания пользователя
+		 * getUserByConnect Метод поиска данных пользователя по данным коннекта
 		 * @param ip  адрес интернет протокола клиента
 		 * @param mac аппаратный адрес сетевого интерфейса клиента
 		 * @return    данные пользователя
 		 */
-		const Data * createUser(const string ip, const string mac);
+		const Data * getUserByConnect(const string ip = "", const string mac = "");
 		/**
 		 * getDataById Метод получения данные пользователя по идентификатору
 		 * @param  uid идентификатор пользователя

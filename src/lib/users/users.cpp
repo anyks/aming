@@ -593,6 +593,66 @@ void Users::setDataUserFromFile(Users::Data &user, INI * ini){
 const bool Users::readUsersFromLdap(){
 	// Результат работы функции
 	bool result = false;
+	// Создаем объект подключения LDAP
+	ALDAP ldap(this->config, this->log);
+	// Запрашиваем данные пользователей
+	auto users = ldap.data(this->ldap.dnUser, "uid,sn,cn,givenName,initials,userPassword,uidNumber", this->ldap.scopeUser, this->ldap.filterUser);
+	// Если пользователи получены
+	if(!users.empty()){
+		// Переходим по всему объекту пользователей
+		for(auto it = users.cbegin(); it != users.cend(); ++it){
+			// Идентификатор пользователя
+			uid_t uid;
+			// Название пользователя
+			string name;
+			// Имя пользователя
+			string firstName;
+			// Фамилия пользователя
+			string lastName;
+			// Отчество пользователя
+			string secondName;
+			// Описание пользователя
+			string description;
+			// Пароль пользователя
+			string password;
+			// Переходим по всему массиву полученных объектов
+			for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
+				// Если список значений существует
+				if(!dt->second.empty()){
+					// Если это название пользователя
+					if(dt->first.compare("uid") == 0) name = dt->second[0];
+					// Если это идентификатор пользователя
+					else if(dt->first.compare("uidNumber") == 0) uid = ::atoi(dt->second[0].c_str());
+					// Если это описание пользователя
+					else if(dt->first.compare("cn") == 0) description = dt->second[0];
+					// Если это пароль пользователя
+					else if(dt->first.compare("userPassword") == 0) password = dt->second[0];
+					// Если это имя пользователя
+					else if(dt->first.compare("givenName") == 0) firstName = dt->second[0];
+					// Если это фамилия пользователя
+					else if(dt->first.compare("sn") == 0) lastName = dt->second[0];
+					// Если это отчество пользователя
+					else if(dt->first.compare("initials") == 0) secondName = dt->second[0];
+				}
+			}
+			// Создаем блок с данными пользователя
+			Data user = createDefaultData(uid, name);
+			// Устанавливаем тип пользователя
+			user.type = 2;
+			// Добавляем пароль пользователя
+			user.pass = password;
+			// Добавляем описание пользователя
+			user.desc = (!firstName.empty() ? (!lastName.empty() ? (!secondName.empty() ? firstName + string(" ") + lastName + string(" ") + secondName : firstName + string(" ") + lastName) : firstName) : !description.empty() ? description : name);
+			// Переопределяем дефолтные данные из файла конфигурации
+			setDataUser(user);
+			// Устанавливаем параметры http парсера
+			user.headers.setOptions(user.options);
+			// Добавляем пользователя в список
+			this->data.insert(pair <uid_t, Data>(user.id, user));
+		}
+		// Сообщаем что все удачно
+		result = true;
+	}
 	// Выводим результат
 	return result;
 }
@@ -744,12 +804,71 @@ const vector <const Users::Data *> Users::getAllUsers(){
 	return result;
 }
 /**
- * createUser Метод создания пользователя
+ * getUserByConnect Метод поиска данных пользователя по данным коннекта
  * @param ip  адрес интернет протокола клиента
  * @param mac аппаратный адрес сетевого интерфейса клиента
  * @return    данные пользователя
  */
-const Users::Data * Users::createUser(const string ip, const string mac){
+const Users::Data * Users::getUserByConnect(const string ip, const string mac){
+	// Если данные существуют
+	if(!ip.empty() || !mac.empty()){
+		// Если данные существуют
+		if(!this->data.empty()){
+			// Получаем mac адрес
+			string cmac = mac;
+			// Данные пользователя
+			const Data * user = nullptr;
+			// Создаем объект сети
+			Network nwk;
+			// Определяем ip адрес
+			u_int nettype = (!ip.empty() ? nwk.checkNetworkByIp(ip) : 0);
+			// Переходим по всему списку пользователей
+			for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+				// Прорверка на ip адрес
+				bool _ip = false;
+				// Проверка на mac адрес
+				bool _mac = false;
+				// Список ip адресов
+				vector <string> ips;
+				// ip адрес совпал
+				switch(nettype){
+					// Для протокола IPv4
+					case 4: ips.assign(it->second.idnt.ip4.begin(), it->second.idnt.ip4.end()); break;
+					// Для протокола IPv6
+					case 6: ips.assign(it->second.idnt.ip6.begin(), it->second.idnt.ip6.end()); break;
+				}
+				// Если ip адреса существуют
+				if(!ips.empty()){
+					// Переходим по всем ip адресам пользователя
+					for(auto jt = ips.cbegin(); jt != ips.cend(); ++jt){
+						// Если mac адрес совпал
+						if(Anyks::toCase(* jt).compare(Anyks::toCase(ip)) == 0){
+							_ip = true;
+							break;
+						}
+					}
+				}
+				// Если mac адреса существуют
+				if(!cmac.empty() && !it->second.idnt.mac.empty()){
+					// Переходим по всем mac адресам пользователя
+					for(auto jt = it->second.idnt.mac.cbegin(); jt != it->second.idnt.mac.cend(); ++jt){
+						// Если mac адрес совпал
+						if(Anyks::toCase(* jt).compare(Anyks::toCase(cmac)) == 0){
+							_mac = true;
+							break;
+						}
+					}
+				}
+				// Если ip адрес и mac адрес совпали
+				if(_ip && _mac) return &(it->second);
+				// Если хоть что-то совпало, то выводим сампого первого найденного пользователя в списке
+				else if((_ip || _mac) && (user == nullptr)) user = &(it->second);
+			}
+			// Если хотя бы один пользователь найден
+			return user;
+		}
+	}
+	// Выводим результат
 	return nullptr;
 }
 /**
@@ -804,11 +923,18 @@ const Users::Data * Users::getDataByName(const string userName){
  */
 const bool Users::checkUserById(const uid_t uid){
 	// Если данные пользователей существуют
-	if(uid && !this->data.empty()){
-		// Выводим результат проверки
-		return (this->data.count(uid) ? true : false);
+	if(gid && !this->data.empty()){
+		// Выполняем поиск данных пользователя
+		if(this->data.count(uid)){
+			// Сообщаем что пользователь существует
+			return true;
+		// Если пользователи не найдены
+		} else if(update()) {
+			// Проверяем снова на существование пользователя
+			return checkUserById(uid);
+		}
 	}
-	// Сообщаем что ничего не найдено
+	// Выводим результат
 	return false;
 }
 /**
