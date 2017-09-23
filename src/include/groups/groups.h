@@ -66,16 +66,6 @@ class Groups {
 			vector <string> resolver;	// Список dns серверов
 		};
 		/**
-		 * ID Структура идентификаторов подключений
-		 */
-		struct ID {
-			vector <string> ip4;	// Список ip4 адресов
-			vector <string> ip6;	// Список ip6 адресов
-			vector <string> nwk4;	// Список сетей IPv4
-			vector <string> nwk6;	// Список сетей IPv6
-			vector <string> mac;	// Список mac адресов
-		};
-		/**
 		 * BufferSize Структура размеров буфера
 		 */
 		struct BufferSize {
@@ -131,7 +121,7 @@ class Groups {
 			string pass;			// Пароль группы
 			string auth;			// Тип авторизации клиентов
 			string desc;			// Описание групп
-			ID idnt;				// Блок списков идентификации групп
+			vector <string> idnt;	// Список ip4/ip6/nwk/mac адресов
 			IP ipv4;				// Блок ip адресов для протокола версии 4
 			IP ipv6;				// Блок ip адресов для протокола версии 6
 			Gzip gzip;				// Параметры gzip

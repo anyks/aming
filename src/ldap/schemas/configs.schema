@@ -7,60 +7,36 @@ attributeTypes: ( 2.2.2.0.1.1
 	SINGLE-VALUE )
 
 attributeTypes: ( 2.2.2.0.1.2
-	NAME 'amingConfigsIdntMac'
-	DESC 'MAC-адрес идентификации клиента в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2'
-	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{17} )
-
-attributeTypes: ( 2.2.2.0.1.3
-	NAME 'amingConfigsIdntIp4'
-	DESC 'IPv4-адрес идентификации клиента в точечно-цифровой нотации, например, 192.168.1.1, без начальных нулей'
-	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
-
-attributeTypes: ( 2.2.2.0.1.4
-	NAME 'amingConfigsIdntNetwork4'
-	DESC 'IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32, без начальных нулей'
-	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{31} )
-
-attributeTypes: ( 2.2.2.0.1.5
-	NAME 'amingConfigsIdntIp6'
-	DESC 'IPv6-адрес идентификации клиента в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d'
-	EQUALITY caseIgnoreIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
-
-attributeTypes: ( 2.2.2.0.1.6
-	NAME 'amingConfigsIdntNetwork6'
-	DESC 'IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64'
+	NAME 'amingConfigsIdnt'
+	DESC 'Идентификации клиента ip4/ip6/network/mac, например, 2001:0db8:11a3::/64'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{43} )
 
-attributeTypes: ( 2.2.2.0.1.7
+attributeTypes: ( 2.2.2.0.1.3
 	NAME 'amingConfigsIpExternal4'
 	DESC 'IPv4-адрес исходящего подключения в точечно-цифровой нотации, например, 0.0.0.0, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
 
-attributeTypes: ( 2.2.2.0.1.8
+attributeTypes: ( 2.2.2.0.1.4
 	NAME 'amingConfigsIpResolver4'
 	DESC 'IPv4-адрес резолвера dns в точечно-цифровой нотации, например, 8.8.8.8, без начальных нулей'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{15} )
 
-attributeTypes: ( 2.2.2.0.1.9
+attributeTypes: ( 2.2.2.0.1.5
 	NAME 'amingConfigsIpExternal6'
 	DESC 'IPv6-адрес исходящего подключения в любой нотации, шестнадцатеричные цифры, например, ::0'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
-attributeTypes: ( 2.2.2.0.1.10
+attributeTypes: ( 2.2.2.0.1.6
 	NAME 'amingConfigsIpResolver6'
 	DESC 'IPv6-адрес резолвера dns в любой нотации, шестнадцатеричные цифры, например, 2001:4860:4860::8888'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{39} )
 
-attributeTypes: ( 2.2.2.0.1.11
+attributeTypes: ( 2.2.2.0.1.7
 	NAME 'amingConfigsTimeoutsRead'
 	DESC 'Таймаут на чтение, например 5s'
 	EQUALITY caseIgnoreMatch
@@ -68,7 +44,7 @@ attributeTypes: ( 2.2.2.0.1.11
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.12
+attributeTypes: ( 2.2.2.0.1.8
 	NAME 'amingConfigsTimeoutsWrite'
 	DESC 'Таймаут на запись, например 13s'
 	EQUALITY caseIgnoreMatch
@@ -76,7 +52,7 @@ attributeTypes: ( 2.2.2.0.1.12
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.13
+attributeTypes: ( 2.2.2.0.1.9
 	NAME 'amingConfigsTimeoutsUpgrade'
 	DESC 'Таймаут ожидания при смене протокола подключения, например 300s'
 	EQUALITY caseIgnoreMatch
@@ -84,7 +60,7 @@ attributeTypes: ( 2.2.2.0.1.13
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.14
+attributeTypes: ( 2.2.2.0.1.10
 	NAME 'amingConfigsSpeedInput'
 	DESC 'Скорость передачи данных при входящем подключении, например 300kbps'
 	EQUALITY caseIgnoreMatch
@@ -92,7 +68,7 @@ attributeTypes: ( 2.2.2.0.1.14
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.15
+attributeTypes: ( 2.2.2.0.1.11
 	NAME 'amingConfigsSpeedOutput'
 	DESC 'Скорость передачи данных при исходящем подключении, например 300kbps'
 	EQUALITY caseIgnoreMatch
@@ -100,14 +76,14 @@ attributeTypes: ( 2.2.2.0.1.15
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.16
+attributeTypes: ( 2.2.2.0.1.12
 	NAME 'amingConfigsKeepAliveEnabled'
 	DESC 'Активация постоянного подключения, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.17
+attributeTypes: ( 2.2.2.0.1.13
 	NAME 'amingConfigsKeepAliveCnt'
 	DESC 'Максимальное количество попыток при постоянном подключении, например 3'
 	EQUALITY integerMatch
@@ -115,7 +91,7 @@ attributeTypes: ( 2.2.2.0.1.17
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.18
+attributeTypes: ( 2.2.2.0.1.14
 	NAME 'amingConfigsKeepAliveIdle'
 	DESC 'Интервал времени в секундах через которое происходит проверка подключения, например 1'
 	EQUALITY integerMatch
@@ -123,7 +99,7 @@ attributeTypes: ( 2.2.2.0.1.18
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.19
+attributeTypes: ( 2.2.2.0.1.15
 	NAME 'amingConfigsKeepAliveIntvl'
 	DESC 'Интервал времени в секундах между попытками, например 2'
 	EQUALITY integerMatch
@@ -131,21 +107,21 @@ attributeTypes: ( 2.2.2.0.1.19
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.20
+attributeTypes: ( 2.2.2.0.1.16
 	NAME 'amingConfigsGzipTransfer'
 	DESC 'Обмен сжатыми данными, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.21
+attributeTypes: ( 2.2.2.0.1.17
 	NAME 'amingConfigsGzipResponse'
 	DESC 'Сжимать не сжатые данные ответа, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.22
+attributeTypes: ( 2.2.2.0.1.18
 	NAME 'amingConfigsGzipLevel'
 	DESC 'Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия), например default'
 	EQUALITY caseIgnoreMatch
@@ -153,7 +129,7 @@ attributeTypes: ( 2.2.2.0.1.22
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{7}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.23
+attributeTypes: ( 2.2.2.0.1.19
 	NAME 'amingConfigsGzipRegex'
 	DESC 'Не сжимать контент, UserAgent которого соответсвует регулярному выражению, например msie6'
 	EQUALITY caseIgnoreMatch
@@ -161,7 +137,7 @@ attributeTypes: ( 2.2.2.0.1.23
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{128}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.24
+attributeTypes: ( 2.2.2.0.1.20
 	NAME 'amingConfigsGzipLength'
 	DESC 'Минимальная длина данных после которых включается сжатие (работает только с Content-Length), например 100'
 	EQUALITY integerMatch
@@ -169,7 +145,7 @@ attributeTypes: ( 2.2.2.0.1.24
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.25
+attributeTypes: ( 2.2.2.0.1.21
 	NAME 'amingConfigsGzipChunk'
 	DESC 'Максимальный размер чанка в (B, KB, MB, GB), например 1KB'
 	EQUALITY caseIgnoreMatch
@@ -177,34 +153,34 @@ attributeTypes: ( 2.2.2.0.1.25
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.26
+attributeTypes: ( 2.2.2.0.1.22
 	NAME 'amingConfigsGzipVhttp'
 	DESC 'Версия http протокола (1.0, 1.1, *), например 1.1'
 	EQUALITY objectIdentifierMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 )
 
-attributeTypes: ( 2.2.2.0.1.27
+attributeTypes: ( 2.2.2.0.1.23
 	NAME 'amingConfigsGzipProxied'
 	DESC 'Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов (off | expired | no-cache | no-store | private | no_last_modified | no_etag | auth | any), например any'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{16} )
 
-attributeTypes: ( 2.2.2.0.1.28
+attributeTypes: ( 2.2.2.0.1.24
 	NAME 'amingConfigsGzipTypes'
 	DESC 'Разрешает сжатие ответа методом gzip для указанных MIME-типов (разрешено разделение | или указания любых типов данных с помощью *), например *'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{255} )
 
-attributeTypes: ( 2.2.2.0.1.29
+attributeTypes: ( 2.2.2.0.1.25
 	NAME 'amingConfigsGzipVary'
 	DESC 'Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”, например FALSE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.30
+attributeTypes: ( 2.2.2.0.1.26
 	NAME 'amingConfigsConnectsSize'
 	DESC 'Максимальный размер скачиваемых данных в (B, KB, MB, GB), например 10MB'
 	EQUALITY caseIgnoreMatch
@@ -212,7 +188,7 @@ attributeTypes: ( 2.2.2.0.1.30
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.31
+attributeTypes: ( 2.2.2.0.1.27
 	NAME 'amingConfigsConnectsConnect'
 	DESC 'Максимальное количество подключений (одного клиента к прокси серверу), например auto'
 	EQUALITY caseIgnoreMatch
@@ -220,14 +196,14 @@ attributeTypes: ( 2.2.2.0.1.31
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{10}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.32
+attributeTypes: ( 2.2.2.0.1.28
 	NAME 'amingConfigsProxySubnet'
 	DESC 'Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.33
+attributeTypes: ( 2.2.2.0.1.29
 	NAME 'amingConfigsProxySkill'
 	DESC 'Скил прокси-сервера - smart (умный) или dumb (глупый), например smart'
 	EQUALITY caseIgnoreMatch
@@ -235,63 +211,63 @@ attributeTypes: ( 2.2.2.0.1.33
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{5}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.34
+attributeTypes: ( 2.2.2.0.1.30
 	NAME 'amingConfigsProxyReverse'
 	DESC 'Обратный прокси (доступ из сети в локальную сеть), например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.35
+attributeTypes: ( 2.2.2.0.1.31
 	NAME 'amingConfigsProxyForward'
 	DESC 'Прямой прокси (доступ во внешнюю сеть), например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.36
+attributeTypes: ( 2.2.2.0.1.32
 	NAME 'amingConfigsProxyTransfer'
 	DESC 'Активация поддержки прокси листа, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.37
+attributeTypes: ( 2.2.2.0.1.33
 	NAME 'amingConfigsProxyPipelining'
 	DESC 'Активация конвеерной обработки, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.38
+attributeTypes: ( 2.2.2.0.1.34
 	NAME 'amingConfigsProxyConnect'
 	DESC 'Разрешить событие connect, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.39
+attributeTypes: ( 2.2.2.0.1.35
 	NAME 'amingConfigsProxyUpgrade'
 	DESC 'Разрешить метод upgrade (переключение протоколов), например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.40
+attributeTypes: ( 2.2.2.0.1.36
 	NAME 'amingConfigsProxyDeblock'
 	DESC 'Попробовать обойти блокировки сайтов на уровне прокси (многие сайты могут работать не правильно), например FALSE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.41
+attributeTypes: ( 2.2.2.0.1.37
 	NAME 'amingConfigsProxyAgent'
 	DESC 'Вставлять заголовок название агента прокси сервера в заголовках http, например TRUE'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.42
+attributeTypes: ( 2.2.2.0.1.38
 	NAME 'amingConfigsType'
 	DESC 'Тип владельца которому принадлежат настройки (users или groups), например groups'
 	EQUALITY caseIgnoreMatch
@@ -299,21 +275,21 @@ attributeTypes: ( 2.2.2.0.1.42
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{6}
 	SINGLE-VALUE )
 
-attributeTypes: ( 2.2.2.0.1.43
+attributeTypes: ( 2.2.2.0.1.39
 	NAME 'amingConfigsGroupId'
 	DESC 'Идентификатор пользователя к которому привязывается конфигурация, например 1001'
 	EQUALITY integerMatch
 	ORDERING integerOrderingMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
 
-attributeTypes: ( 2.2.2.0.1.44
+attributeTypes: ( 2.2.2.0.1.40
 	NAME 'amingConfigsUserId'
 	DESC 'Идентификатор группы к которой привязывается конфигурация, например 1001'
 	EQUALITY integerMatch
 	ORDERING integerOrderingMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
 
-attributeTypes: ( 2.2.2.0.1.45
+attributeTypes: ( 2.2.2.0.1.41
 	NAME 'ac'
 	DESC 'Название конфигурации'
 	EQUALITY caseIgnoreMatch
@@ -326,4 +302,4 @@ objectClass ( 2.2.2.0.1
 	DESC 'Схема конфигурационных данных прокси-сервера Aming'
 	SUP top STRUCTURAL
 	MUST ( ac $ amingConfigsType )
-	MAY ( amingConfigsAuth $ amingConfigsIdntMac $ amingConfigsIdntIp4 $ amingConfigsIdntNetwork4 $ amingConfigsIdntIp6 $ amingConfigsIdntNetwork6 $ amingConfigsIpExternal4 $ amingConfigsIpResolver4 $ amingConfigsIpExternal6 $ amingConfigsIpResolver6 $ amingConfigsTimeoutsRead $ amingConfigsTimeoutsWrite $ amingConfigsTimeoutsUpgrade $ amingConfigsSpeedInput $ amingConfigsSpeedOutput $ amingConfigsKeepAliveEnabled $ amingConfigsKeepAliveCnt $ amingConfigsKeepAliveIdle $ amingConfigsKeepAliveIntvl $ amingConfigsGzipTransfer $ amingConfigsGzipResponse $ amingConfigsGzipLevel $ amingConfigsGzipRegex $ amingConfigsGzipLength $ amingConfigsGzipChunk $ amingConfigsGzipVhttp $ amingConfigsGzipProxied $ amingConfigsGzipTypes $ amingConfigsGzipVary $ amingConfigsConnectsSize $ amingConfigsConnectsConnect $ amingConfigsProxySubnet $ amingConfigsProxySkill $ amingConfigsProxyReverse $ amingConfigsProxyForward $ amingConfigsProxyTransfer $ amingConfigsProxyPipelining $ amingConfigsProxyConnect $ amingConfigsProxyUpgrade $ amingConfigsProxyDeblock $ amingConfigsProxyAgent $ amingConfigsType $ amingConfigsGroupId $ amingConfigsUserId $ ac) )
+	MAY ( amingConfigsAuth $ amingConfigsIdnt $ amingConfigsIpExternal4 $ amingConfigsIpResolver4 $ amingConfigsIpExternal6 $ amingConfigsIpResolver6 $ amingConfigsTimeoutsRead $ amingConfigsTimeoutsWrite $ amingConfigsTimeoutsUpgrade $ amingConfigsSpeedInput $ amingConfigsSpeedOutput $ amingConfigsKeepAliveEnabled $ amingConfigsKeepAliveCnt $ amingConfigsKeepAliveIdle $ amingConfigsKeepAliveIntvl $ amingConfigsGzipTransfer $ amingConfigsGzipResponse $ amingConfigsGzipLevel $ amingConfigsGzipRegex $ amingConfigsGzipLength $ amingConfigsGzipChunk $ amingConfigsGzipVhttp $ amingConfigsGzipProxied $ amingConfigsGzipTypes $ amingConfigsGzipVary $ amingConfigsConnectsSize $ amingConfigsConnectsConnect $ amingConfigsProxySubnet $ amingConfigsProxySkill $ amingConfigsProxyReverse $ amingConfigsProxyForward $ amingConfigsProxyTransfer $ amingConfigsProxyPipelining $ amingConfigsProxyConnect $ amingConfigsProxyUpgrade $ amingConfigsProxyDeblock $ amingConfigsProxyAgent $ amingConfigsType $ amingConfigsGroupId $ amingConfigsUserId $ ac) )

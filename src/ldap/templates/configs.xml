@@ -364,66 +364,38 @@
 			<value><![CDATA[=php.PickList(/;(&(objectClass=posixAccount));uidNumber;%uid%;;;;uid)]]></value>
 		</attribute>
 
-		<attribute id="amingConfigsIdntMac">
-			<display>MAC-адрес идентификации клиента в максимальной нотации, шестнадцатеричные цифры, разделённые двоеточиями, например, 00:00:92:90:ee:e2</display>
+		<attribute id="amingConfigsIdnt">
+			<display>Идентификации клиента ip4/ip6/network/mac, например, 2001:0db8:11a3::/64</display>
 			<icon>ldap-o.png</icon>
 			<order>1</order>
-			<page>5</page>
-		</attribute>
-
-		<attribute id="amingConfigsIdntIp4">
-			<display>IPv4-адрес идентификации клиента в точечно-цифровой нотации, например, 192.168.1.1</display>
-			<icon>ldap-o.png</icon>
-			<order>2</order>
-			<page>5</page>
-		</attribute>
-
-		<attribute id="amingConfigsIdntNetwork4">
-			<display>IPv4-сеть в точечно-цифровой нотации, например, 192.168.0.0/32</display>
-			<icon>ldap-o.png</icon>
-			<order>3</order>
-			<page>5</page>
-		</attribute>
-
-		<attribute id="amingConfigsIdntIp6">
-			<display>IPv6-адрес идентификации клиента в любой нотации, шестнадцатеричные цифры, например, 2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d</display>
-			<icon>ldap-o.png</icon>
-			<order>4</order>
-			<page>5</page>
-		</attribute>
-
-		<attribute id="amingConfigsIdntNetwork6">
-			<display>IPv6-сеть в любой нотации, например, 2001:0db8:11a3::/64</display>
-			<icon>ldap-o.png</icon>
-			<order>5</order>
 			<page>5</page>
 		</attribute>
 
 		<attribute id="amingConfigsIpExternal4">
 			<display>IPv4-адрес исходящего подключения в точечно-цифровой нотации, например, 0.0.0.0</display>
 			<icon>ldap-o.png</icon>
-			<order>6</order>
+			<order>2</order>
 			<page>5</page>
 		</attribute>
 
 		<attribute id="amingConfigsIpResolver4">
 			<display>IPv4-адрес резолвера dns в точечно-цифровой нотации, например, 8.8.8.8</display>
 			<icon>ldap-o.png</icon>
-			<order>7</order>
+			<order>3</order>
 			<page>5</page>
 		</attribute>
 
 		<attribute id="amingConfigsIpExternal6">
 			<display>IPv6-адрес исходящего подключения в любой нотации, шестнадцатеричные цифры, например, ::0</display>
 			<icon>ldap-o.png</icon>
-			<order>8</order>
+			<order>4</order>
 			<page>5</page>
 		</attribute>
 
 		<attribute id="amingConfigsIpResolver6">
 			<display>IPv6-адрес резолвера dns в любой нотации, шестнадцатеричные цифры, например, 2001:4860:4860::8888</display>
 			<icon>ldap-o.png</icon>
-			<order>9</order>
+			<order>5</order>
 			<page>5</page>
 		</attribute>
 	</attributes>

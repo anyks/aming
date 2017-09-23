@@ -56,8 +56,7 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 								"amingConfigsGzipLength,amingConfigsGzipLevel,amingConfigsGzipProxied,"
 								"amingConfigsGzipRegex,amingConfigsGzipResponse,amingConfigsGzipTransfer,"
 								"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,amingConfigsAuth,"
-								"amingConfigsIdntIp4,amingConfigsIdntIp6,amingConfigsIdntMac,amingConfigsIdntNetwork4,"
-								"amingConfigsIdntNetwork6,amingConfigsIpExternal4,amingConfigsIpExternal6,"
+								"amingConfigsIdnt,amingConfigsIpExternal4,amingConfigsIpExternal6,"
 								"amingConfigsIpResolver4,amingConfigsIpResolver6,amingConfigsKeepAliveCnt,"
 								"amingConfigsKeepAliveEnabled,amingConfigsKeepAliveIdle,amingConfigsKeepAliveIntvl,"
 								"amingConfigsProxyAgent,amingConfigsProxyConnect,amingConfigsProxyDeblock,"
@@ -88,22 +87,12 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 			};
 			// Переходим по всему объекту параметров
 			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
-				// Списки данных идентификации
-				vector <string> idnt_ip4, idnt_ip6, idnt_mac, idnt_network4, idnt_network6;
 				// Переходим по всему массиву полученных объектов
 				for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
 					// Если список значений существует
 					if(!dt->second.empty()){
-						// Если это идентификатор IPv4
-						if(dt->first.compare("amingConfigsIdntIp4") == 0) idnt_ip4 = dt->second;
-						// Если это идентификатор IPv6
-						else if(dt->first.compare("amingConfigsIdntIp6") == 0) idnt_ip6 = dt->second;
-						// Если это идентификатор MAC
-						else if(dt->first.compare("amingConfigsIdntMac") == 0) idnt_mac = dt->second;
-						// Если это идентификатор Network IPv4
-						else if(dt->first.compare("amingConfigsIdntNetwork4") == 0) idnt_network4 = dt->second;
-						// Если это идентификатор Network IPv6
-						else if(dt->first.compare("amingConfigsIdntNetwork6") == 0) idnt_network6 = dt->second;
+						// Если это идентификатор
+						if(dt->first.compare("amingConfigsIdnt") == 0) group.idnt.push_back(dt->second);
 						// Если это External IPv4
 						else if(dt->first.compare("amingConfigsIpExternal4") == 0) group.ipv4.ip = dt->second;
 						// Если это External IPv6
@@ -254,8 +243,6 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 						}
 					}
 				}
-				// Создаем список идентификаторов группы
-				group.idnt = {idnt_ip4, idnt_ip6, idnt_network4, idnt_network6, idnt_mac};
 			}
 		}
 	}
@@ -282,13 +269,7 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
 		} else return;
 	}
 	// Создаем список идентификаторов группы
-	group.idnt	= {
-		Anyks::split(ini->getString(group.name + "_idnt", "ip4"), "|"),
-		Anyks::split(ini->getString(group.name + "_idnt", "ip6"), "|"),
-		Anyks::split(ini->getString(group.name + "_idnt", "network4"), "|"),
-		Anyks::split(ini->getString(group.name + "_idnt", "network6"), "|"),
-		Anyks::split(ini->getString(group.name + "_idnt", "mac"), "|")
-	};
+	group.idnt = Anyks::split(ini->getString("identificators", group.name), "|");
 	// Выполняем проверку на существование записи в конфигурационном файле
 	if(ini->checkParam(group.name + "_proxy", "connect")){
 		// Выполняем проверку на доступность опции
