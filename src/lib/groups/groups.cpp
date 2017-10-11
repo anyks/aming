@@ -6,7 +6,7 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
 
-#include "groups/groups.h"
+#include "users/users.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -17,7 +17,7 @@ using namespace std;
  * @param proxyOptions список существующих опций
  * @param flag         флаг добавления или удаления опции
  */
-void Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
+void AUsers::Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
 	// Формируем параметры
 	u_short options = proxyOptions;
 	// Устанавливаем параметры прокси сервера
@@ -36,7 +36,7 @@ void Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const 
  * setDataGroupFromLdap Метод заполнения данных группы из LDAP
  * @param group объект группы
  */
-void Groups::setDataGroupFromLdap(Groups::Data &group){
+void AUsers::Groups::setDataGroupFromLdap(AUsers::DataGroups &group){
 	// Параметр для поиска
 	const char * key = "%g";
 	// Выполняем поиск ключа
@@ -92,7 +92,7 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
 					// Если список значений существует
 					if(!dt->second.empty()){
 						// Если это идентификатор
-						if(dt->first.compare("amingConfigsIdnt") == 0) group.idnt.push_back(dt->second);
+						if(dt->first.compare("amingConfigsIdnt") == 0) group.idnt = dt->second;
 						// Если это External IPv4
 						else if(dt->first.compare("amingConfigsIpExternal4") == 0) group.ipv4.ip = dt->second;
 						// Если это External IPv6
@@ -252,7 +252,7 @@ void Groups::setDataGroupFromLdap(Groups::Data &group){
  * @param group объект группы
  * @param ini   указатель на объект конфигурации
  */
-void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
+void AUsers::Groups::setDataGroupFromFile(AUsers::DataGroups &group, INI * ini){
 	// Флаг удаления созданного объекта ini конфигурации
 	bool rmINI = false;
 	// Если объект ini не передан то создаем его
@@ -480,7 +480,7 @@ void Groups::setDataGroupFromFile(Groups::Data &group, INI * ini){
  * @param group объект группы
  * @param ini   указатель на объект конфигурации
  */
-void Groups::setDataGroup(Groups::Data &group, INI * ini){
+void AUsers::Groups::setDataGroup(AUsers::DataGroups &group, INI * ini){
 	// Определяем тип системы откуда нужно получить конфигурационные файлы
 	switch(this->typeConfigs){
 		// Переопределяем дефолтные данные из файла конфигурации
@@ -495,9 +495,9 @@ void Groups::setDataGroup(Groups::Data &group, INI * ini){
  * @param  name название группы
  * @return      созданная группа
  */
-const Groups::Data Groups::createDefaultData(const gid_t id, const string name){
+const AUsers::DataGroups AUsers::Groups::createDefaultData(const gid_t id, const string name){
 	// Создаем блок с данными группы
-	Data group;
+	DataGroups group;
 	// Если входные параметры верные
 	if(id && !name.empty()){
 		// Запоминаем название группы
@@ -560,7 +560,7 @@ const Groups::Data Groups::createDefaultData(const gid_t id, const string name){
  * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
  * @return результат операции
  */
-const bool Groups::readGroupsFromLdap(){
+const bool AUsers::Groups::readGroupsFromLdap(){
 	// Результат работы функции
 	bool result = false;
 	// Создаем объект подключения LDAP
@@ -608,7 +608,7 @@ const bool Groups::readGroupsFromLdap(){
 				}
 			}
 			// Создаем блок с данными группы
-			Data group = createDefaultData(gid, name);
+			DataGroups group = createDefaultData(gid, name);
 			// Устанавливаем тип группы
 			group.type = 2;
 			// Добавляем пользователя в список
@@ -622,7 +622,7 @@ const bool Groups::readGroupsFromLdap(){
 			// Устанавливаем параметры http парсера
 			group.headers.setOptions(group.options);
 			// Добавляем группу в список групп
-			this->data.insert(pair <gid_t, Data>(group.id, group));
+			this->data.insert(pair <gid_t, DataGroups>(group.id, group));
 		}
 		// Если пользователи существуют
 		if(!users.empty()){
@@ -677,7 +677,7 @@ const bool Groups::readGroupsFromLdap(){
  * readGroupsFromPam Метод чтения данных групп из операционной системы
  * @return результат операции
  */
-const bool Groups::readGroupsFromPam(){
+const bool AUsers::Groups::readGroupsFromPam(){
 	// Результат работы функции
 	bool result = false;
 	// Блок данных пользователей
@@ -735,7 +735,7 @@ const bool Groups::readGroupsFromPam(){
 							// Если группа не найдена, то создаем её
 							} else {
 								// Создаем блок с данными группы
-								Data group = createDefaultData(gr->gr_gid, gr->gr_name);
+								DataGroups group = createDefaultData(gr->gr_gid, gr->gr_name);
 								// Устанавливаем тип группы
 								group.type = 1;
 								// Добавляем пароль группы
@@ -747,7 +747,7 @@ const bool Groups::readGroupsFromPam(){
 								// Устанавливаем параметры http парсера
 								group.headers.setOptions(group.options);
 								// Добавляем группу в список групп
-								this->data.insert(pair <gid_t, Data>(group.id, group));
+								this->data.insert(pair <gid_t, DataGroups>(group.id, group));
 							}
 						// Выводим сообщение что данная группа не найдена
 						} else this->log->write(LOG_ERROR, 0, "group [%i] from user = %s [%s] not found", userGroups[i], pw->pw_name, pw->pw_gecos);
@@ -767,7 +767,7 @@ const bool Groups::readGroupsFromPam(){
  * readGroupsFromFile Метод чтения данных групп из файла
  * @return результат операции
  */
-const bool Groups::readGroupsFromFile(){
+const bool AUsers::Groups::readGroupsFromFile(){
 	// Результат работы функции
 	bool result = false;
 	// Создаем адрес для хранения файла
@@ -795,7 +795,7 @@ const bool Groups::readGroupsFromFile(){
 					// Получаем название группы
 					const string name = (Anyks::isNumber(it->key) ? it->value : it->key);
 					// Создаем блок с данными группы
-					Data group = createDefaultData(gid, name);
+					DataGroups group = createDefaultData(gid, name);
 					// Устанавливаем тип группы
 					group.type = 0;
 					// Если список пользователей существует
@@ -842,7 +842,7 @@ const bool Groups::readGroupsFromFile(){
 					// Устанавливаем параметры http парсера
 					group.headers.setOptions(group.options);
 					// Добавляем группу в список групп
-					this->data.insert(pair <gid_t, Data>(group.id, group));
+					this->data.insert(pair <gid_t, DataGroups>(group.id, group));
 				}
 			}
 		}
@@ -853,7 +853,7 @@ const bool Groups::readGroupsFromFile(){
 /**
  * update Метод обновления групп
  */
-const bool Groups::update(){
+const bool AUsers::Groups::update(){
 	// Результат проверки
 	bool result = false;
 	// Создаем текущее время генерации
@@ -904,9 +904,9 @@ const bool Groups::update(){
  * getAllGroups Метод получения данных всех групп
  * @return      список данных всех групп
  */
-const vector <const Groups::Data *> Groups::getAllGroups(){
+const vector <const AUsers::DataGroups *> AUsers::Groups::getAllGroups(){
 	// Список данных по умолчанию
-	vector <const Data *> result;
+	vector <const DataGroups *> result;
 	// Если данные групп существуют
 	if(!this->data.empty()){
 		// Переходим по всем данным групп
@@ -923,7 +923,7 @@ const vector <const Groups::Data *> Groups::getAllGroups(){
  * @param  gid идентификатор группы
  * @return     данные группы
  */
-const Groups::Data * Groups::getDataById(const gid_t gid){
+const AUsers::DataGroups * AUsers::Groups::getDataById(const gid_t gid){
 	// Если данные групп существуют
 	if(gid && !this->data.empty()){
 		// Выполняем поиск данных групп
@@ -944,7 +944,7 @@ const Groups::Data * Groups::getDataById(const gid_t gid){
  * @param  groupName название группы
  * @return           данные группы
  */
-const Groups::Data * Groups::getDataByName(const string groupName){
+const AUsers::DataGroups * AUsers::Groups::getDataByName(const string groupName){
 	// Если данные групп существуют
 	if(!groupName.empty() && !this->data.empty()){
 		// Приводим имя группы к нужному виду
@@ -968,7 +968,7 @@ const Groups::Data * Groups::getDataByName(const string groupName){
  * @param  uid идентификатор пользователя
  * @return     идентификатор группы
  */
-const vector <gid_t> Groups::getGroupIdByUser(const uid_t uid){
+const vector <gid_t> AUsers::Groups::getGroupIdByUser(const uid_t uid){
 	// Результат работы функции
 	vector <gid_t> result;
 	// Если идентификатор пользователя передан
@@ -997,7 +997,7 @@ const vector <gid_t> Groups::getGroupIdByUser(const uid_t uid){
  * @param  userName название пользователя
  * @return          идентификатор группы
  */
-const vector <gid_t> Groups::getGroupIdByUser(const string userName){
+const vector <gid_t> AUsers::Groups::getGroupIdByUser(const string userName){
 	// Результат работы функции
 	vector <gid_t> result;
 	// Если название пользователя передано
@@ -1015,7 +1015,7 @@ const vector <gid_t> Groups::getGroupIdByUser(const string userName){
  * @param  uid идентификатор пользователя
  * @return     название группы
  */
-const vector <string> Groups::getGroupNameByUser(const uid_t uid){
+const vector <string> AUsers::Groups::getGroupNameByUser(const uid_t uid){
 	// Результат работы функции
 	vector <string> result;
 	// Если идентификатор пользователя передан
@@ -1044,7 +1044,7 @@ const vector <string> Groups::getGroupNameByUser(const uid_t uid){
  * @param  userName название пользователя
  * @return          название группы
  */
-const vector <string> Groups::getGroupNameByUser(const string userName){
+const vector <string> AUsers::Groups::getGroupNameByUser(const string userName){
 	// Результат работы функции
 	vector <string> result;
 	// Если название пользователя передано
@@ -1063,7 +1063,7 @@ const vector <string> Groups::getGroupNameByUser(const string userName){
  * @param  uid идентификатор пользователя
  * @return     результат проверки
  */
-const bool Groups::checkUser(const gid_t gid, const uid_t uid){
+const bool AUsers::Groups::checkUser(const gid_t gid, const uid_t uid){
 	// Результат проверки
 	bool result = false;
 	// Если идентификаторы пользователя и группы переданы
@@ -1094,7 +1094,7 @@ const bool Groups::checkUser(const gid_t gid, const uid_t uid){
  * @param  userName название пользователя
  * @return          результат проверки
  */
-const bool Groups::checkUser(const gid_t gid, const string userName){
+const bool AUsers::Groups::checkUser(const gid_t gid, const string userName){
 	// Результат проверки
 	bool result = false;
 	// Если данные для проверки переданы
@@ -1113,7 +1113,7 @@ const bool Groups::checkUser(const gid_t gid, const string userName){
  * @param  uid       идентификатор пользователя
  * @return           результат проверки
  */
-const bool Groups::checkUser(const string groupName, const uid_t uid){
+const bool AUsers::Groups::checkUser(const string groupName, const uid_t uid){
 	// Результат проверки
 	bool result = false;
 	// Если данные для проверки переданы
@@ -1132,7 +1132,7 @@ const bool Groups::checkUser(const string groupName, const uid_t uid){
  * @param  userName  название пользователя
  * @return           результат проверки
  */
-const bool Groups::checkUser(const string groupName, const string userName){
+const bool AUsers::Groups::checkUser(const string groupName, const string userName){
 	// Результат проверки
 	bool result = false;
 	// Если названия пользователя и группы переданы
@@ -1152,7 +1152,7 @@ const bool Groups::checkUser(const string groupName, const string userName){
  * @param  gid идентификатор группы
  * @return     данные группы
  */
-const bool Groups::checkGroupById(const gid_t gid){
+const bool AUsers::Groups::checkGroupById(const gid_t gid){
 	// Если данные групп существуют
 	if(gid && !this->data.empty()){
 		// Выполняем поиск данных группы
@@ -1173,7 +1173,7 @@ const bool Groups::checkGroupById(const gid_t gid){
  * @param  groupName название группы
  * @return           результат проверки
  */
-const bool Groups::checkGroupByName(const string groupName){
+const bool AUsers::Groups::checkGroupByName(const string groupName){
 	// Выполняем проверку на существование пользователя
 	return (getIdByName(groupName) > -1 ? true : false);
 }
@@ -1182,12 +1182,13 @@ const bool Groups::checkGroupByName(const string groupName){
  * @param  userName название пользователя
  * @return          идентификатор пользователя
  */
-const uid_t Groups::getUidByUserName(const string userName){
+const uid_t AUsers::Groups::getUidByUserName(const string userName){
 	// Результат работы функции
 	uid_t result = -1;
 	// Если идентификатор пользователя передан
-	if(!userName.empty()){
-		result = -1;
+	if(!userName.empty() && (this->users != nullptr)){
+		// Выводим результат
+		result = (reinterpret_cast <Users *> (this->users))->getIdByName(userName);
 	}
 	// Выводим результат
 	return result;
@@ -1197,7 +1198,7 @@ const uid_t Groups::getUidByUserName(const string userName){
  * @param  groupName название группы
  * @return           идентификатор группы
  */
-const gid_t Groups::getIdByName(const string groupName){
+const gid_t AUsers::Groups::getIdByName(const string groupName){
 	// Если идентификатор группы передан
 	if(!groupName.empty() && !this->data.empty()){
 		// Запоминаем полученное название группы
@@ -1219,28 +1220,25 @@ const gid_t Groups::getIdByName(const string groupName){
 /**
  * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
  * @param  uid   идентификатор пользователя
- * @param  users объект пользователей
  * @return       название пользователя
  */
-/*
-const string Groups::getUserNameByUid(const uid_t uid, Users * users){
+const string AUsers::Groups::getUserNameByUid(const uid_t uid){
 	// Результат работы функции
 	string result;
 	// Если идентификатор передан и объект пользователей
-	if((uid > -1) && (users != nullptr)){
+	if((uid > -1) && (this->users != nullptr)){
 		// Извлекаем имя пользователя
-		result = users->getNameById(uid);
+		result = (reinterpret_cast <Users *> (this->users))->getNameById(uid);
 	}
 	// Выводим результат
 	return result;
 }
-*/
 /**
  * getNameById Метод извлечения имени группы по ее идентификатору
  * @param  gid идентификатор группы
  * @return     название группы
  */
-const string Groups::getNameById(const gid_t gid){
+const string AUsers::Groups::getNameById(const gid_t gid){
 	// Если данные пользователей существуют
 	if(gid && !this->data.empty()){
 		// Если идентификатор группы передан
@@ -1258,22 +1256,20 @@ const string Groups::getNameById(const gid_t gid){
 }
 /**
  * getNameUsers Метод получения списка пользователей в группе
- * @param  gid   идентификатор группы
- * @param  users объект пользователей
- * @return       список имен пользователей
+ * @param  gid идентификатор группы
+ * @return     список имен пользователей
  */
- /*
-const vector <string> Groups::getNameUsers(const gid_t gid, Users * users){
+const vector <string> AUsers::Groups::getNameUsers(const gid_t gid){
 	// Результат работы функции
 	vector <string> result;
 	// Если идентификатор группы передан
 	if((gid > -1) && (users != nullptr) && this->data.count(gid)){
 		// Получаем список пользователей
-		auto users = this->data.find(gid)->second.users;
+		auto _users = this->data.find(gid)->second.users;
 		// Переходим по списку пользователей
-		for(auto it = users.cbegin(); it != users.cend(); ++it){
+		for(auto it = _users.cbegin(); it != _users.cend(); ++it){
 			// Получаем имя пользователя
-			const string userName = getUserNameByUid(* it, users);
+			const string userName = getUserNameByUid(* it);
 			// Добавляем имя пользователя в список
 			if(!userName.empty()) result.push_back(userName);
 		}
@@ -1285,15 +1281,12 @@ const vector <string> Groups::getNameUsers(const gid_t gid, Users * users){
 	// Выводим результат
 	return result;
 }
-*/
 /**
  * getNameUsers Метод получения списка пользователей в группе
  * @param  groupName название группы
- * @param  users     объект пользователей
  * @return           список имен пользователей
  */
- /*
-const vector <string> Groups::getNameUsers(const string groupName, Users * users){
+const vector <string> AUsers::Groups::getNameUsers(const string groupName){
 	// Результат работы функции
 	vector <string> result;
 	// Если идентификатор группы передан
@@ -1301,17 +1294,16 @@ const vector <string> Groups::getNameUsers(const string groupName, Users * users
 		// Получаем идентификатор группы
 		const gid_t gid = getIdByName(groupName);
 		// Получаем список имен пользователей
-		if(gid > -1) result = getNameUsers(gid, users);
+		if(gid > -1) result = getNameUsers(gid);
 	}
 	// Выводим результат
 	return result;
 }
-*/
 /**
  * getIdAllUsers Метод получения списка всех пользователей
  * @return список идентификаторов пользователей
  */
-const vector <uid_t> Groups::getIdAllUsers(){
+const vector <uid_t> AUsers::Groups::getIdAllUsers(){
 	// Результат работы функции
 	vector <uid_t> result;
 	// Получаем список групп
@@ -1336,7 +1328,7 @@ const vector <uid_t> Groups::getIdAllUsers(){
  * @param  gid идентификатор группы
  * @return     список идентификаторов пользователей
  */
-const vector <uid_t> Groups::getIdUsers(const gid_t gid){
+const vector <uid_t> AUsers::Groups::getIdUsers(const gid_t gid){
 	// Результат работы функции
 	vector <uid_t> result;
 	// Если идентификатор группы передан
@@ -1356,7 +1348,7 @@ const vector <uid_t> Groups::getIdUsers(const gid_t gid){
  * @param  groupName название группы
  * @return           список идентификаторов пользователей
  */
-const vector <uid_t> Groups::getIdUsers(const string groupName){
+const vector <uid_t> AUsers::Groups::getIdUsers(const string groupName){
 	// Результат работы функции
 	vector <uid_t> result;
 	// Если идентификатор группы передан
@@ -1375,7 +1367,7 @@ const vector <uid_t> Groups::getIdUsers(const string groupName){
  * @param  uid идентификатор пользователя
  * @return     результат добавления
  */
-const bool Groups::addUser(const gid_t gid, const uid_t uid){
+const bool AUsers::Groups::addUser(const gid_t gid, const uid_t uid){
 	// Результат работы функции
 	bool result = false;
 	// Если входящие параметры верные
@@ -1398,7 +1390,7 @@ const bool Groups::addUser(const gid_t gid, const uid_t uid){
  * @param  userName  название пользователя
  * @return           результат добавления
  */
-const bool Groups::addUser(const gid_t gid, const string userName){
+const bool AUsers::Groups::addUser(const gid_t gid, const string userName){
 	// Результат работы функции
 	bool result = false;
 	// Если входящие параметры верные
@@ -1417,7 +1409,7 @@ const bool Groups::addUser(const gid_t gid, const string userName){
  * @param  uid       идентификатор пользователя
  * @return           результат добавления
  */
-const bool Groups::addUser(const string groupName, const uid_t uid){
+const bool AUsers::Groups::addUser(const string groupName, const uid_t uid){
 	// Результат работы функции
 	bool result = false;
 	// Если входящие параметры верные
@@ -1436,7 +1428,7 @@ const bool Groups::addUser(const string groupName, const uid_t uid){
  * @param  userName  название пользователя
  * @return           результат добавления
  */
-const bool Groups::addUser(const string groupName, const string userName){
+const bool AUsers::Groups::addUser(const string groupName, const string userName){
 	// Результат работы функции
 	bool result = false;
 	// Если входящие параметры верные
@@ -1457,15 +1449,15 @@ const bool Groups::addUser(const string groupName, const string userName){
  * @param  name название группы
  * @return      результат добавления
  */
-const bool Groups::addGroup(const gid_t id, const string name){
+const bool AUsers::Groups::addGroup(const gid_t id, const string name){
 	// Результат работы функции
 	bool result = false;
 	// Если идентификатор и название переданы
 	if(id && !name.empty()){
 		// Создаем блок с данными группы
-		Data group = createDefaultData(id, name);
+		DataGroups group = createDefaultData(id, name);
 		// Добавляем группу в список групп
-		this->data.insert(pair <gid_t, Data>(group.id, group));
+		this->data.insert(pair <gid_t, DataGroups>(group.id, group));
 		// Выводим сообщение что все удачно
 		result = true;
 	}
@@ -1473,11 +1465,19 @@ const bool Groups::addGroup(const gid_t id, const string name){
 	return result;
 }
 /**
+ * setUsers Метод добавления объекта пользователей
+ * @param users объект пользователей
+ */
+void AUsers::Groups::setUsers(void * users){
+	// Если объект пользователей существует то добавляем его
+	this->users = users;
+}
+/**
  * Groups Конструктор
  * @param config конфигурационные данные
  * @param log    объект лога для вывода информации
  */
-Groups::Groups(Config * config, LogApp * log){
+AUsers::Groups::Groups(Config * config, LogApp * log){
 	// Если конфигурационные данные переданы
 	if(config){
 		// Запоминаем данные логов

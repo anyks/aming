@@ -194,7 +194,7 @@ class Network {
 		 * @param  mask блок с данными маски сети
 		 * @return      результат проверки
 		 */
-		bool checkMask(IPdata ip, IPdata mask);
+		const bool checkMask(IPdata ip, IPdata mask);
 		/**
 		 * getLow1Ip6 Функция упрощения IPv6 адреса первого порядка
 		 * @param  ip адрес интернет протокола версии 6
@@ -245,35 +245,42 @@ class Network {
 		 * @param  eip конечный диапазон ip адресов
 		 * @return     результат проверки
 		 */
-		bool checkRange6(const string ip, const string bip, const string eip);
+		const bool checkRange6(const string ip, const string bip, const string eip);
 		/**
 		 * checkMaskByString Метод проверки на соответствие маски по строке маски
 		 * @param  ip   данные ip адреса
 		 * @param  mask номер маски
 		 * @return      результат проверки
 		 */
-		bool checkMaskByString(string ip, string mask);
+		const bool checkMaskByString(string ip, string mask);
 		/**
 		 * checkMaskByNumber Метод проверки на соответствие маски по номеру маски
 		 * @param  ip   данные ip адреса
 		 * @param  mask номер маски
 		 * @return      результат проверки
 		 */
-		bool checkMaskByNumber(string ip, u_int mask);
+		const bool checkMaskByNumber(string ip, u_int mask);
 		/**
 		 * checkIPByNetwork Метод проверки, принадлежит ли ip адресу указанной сети
 		 * @param  ip  данные ip адреса интернет протокола версии 4
 		 * @param  nwk адрес сети (192.168.0.0/16)
 		 * @return     результат проверки
 		 */
-		bool checkIPByNetwork(const string ip, const string nwk);
+		const bool checkIPByNetwork(const string ip, const string nwk);
 		/**
 		 * checkIPByNetwork6 Метод проверки, принадлежит ли ip адресу указанной сети
 		 * @param  ip  данные ip адреса интернет протокола версии 6
 		 * @param  nwk адрес сети (2001:db8::/32)
 		 * @return     результат проверки
 		 */
-		bool checkIPByNetwork6(const string ip, const string nwk);
+		const bool checkIPByNetwork6(const string ip, const string nwk);
+		/**
+		 * compareIP6 Метод проверки на совпадение ip адресов
+		 * @param  ip1 адрес подключения IPv6
+		 * @param  ip2 адрес подключения IPv6
+		 * @return     результат проверки
+		 */
+		const bool compareIP6(const string ip1, const string ip2);
 		/**
 		 * imposeMask Метод наложения маски
 		 * @param  ip   блок с данными ip адреса

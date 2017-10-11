@@ -26,27 +26,53 @@
 #include "system/system.h"
 #include "general/general.h"
 #include "ldap2/ldap.h"
-#include "groups/groups.h"
 #include "headers/headers.h"
+
 
 // Устанавливаем область видимости
 using namespace std;
 
 /**
- * Users Класс пользователей
+ * AUsers Класс пользователей AMING
  */
-class Users {
+class AUsers {
 	private:
 		/**
-		 * Ldap Структура ldap
+		 * Gzip Структура параметров сжатия данных на уровне прокси сервера
 		 */
-		 struct Ldap {
-			string dnUser;
-			string dnConfig;
-			string scopeUser;
-			string scopeConfig;
-			string filterUser;
-			string filterConfig;
+		struct Gzip {
+			bool vary;					// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
+			int level;					// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
+			long length;				// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
+			size_t chunk;				// Максимальный размер чанка в байтах
+			string regex;				// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
+			vector <string> vhttp;		// Версия http протокола
+			vector <string> proxied;	// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
+			vector <string> types;		// Разрешает сжатие ответа методом gzip для указанных MIME-типов
+		};
+		/**
+		 * IP Структура ip адреса
+		 */
+		struct IP {
+			vector <string> ip;			// Список ip адресов
+			vector <string> resolver;	// Список dns серверов
+		};
+		/**
+		 * Proxy Структура параметров самого прокси-сервера
+		 */
+		struct Proxy {
+			bool reverse;		// Обратный прокси (доступ из сети в локальную сеть)
+			bool transfer;		// Активация поддержки прокси листа
+			bool forward;		// Прямой прокси (доступ во внешнюю сеть)
+			bool subnet;		// Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть
+			bool pipelining;	// Активация конвеерной обработки
+		};
+		/**
+		 * Connects Структура контроля подключений клиента к серверу
+		 */
+		struct Connects {
+			size_t size;	// Максимальный размер скачиваемых данных в байтах
+			u_int connect;	// Максимальное количество подключений (одного клиента к прокси серверу)
 		};
 		/**
 		 * Timeout Структура таймаутов
@@ -55,13 +81,6 @@ class Users {
 			size_t read;	// Таймаут на чтение данных
 			size_t write;	// Таймаут на запись данных
 			size_t upgrade;	// Таймаут на работу в режиме переключения протоколов
-		};
-		/**
-		 * IP Структура ip адреса
-		 */
-		struct IP {
-			vector <string> ip;			// Список ip адресов
-			vector <string> resolver;	// Список dns серверов
 		};
 		/**
 		 * BufferSize Структура размеров буфера
@@ -79,39 +98,32 @@ class Users {
 			int keepintvl;	// Интервал времени в секундах между попытками
 		};
 		/**
-		 * Connects Структура контроля подключений клиента к серверу
+		 * DataGroups Структура данных группы
 		 */
-		struct Connects {
-			size_t size;	// Максимальный размер скачиваемых данных в байтах
-			u_int connect;	// Максимальное количество подключений (одного клиента к прокси серверу)
+		struct DataGroups {
+			gid_t id;				// Идентификатор группы
+			u_short options;		// Основные параметры прокси
+			u_short type;			// Тип группы (0 - файлы, 1 - PAM, 2 - LDAP)
+			string name;			// Название группы
+			string pass;			// Пароль группы
+			string auth;			// Тип авторизации клиентов
+			string desc;			// Описание групп
+			vector <string> idnt;	// Список ip4/ip6/nwk/mac адресов
+			IP ipv4;				// Блок ip адресов для протокола версии 4
+			IP ipv6;				// Блок ip адресов для протокола версии 6
+			Gzip gzip;				// Параметры gzip
+			Proxy proxy;			// Параметры самого прокси-сервера
+			Headers headers;		// Объект управления заголовками
+			Connects connects;		// Контроль подключений клиента к серверу
+			Timeouts timeouts;		// Таймауты подключений
+			BufferSize buffers;		// Размеры буферов передачи данных
+			Keepalive keepalive;	// Постоянное подключение
+			vector <uid_t> users;	// Список идентификаторов пользователей
 		};
 		/**
-		 * Gzip Структура параметров сжатия данных на уровне прокси сервера
+		 * DataUsers Структура данных пользователя
 		 */
-		struct Gzip {
-			bool vary;					// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
-			int level;					// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
-			long length;				// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
-			size_t chunk;				// Максимальный размер чанка в байтах
-			string regex;				// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
-			vector <string> vhttp;		// Версия http протокола
-			vector <string> proxied;	// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
-			vector <string> types;		// Разрешает сжатие ответа методом gzip для указанных MIME-типов
-		};
-		/**
-		 * Proxy Структура параметров самого прокси-сервера
-		 */
-		struct Proxy {
-			bool reverse;		// Обратный прокси (доступ из сети в локальную сеть)
-			bool transfer;		// Активация поддержки прокси листа
-			bool forward;		// Прямой прокси (доступ во внешнюю сеть)
-			bool subnet;		// Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть
-			bool pipelining;	// Активация конвеерной обработки
-		};
-		/**
-		 * Data Структура данных пользователя
-		 */
-		struct Data {
+		struct DataUsers {
 			uid_t id;				// Идентификатор пользователя
 			u_short options;		// Основные параметры прокси
 			u_short type;			// Тип пользователя (0 - файлы, 1 - PAM, 2 - LDAP)
@@ -130,135 +142,523 @@ class Users {
 			BufferSize buffers;		// Размеры буферов передачи данных
 			Keepalive keepalive;	// Постоянное подключение
 		};
-		// Время в течение которого обновлять нельзя
-		time_t maxUpdate = 0;
-		// Время последнего обновления данных
-		time_t lastUpdate = 0;
-		// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
-		u_short typeSearch = 0;
-		// Тип поиска конфигурационных данных
-		u_short typeConfigs = 0; // (0 - Из файла, 1 - из LDAP)
-		// Объект ldap подклчюения
-		Ldap ldap;
+		/**
+		 * Groups Класс групп пользователей
+		 */
+		class Groups {
+			private:
+				/**
+				 * Ldap Структура ldap
+				 */
+				struct Ldap {
+					string dnGroup;
+					string dnUser;
+					string dnConfig;
+					string scopeGroup;
+					string scopeUser;
+					string scopeConfig;
+					string filterGroup;
+					string filterUser;
+					string filterConfig;
+				};
+				// Время в течение которого обновлять нельзя
+				time_t maxUpdate = 0;
+				// Время последнего обновления данных
+				time_t lastUpdate = 0;
+				// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
+				u_short typeSearch = 0;
+				// Тип поиска конфигурационных данных
+				u_short typeConfigs = 0; // (0 - Из файла, 1 - из LDAP)
+				// Максимальное количество групп пользователя для PAM
+				int maxPamGroupsUser = 0;
+				// Объект ldap подклчюения
+				Ldap ldap;
+				// Объект лога
+				LogApp * log = nullptr;
+				// Конфигурационные данные
+				Config * config = nullptr;
+				// Данные пользователей
+				void * users = nullptr;
+				// Список групп
+				unordered_map <gid_t, DataGroups> data;
+				/**
+				 * setProxyOptions Функция добавления опций прокси
+				 * @param option       опция для добавления
+				 * @param proxyOptions список существующих опций
+				 * @param flag         флаг добавления или удаления опции
+				 */
+				void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
+				/**
+				 * setDataGroupFromLdap Метод заполнения данных группы из LDAP
+				 * @param group объект группы
+				 */
+				void setDataGroupFromLdap(DataGroups &group);
+				/**
+				 * setDataGroupFromFile Метод заполнения данных группы из конфигурационного файла
+				 * @param group объект группы
+				 * @param ini   указатель на объект конфигурации
+				 */
+				void setDataGroupFromFile(DataGroups &group, INI * ini = nullptr);
+				/**
+				 * setDataGroup Метод заполнения данных группы
+				 * @param group объект группы
+				 * @param ini   указатель на объект конфигурации
+				 */
+				void setDataGroup(DataGroups &group, INI * ini = nullptr);
+				/**
+				 * createDefaultData Метод создания группы с параметрами по умолчанию
+				 * @param  id   идентификатор групыы
+				 * @param  name название группы
+				 * @return      созданная группа
+				 */
+				const DataGroups createDefaultData(const gid_t id, const string name);
+				/**
+				 * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
+				 * @return результат операции
+				 */
+				const bool readGroupsFromLdap();
+				/**
+				 * readGroupsFromPam Метод чтения данных групп из операционной системы
+				 * @return результат операции
+				 */
+				const bool readGroupsFromPam();
+				/**
+				 * readGroupsFromFile Метод чтения данных групп из файла
+				 * @return результат операции
+				 */
+				const bool readGroupsFromFile();
+				/**
+				 * update Метод обновления групп
+				 */
+				const bool update();
+			public:
+				/**
+				 * getAllGroups Метод получения данных всех групп
+				 * @return      список данных всех групп
+				 */
+				const vector <const DataGroups *> getAllGroups();
+				/**
+				 * getDataById Метод получения данные группы по идентификатору группы
+				 * @param  gid идентификатор группы
+				 * @return     данные группы
+				 */
+				const DataGroups * getDataById(const gid_t gid);
+				/**
+				 * getDataByName Метод получения данные группы по имени группы
+				 * @param  groupName название группы
+				 * @return           данные группы
+				 */
+				const DataGroups * getDataByName(const string groupName);
+				/**
+				 * getGroupIdByUser Метод получения идентификатор группы по идентификатору пользователя
+				 * @param  uid идентификатор пользователя
+				 * @return     идентификатор группы
+				 */
+				const vector <gid_t> getGroupIdByUser(const uid_t uid);
+				/**
+				 * getGroupIdByUser Метод получения идентификатор группы по имени пользователя
+				 * @param  userName название пользователя
+				 * @return          идентификатор группы
+				 */
+				const vector <gid_t> getGroupIdByUser(const string userName);
+				/**
+				 * getGroupNameByUser Метод получения название группы по идентификатору пользователя
+				 * @param  uid идентификатор пользователя
+				 * @return     название группы
+				 */
+				const vector <string> getGroupNameByUser(const uid_t uid);
+				/**
+				 * getGroupNameByUser Метод получения название группы по имени пользователя
+				 * @param  userName название пользователя
+				 * @return          название группы
+				 */
+				const vector <string> getGroupNameByUser(const string userName);
+				/**
+				 * checkUser Метод проверки принадлежности пользователя к группе
+				 * @param  gid идентификатор группы
+				 * @param  uid идентификатор пользователя
+				 * @return     результат проверки
+				 */
+				const bool checkUser(const gid_t gid, const uid_t uid);
+				/**
+				 * checkUser Метод проверки принадлежности пользователя к группе
+				 * @param  gid      идентификатор группы
+				 * @param  userName название пользователя
+				 * @return          результат проверки
+				 */
+				const bool checkUser(const gid_t gid, const string userName);
+				/**
+				 * checkUser Метод проверки принадлежности пользователя к группе
+				 * @param  groupName название группы
+				 * @param  uid       идентификатор пользователя
+				 * @return           результат проверки
+				 */
+				const bool checkUser(const string groupName, const uid_t uid);
+				/**
+				 * checkUser Метод проверки принадлежности пользователя к группе
+				 * @param  groupName название группы
+				 * @param  userName  название пользователя
+				 * @return           результат проверки
+				 */
+				const bool checkUser(const string groupName, const string userName);
+				/**
+				 * checkGroupById Метод проверки на существование группы
+				 * @param  gid идентификатор группы
+				 * @return     результат проверки
+				 */
+				const bool checkGroupById(const gid_t gid);
+				/**
+				 * checkGroupByName Метод проверки на существование группы
+				 * @param  groupName название группы
+				 * @return           результат проверки
+				 */
+				const bool checkGroupByName(const string groupName);
+				/**
+				 * getUidByUserName Метод извлечения идентификатора пользователя по его имени
+				 * @param  userName название пользователя
+				 * @return          идентификатор пользователя
+				 */
+				const uid_t getUidByUserName(const string userName);
+				/**
+				 * getIdByName Метод извлечения идентификатора группы по ее имени
+				 * @param  groupName название группы
+				 * @return           идентификатор группы
+				 */
+				const gid_t getIdByName(const string groupName);
+				/**
+				 * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
+				 * @param  uid идентификатор пользователя
+				 * @return     название пользователя
+				 */
+				const string getUserNameByUid(const uid_t uid);
+				/**
+				 * getNameById Метод извлечения имени группы по ее идентификатору
+				 * @param  gid идентификатор группы
+				 * @return     название группы
+				 */
+				const string getNameById(const gid_t gid);
+				/**
+				 * getNameUsers Метод получения списка пользователей в группе
+				 * @param  gid идентификатор группы
+				 * @return     список имен пользователей
+				 */
+				const vector <string> getNameUsers(const gid_t gid);
+				/**
+				 * getNameUsers Метод получения списка пользователей в группе
+				 * @param  groupName название группы
+				 * @return           список имен пользователей
+				 */
+				const vector <string> getNameUsers(const string groupName);
+				/**
+				 * getIdAllUsers Метод получения списка всех пользователей
+				 * @return список идентификаторов пользователей
+				 */
+				const vector <uid_t> getIdAllUsers();
+				/**
+				 * getIdUsers Метод получения списка пользователей в группе
+				 * @param  gid идентификатор группы
+				 * @return     список идентификаторов пользователей
+				 */
+				const vector <uid_t> getIdUsers(const gid_t gid);
+				/**
+				 * getIdUsers Метод получения списка пользователей в группе
+				 * @param  groupName название группы
+				 * @return           список идентификаторов пользователей
+				 */
+				const vector <uid_t> getIdUsers(const string groupName);
+				/**
+				 * addUser Метод добавления пользователя
+				 * @param  gid идентификатор группы
+				 * @param  uid идентификатор пользователя
+				 * @return     результат добавления
+				 */
+				const bool addUser(const gid_t gid, const uid_t uid);
+				/**
+				 * addUser Метод добавления пользователя
+				 * @param  gid       идентификатор группы
+				 * @param  userName  название пользователя
+				 * @return           результат добавления
+				 */
+				const bool addUser(const gid_t gid, const string userName);
+				/**
+				 * addUser Метод добавления пользователя
+				 * @param  groupName название группы
+				 * @param  uid       идентификатор пользователя
+				 * @return           результат добавления
+				 */
+				const bool addUser(const string groupName, const uid_t uid);
+				/**
+				 * addUser Метод добавления пользователя
+				 * @param  groupName название группы
+				 * @param  userName  название пользователя
+				 * @return           результат добавления
+				 */
+				const bool addUser(const string groupName, const string userName);
+				/**
+				 * addGroup Метод добавления группы
+				 * @param  id   идентификатор группы
+				 * @param  name название группы
+				 * @return      результат добавления
+				 */
+				const bool addGroup(const gid_t id, const string name);
+				/**
+				 * setUsers Метод добавления объекта пользователей
+				 * @param users объект пользователей
+				 */
+				void setUsers(void * users = nullptr);
+				/**
+				 * Groups Конструктор
+				 * @param config конфигурационные данные
+				 * @param log    объект лога для вывода информации
+				 */
+				Groups(Config * config = nullptr, LogApp * log = nullptr);
+		};
+		/**
+		 * Users Класс пользователей
+		 */
+		class Users {
+			private:
+				/**
+				 * Ldap Структура ldap
+				 */
+				struct Ldap {
+					string dnUser;
+					string dnConfig;
+					string scopeUser;
+					string scopeConfig;
+					string filterUser;
+					string filterConfig;
+				};
+				// Время в течение которого обновлять нельзя
+				time_t maxUpdate = 0;
+				// Время последнего обновления данных
+				time_t lastUpdate = 0;
+				// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
+				u_short typeSearch = 0;
+				// Тип поиска конфигурационных данных
+				u_short typeConfigs = 0; // (0 - Из файла, 1 - из LDAP)
+				// Объект ldap подклчюения
+				Ldap ldap;
+				// Объект лога
+				LogApp * log = nullptr;
+				// Конфигурационные данные
+				Config * config = nullptr;
+				// Данные групп
+				void * groups = nullptr;
+				// Список пользователей
+				unordered_map <uid_t, DataUsers> data;
+				/**
+				 * setProxyOptions Функция добавления опций прокси
+				 * @param option       опция для добавления
+				 * @param proxyOptions список существующих опций
+				 * @param flag         флаг добавления или удаления опции
+				 */
+				void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
+				/**
+				 * setDataUserFromLdap Метод заполнения данных пользователя из LDAP
+				 * @param user объект пользователя
+				 */
+				void setDataUserFromLdap(DataUsers &user);
+				/**
+				 * setDataUserFromFile Метод заполнения данных пользователя из конфигурационного файла
+				 * @param user объект пользователя
+				 * @param ini  указатель на объект конфигурации
+				 */
+				void setDataUserFromFile(DataUsers &user, INI * ini = nullptr);
+				/**
+				 * setDataUser Метод заполнения данных пользователя
+				 * @param user объект пользователя
+				 * @param ini  указатель на объект конфигурации
+				 */
+				void setDataUser(DataUsers &user, INI * ini = nullptr);
+				/**
+				 * createDefaultData Метод создания пользователя с параметрами по умолчанию
+				 * @param  id   идентификатор пользователя
+				 * @param  name название пользователя
+				 * @return      созданный пользователь
+				 */
+				const DataUsers createDefaultData(const uid_t id, const string name);
+				/**
+				 * readUsersFromLdap Метод чтения данных пользователей из LDAP сервера
+				 * @return результат операции
+				 */
+				const bool readUsersFromLdap();
+				/**
+				 * readUsersFromPam Метод чтения данных пользователей из операционной системы
+				 * @return результат операции
+				 */
+				const bool readUsersFromPam();
+				/**
+				 * readUsersFromFile Метод чтения данных пользователей из файла
+				 * @return результат операции
+				 */
+				const bool readUsersFromFile();
+				/**
+				 * update Метод обновления пользователей
+				 */
+				const bool update();
+			public:
+				/**
+				 * getAllUsers Метод получения данных всех пользователей
+				 * @return     список данных всех пользователей
+				 */
+				const vector <const DataUsers *> getAllUsers();
+				/**
+				 * getUserByConnect Метод поиска данных пользователя по данным коннекта
+				 * @param ip  адрес интернет протокола клиента
+				 * @param mac аппаратный адрес сетевого интерфейса клиента
+				 * @return    данные пользователя
+				 */
+				const DataUsers * getUserByConnect(const string ip = "", const string mac = "");
+				/**
+				 * getDataById Метод получения данные пользователя по идентификатору
+				 * @param  uid идентификатор пользователя
+				 * @return     данные пользователя
+				 */
+				const DataUsers * getDataById(const uid_t uid);
+				/**
+				 * getDataByName Метод получения данные пользователя по имени
+				 * @param  groupName название пользователя
+				 * @return           данные пользователя
+				 */
+				const DataUsers * getDataByName(const string userName);
+				/**
+				 * checkUserById Метод проверки на существование пользователя
+				 * @param  uid идентификатор пользователя
+				 * @return     результат проверки
+				 */
+				const bool checkUserById(const uid_t uid);
+				/**
+				 * checkGroupByName Метод проверки на существование пользователя
+				 * @param  userName название пользователя
+				 * @return          результат проверки
+				 */
+				const bool checkUserByName(const string userName);
+				/**
+				 * getIdByName Метод извлечения идентификатора пользователя по его имени
+				 * @param  userName название пользователя
+				 * @return          идентификатор пользователя
+				 */
+				const uid_t getIdByName(const string userName);
+				/**
+				 * getNameById Метод извлечения имени пользователя по его идентификатору
+				 * @param  uid идентификатор пользователя
+				 * @return     название пользователя
+				 */
+				const string getNameById(const uid_t uid);
+				/**
+				 * getIdAllUsers Метод получения списка всех пользователей
+				 * @return список идентификаторов пользователей
+				 */
+				const vector <uid_t> getIdAllUsers();
+				/**
+				 * setGroups Метод добавления объекта групп
+				 * @param groups объект групп
+				 */
+				void setGroups(void * groups = nullptr);
+				/**
+				 * Users Конструктор
+				 * @param config конфигурационные данные
+				 * @param log    объект лога для вывода информации
+				 */
+				Users(Config * config = nullptr, LogApp * log = nullptr);
+		};
 		// Объект лога
 		LogApp * log = nullptr;
 		// Конфигурационные данные
 		Config * config = nullptr;
-		// Данные групп
+		// Объект с данными групп
 		Groups * groups = nullptr;
-		// Список пользователей
-		unordered_map <uid_t, Data> data;
-		/**
-		 * setProxyOptions Функция добавления опций прокси
-		 * @param option       опция для добавления
-		 * @param proxyOptions список существующих опций
-		 * @param flag         флаг добавления или удаления опции
-		 */
-		void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
-		/**
-		 * setDataUserFromLdap Метод заполнения данных пользователя из LDAP
-		 * @param user объект пользователя
-		 */
-		void setDataUserFromLdap(Data &user);
-		/**
-		 * setDataUserFromFile Метод заполнения данных пользователя из конфигурационного файла
-		 * @param user объект пользователя
-		 * @param ini  указатель на объект конфигурации
-		 */
-		void setDataUserFromFile(Data &user, INI * ini = nullptr);
-		/**
-		 * setDataUser Метод заполнения данных пользователя
-		 * @param user объект пользователя
-		 * @param ini  указатель на объект конфигурации
-		 */
-		void setDataUser(Data &user, INI * ini = nullptr);
-		/**
-		 * createDefaultData Метод создания пользователя с параметрами по умолчанию
-		 * @param  id   идентификатор пользователя
-		 * @param  name название пользователя
-		 * @return      созданный пользователь
-		 */
-		const Data createDefaultData(const uid_t id, const string name);
-		/**
-		 * readUsersFromLdap Метод чтения данных пользователей из LDAP сервера
-		 * @return результат операции
-		 */
-		const bool readUsersFromLdap();
-		/**
-		 * readUsersFromPam Метод чтения данных пользователей из операционной системы
-		 * @return результат операции
-		 */
-		const bool readUsersFromPam();
-		/**
-		 * readUsersFromFile Метод чтения данных пользователей из файла
-		 * @return результат операции
-		 */
-		const bool readUsersFromFile();
-		/**
-		 * update Метод обновления пользователей
-		 */
-		const bool update();
+		// Объект с данными пользователей
+		Users * users = nullptr;
 	public:
 		/**
-		 * getAllUsers Метод получения данных всех пользователей
-		 * @return     список данных всех пользователей
+		 * getAllGroups Метод получения данных всех групп
+		 * @return      список данных всех групп
 		 */
-		const vector <const Data *> getAllUsers();
+		const vector <const DataGroups *> getAllGroups();
 		/**
-		 * getUserByConnect Метод поиска данных пользователя по данным коннекта
-		 * @param ip  адрес интернет протокола клиента
-		 * @param mac аппаратный адрес сетевого интерфейса клиента
-		 * @return    данные пользователя
+		 * getIdUsersInGroup Метод получения списка пользователей в группе
+		 * @param  gid идентификатор группы
+		 * @return     список идентификаторов пользователей
 		 */
-		const Data * getUserByConnect(const string ip = "", const string mac = "");
+		const vector <uid_t> getIdUsersInGroup(const gid_t gid);
 		/**
-		 * getDataById Метод получения данные пользователя по идентификатору
-		 * @param  uid идентификатор пользователя
-		 * @return     данные пользователя
+		 * getIdUsersInGroup Метод получения списка пользователей в группе
+		 * @param  groupName название группы
+		 * @return           список идентификаторов пользователей
 		 */
-		const Data * getDataById(const uid_t uid);
+		const vector <uid_t> getIdUsersInGroup(const string groupName);
 		/**
-		 * getDataByName Метод получения данные пользователя по имени
-		 * @param  groupName название пользователя
-		 * @return           данные пользователя
+		 * getNameUsersInGroup Метод получения списка пользователей в группе
+		 * @param  gid   идентификатор группы
+		 * @param  users объект пользователей
+		 * @return       список имен пользователей
 		 */
-		const Data * getDataByName(const string userName);
+		const vector <string> getNameUsersInGroup(const gid_t gid);
 		/**
-		 * checkUserById Метод проверки на существование пользователя
-		 * @param  uid идентификатор пользователя
-		 * @return     результат проверки
+		 * getNameUsersInGroup Метод получения списка пользователей в группе
+		 * @param  groupName название группы
+		 * @param  users     объект пользователей
+		 * @return           список имен пользователей
 		 */
-		const bool checkUserById(const uid_t uid);
+		const vector <string> getNameUsersInGroup(const string groupName);
 		/**
-		 * checkGroupByName Метод проверки на существование пользователя
-		 * @param  userName название пользователя
-		 * @return          результат проверки
+		 * getGidByName Метод извлечения идентификатора группы по ее имени
+		 * @param  groupName название группы
+		 * @return           идентификатор группы
 		 */
-		const bool checkUserByName(const string userName);
+		const gid_t getGidByName(const string groupName);
 		/**
-		 * getIdByName Метод извлечения идентификатора пользователя по его имени
+		 * getUidByName Метод извлечения идентификатора пользователя по его имени
 		 * @param  userName название пользователя
 		 * @return          идентификатор пользователя
 		 */
-		const uid_t getIdByName(const string userName);
+		const uid_t getUidByName(const string userName);
 		/**
-		 * getNameById Метод извлечения имени пользователя по его идентификатору
+		 * checkUserInGroup Метод проверки принадлежности пользователя к группе
+		 * @param  gid идентификатор группы
 		 * @param  uid идентификатор пользователя
-		 * @return     название пользователя
+		 * @return     результат проверки
 		 */
-		const string getNameById(const uid_t uid);
+		const bool checkUserInGroup(const gid_t gid, const uid_t uid);
 		/**
-		 * getIdAllUsers Метод получения списка всех пользователей
-		 * @return список идентификаторов пользователей
+		 * checkUserInGroup Метод проверки принадлежности пользователя к группе
+		 * @param  gid      идентификатор группы
+		 * @param  userName название пользователя
+		 * @return          результат проверки
 		 */
-		const vector <uid_t> getIdAllUsers();
+		const bool checkUserInGroup(const gid_t gid, const string userName);
 		/**
-		 * Users Конструктор
+		 * checkUserInGroup Метод проверки принадлежности пользователя к группе
+		 * @param  groupName название группы
+		 * @param  uid       идентификатор пользователя
+		 * @return           результат проверки
+		 */
+		const bool checkUserInGroup(const string groupName, const uid_t uid);
+		/**
+		 * checkUserInGroup Метод проверки принадлежности пользователя к группе
+		 * @param  groupName название группы
+		 * @param  userName  название пользователя
+		 * @return           результат проверки
+		 */
+		const bool checkUserInGroup(const string groupName, const string userName);
+		/**
+		 * checkGroupById Метод проверки на существование группы
+		 * @param  gid идентификатор группы
+		 * @return     результат проверки
+		 */
+		const bool checkGroupById(const gid_t gid);
+		/**
+		 * AUsers Конструктор
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
-		 * @param groups объект групп пользователей
 		 */
-		Users(Config * config = nullptr, LogApp * log = nullptr, Groups * groups = nullptr);
+		AUsers(Config * config = nullptr, LogApp * log = nullptr);
+		/**
+		 * ~AUsers Деструктор
+		 */
+		~AUsers();
 };
 
 #endif // _USERS_PROXY_AMING_

@@ -27,7 +27,7 @@ const Headers2::IsNot Headers2::isNot(const string str){
  */
 void Headers2::createRulesList(const Headers2::Params params){
 	// Получаем список всех групп
-	auto data_groups = this->groups->getAllGroups();
+	auto data_groups = this->ausers->getAllGroups();
 	// Если группы существуют
 	if(!data_groups.empty()){
 		/**
@@ -199,9 +199,9 @@ void Headers2::createRulesList(const Headers2::Params params){
 					// Определяем идентификатор пользователя
 					if(Anyks::isNumber(user)) uid = ::atoi(user.c_str());
 					// Если это название пользователя
-					else uid = this->groups->getUidByName(user);
+					else uid = this->ausers->getUidByName(user);
 					// Если пользователь принадлежит группе
-					if(this->groups->checkUser(gid, uid)){
+					if(this->ausers->checkUserInGroup(gid, uid)){
 						// Добавляем список экшенов к пользователю
 						users.emplace(uid, actions);
 					}
@@ -210,7 +210,7 @@ void Headers2::createRulesList(const Headers2::Params params){
 					// Очищаем список пользователей
 					users.clear();
 					// Запрашиваем список всех пользователей группы
-					auto uids = this->groups->getIdUsers(gid);
+					auto uids = this->ausers->getIdUsersInGroup(gid);
 					// Переходим по всем идентификаторам пользователей и добавляем туда экшены
 					for(auto it = uids.cbegin(); it != uids.cend(); ++it) users.emplace(* it, actions);
 					// Выходим из цикла
@@ -233,9 +233,9 @@ void Headers2::createRulesList(const Headers2::Params params){
 				// Если это идентификатор группы
 				if(Anyks::isNumber(group)) gid = ::atoi(group.c_str());
 				// Если это название группы
-				else gid = this->groups->getIdByName(group);
+				else gid = this->ausers->getGidByName(group);
 				// Выполняем создание правила
-				if(this->groups->checkGroupById(gid)) createRules(gid);
+				if(this->ausers->checkGroupById(gid)) createRules(gid);
 			// Если найдена звездочка то добавляем во все группы
 			} else {
 				// Переходим по всему списку групп
@@ -647,7 +647,7 @@ void Headers2::add(const gid_t gid, const uid_t uid, const bool action, const bo
 				// Добавляем трафик
 				actions.at(action) = traffics;
 				// Если пользователь принадлежит группе
-				if(this->groups->checkUser(gid, uid)){
+				if(this->ausers->checkUserInGroup(gid, uid)){
 					// Добавляем экшены
 					users.emplace(uid, actions);
 					// Добавляем в список правил
@@ -736,10 +736,11 @@ void Headers2::addName(const string name){
  * Headers Конструктор
  * @param config конфигурационные данные
  * @param log    объект лога для вывода информации
+ * @param ausers объект пользователей
  */
-Headers2::Headers2(Config * config, LogApp * log, Groups * groups){
+Headers2::Headers2(Config * config, LogApp * log, AUsers * ausers){
 	// Если конфигурационные данные переданы
-	if(config && groups){
+	if(config && ausers){
 		// Очищаем все параметры
 		clear();
 		// Запоминаем объект логов
@@ -747,7 +748,7 @@ Headers2::Headers2(Config * config, LogApp * log, Groups * groups){
 		// Запоминаем параметры конфига
 		this->config = config;
 		// Запоминаем параметры групп
-		this->groups = groups;
+		this->ausers = ausers;
 		// Запоминаем название конфигурационного файла
 		this->names.push_front(this->config->proxy.name);
 		// Запоминаем тип поиска параметров заголовков

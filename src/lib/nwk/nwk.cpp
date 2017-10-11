@@ -190,7 +190,7 @@ IPdata Network::getDataIp(string ip){
  * @param  eip конечный диапазон ip адресов
  * @return     результат проверки
  */
-bool Network::checkRange6(const string ip, const string bip, const string eip){
+const bool Network::checkRange6(const string ip, const string bip, const string eip){
 	// Результат проверки
 	bool result = false;
 	// Если все данные переданы
@@ -211,7 +211,7 @@ bool Network::checkRange6(const string ip, const string bip, const string eip){
  * @param  mask блок с данными маски сети
  * @return      результат проверки
  */
-bool Network::checkMask(IPdata ip, IPdata mask){
+const bool Network::checkMask(IPdata ip, IPdata mask){
 	// Переходим по всему блоку данных ip
 	for(u_int i = 0; i < ip.size(); i++){
 		// Определяем значение маски сети
@@ -228,7 +228,7 @@ bool Network::checkMask(IPdata ip, IPdata mask){
  * @param  mask номер маски
  * @return      результат проверки
  */
-bool Network::checkMaskByString(string ip, string mask){
+const bool Network::checkMaskByString(string ip, string mask){
 	// Оцифровываем данные ip
 	IPdata ipdata = getDataIp(ip);
 	// Оцифровываем данные маски
@@ -242,7 +242,7 @@ bool Network::checkMaskByString(string ip, string mask){
  * @param  mask номер маски
  * @return      результат проверки
  */
-bool Network::checkMaskByNumber(string ip, u_int mask){
+const bool Network::checkMaskByNumber(string ip, u_int mask){
 	// Оцифровываем данные ip
 	IPdata ipdata = getDataIp(ip);
 	// Оцифровываем данные маски
@@ -256,7 +256,7 @@ bool Network::checkMaskByNumber(string ip, u_int mask){
  * @param  nwk адрес сети (192.168.0.0/16)
  * @return     результат проверки
  */
-bool Network::checkIPByNetwork(const string ip, const string nwk){
+const bool Network::checkIPByNetwork(const string ip, const string nwk){
 	// Получаем данные ip адреса
 	IPdata ipdata = getDataIp(ip);
 	// Получаем данные сети
@@ -275,7 +275,7 @@ bool Network::checkIPByNetwork(const string ip, const string nwk){
  * @param  nwk адрес сети (2001:db8::/32)
  * @return     результат проверки
  */
-bool Network::checkIPByNetwork6(const string ip, const string nwk){
+const bool Network::checkIPByNetwork6(const string ip, const string nwk){
 	// Результат сравнения
 	bool compare = false;
 	// Результат работы регулярного выражения
@@ -316,6 +316,26 @@ bool Network::checkIPByNetwork6(const string ip, const string nwk){
 				}
 			}
 		}
+	}
+	// Выводим результат сравнения
+	return compare;
+}
+/**
+ * compareIP6 Метод проверки на совпадение ip адресов
+ * @param  ip1 адрес подключения IPv6
+ * @param  ip2 адрес подключения IPv6
+ * @return     результат проверки
+ */
+const bool Network::compareIP6(const string ip1, const string ip2){
+	// Результат сравнения
+	bool compare = false;
+	// Если ip адреса переданы
+	if(!ip1.empty() && !ip2.empty()){
+		// Преобразуем ip адреса в полный вид
+		const string _ip1 = Anyks::toCase(setLowIp6(ip1));
+		const string _ip2 = Anyks::toCase(setLowIp6(ip2));
+		// Если ip адреса совпадают то запоминаем это
+		if(_ip1.compare(_ip2) == 0) compare = true;
 	}
 	// Выводим результат сравнения
 	return compare;

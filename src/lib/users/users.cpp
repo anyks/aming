@@ -17,7 +17,7 @@ using namespace std;
  * @param proxyOptions список существующих опций
  * @param flag         флаг добавления или удаления опции
  */
-void Users::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
+void AUsers::Users::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
 	// Формируем параметры
 	u_short options = proxyOptions;
 	// Устанавливаем параметры прокси сервера
@@ -36,7 +36,7 @@ void Users::setProxyOptions(const u_short option, u_short &proxyOptions, const b
  * setDataUserFromLdap Метод заполнения данных пользователя из LDAP
  * @param user объект пользователя
  */
-void Users::setDataUserFromLdap(Users::Data &user){
+void AUsers::Users::setDataUserFromLdap(AUsers::DataUsers &user){
 	// Параметр для поиска
 	const char * key = "%u";
 	// Выполняем поиск ключа
@@ -92,7 +92,7 @@ void Users::setDataUserFromLdap(Users::Data &user){
 					// Если список значений существует
 					if(!dt->second.empty()){
 						// Если это идентификатор
-						if(dt->first.compare("amingConfigsIdnt") == 0) user.idnt.push_back(dt->second);
+						if(dt->first.compare("amingConfigsIdnt") == 0) user.idnt = dt->second;
 						// Если это External IPv4
 						else if(dt->first.compare("amingConfigsIpExternal4") == 0) user.ipv4.ip = dt->second;
 						// Если это External IPv6
@@ -252,7 +252,7 @@ void Users::setDataUserFromLdap(Users::Data &user){
  * @param user объект пользователя
  * @param ini  указатель на объект конфигурации
  */
-void Users::setDataUserFromFile(Users::Data &user, INI * ini){
+void AUsers::Users::setDataUserFromFile(AUsers::DataUsers &user, INI * ini){
 	// Флаг удаления созданного объекта ini конфигурации
 	bool rmINI = false;
 	// Если объект ini не передан то создаем его
@@ -480,7 +480,7 @@ void Users::setDataUserFromFile(Users::Data &user, INI * ini){
  * @param user объект пользователя
  * @param ini  указатель на объект конфигурации
  */
- void Users::setDataUser(Users::Data &user, INI * ini){
+ void AUsers::Users::setDataUser(AUsers::DataUsers &user, INI * ini){
 	// Определяем тип системы откуда нужно получить конфигурационные файлы
 	switch(this->typeConfigs){
 		// Переопределяем дефолтные данные из файла конфигурации
@@ -495,13 +495,15 @@ void Users::setDataUserFromFile(Users::Data &user, INI * ini){
  * @param  name название пользователя
  * @return      созданный пользователь
  */
- const Users::Data Users::createDefaultData(const uid_t id, const string name){
+ const AUsers::DataUsers AUsers::Users::createDefaultData(const uid_t id, const string name){
 	// Создаем блок с данными пользователя
-	Data user;
+	DataUsers user;
 	// Если входные параметры верные
-	if(id && !name.empty()){
+	if(id && !name.empty() && (this->groups != nullptr)){
+		// Получаем объект групп
+		Groups * groups = reinterpret_cast <Groups *> (this->groups);
 		// Получаем список групп которым принадлежит пользователь
-		auto gids = this->groups->getGroupIdByUser(id);
+		auto gids = groups->getGroupIdByUser(id);
 		// Если список получен
 		if(!gids.empty()){
 			// Запоминаем название пользователя
@@ -518,7 +520,7 @@ void Users::setDataUserFromFile(Users::Data &user, INI * ini){
 					// Запоминаем идентификатор группы
 					gid = (* gt);
 					// Получаем данные группы
-					auto group = this->groups->getDataById(gid);
+					auto group = groups->getDataById(gid);
 					// Запоминаем тип авторизации
 					user.auth 		= group->auth;
 					user.options	= group->options;
@@ -578,7 +580,7 @@ void Users::setDataUserFromFile(Users::Data &user, INI * ini){
  * readUsersFromLdap Метод чтения данных пользователей из LDAP сервера
  * @return результат операции
  */
-const bool Users::readUsersFromLdap(){
+const bool AUsers::Users::readUsersFromLdap(){
 	// Результат работы функции
 	bool result = false;
 	// Создаем объект подключения LDAP
@@ -624,7 +626,7 @@ const bool Users::readUsersFromLdap(){
 				}
 			}
 			// Создаем блок с данными пользователя
-			Data user = createDefaultData(uid, name);
+			DataUsers user = createDefaultData(uid, name);
 			// Устанавливаем тип пользователя
 			user.type = 2;
 			// Добавляем пароль пользователя
@@ -636,7 +638,7 @@ const bool Users::readUsersFromLdap(){
 			// Устанавливаем параметры http парсера
 			user.headers.setOptions(user.options);
 			// Добавляем пользователя в список
-			this->data.insert(pair <uid_t, Data>(user.id, user));
+			this->data.insert(pair <uid_t, DataUsers>(user.id, user));
 		}
 		// Сообщаем что все удачно
 		result = true;
@@ -648,7 +650,7 @@ const bool Users::readUsersFromLdap(){
  * readUsersFromPam Метод чтения данных пользователей из операционной системы
  * @return результат операции
  */
-const bool Users::readUsersFromPam(){
+const bool AUsers::Users::readUsersFromPam(){
 	// Результат работы функции
 	bool result = false;
 	// Выводим результат
@@ -658,7 +660,7 @@ const bool Users::readUsersFromPam(){
  * readUsersFromFile Метод чтения данных пользователей из файла
  * @return результат операции
  */
-const bool Users::readUsersFromFile(){
+const bool AUsers::Users::readUsersFromFile(){
 	// Результат работы функции
 	bool result = false;
 	// Создаем адрес для хранения файла
@@ -686,7 +688,7 @@ const bool Users::readUsersFromFile(){
 						// Получаем название пользователя
 						const string name = (Anyks::isNumber(ut->key) ? ut->value : ut->key);
 						// Создаем блок с данными пользователя
-						Data user = createDefaultData(uid, name);
+						DataUsers user = createDefaultData(uid, name);
 						// Устанавливаем тип пользователя
 						user.type = 0;
 						// Если пароли пользователей существуют
@@ -714,7 +716,7 @@ const bool Users::readUsersFromFile(){
 						// Устанавливаем параметры http парсера
 						user.headers.setOptions(user.options);
 						// Добавляем пользователя в список пользователей
-						this->data.insert(pair <uid_t, Data>(user.id, user));
+						this->data.insert(pair <uid_t, DataUsers>(user.id, user));
 					}
 				}
 			}
@@ -726,7 +728,7 @@ const bool Users::readUsersFromFile(){
 /**
  * update Метод обновления пользователей
  */
-const bool Users::update(){
+const bool AUsers::Users::update(){
 	// Результат проверки
 	bool result = false;
 	// Создаем текущее время генерации
@@ -777,9 +779,9 @@ const bool Users::update(){
  * getAllUsers Метод получения данных всех пользователей
  * @return     список данных всех пользователей
  */
-const vector <const Users::Data *> Users::getAllUsers(){
+const vector <const AUsers::DataUsers *> AUsers::Users::getAllUsers(){
 	// Список данных по умолчанию
-	vector <const Data *> result;
+	vector <const DataUsers *> result;
 	// Если данные пользователей существуют
 	if(!this->data.empty()){
 		// Переходим по всем данным пользователей
@@ -797,7 +799,7 @@ const vector <const Users::Data *> Users::getAllUsers(){
  * @param mac аппаратный адрес сетевого интерфейса клиента
  * @return    данные пользователя
  */
-const Users::Data * Users::getUserByConnect(const string ip, const string mac){
+const AUsers::DataUsers * AUsers::Users::getUserByConnect(const string ip, const string mac){
 	// Если данные существуют
 	if(!ip.empty() || !mac.empty()){
 		// Если данные существуют
@@ -805,7 +807,7 @@ const Users::Data * Users::getUserByConnect(const string ip, const string mac){
 			// Получаем mac адрес
 			string cmac = mac;
 			// Данные пользователя
-			const Data * user = nullptr;
+			const DataUsers * user = nullptr;
 			// Создаем объект сети
 			Network nwk;
 			// Определяем ip адрес
@@ -816,35 +818,24 @@ const Users::Data * Users::getUserByConnect(const string ip, const string mac){
 				bool _ip = false;
 				// Проверка на mac адрес
 				bool _mac = false;
-				// Список ip адресов
-				vector <string> ips;
-				// ip адрес совпал
-				switch(nettype){
-					// Для протокола IPv4
-					case 4: ips.assign(it->second.idnt.ip4.begin(), it->second.idnt.ip4.end()); break;
-					// Для протокола IPv6
-					case 6: ips.assign(it->second.idnt.ip6.begin(), it->second.idnt.ip6.end()); break;
-				}
-				// Если ip адреса существуют
-				if(!ips.empty()){
-					// Переходим по всем ip адресам пользователя
-					for(auto jt = ips.cbegin(); jt != ips.cend(); ++jt){
-						// Если mac адрес совпал
-						if(Anyks::toCase(* jt).compare(Anyks::toCase(ip)) == 0){
-							_ip = true;
-							break;
-						}
-					}
-				}
-				// Если mac адреса существуют
-				if(!cmac.empty() && !it->second.idnt.mac.empty()){
-					// Переходим по всем mac адресам пользователя
-					for(auto jt = it->second.idnt.mac.cbegin(); jt != it->second.idnt.mac.cend(); ++jt){
-						// Если mac адрес совпал
-						if(Anyks::toCase(* jt).compare(Anyks::toCase(cmac)) == 0){
-							_mac = true;
-							break;
-						}
+				// Переходим по всему списку идентификаторов
+				for(auto iit = it->second.idnt.cbegin(); iit != it->second.idnt.cend(); ++iit){
+					// Определяем тип адреса
+					const u_int idnt = Anyks::getTypeAmingByString(* iit);
+					// Если это нужный нам адрес
+					switch(idnt){
+						case AMING_IPV4: {
+							// Если нам нужен протокол версии 4
+							if((nettype == 4) && (ip.compare(* iit) == 0)) _ip = true;
+						} break;
+						case AMING_IPV6: {
+							// Если нам нужен протокол версии 4
+							if((nettype == 6) && nwk.compareIP6(ip, * iit)) _ip = true;
+						} break;
+						case AMING_MAC: {
+							// Если mac адреса соответствует
+							if(!cmac.empty() && (Anyks::toCase(* iit).compare(Anyks::toCase(cmac)) == 0)) _mac = true;
+						} break;
 					}
 				}
 				// Если ip адрес и mac адрес совпали
@@ -864,7 +855,7 @@ const Users::Data * Users::getUserByConnect(const string ip, const string mac){
  * @param  uid идентификатор пользователя
  * @return     данные пользователя
  */
-const Users::Data * Users::getDataById(const uid_t uid){
+const AUsers::DataUsers * AUsers::Users::getDataById(const uid_t uid){
 	// Если данные пользователей существуют
 	if(uid && !this->data.empty()){
 		// Выполняем поиск данных пользователя
@@ -885,7 +876,7 @@ const Users::Data * Users::getDataById(const uid_t uid){
  * @param  groupName название пользователя
  * @return           данные пользователя
  */
-const Users::Data * Users::getDataByName(const string userName){
+const AUsers::DataUsers * AUsers::Users::getDataByName(const string userName){
 	// Если данные пользователей существуют
 	if(!userName.empty() && !this->data.empty()){
 		// Приводим имя пользователя к нужному виду
@@ -909,9 +900,9 @@ const Users::Data * Users::getDataByName(const string userName){
  * @param  uid идентификатор пользователя
  * @return     результат проверки
  */
-const bool Users::checkUserById(const uid_t uid){
+const bool AUsers::Users::checkUserById(const uid_t uid){
 	// Если данные пользователей существуют
-	if(gid && !this->data.empty()){
+	if(uid && !this->data.empty()){
 		// Выполняем поиск данных пользователя
 		if(this->data.count(uid)){
 			// Сообщаем что пользователь существует
@@ -930,7 +921,7 @@ const bool Users::checkUserById(const uid_t uid){
  * @param  userName название пользователя
  * @return          результат проверки
  */
-const bool Users::checkUserByName(const string userName){
+const bool AUsers::Users::checkUserByName(const string userName){
 	// Выполняем проверку на существование пользователя
 	return (getIdByName(userName) > -1 ? true : false);
 }
@@ -939,7 +930,7 @@ const bool Users::checkUserByName(const string userName){
  * @param  userName название пользователя
  * @return          идентификатор пользователя
  */
-const uid_t Users::getIdByName(const string userName){
+const uid_t AUsers::Users::getIdByName(const string userName){
 	// Если данные пользователей существуют
 	if(!userName.empty() && !this->data.empty()){
 		// Приводим имя пользователя к нужному виду
@@ -963,7 +954,7 @@ const uid_t Users::getIdByName(const string userName){
  * @param  uid идентификатор пользователя
  * @return     название пользователя
  */
-const string Users::getNameById(const uid_t uid){
+const string AUsers::Users::getNameById(const uid_t uid){
 	// Если данные пользователей существуют
 	if(uid && !this->data.empty()){
 		// Выполняем поиск данных пользователя
@@ -983,7 +974,7 @@ const string Users::getNameById(const uid_t uid){
  * getIdAllUsers Метод получения списка всех пользователей
  * @return список идентификаторов пользователей
  */
-const vector <uid_t> Users::getIdAllUsers(){
+const vector <uid_t> AUsers::Users::getIdAllUsers(){
 	// Результат работы функции
 	vector <uid_t> result;
 	// Получаем список пользователей
@@ -1004,20 +995,25 @@ const vector <uid_t> Users::getIdAllUsers(){
 	return result;
 }
 /**
+ * setGroups Метод добавления объекта групп
+ * @param groups объект групп
+ */
+void AUsers::Users::setGroups(void * groups){
+	// Если объект групп существует то добавляем его
+	this->groups = groups;
+}
+/**
  * Users Конструктор
  * @param config конфигурационные данные
  * @param log    объект лога для вывода информации
- * @param groups объект групп пользователей
  */
-Users::Users(Config * config, LogApp * log, Groups * groups){
+AUsers::Users::Users(Config * config, LogApp * log){
 	// Если конфигурационные данные переданы
 	if(config){
 		// Запоминаем данные логов
 		this->log = log;
 		// Запоминаем конфигурационные данные
 		this->config = config;
-		// Запоминаем данные групп
-		this->groups = groups;
 		// Запоминаем тип поиска групп пользователя
 		this->typeSearch = 0;
 		// Заполняем тип извлечения конфигурационных данных
@@ -1036,4 +1032,220 @@ Users::Users(Config * config, LogApp * log, Groups * groups){
 		// Считываем данные групп
 		update();
 	}
+}
+/**
+ * getAllGroups Метод получения данных всех групп
+ * @return      список данных всех групп
+ */
+const vector <const AUsers::DataGroups *> AUsers::getAllGroups(){
+	// Результат получения данных
+	vector <const AUsers::DataGroups *> result;
+	// Если объект групп существует
+	if(this->groups != nullptr) result = this->groups->getAllGroups();
+	// Выводим результат
+	return result;
+}
+/**
+ * getIdUsersInGroup Метод получения списка пользователей в группе
+ * @param  gid идентификатор группы
+ * @return     список идентификаторов пользователей
+ */
+const vector <uid_t> AUsers::getIdUsersInGroup(const gid_t gid){
+	// Результат работы
+	vector <uid_t> result;
+	// Если идентификатор группы передан
+	if(gid && (this->groups != nullptr)){
+		// Запрашиваем данные
+		result = this->groups->getIdUsers(gid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getIdUsersInGroup Метод получения списка пользователей в группе
+ * @param  groupName название группы
+ * @return           список идентификаторов пользователей
+ */
+const vector <uid_t> AUsers::getIdUsersInGroup(const string groupName){
+	// Результат работы
+	vector <uid_t> result;
+	// Если идентификатор группы передан
+	if(!groupName.empty() && (this->groups != nullptr)){
+		// Запрашиваем данные
+		result = this->groups->getIdUsers(groupName);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getNameUsersInGroup Метод получения списка пользователей в группе
+ * @param  gid   идентификатор группы
+ * @return       список имен пользователей
+ */
+const vector <string> AUsers::getNameUsersInGroup(const gid_t gid){
+	// Результат работы
+	vector <string> result;
+	// Если идентификатор группы передан
+	if(gid && (this->groups != nullptr) && (this->users != nullptr)){
+		// Запрашиваем данные
+		result = this->groups->getNameUsers(gid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getNameUsersInGroup Метод получения списка пользователей в группе
+ * @param  groupName название группы
+ * @return           список имен пользователей
+ */
+const vector <string> AUsers::getNameUsersInGroup(const string groupName){
+	// Результат работы
+	vector <string> result;
+	// Если идентификатор группы передан
+	if(!groupName.empty() && (this->groups != nullptr) && (this->users != nullptr)){
+		// Запрашиваем данные
+		result = this->groups->getNameUsers(groupName);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getGidByName Метод извлечения идентификатора группы по ее имени
+ * @param  groupName название группы
+ * @return           идентификатор группы
+ */
+const gid_t AUsers::getGidByName(const string groupName){
+	// Результат работы
+	gid_t result = -1;
+	// Если пользователи найдены
+	if(this->groups != nullptr) result = this->groups->getIdByName(groupName);
+	// Выводим результат
+	return result;
+}
+/**
+ * getUidByName Метод извлечения идентификатора пользователя по его имени
+ * @param  userName название пользователя
+ * @return          идентификатор пользователя
+ */
+const uid_t AUsers::getUidByName(const string userName){
+	// Результат работы
+	uid_t result = -1;
+	// Если пользователи найдены
+	if(this->users != nullptr) result = this->users->getIdByName(userName);
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUserInGroup Метод проверки принадлежности пользователя к группе
+ * @param  gid идентификатор группы
+ * @param  uid идентификатор пользователя
+ * @return     результат проверки
+ */
+const bool AUsers::checkUserInGroup(const gid_t gid, const uid_t uid){
+	// Результат работы
+	bool result = false;
+	// Если идентификаторы группы и пользователя переданы
+	if(gid && uid && (this->groups != nullptr)){
+		// Выполняем проверку
+		result = this->groups->checkUser(gid, uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUserInGroup Метод проверки принадлежности пользователя к группе
+ * @param  gid      идентификатор группы
+ * @param  userName название пользователя
+ * @return          результат проверки
+ */
+const bool AUsers::checkUserInGroup(const gid_t gid, const string userName){
+	// Результат работы
+	bool result = false;
+	// Если идентификаторы группы и пользователя переданы
+	if(gid && !userName.empty() && (this->groups != nullptr)){
+		// Выполняем проверку
+		result = this->groups->checkUser(gid, userName);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUserInGroup Метод проверки принадлежности пользователя к группе
+ * @param  groupName название группы
+ * @param  uid       идентификатор пользователя
+ * @return           результат проверки
+ */
+const bool AUsers::checkUserInGroup(const string groupName, const uid_t uid){
+	// Результат работы
+	bool result = false;
+	// Если идентификаторы группы и пользователя переданы
+	if(uid && !groupName.empty() && (this->groups != nullptr)){
+		// Выполняем проверку
+		result = this->groups->checkUser(groupName, uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUserInGroup Метод проверки принадлежности пользователя к группе
+ * @param  groupName название группы
+ * @param  userName  название пользователя
+ * @return           результат проверки
+ */
+const bool AUsers::checkUserInGroup(const string groupName, const string userName){
+	// Результат работы
+	bool result = false;
+	// Если идентификаторы группы и пользователя переданы
+	if(!userName.empty() && !groupName.empty() && (this->groups != nullptr)){
+		// Выполняем проверку
+		result = this->groups->checkUser(groupName, userName);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkGroupById Метод проверки на существование группы
+ * @param  gid идентификатор группы
+ * @return     результат проверки
+ */
+const bool AUsers::checkGroupById(const gid_t gid){
+	// Результат работы
+	bool result = false;
+	// Если идентификаторы группы и пользователя переданы
+	if(gid && (this->groups != nullptr)){
+		// Выполняем проверку
+		result = this->groups->checkGroupById(gid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * AUsers Конструктор
+ * @param config конфигурационные данные
+ * @param log    объект лога для вывода информации
+ */
+AUsers::AUsers(Config * config, LogApp * log){
+	// Если конфигурационные данные переданы
+	if(config){
+		// Запоминаем данные логов
+		this->log = log;
+		// Запоминаем конфигурационные данные
+		this->config = config;
+		// Создаем объект групп
+		this->groups = new Groups(this->config, this->log);
+		// Создаем объект пользователей
+		this->users = new Users(this->config, this->log);
+		// Добавляем объект групп пользователям
+		if(this->users != nullptr) this->users->setGroups(this->groups);
+		// Добавляем объект пользователей группам
+		if(this->groups != nullptr) this->groups->setUsers(this->users);
+	}
+}
+/**
+ * ~AUsers Деструктор
+ */
+AUsers::~AUsers(){
+	// Очищаем память
+	if(this->users != nullptr)	delete this->users;
+	if(this->groups != nullptr)	delete this->groups;
 }

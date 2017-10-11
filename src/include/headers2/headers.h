@@ -22,7 +22,7 @@
 #include "log/log.h"
 #include "http/http.h"
 #include "ldap2/ldap.h"
-#include "groups/groups.h"
+#include "users/users.h"
 #include "general/general.h"
 
 // Устанавливаем область видимости
@@ -122,7 +122,7 @@ class Headers2 {
 		// Системные параметры
 		LogApp * log = nullptr;
 		Config * config = nullptr;
-		Groups * groups = nullptr;
+		AUsers * ausers = nullptr;
 		// Время в течение которого обновлять нельзя
 		time_t maxUpdate = 0;
 		// Время последнего обновления данных
@@ -202,8 +202,9 @@ class Headers2 {
 		 * Headers Конструктор
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
+		 * @param ausers объект пользователей
 		 */
-		Headers2(Config * config = nullptr, LogApp * log = nullptr, Groups * groups = nullptr);
+		Headers2(Config * config = nullptr, LogApp * log = nullptr, AUsers * ausers = nullptr);
 };
 
 #endif // _HEADERS2_AMING_
