@@ -653,6 +653,41 @@ const bool AUsers::Users::readUsersFromLdap(){
 const bool AUsers::Users::readUsersFromPam(){
 	// Результат работы функции
 	bool result = false;
+	// Блок данных пользователей
+	struct passwd * pw = nullptr;
+	// Результат работы регулярного выражения
+	smatch match;
+	// Устанавливаем правило регулярного выражения для проверки оболочки пользователя
+	regex e("\\/(?:sh|bash)$", regex::ECMAScript | regex::icase);
+	// Извлекаем всех пользователей что есть в системе
+	while((pw = getpwent()) != nullptr){
+		// Если это не root
+		if(pw->pw_uid > 0){
+			// Получаем оболочку пользователя
+			string shell = pw->pw_shell;
+			// Выполняем проверку оболочки пользователя
+			regex_search(shell, match, e);
+			// Если оболочка пользователя актуальная
+			if(!match.empty()){
+				// Создаем блок с данными пользователя
+				DataUsers user = createDefaultData(pw->pw_uid, pw->pw_name);
+				// Устанавливаем тип пользователя
+				user.type = 1;
+				// Добавляем пароль пользователя
+				user.pass = pw->pw_passwd;
+				// Добавляем описание пользователя
+				user.desc = pw->pw_name;
+				// Переопределяем дефолтные данные из файла конфигурации
+				setDataUser(user);
+				// Устанавливаем параметры http парсера
+				user.headers.setOptions(user.options);
+				// Добавляем пользователя в список
+				this->data.insert(pair <uid_t, DataUsers>(user.id, user));
+				// Сообщаем что все удачно
+				result = true;
+			}
+		}
+	}
 	// Выводим результат
 	return result;
 }

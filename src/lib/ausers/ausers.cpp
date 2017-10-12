@@ -64,7 +64,7 @@ const vector <string> AUsers::getNameUsersInGroup(const gid_t gid){
 	// Результат работы
 	vector <string> result;
 	// Если идентификатор группы передан
-	if(gid && (this->groups != nullptr) && (this->users != nullptr)){
+	if(gid && (this->groups != nullptr)){
 		// Запрашиваем данные
 		result = this->groups->getNameUsers(gid);
 	}
@@ -80,7 +80,7 @@ const vector <string> AUsers::getNameUsersInGroup(const string groupName){
 	// Результат работы
 	vector <string> result;
 	// Если идентификатор группы передан
-	if(!groupName.empty() && (this->groups != nullptr) && (this->users != nullptr)){
+	if(!groupName.empty() && (this->groups != nullptr)){
 		// Запрашиваем данные
 		result = this->groups->getNameUsers(groupName);
 	}

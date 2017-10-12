@@ -20,7 +20,7 @@ CHECK_INCLUDE_FILES (security/pam_misc.h HAVE_SECURITY_PAM_MISC_H)
  */
 
 // To build this:
-// g++ pam.cc -lpam -o test
+// g++ ./examples/pam.cpp -lpam -o ./bin/test
 
 struct pam_response *reply;
 
@@ -62,8 +62,6 @@ int main(int argc, char** argv)
   reply[0].resp_retcode = 0;
 
   retval = pam_authenticate(local_auth_handle, 0);
-
-
 
 	openlog("pamtest_aming", 0, LOG_LOCAL0);
 	syslog(LOG_LOCAL1, "Can not open file \"%s\" for writing.", "pamtest_aming.conf");
