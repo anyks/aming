@@ -36,7 +36,7 @@ void AUsers::Users::setProxyOptions(const u_short option, u_short &proxyOptions,
  * setDataUserFromLdap Метод заполнения данных пользователя из LDAP
  * @param user объект пользователя
  */
-void AUsers::Users::setDataUserFromLdap(AUsers::DataUsers &user){
+void AUsers::Users::setDataUserFromLdap(AUsers::DataUser &user){
 	// Параметр для поиска
 	const char * key = "%u";
 	// Выполняем поиск ключа
@@ -252,7 +252,7 @@ void AUsers::Users::setDataUserFromLdap(AUsers::DataUsers &user){
  * @param user объект пользователя
  * @param ini  указатель на объект конфигурации
  */
-void AUsers::Users::setDataUserFromFile(AUsers::DataUsers &user, INI * ini){
+void AUsers::Users::setDataUserFromFile(AUsers::DataUser &user, INI * ini){
 	// Флаг удаления созданного объекта ini конфигурации
 	bool rmINI = false;
 	// Если объект ini не передан то создаем его
@@ -480,7 +480,7 @@ void AUsers::Users::setDataUserFromFile(AUsers::DataUsers &user, INI * ini){
  * @param user объект пользователя
  * @param ini  указатель на объект конфигурации
  */
- void AUsers::Users::setDataUser(AUsers::DataUsers &user, INI * ini){
+ void AUsers::Users::setDataUser(AUsers::DataUser &user, INI * ini){
 	// Определяем тип системы откуда нужно получить конфигурационные файлы
 	switch(this->typeConfigs){
 		// Переопределяем дефолтные данные из файла конфигурации
@@ -495,9 +495,9 @@ void AUsers::Users::setDataUserFromFile(AUsers::DataUsers &user, INI * ini){
  * @param  name название пользователя
  * @return      созданный пользователь
  */
- const AUsers::DataUsers AUsers::Users::createDefaultData(const uid_t id, const string name){
+ const AUsers::DataUser AUsers::Users::createDefaultData(const uid_t id, const string name){
 	// Создаем блок с данными пользователя
-	DataUsers user;
+	DataUser user;
 	// Если входные параметры верные
 	if(id && !name.empty() && (this->groups != nullptr)){
 		// Получаем объект групп
@@ -626,7 +626,7 @@ const bool AUsers::Users::readUsersFromLdap(){
 				}
 			}
 			// Создаем блок с данными пользователя
-			DataUsers user = createDefaultData(uid, name);
+			DataUser user = createDefaultData(uid, name);
 			// Устанавливаем тип пользователя
 			user.type = 2;
 			// Добавляем пароль пользователя
@@ -638,7 +638,7 @@ const bool AUsers::Users::readUsersFromLdap(){
 			// Устанавливаем параметры http парсера
 			user.headers.setOptions(user.options);
 			// Добавляем пользователя в список
-			this->data.insert(pair <uid_t, DataUsers>(user.id, user));
+			this->data.insert(pair <uid_t, DataUser>(user.id, user));
 		}
 		// Сообщаем что все удачно
 		result = true;
@@ -670,7 +670,7 @@ const bool AUsers::Users::readUsersFromPam(){
 			// Если оболочка пользователя актуальная
 			if(!match.empty()){
 				// Создаем блок с данными пользователя
-				DataUsers user = createDefaultData(pw->pw_uid, pw->pw_name);
+				DataUser user = createDefaultData(pw->pw_uid, pw->pw_name);
 				// Устанавливаем тип пользователя
 				user.type = 1;
 				// Добавляем пароль пользователя
@@ -682,7 +682,7 @@ const bool AUsers::Users::readUsersFromPam(){
 				// Устанавливаем параметры http парсера
 				user.headers.setOptions(user.options);
 				// Добавляем пользователя в список
-				this->data.insert(pair <uid_t, DataUsers>(user.id, user));
+				this->data.insert(pair <uid_t, DataUser>(user.id, user));
 				// Сообщаем что все удачно
 				result = true;
 			}
@@ -723,7 +723,7 @@ const bool AUsers::Users::readUsersFromFile(){
 						// Получаем название пользователя
 						const string name = (Anyks::isNumber(ut->key) ? ut->value : ut->key);
 						// Создаем блок с данными пользователя
-						DataUsers user = createDefaultData(uid, name);
+						DataUser user = createDefaultData(uid, name);
 						// Устанавливаем тип пользователя
 						user.type = 0;
 						// Если пароли пользователей существуют
@@ -751,7 +751,9 @@ const bool AUsers::Users::readUsersFromFile(){
 						// Устанавливаем параметры http парсера
 						user.headers.setOptions(user.options);
 						// Добавляем пользователя в список пользователей
-						this->data.insert(pair <uid_t, DataUsers>(user.id, user));
+						this->data.insert(pair <uid_t, DataUser>(user.id, user));
+						// Сообщаем что все удачно
+						result = true;
 					}
 				}
 			}
@@ -814,9 +816,9 @@ const bool AUsers::Users::update(){
  * getAllUsers Метод получения данных всех пользователей
  * @return     список данных всех пользователей
  */
-const vector <const AUsers::DataUsers *> AUsers::Users::getAllUsers(){
+const vector <const AUsers::DataUser *> AUsers::Users::getAllUsers(){
 	// Список данных по умолчанию
-	vector <const DataUsers *> result;
+	vector <const DataUser *> result;
 	// Если данные пользователей существуют
 	if(!this->data.empty()){
 		// Переходим по всем данным пользователей
@@ -834,7 +836,7 @@ const vector <const AUsers::DataUsers *> AUsers::Users::getAllUsers(){
  * @param mac аппаратный адрес сетевого интерфейса клиента
  * @return    данные пользователя
  */
-const AUsers::DataUsers * AUsers::Users::getUserByConnect(const string ip, const string mac){
+const AUsers::DataUser * AUsers::Users::getUserByConnect(const string ip, const string mac){
 	// Если данные существуют
 	if(!ip.empty() || !mac.empty()){
 		// Если данные существуют
@@ -842,7 +844,7 @@ const AUsers::DataUsers * AUsers::Users::getUserByConnect(const string ip, const
 			// Получаем mac адрес
 			string cmac = mac;
 			// Данные пользователя
-			const DataUsers * user = nullptr;
+			const DataUser * user = nullptr;
 			// Создаем объект сети
 			Network nwk;
 			// Определяем ip адрес
@@ -890,7 +892,7 @@ const AUsers::DataUsers * AUsers::Users::getUserByConnect(const string ip, const
  * @param  uid идентификатор пользователя
  * @return     данные пользователя
  */
-const AUsers::DataUsers * AUsers::Users::getDataById(const uid_t uid){
+const AUsers::DataUser * AUsers::Users::getDataById(const uid_t uid){
 	// Если данные пользователей существуют
 	if(uid && !this->data.empty()){
 		// Выполняем поиск данных пользователя
@@ -911,7 +913,7 @@ const AUsers::DataUsers * AUsers::Users::getDataById(const uid_t uid){
  * @param  groupName название пользователя
  * @return           данные пользователя
  */
-const AUsers::DataUsers * AUsers::Users::getDataByName(const string userName){
+const AUsers::DataUser * AUsers::Users::getDataByName(const string userName){
 	// Если данные пользователей существуют
 	if(!userName.empty() && !this->data.empty()){
 		// Приводим имя пользователя к нужному виду

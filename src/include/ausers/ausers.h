@@ -98,9 +98,9 @@ class AUsers {
 			int keepintvl;	// Интервал времени в секундах между попытками
 		};
 		/**
-		 * DataGroups Структура данных группы
+		 * DataGroup Структура данных группы
 		 */
-		struct DataGroups {
+		struct DataGroup {
 			gid_t id;				// Идентификатор группы
 			u_short options;		// Основные параметры прокси
 			u_short type;			// Тип группы (0 - файлы, 1 - PAM, 2 - LDAP)
@@ -121,9 +121,9 @@ class AUsers {
 			vector <uid_t> users;	// Список идентификаторов пользователей
 		};
 		/**
-		 * DataUsers Структура данных пользователя
+		 * DataUser Структура данных пользователя
 		 */
-		struct DataUsers {
+		struct DataUser {
 			uid_t id;				// Идентификатор пользователя
 			u_short options;		// Основные параметры прокси
 			u_short type;			// Тип пользователя (0 - файлы, 1 - PAM, 2 - LDAP)
@@ -180,7 +180,7 @@ class AUsers {
 				// Данные пользователей
 				void * users = nullptr;
 				// Список групп
-				unordered_map <gid_t, DataGroups> data;
+				unordered_map <gid_t, DataGroup> data;
 				/**
 				 * setProxyOptions Функция добавления опций прокси
 				 * @param option       опция для добавления
@@ -192,26 +192,26 @@ class AUsers {
 				 * setDataGroupFromLdap Метод заполнения данных группы из LDAP
 				 * @param group объект группы
 				 */
-				void setDataGroupFromLdap(DataGroups &group);
+				void setDataGroupFromLdap(DataGroup &group);
 				/**
 				 * setDataGroupFromFile Метод заполнения данных группы из конфигурационного файла
 				 * @param group объект группы
 				 * @param ini   указатель на объект конфигурации
 				 */
-				void setDataGroupFromFile(DataGroups &group, INI * ini = nullptr);
+				void setDataGroupFromFile(DataGroup &group, INI * ini = nullptr);
 				/**
 				 * setDataGroup Метод заполнения данных группы
 				 * @param group объект группы
 				 * @param ini   указатель на объект конфигурации
 				 */
-				void setDataGroup(DataGroups &group, INI * ini = nullptr);
+				void setDataGroup(DataGroup &group, INI * ini = nullptr);
 				/**
 				 * createDefaultData Метод создания группы с параметрами по умолчанию
 				 * @param  id   идентификатор групыы
 				 * @param  name название группы
 				 * @return      созданная группа
 				 */
-				const DataGroups createDefaultData(const gid_t id, const string name);
+				const DataGroup createDefaultData(const gid_t id, const string name);
 				/**
 				 * readGroupsFromLdap Метод чтения данных групп из LDAP сервера
 				 * @return результат операции
@@ -236,19 +236,19 @@ class AUsers {
 				 * getAllGroups Метод получения данных всех групп
 				 * @return      список данных всех групп
 				 */
-				const vector <const DataGroups *> getAllGroups();
+				const vector <const DataGroup *> getAllGroups();
 				/**
 				 * getDataById Метод получения данные группы по идентификатору группы
 				 * @param  gid идентификатор группы
 				 * @return     данные группы
 				 */
-				const DataGroups * getDataById(const gid_t gid);
+				const DataGroup * getDataById(const gid_t gid);
 				/**
 				 * getDataByName Метод получения данные группы по имени группы
 				 * @param  groupName название группы
 				 * @return           данные группы
 				 */
-				const DataGroups * getDataByName(const string groupName);
+				const DataGroup * getDataByName(const string groupName);
 				/**
 				 * getGroupIdByUser Метод получения идентификатор группы по идентификатору пользователя
 				 * @param  uid идентификатор пользователя
@@ -446,7 +446,7 @@ class AUsers {
 				// Данные групп
 				void * groups = nullptr;
 				// Список пользователей
-				unordered_map <uid_t, DataUsers> data;
+				unordered_map <uid_t, DataUser> data;
 				/**
 				 * setProxyOptions Функция добавления опций прокси
 				 * @param option       опция для добавления
@@ -458,26 +458,26 @@ class AUsers {
 				 * setDataUserFromLdap Метод заполнения данных пользователя из LDAP
 				 * @param user объект пользователя
 				 */
-				void setDataUserFromLdap(DataUsers &user);
+				void setDataUserFromLdap(DataUser &user);
 				/**
 				 * setDataUserFromFile Метод заполнения данных пользователя из конфигурационного файла
 				 * @param user объект пользователя
 				 * @param ini  указатель на объект конфигурации
 				 */
-				void setDataUserFromFile(DataUsers &user, INI * ini = nullptr);
+				void setDataUserFromFile(DataUser &user, INI * ini = nullptr);
 				/**
 				 * setDataUser Метод заполнения данных пользователя
 				 * @param user объект пользователя
 				 * @param ini  указатель на объект конфигурации
 				 */
-				void setDataUser(DataUsers &user, INI * ini = nullptr);
+				void setDataUser(DataUser &user, INI * ini = nullptr);
 				/**
 				 * createDefaultData Метод создания пользователя с параметрами по умолчанию
 				 * @param  id   идентификатор пользователя
 				 * @param  name название пользователя
 				 * @return      созданный пользователь
 				 */
-				const DataUsers createDefaultData(const uid_t id, const string name);
+				const DataUser createDefaultData(const uid_t id, const string name);
 				/**
 				 * readUsersFromLdap Метод чтения данных пользователей из LDAP сервера
 				 * @return результат операции
@@ -502,26 +502,26 @@ class AUsers {
 				 * getAllUsers Метод получения данных всех пользователей
 				 * @return     список данных всех пользователей
 				 */
-				const vector <const DataUsers *> getAllUsers();
+				const vector <const DataUser *> getAllUsers();
 				/**
 				 * getUserByConnect Метод поиска данных пользователя по данным коннекта
 				 * @param ip  адрес интернет протокола клиента
 				 * @param mac аппаратный адрес сетевого интерфейса клиента
 				 * @return    данные пользователя
 				 */
-				const DataUsers * getUserByConnect(const string ip = "", const string mac = "");
+				const DataUser * getUserByConnect(const string ip = "", const string mac = "");
 				/**
 				 * getDataById Метод получения данные пользователя по идентификатору
 				 * @param  uid идентификатор пользователя
 				 * @return     данные пользователя
 				 */
-				const DataUsers * getDataById(const uid_t uid);
+				const DataUser * getDataById(const uid_t uid);
 				/**
 				 * getDataByName Метод получения данные пользователя по имени
 				 * @param  groupName название пользователя
 				 * @return           данные пользователя
 				 */
-				const DataUsers * getDataByName(const string userName);
+				const DataUser * getDataByName(const string userName);
 				/**
 				 * checkUserById Метод проверки на существование пользователя
 				 * @param  uid идентификатор пользователя
@@ -576,7 +576,7 @@ class AUsers {
 		 * getAllGroups Метод получения данных всех групп
 		 * @return      список данных всех групп
 		 */
-		const vector <const DataGroups *> getAllGroups();
+		const vector <const DataGroup *> getAllGroups();
 		/**
 		 * getIdUsersInGroup Метод получения списка пользователей в группе
 		 * @param  gid идентификатор группы

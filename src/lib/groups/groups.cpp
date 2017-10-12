@@ -36,7 +36,7 @@ void AUsers::Groups::setProxyOptions(const u_short option, u_short &proxyOptions
  * setDataGroupFromLdap Метод заполнения данных группы из LDAP
  * @param group объект группы
  */
-void AUsers::Groups::setDataGroupFromLdap(AUsers::DataGroups &group){
+void AUsers::Groups::setDataGroupFromLdap(AUsers::DataGroup &group){
 	// Параметр для поиска
 	const char * key = "%g";
 	// Выполняем поиск ключа
@@ -252,7 +252,7 @@ void AUsers::Groups::setDataGroupFromLdap(AUsers::DataGroups &group){
  * @param group объект группы
  * @param ini   указатель на объект конфигурации
  */
-void AUsers::Groups::setDataGroupFromFile(AUsers::DataGroups &group, INI * ini){
+void AUsers::Groups::setDataGroupFromFile(AUsers::DataGroup &group, INI * ini){
 	// Флаг удаления созданного объекта ini конфигурации
 	bool rmINI = false;
 	// Если объект ini не передан то создаем его
@@ -480,7 +480,7 @@ void AUsers::Groups::setDataGroupFromFile(AUsers::DataGroups &group, INI * ini){
  * @param group объект группы
  * @param ini   указатель на объект конфигурации
  */
-void AUsers::Groups::setDataGroup(AUsers::DataGroups &group, INI * ini){
+void AUsers::Groups::setDataGroup(AUsers::DataGroup &group, INI * ini){
 	// Определяем тип системы откуда нужно получить конфигурационные файлы
 	switch(this->typeConfigs){
 		// Переопределяем дефолтные данные из файла конфигурации
@@ -495,9 +495,9 @@ void AUsers::Groups::setDataGroup(AUsers::DataGroups &group, INI * ini){
  * @param  name название группы
  * @return      созданная группа
  */
-const AUsers::DataGroups AUsers::Groups::createDefaultData(const gid_t id, const string name){
+const AUsers::DataGroup AUsers::Groups::createDefaultData(const gid_t id, const string name){
 	// Создаем блок с данными группы
-	DataGroups group;
+	DataGroup group;
 	// Если входные параметры верные
 	if(id && !name.empty()){
 		// Запоминаем название группы
@@ -608,7 +608,7 @@ const bool AUsers::Groups::readGroupsFromLdap(){
 				}
 			}
 			// Создаем блок с данными группы
-			DataGroups group = createDefaultData(gid, name);
+			DataGroup group = createDefaultData(gid, name);
 			// Устанавливаем тип группы
 			group.type = 2;
 			// Добавляем пользователя в список
@@ -622,7 +622,7 @@ const bool AUsers::Groups::readGroupsFromLdap(){
 			// Устанавливаем параметры http парсера
 			group.headers.setOptions(group.options);
 			// Добавляем группу в список групп
-			this->data.insert(pair <gid_t, DataGroups>(group.id, group));
+			this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 		}
 		// Если пользователи существуют
 		if(!users.empty()){
@@ -735,7 +735,7 @@ const bool AUsers::Groups::readGroupsFromPam(){
 							// Если группа не найдена, то создаем её
 							} else {
 								// Создаем блок с данными группы
-								DataGroups group = createDefaultData(gr->gr_gid, gr->gr_name);
+								DataGroup group = createDefaultData(gr->gr_gid, gr->gr_name);
 								// Устанавливаем тип группы
 								group.type = 1;
 								// Добавляем пароль группы
@@ -747,7 +747,7 @@ const bool AUsers::Groups::readGroupsFromPam(){
 								// Устанавливаем параметры http парсера
 								group.headers.setOptions(group.options);
 								// Добавляем группу в список групп
-								this->data.insert(pair <gid_t, DataGroups>(group.id, group));
+								this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 							}
 						// Выводим сообщение что данная группа не найдена
 						} else this->log->write(LOG_ERROR, 0, "group [%i] from user = %s [%s] not found", userGroups[i], pw->pw_name, pw->pw_gecos);
@@ -795,7 +795,7 @@ const bool AUsers::Groups::readGroupsFromFile(){
 					// Получаем название группы
 					const string name = (Anyks::isNumber(it->key) ? it->value : it->key);
 					// Создаем блок с данными группы
-					DataGroups group = createDefaultData(gid, name);
+					DataGroup group = createDefaultData(gid, name);
 					// Устанавливаем тип группы
 					group.type = 0;
 					// Если список пользователей существует
@@ -842,7 +842,7 @@ const bool AUsers::Groups::readGroupsFromFile(){
 					// Устанавливаем параметры http парсера
 					group.headers.setOptions(group.options);
 					// Добавляем группу в список групп
-					this->data.insert(pair <gid_t, DataGroups>(group.id, group));
+					this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 				}
 			}
 		}
@@ -904,9 +904,9 @@ const bool AUsers::Groups::update(){
  * getAllGroups Метод получения данных всех групп
  * @return      список данных всех групп
  */
-const vector <const AUsers::DataGroups *> AUsers::Groups::getAllGroups(){
+const vector <const AUsers::DataGroup *> AUsers::Groups::getAllGroups(){
 	// Список данных по умолчанию
-	vector <const DataGroups *> result;
+	vector <const DataGroup *> result;
 	// Если данные групп существуют
 	if(!this->data.empty()){
 		// Переходим по всем данным групп
@@ -923,7 +923,7 @@ const vector <const AUsers::DataGroups *> AUsers::Groups::getAllGroups(){
  * @param  gid идентификатор группы
  * @return     данные группы
  */
-const AUsers::DataGroups * AUsers::Groups::getDataById(const gid_t gid){
+const AUsers::DataGroup * AUsers::Groups::getDataById(const gid_t gid){
 	// Если данные групп существуют
 	if(gid && !this->data.empty()){
 		// Выполняем поиск данных групп
@@ -944,7 +944,7 @@ const AUsers::DataGroups * AUsers::Groups::getDataById(const gid_t gid){
  * @param  groupName название группы
  * @return           данные группы
  */
-const AUsers::DataGroups * AUsers::Groups::getDataByName(const string groupName){
+const AUsers::DataGroup * AUsers::Groups::getDataByName(const string groupName){
 	// Если данные групп существуют
 	if(!groupName.empty() && !this->data.empty()){
 		// Приводим имя группы к нужному виду
@@ -1455,9 +1455,9 @@ const bool AUsers::Groups::addGroup(const gid_t id, const string name){
 	// Если идентификатор и название переданы
 	if(id && !name.empty()){
 		// Создаем блок с данными группы
-		DataGroups group = createDefaultData(id, name);
+		DataGroup group = createDefaultData(id, name);
 		// Добавляем группу в список групп
-		this->data.insert(pair <gid_t, DataGroups>(group.id, group));
+		this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 		// Выводим сообщение что все удачно
 		result = true;
 	}

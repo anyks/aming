@@ -15,9 +15,9 @@ using namespace std;
  * getAllGroups Метод получения данных всех групп
  * @return      список данных всех групп
  */
-const vector <const AUsers::DataGroups *> AUsers::getAllGroups(){
+const vector <const AUsers::DataGroup *> AUsers::getAllGroups(){
 	// Результат получения данных
-	vector <const AUsers::DataGroups *> result;
+	vector <const AUsers::DataGroup *> result;
 	// Если объект групп существует
 	if(this->groups != nullptr) result = this->groups->getAllGroups();
 	// Выводим результат
