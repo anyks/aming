@@ -213,10 +213,13 @@ AUsers::AUsers(Config * config, LogApp * log){
 		this->groups = new Groups(this->config, this->log);
 		// Создаем объект пользователей
 		this->users = new Users(this->config, this->log);
-		// Добавляем объект групп пользователям
-		if(this->users != nullptr) this->users->setGroups(this->groups);
-		// Добавляем объект пользователей группам
-		if(this->groups != nullptr) this->groups->setUsers(this->users);
+		// Если объекты пользователей и групп созданы
+		if((this->users != nullptr) && (this->groups != nullptr)){
+			// Добавляем объект групп пользователям
+			this->users->setGroups(this->groups);
+			// Добавляем объект пользователей группам
+			this->groups->setUsers(this->users);
+		}
 	}
 }
 /**
