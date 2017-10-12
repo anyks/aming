@@ -6,7 +6,7 @@
 *	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
 */
 
-#include "users/users.h"
+#include "ausers/ausers.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -1471,6 +1471,8 @@ const bool AUsers::Groups::addGroup(const gid_t id, const string name){
 void AUsers::Groups::setUsers(void * users){
 	// Если объект пользователей существует то добавляем его
 	this->users = users;
+	// Считываем данные групп
+	update();
 }
 /**
  * Groups Конструктор
@@ -1504,7 +1506,5 @@ AUsers::Groups::Groups(Config * config, LogApp * log){
 			"(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))",
 			"(&(amingConfigsGroupId=%g)(amingConfigsType=groups)(objectClass=amingConfigs))"
 		};
-		// Считываем данные групп
-		update();
 	}
 }

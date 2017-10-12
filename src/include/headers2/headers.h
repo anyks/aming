@@ -22,7 +22,7 @@
 #include "log/log.h"
 #include "http/http.h"
 #include "ldap2/ldap.h"
-#include "users/users.h"
+#include "ausers/ausers.h"
 #include "general/general.h"
 
 // Устанавливаем область видимости
