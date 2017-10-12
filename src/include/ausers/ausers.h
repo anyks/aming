@@ -177,7 +177,7 @@ class AUsers {
 				LogApp * log = nullptr;
 				// Конфигурационные данные
 				Config * config = nullptr;
-				// Данные пользователей
+				// Объект пользователей
 				void * users = nullptr;
 				// Список групп
 				unordered_map <gid_t, DataGroup> data;
@@ -443,7 +443,7 @@ class AUsers {
 				LogApp * log = nullptr;
 				// Конфигурационные данные
 				Config * config = nullptr;
-				// Данные групп
+				// Объект групп
 				void * groups = nullptr;
 				// Список пользователей
 				unordered_map <uid_t, DataUser> data;
