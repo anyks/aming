@@ -20,8 +20,61 @@ const bool AUsers::Auth::checkLdap(const uid_t uid, const string password){
 	// Результат проверки
 	bool result = false;
 	// Если данные переданы
-	if((uid > 0) && !password.empty()){
-
+	if((uid > 0) && !password.empty() && (this->users != nullptr)){
+		// Параметр для поиска
+		string key = "uid";
+		// Скоуп пользователя
+		string scope = "one";
+		// DN пользователя
+		string dn = "ou=users,dc=agro24,dc=dev";
+		// Фильтр пользователя
+		string filter = "(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))";
+		// Получаем имя пользователя
+		const string login = (reinterpret_cast <Users *> (this->users))->getNameById(uid);
+		// Если логин найден
+		if(!login.empty()){
+			// Заменяем ключ на логин пользователя
+			dn = (key + string("=") + Anyks::toCase(login) + string(",") + dn);
+			// Создаем объект подключения LDAP
+			ALDAP ldap(this->config, this->log);
+			// Выполняем проверку авторизации
+			result = ldap.checkAuth(dn, password, scope, filter);
+			// Если пароль не соответствует то проверяем соответствует ли он паролям группы
+			if(!result && (this->groups != nullptr)){
+				// Получаем объект групп
+				Groups * groups = reinterpret_cast <Groups *> (this->groups);
+				// Если группы получены
+				if(groups != nullptr){
+					// Получаем список групп в которых состоит пользователь
+					auto gids = groups->getGroupIdByUser(uid);
+					// Если список групп получен
+					if(!gids.empty()){
+						// Переходим по всему списку групп
+						for(auto gid = gids.cbegin(); gid != gids.cend(); ++gid){
+							// Получаем данные группы
+							auto * group = groups->getDataById(* gid);
+							// Если данные группы найдены
+							if(group != nullptr){
+								// Параметр для поиска
+								string key = "cn";
+								// Скоуп пользователя
+								string scope = "one";
+								// DN пользователя
+								string dn = "ou=groups,dc=agro24,dc=dev";
+								// Фильтр пользователя
+								string filter = "(objectClass=posixGroup)";
+								// Заменяем ключ на логин пользователя
+								dn = (key + string("=") + Anyks::toCase(group->name) + string(",") + dn);
+								// Выполняем проверку корректности пароля
+								result = ldap.checkAuth(dn, password, scope, filter);
+								// Если пароль корректный то выходим из цикла
+								if(result) break;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	// Выводим результат
 	return result;
