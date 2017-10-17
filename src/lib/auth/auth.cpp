@@ -63,6 +63,14 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 			auto checkPassword = [](const string password1, const string password2){
 				// Результат проверки
 				bool result = false;
+
+				/*
+				// Если пароль является адресом файла
+				if(Anyks::getTypeAmingByString(password1) == AMING_ADDRESS){
+
+				}
+				*/
+
 				// Результат работы регулярного выражения
 				smatch match;
 				// CL:bigsecret
@@ -89,7 +97,7 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 				}
 				// Выводим результат
 				return result;
-			}; //AMING_ADDRESS
+			};
 			// Выполняем проверку корректности пароля
 			result = checkPassword(user->pass, user->name + password);
 			// Если пароль не соответствует то проверяем соответствует ли он паролям группы
