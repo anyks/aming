@@ -724,6 +724,8 @@ const u_int Anyks::getTypeAmingByString(const string str){
 			"(\\:\\:ffff\\:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))|"
 			// Если это сеть
 			"((?:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))\\/(?:\\d{1,3}(?:\\.\\d{1,3}){3}|\\d+))|"
+			// Определение адреса
+			"(\\/[\\w\\.]+(?:\\/[\\w\\.]+)*)|"
 			// Если это экшен
 			"(add|rm)|"
 			// Если это метод
@@ -742,15 +744,17 @@ const u_int Anyks::getTypeAmingByString(const string str){
 			const string ip4 = match[3].str();
 			const string ip6 = match[4].str();
 			const string network = match[5].str();
-			const string action = match[6].str();
-			const string method = match[7].str();
-			const string traffic = match[8].str();
+			const string address = match[6].str();
+			const string action = match[7].str();
+			const string method = match[8].str();
+			const string traffic = match[9].str();
 			// Определяем тип данных
 			if(!domain.empty())			result = AMING_DOMAIN;
 			else if(!mac.empty())		result = AMING_MAC;
 			else if(!ip4.empty())		result = AMING_IPV4;
 			else if(!ip6.empty())		result = AMING_IPV6;
 			else if(!network.empty())	result = AMING_NETWORK;
+			else if(!address.empty())	result = AMING_ADDRESS;
 			else if(!action.empty())	result = AMING_HTTP_ACTION;
 			else if(!method.empty())	result = AMING_HTTP_METHOD;
 			else if(!traffic.empty())	result = AMING_HTTP_TRAFFIC;
