@@ -432,7 +432,7 @@ class AUsers {
 				time_t maxUpdate = 0;
 				// Время последнего обновления данных
 				time_t lastUpdate = 0;
-				// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
+				// Тип поиска пользователей (0 - Из файла, 1 - из PAM, 2 - из LDAP)
 				u_short typeSearch = 0;
 				// Тип поиска конфигурационных данных (0 - Из файла, 1 - из LDAP)
 				u_short typeConfigs = 0;
@@ -442,7 +442,7 @@ class AUsers {
 				LogApp * log = nullptr;
 				// Конфигурационные данные
 				Config * config = nullptr;
-				// Объект групп
+				// Объект пользователей
 				void * groups = nullptr;
 				// Список пользователей
 				unordered_map <uid_t, DataUser> data;
@@ -579,31 +579,27 @@ class AUsers {
 				 * checkLdap Метод проверки корректности пароля c помощью LDAP сервера
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
-				 * @param type     тип кодировки пароля передаваемый в http запросе
 				 */
-				const bool checkLdap(const uid_t uid, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+				const bool checkLdap(const uid_t uid, const string password);
 				/**
 				 * checkPam Метод проверки корректности пароля c помощью операционной системы
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
-				 * @param type     тип кодировки пароля передаваемый в http запросе
 				 */
-				const bool checkPam(const uid_t uid, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+				const bool checkPam(const uid_t uid, const string password);
 				/**
 				 * checkPam Метод проверки корректности пароля c помощью конфигурационного файла
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
-				 * @param type     тип кодировки пароля передаваемый в http запросе
 				 */
-				const bool checkFile(const uid_t uid, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+				const bool checkFile(const uid_t uid, const string password);
 			public:
 				/**
 				 * check Метод проверки корректности пароля
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
-				 * @param type     тип кодировки пароля передаваемый в http запросе
 				 */
-				const bool check(const string username, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+				const bool check(const string username, const string password);
 				/**
 				 * Auth Конструктор
 				 * @param config конфигурационные данные

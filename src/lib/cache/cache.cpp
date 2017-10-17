@@ -324,7 +324,7 @@ void Cache::readCache(HttpData &http, DataCache * data){
 		// Добавляем тип подключения
 		dir = Anyks::addToPath(dir, (http.isAlive() ? "a" : "c"));
 		// Создаем адрес для хранения файла
-		const string filename = Anyks::addToPath(dir, md5(http.getPath()));
+		const string filename = Anyks::addToPath(dir, Anyks::md5(http.getPath()));
 		// Проверяем на существование адреса
 		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			// Открываем файл на чтение
@@ -411,7 +411,7 @@ void Cache::writeCache(HttpData &http, DataCache data){
 		// Добавляем тип подключения
 		dir = Anyks::addToPath(dir, (http.isAlive() ? "a" : "c"));
 		// Создаем адрес для хранения файла
-		const string filename = Anyks::addToPath(dir, md5(http.getPath()));
+		const string filename = Anyks::addToPath(dir, Anyks::md5(http.getPath()));
 		// Проверяем на существование адреса
 		if(!filename.empty()){
 			// Проверяем существует ли нужный нам каталог

@@ -20,6 +20,8 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
 
 // Типы данных системы
 #define AMING_NULL 0x00
@@ -34,9 +36,6 @@
 #define AMING_HTTP_ACTION 0x09
 #define AMING_HTTP_METHOD 0x10
 #define AMING_HTTP_TRAFFIC 0x11
-
-// Типы кодировок паролей
-#define AMING_TYPE_AUTH_BASIC 0x01
 
 // Параметры прокси-сервера
 #define PROXY_HTTP_METHODS "OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT"
@@ -182,6 +181,26 @@ namespace Anyks {
 	* @return      сформированный путь
 	*/
 	const string addToPath(const string path, const string file);
+	/**
+	 * md5 Метод получения md5 хэша из строки
+	 * @param text текст для перевода в строку
+	 */
+	const string md5(const string text);
+	/**
+	 * sha1 Метод получения sha1 хэша из строки
+	 * @param text текст для перевода в строку
+	 */
+	const string sha1(const string text);
+	/**
+	 * sha256 Метод получения sha256 хэша из строки
+	 * @param text текст для перевода в строку
+	 */
+	const string sha256(const string text);
+	/**
+	 * sha512 Метод получения sha512 хэша из строки
+	 * @param text текст для перевода в строку
+	 */
+	const string sha512(const string text);
 	/**
 	* strToTime Метод перевода строки в timestamp
 	* @param  date строка даты

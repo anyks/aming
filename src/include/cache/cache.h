@@ -15,7 +15,6 @@
 #include <iostream>
 #include <time.h>
 #include <stdlib.h>
-#include "md5/md5.h"
 #include "config/conf.h"
 #include "nwk/nwk.h"
 #include "log/log.h"
