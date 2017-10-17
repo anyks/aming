@@ -599,7 +599,7 @@ class AUsers {
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
 				 */
-				const bool check(const string username, const string password);
+				const bool check(const string username = "", const string password = "");
 				/**
 				 * Auth Конструктор
 				 * @param config конфигурационные данные

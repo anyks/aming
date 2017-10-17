@@ -55,29 +55,67 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 		auto * user = (reinterpret_cast <Users *> (this->users))->getDataById(uid);
 		// Если пользователь найден
 		if(user != nullptr){
-			// Результат работы регулярного выражения
-			smatch match;
-			// CL:bigsecret
-			// MD5:ee11cbb19052e40b07aac0ca060c23ee (32)
-			// SHA1:12dea96fec20593566ab75692c9949596833adc9 (40)
-			// SHA256:04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb (64)
-			// SHA512:b14361404c078ffd549c03db443c3fede2f3e534d73f78f77301ed97d4a436a9fd9db05ee8b325c0ad36438b43fec8510c204fc1c1edb21d0941c00e9e2c1ce2 (128)
-			// Определяем тип пароля
-			regex e("(?:(CL)\\:(.+)|(MD5)\\:(\\w{32})|(SHA1)\\:(\\w{40})|(SHA256)\\:(\\w{64})|(SHA512)\\:(\\w{128}))", regex::ECMAScript | regex::icase);
-			// Выполняем проверку типа пароля
-			regex_search(user->pass, match, e);
-			// Если данные найдены
-			if(!match.empty()){
-				// Если это чистый пароль
-				if(!match[1].str().empty()) result = (password.compare(match[2].str()) == 0);
-				// Если это md5
-				else if(!match[3].str().empty()) result = (Anyks::md5(password).compare(match[4].str()) == 0);
-				// Если это sha1
-				else if(!match[5].str().empty()) result = (Anyks::sha1(password).compare(match[6].str()) == 0);
-				// Если это sha256
-				else if(!match[7].str().empty()) result = (Anyks::sha256(password).compare(match[8].str()) == 0);
-				// Если это sha512
-				else if(!match[9].str().empty()) result = (Anyks::sha512(password).compare(match[10].str()) == 0);
+			/**
+			 * checkPassword Функция проверки паролей
+			 * @param password1 Пароль из базы пользователей (зашифрованный)
+			 * @param password2 Пароль для проверки (не зашифрованный)
+			 */
+			auto checkPassword = [](const string password1, const string password2){
+				// Результат проверки
+				bool result = false;
+				// Результат работы регулярного выражения
+				smatch match;
+				// CL:bigsecret
+				// MD5:ee11cbb19052e40b07aac0ca060c23ee (32)
+				// SHA1:12dea96fec20593566ab75692c9949596833adc9 (40)
+				// SHA256:04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb (64)
+				// SHA512:b14361404c078ffd549c03db443c3fede2f3e534d73f78f77301ed97d4a436a9fd9db05ee8b325c0ad36438b43fec8510c204fc1c1edb21d0941c00e9e2c1ce2 (128)
+				// Определяем тип пароля
+				regex e("(?:(CL)\\:(.+)|(MD5)\\:(\\w{32})|(SHA1)\\:(\\w{40})|(SHA256)\\:(\\w{64})|(SHA512)\\:(\\w{128}))", regex::ECMAScript | regex::icase);
+				// Выполняем проверку типа пароля
+				regex_search(password1, match, e);
+				// Если данные найдены
+				if(!match.empty()){
+					// Если это чистый пароль
+					if(!match[1].str().empty()) result = (password2.compare(match[2].str()) == 0);
+					// Если это md5
+					else if(!match[3].str().empty()) result = (Anyks::md5(password2).compare(match[4].str()) == 0);
+					// Если это sha1
+					else if(!match[5].str().empty()) result = (Anyks::sha1(password2).compare(match[6].str()) == 0);
+					// Если это sha256
+					else if(!match[7].str().empty()) result = (Anyks::sha256(password2).compare(match[8].str()) == 0);
+					// Если это sha512
+					else if(!match[9].str().empty()) result = (Anyks::sha512(password2).compare(match[10].str()) == 0);
+				}
+				// Выводим результат
+				return result;
+			};
+			// Выполняем проверку корректности пароля
+			result = checkPassword(user->pass, user->name + password);
+			// Если пароль не соответствует то проверяем соответствует ли он паролям группы
+			if(!result && (this->groups != nullptr)){
+				// Получаем объект групп
+				Groups * groups = reinterpret_cast <Groups *> (this->groups);
+				// Если группы получены
+				if(groups != nullptr){
+					// Получаем список групп в которых состоит пользователь
+					auto gids = groups->getGroupIdByUser(user->id);
+					// Если список групп получен
+					if(!gids.empty()){
+						// Переходим по всему списку групп
+						for(auto gid = gids.cbegin(); gid != gids.cend(); ++gid){
+							// Получаем данные группы
+							auto * group = groups->getDataById(* gid);
+							// Если данные группы найдены
+							if(group != nullptr){
+								// Выполняем проверку корректности пароля
+								result = checkPassword(group->pass, group->name + password);
+								// Если пароль корректный то выходим из цикла
+								if(result) break;
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -93,7 +131,7 @@ const bool AUsers::Auth::check(const string username, const string password){
 	// Результат проверки
 	bool result = false;
 	// Если данные переданы
-	if(!username.empty() && !password.empty() && (this->users != nullptr)){
+	if(!username.empty() && !password.empty() && (this->users != nullptr) && this->config->auth.enabled){
 		// Получаем данные пользователя
 		auto * user = (reinterpret_cast <Users *> (this->users))->getDataByName(username);
 		// Если пользователь найден
@@ -107,8 +145,9 @@ const bool AUsers::Auth::check(const string username, const string password){
 				// Если это проверка LDAP
 				case 2: result = checkLdap(user->id, password);	break;
 			}
-		}		
-	}
+		}
+	// Если авторизация не требуется тогда сообщаем что все удачно
+	} else if(!this->config->auth.enabled) result = true;
 	// Выводим результат
 	return result;
 }
