@@ -18,7 +18,6 @@
 #include <grp.h>
 #include <pwd.h>
 #include <time.h>
-#include <zlib.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include "ini/ini.h"
@@ -435,8 +434,8 @@ class AUsers {
 				time_t lastUpdate = 0;
 				// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
 				u_short typeSearch = 0;
-				// Тип поиска конфигурационных данных
-				u_short typeConfigs = 0; // (0 - Из файла, 1 - из LDAP)
+				// Тип поиска конфигурационных данных (0 - Из файла, 1 - из LDAP)
+				u_short typeConfigs = 0;
 				// Объект ldap подклчюения
 				Ldap ldap;
 				// Объект лога
@@ -563,6 +562,57 @@ class AUsers {
 				 */
 				Users(Config * config = nullptr, LogApp * log = nullptr);
 		};
+		/**
+		 * Auth Класс авторизации AMING
+		 */
+		class Auth {
+			private:
+				// Объект лога
+				LogApp * log = nullptr;
+				// Конфигурационные данные
+				Config * config = nullptr;
+				// Объект с данными групп
+				void * groups = nullptr;
+				// Объект с данными пользователей
+				void * users = nullptr;
+				/**
+				 * checkLdap Метод проверки корректности пароля c помощью LDAP сервера
+				 * @param username имя пользователя
+				 * @param password пароль пользователя
+				 * @param type     тип кодировки пароля передаваемый в http запросе
+				 */
+				const bool checkLdap(const uid_t uid, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+				/**
+				 * checkPam Метод проверки корректности пароля c помощью операционной системы
+				 * @param username имя пользователя
+				 * @param password пароль пользователя
+				 * @param type     тип кодировки пароля передаваемый в http запросе
+				 */
+				const bool checkPam(const uid_t uid, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+				/**
+				 * checkPam Метод проверки корректности пароля c помощью конфигурационного файла
+				 * @param username имя пользователя
+				 * @param password пароль пользователя
+				 * @param type     тип кодировки пароля передаваемый в http запросе
+				 */
+				const bool checkFile(const uid_t uid, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+			public:
+				/**
+				 * check Метод проверки корректности пароля
+				 * @param username имя пользователя
+				 * @param password пароль пользователя
+				 * @param type     тип кодировки пароля передаваемый в http запросе
+				 */
+				const bool check(const string username, const string password, const u_short type = AMING_TYPE_AUTH_BASIC);
+				/**
+				 * Auth Конструктор
+				 * @param config конфигурационные данные
+				 * @param log    объект лога для вывода информации
+				 * @param groups объект групп пользователей
+				 * @param users  объект пользователей
+				 */
+				Auth(Config * config = nullptr, LogApp * log = nullptr, void * groups = nullptr, void * users = nullptr);
+		};
 		// Объект лога
 		LogApp * log = nullptr;
 		// Конфигурационные данные
@@ -571,6 +621,8 @@ class AUsers {
 		Groups * groups = nullptr;
 		// Объект с данными пользователей
 		Users * users = nullptr;
+		// Объект с данными авторизации
+		Auth * auth = nullptr;
 	public:
 		/**
 		 * getAllGroups Метод получения данных всех групп

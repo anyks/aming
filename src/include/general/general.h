@@ -35,6 +35,9 @@
 #define AMING_HTTP_METHOD 0x10
 #define AMING_HTTP_TRAFFIC 0x11
 
+// Типы кодировок паролей
+#define AMING_TYPE_AUTH_BASIC 0x01
+
 // Параметры прокси-сервера
 #define PROXY_HTTP_METHODS "OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT"
 

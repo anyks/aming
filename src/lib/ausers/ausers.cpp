@@ -219,6 +219,8 @@ AUsers::AUsers(Config * config, LogApp * log){
 			this->users->setGroups(this->groups);
 			// Добавляем объект пользователей группам
 			this->groups->setUsers(this->users);
+			// Создаем объект авторизации
+			this->auth = new Auth(this->config, this->log, this->groups, this->users);
 		}
 	}
 }
@@ -227,6 +229,7 @@ AUsers::AUsers(Config * config, LogApp * log){
  */
 AUsers::~AUsers(){
 	// Очищаем память
+	if(this->auth != nullptr)	delete this->auth;
 	if(this->users != nullptr)	delete this->users;
 	if(this->groups != nullptr)	delete this->groups;
 }
