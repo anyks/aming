@@ -20,14 +20,15 @@
 #include <pwd.h>
 #include <time.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/types.h>
+#include <security/pam_appl.h>
 #include "ini/ini.h"
 #include "nwk/nwk.h"
 #include "system/system.h"
 #include "general/general.h"
 #include "ldap2/ldap.h"
 #include "headers/headers.h"
-
 
 // Устанавливаем область видимости
 using namespace std;
@@ -576,6 +577,18 @@ class AUsers {
 		 */
 		class Auth {
 			private:
+				
+				struct Pam {
+					/**
+					 * conversation Функция проверки валидности pam авторизации
+					 * @param num_msg     номер сообщения
+					 * @param msg         сообщение
+					 * @param resp        ответ системы
+					 * @param appdata_ptr указатель на объект данных системы
+					 */
+					int conversation(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr);
+				};
+				
 				/**
 				 * Ldap Структура ldap
 				 */

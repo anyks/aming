@@ -12,6 +12,19 @@
 using namespace std;
 
 /**
+ * conversation Функция проверки валидности pam авторизации
+ * @param num_msg     номер сообщения
+ * @param msg         сообщение
+ * @param resp        ответ системы
+ * @param appdata_ptr указатель на объект данных системы
+ */
+int AUsers::Auth::Pam::conversation(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr){
+	// Запоминаем объект с введенными данными
+	* resp = pamReply;
+	// Выводим результат
+	return PAM_SUCCESS;
+}
+/**
  * checkLdap Метод проверки корректности пароля c помощью LDAP сервера
  * @param username имя пользователя
  * @param password пароль пользователя
