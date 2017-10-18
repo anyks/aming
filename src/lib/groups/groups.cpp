@@ -824,7 +824,7 @@ const bool AUsers::Groups::readGroupsFromFile(){
 							// Если группа соответствует текущей, устанавливаем пароль
 							if((Anyks::isNumber(gp->key)
 							&& (gid_t(::atoi(gp->key.c_str())) == group.id))
-							|| (Anyks::toCase(gp->key).compare(group.name) == 0)) group.pass = gp->value;
+							|| (Anyks::toCase(gp->key).compare(group.name) == 0)) group.pass = getPasswordFromFile(gp->value, this->log, group.id, group.name);
 						}
 					}
 					// Если описания групп существуют

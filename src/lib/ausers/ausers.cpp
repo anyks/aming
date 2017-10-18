@@ -12,6 +12,66 @@
 using namespace std;
 
 /**
+ * getPasswordFromFile Метод получения данных паролей из файла
+ * @param path путь где расположен файл с паролями
+ * @param log  объект ведения логов
+ * @param uid  идентификатор пользователя
+ * @param name название пользователя
+ */
+const string AUsers::getPasswordFromFile(const string path, LogApp * log, const uid_t uid, const string name){
+	// Результат работы
+	string result = path;
+	// Проверяем входящие данные
+	if(((uid > 0) || !name.empty()) && !path.empty()){
+		// Если пароль является адресом файла
+		if(Anyks::getTypeAmingByString(path) == AMING_ADDRESS){
+			// Проверяем существует ли такой файл
+			if(Anyks::isFileExist(path.c_str())){
+				// Строка чтения из файла
+				string filedata;
+				// Открываем файл на чтение
+				ifstream file(path.c_str());
+				// Если файл открыт
+				if(file.is_open()){
+					// Считываем до тех пор пока все удачно
+					while(file.good()){
+						// Считываем строку из файла
+						getline(file, filedata);
+						// Если строка существует
+						if(!filedata.empty()){
+							// Результат работы регулярного выражения
+							smatch match;
+							// Создаем регулярное выражение
+							regex e("^([A-Za-z]+|\\d+)\\:((?:CL|MD5|SHA1|SHA256|SHA512)\\:.{3,128})$", regex::ECMAScript | regex::icase);
+							// Выполняем извлечение данных
+							regex_search(filedata, match, e);
+							// Если данные найдены
+							if(!match.empty()){
+								// Получаем имя пользователя
+								const string user = Anyks::toCase(match[1].str());
+								// Если пользователь соответствует то выводим пароль
+								if((Anyks::isNumber(user) && (uid_t(::atoi(user.c_str())) == uid))
+								|| (Anyks::toCase(name).compare(user) == 0)){
+									// Запоминаем пароль пользователя
+									result = match[2].str();
+									// Выходим из цикла
+									break;
+								}
+							}
+						}
+					}
+					// Закрываем файл
+					file.close();
+				// Выводим сообщение об ошибке
+				} else if(log != nullptr) log->write(LOG_ERROR, 0, "password file (%s) is cannot open", path.c_str());
+			// Выводим сообщение что файл не существует
+			} else if(log != nullptr) log->write(LOG_ERROR, 0, "password file (%s) does not exist", path.c_str());
+		}
+	}
+	// Выводим путь так как он пришел (если это пароль)
+	return result;
+}
+/**
  * getAllGroups Метод получения данных всех групп
  * @return      список данных всех групп
  */

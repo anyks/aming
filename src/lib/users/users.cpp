@@ -733,7 +733,7 @@ const bool AUsers::Users::readUsersFromFile(){
 								// Если пользователь соответствует текущей, устанавливаем пароль
 								if((Anyks::isNumber(up->key)
 								&& (uid_t(::atoi(up->key.c_str())) == user.id))
-								|| (Anyks::toCase(up->key).compare(user.name) == 0)) user.pass = up->value;
+								|| (Anyks::toCase(up->key).compare(user.name) == 0)) user.pass = getPasswordFromFile(up->value, this->log, user.id, user.name);
 							}
 						}
 						// Если описания пользователей существуют

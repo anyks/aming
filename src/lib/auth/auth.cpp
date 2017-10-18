@@ -21,24 +21,16 @@ const bool AUsers::Auth::checkLdap(const uid_t uid, const string password){
 	bool result = false;
 	// Если данные переданы
 	if((uid > 0) && !password.empty() && (this->users != nullptr)){
-		// Параметр для поиска
-		string key = "uid";
-		// Скоуп пользователя
-		string scope = "one";
-		// DN пользователя
-		string dn = "ou=users,dc=agro24,dc=dev";
-		// Фильтр пользователя
-		string filter = "(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))";
 		// Получаем имя пользователя
 		const string login = (reinterpret_cast <Users *> (this->users))->getNameById(uid);
 		// Если логин найден
 		if(!login.empty()){
 			// Заменяем ключ на логин пользователя
-			dn = (key + string("=") + Anyks::toCase(login) + string(",") + dn);
+			const string dn = (this->ldap.keyUser + string("=") + Anyks::toCase(login) + string(",") + this->ldap.dnUser);
 			// Создаем объект подключения LDAP
 			ALDAP ldap(this->config, this->log);
 			// Выполняем проверку авторизации
-			result = ldap.checkAuth(dn, password, scope, filter);
+			result = ldap.checkAuth(dn, password, this->ldap.scopeUser, this->ldap.filterUser);
 			// Если пароль не соответствует то проверяем соответствует ли он паролям группы
 			if(!result && (this->groups != nullptr)){
 				// Получаем объект групп
@@ -55,18 +47,10 @@ const bool AUsers::Auth::checkLdap(const uid_t uid, const string password){
 							auto * group = groups->getDataById(* gid);
 							// Если данные группы найдены
 							if(group != nullptr){
-								// Параметр для поиска
-								string key = "cn";
-								// Скоуп пользователя
-								string scope = "one";
-								// DN пользователя
-								string dn = "ou=groups,dc=agro24,dc=dev";
-								// Фильтр пользователя
-								string filter = "(objectClass=posixGroup)";
 								// Заменяем ключ на логин пользователя
-								dn = (key + string("=") + Anyks::toCase(group->name) + string(",") + dn);
+								const string dn = (this->ldap.keyGroup + string("=") + Anyks::toCase(group->name) + string(",") + this->ldap.dnGroup);
 								// Выполняем проверку корректности пароля
-								result = ldap.checkAuth(dn, password, scope, filter);
+								result = ldap.checkAuth(dn, password, this->ldap.scopeGroup, this->ldap.filterGroup);
 								// Если пароль корректный то выходим из цикла
 								if(result) break;
 							}
@@ -116,14 +100,6 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 			auto checkPassword = [](const string password1, const string password2){
 				// Результат проверки
 				bool result = false;
-
-				/*
-				// Если пароль является адресом файла
-				if(Anyks::getTypeAmingByString(password1) == AMING_ADDRESS){
-
-				}
-				*/
-
 				// Результат работы регулярного выражения
 				smatch match;
 				// CL:bigsecret
@@ -230,5 +206,16 @@ AUsers::Auth::Auth(Config * config, LogApp * log, void * groups, void * users){
 		this->groups = groups;
 		// Запоминаем данные пользователей
 		this->users = users;
+		// Устанавливаем параметры подключения LDAP
+		this->ldap = {
+			"uid",
+			"cn",
+			"ou=users,dc=agro24,dc=dev",
+			"ou=groups,dc=agro24,dc=dev",
+			"one",
+			"one",
+			"(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))",
+			"(objectClass=posixGroup)"
+		};
 	}
 }

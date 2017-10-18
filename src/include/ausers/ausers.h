@@ -13,6 +13,7 @@
 #include <random>
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <unordered_map>
 #include <grp.h>
@@ -141,6 +142,14 @@ class AUsers {
 			BufferSize buffers;		// Размеры буферов передачи данных
 			Keepalive keepalive;	// Постоянное подключение
 		};
+		/**
+		 * getPasswordFromFile Метод получения данных паролей из файла
+		 * @param path путь где расположен файл с паролями
+		 * @param log  объект ведения логов
+		 * @param uid  идентификатор пользователя
+		 * @param name название пользователя
+		 */
+		static const string getPasswordFromFile(const string path, LogApp * log = nullptr, const uid_t uid = -1, const string name = "");
 		/**
 		 * Groups Класс групп пользователей
 		 */
@@ -567,6 +576,21 @@ class AUsers {
 		 */
 		class Auth {
 			private:
+				/**
+				 * Ldap Структура ldap
+				 */
+				struct Ldap {
+					string keyUser;
+					string keyGroup;
+					string dnUser;
+					string dnGroup;
+					string scopeUser;
+					string scopeGroup;
+					string filterUser;
+					string filterGroup;
+				};
+				// Объект ldap подклчюения
+				Ldap ldap;
 				// Объект лога
 				LogApp * log = nullptr;
 				// Конфигурационные данные
