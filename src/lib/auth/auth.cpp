@@ -12,13 +12,13 @@
 using namespace std;
 
 /**
- * conversation Функция проверки валидности pam авторизации
+ * pamconv Функция проверки валидности pam авторизации
  * @param num_msg     номер сообщения
  * @param msg         сообщение
  * @param resp        ответ системы
  * @param appdata_ptr указатель на объект данных системы
  */
-int AUsers::Auth::conversation(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr){
+int AUsers::Auth::pamconv(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr){
 	// Если сообщения не пришли тогда выходим
 	if(num_msg <= 0 || (appdata_ptr == nullptr)) return PAM_CONV_ERR;
 	// Выделяем память под входящее сообщение
@@ -104,7 +104,7 @@ const bool AUsers::Auth::checkPam(const uid_t uid, const string password){
 		if(!name.empty()){
 			// Создаем структуру обраобтчика ответа
 			const struct pam_conv conv = {
-				&conversation,
+				&pamconv,
 				strdup(password.c_str())
 			};
 			// Создаем объект запроса с PAM модулем

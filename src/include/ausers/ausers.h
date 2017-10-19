@@ -601,13 +601,13 @@ class AUsers {
 				// Объект с данными пользователей
 				void * users = nullptr;
 				/**
-				 * conversation Функция проверки валидности pam авторизации
+				 * pamconv Функция проверки валидности pam авторизации
 				 * @param num_msg     номер сообщения
 				 * @param msg         сообщение
 				 * @param resp        ответ системы
 				 * @param appdata_ptr указатель на объект данных системы
 				 */
-				static int conversation(int num_msg = 0, const struct pam_message ** msg = nullptr, struct pam_response ** resp = nullptr, void * appdata_ptr = nullptr);
+				static int pamconv(int num_msg = 0, const struct pam_message ** msg = nullptr, struct pam_response ** resp = nullptr, void * appdata_ptr = nullptr);
 				/**
 				 * checkLdap Метод проверки корректности пароля c помощью LDAP сервера
 				 * @param username имя пользователя
