@@ -12,6 +12,113 @@
 using namespace std;
 
 /**
+ * getPasswordsFromFile Метод получения данных паролей из файла для всех пользователей
+ * @param path  путь где расположен файл с паролями
+ * @param log   объект ведения логов
+ * @param object объект пользователей или групп
+ * @param flag   флаг обозначающий тип объекта
+ */
+void AUsers::getPasswordsFromFile(const string path, LogApp * log, void * object, const u_short flag){
+	// Проверяем входящие данные
+	if(!path.empty() && (object != nullptr)
+	&& ((flag == AMING_USER) || (flag == AMING_GROUP))){
+		// Если пароль является адресом файла
+		if(Anyks::getTypeAmingByString(path) == AMING_ADDRESS){
+			// Проверяем существует ли такой файл
+			if(Anyks::isFileExist(path.c_str())){
+				// Открываем файл на чтение
+				ifstream file(path.c_str());
+				// Если файл открыт
+				if(file.is_open()){
+					/**
+					 * readData Функция считывающая из файла паролей, пароли и присваивает их
+					 * @param object объект групп или пользователей
+					 * @param data   список данных групп или пользователей
+					 * @param flag   флаг указывающий, с чем конкретно мы сейчас имеем дело
+					 */
+					auto readData = [&file](void * object, void * data, const u_short flag){
+						// Строка чтения из файла
+						string filedata;
+						// Считываем до тех пор пока все удачно
+						while(file.good()){
+							// Считываем строку из файла
+							getline(file, filedata);
+							// Если строка существует
+							if(!filedata.empty()){
+								// Результат работы регулярного выражения
+								smatch match;
+								// Создаем регулярное выражение
+								regex e("^([A-Za-z]+|\\d+)\\:((?:CL|MD5|SHA1|SHA256|SHA512)\\:.{3,128})$", regex::ECMAScript | regex::icase);
+								// Выполняем извлечение данных
+								regex_search(filedata, match, e);
+								// Если данные найдены
+								if(!match.empty()){
+									// Получаем имя пользователя или группы
+									const string subject = Anyks::toCase(match[1].str());
+									// Определяем тип объекта для работы
+									switch(flag){
+										// Если это группы
+										case AMING_GROUP: {
+											// Получаем данные групп
+											auto * groups = reinterpret_cast <const vector <const DataGroup *> *> (data);
+											// Получаем идентификатор группы
+											const gid_t gid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : -1);
+											// Переходим по всему списку групп
+											for(auto it = groups->cbegin(); it != groups->cend(); ++it){
+												// Если тип пользователя работа с файлами
+												if(((* it)->type == 0) && (((gid > -1)
+												&& ((* it)->id == gid))
+												|| (subject.compare(Anyks::toCase((* it)->name)) == 0))) (reinterpret_cast <Groups *> (object))->setPassword(gid, match[2].str());
+											}
+										} break;
+										// Если это пользователи
+										case AMING_USER: {
+											// Получаем данные пользователей
+											auto * users = reinterpret_cast <const vector <const DataUser *> *> (data);
+											// Получаем идентификатор пользователя
+											const uid_t uid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : -1);
+											// Переходим по всему списку пользователей
+											for(auto it = users->cbegin(); it != users->cend(); ++it){
+												// Если тип пользователя работа с файлами
+												if(((* it)->type == 0) && (((uid > -1)
+												&& ((* it)->id == uid))
+												|| (subject.compare(Anyks::toCase((* it)->name)) == 0))) (reinterpret_cast <Users *> (object))->setPassword(uid, match[2].str());
+											}
+										} break;
+									}
+								}
+							}
+						}
+						// Выводим результат
+						return true;
+					};
+					// Определяем тип объекта для работы
+					switch(flag){
+						// Если это группы
+						case AMING_GROUP: {
+							// Получаем данные групп
+							auto data = (reinterpret_cast <Groups *> (object))->getAllGroups();
+							// Выполняем чтение данных
+							readData(object, &data, flag);
+						} break;
+						// Если это пользователи
+						case AMING_USER: {
+							// Получаем данные пользователей
+							auto data = (reinterpret_cast <Users *> (object))->getAllUsers();
+							// Выполняем чтение данных
+							readData(object, &data, flag);
+						} break;
+					}
+					// Закрываем файл
+					file.close();
+				// Выводим сообщение об ошибке
+				} else if(log != nullptr) log->write(LOG_ERROR, 0, "password file (%s) is cannot open", path.c_str());
+			// Выводим сообщение что файл не существует
+			} else if(log != nullptr) log->write(LOG_ERROR, 0, "password file (%s) does not exist", path.c_str());
+		}
+	}
+}
+/**
  * getPasswordFromFile Метод получения данных паролей из файла
  * @param path путь где расположен файл с паролями
  * @param log  объект ведения логов

@@ -706,6 +706,8 @@ const bool AUsers::Users::readUsersFromFile(){
 		INI ini(filename);
 		// Если во время чтения файла ошибок не возникло
 		if(!ini.isError()){
+			// Пароли хранятся для всех пользователей в одном файле
+			string filepass;
 			// Получаем список пользователей
 			auto users = ini.getParamsInSection("users");
 			// Получаем список паролей
@@ -730,10 +732,16 @@ const bool AUsers::Users::readUsersFromFile(){
 						if(!passwords.empty()){
 							// Переходим по списку паролей
 							for(auto up = passwords.cbegin(); up != passwords.cend(); ++up){
-								// Если пользователь соответствует текущей, устанавливаем пароль
-								if((Anyks::isNumber(up->key)
-								&& (uid_t(::atoi(up->key.c_str())) == user.id))
-								|| (Anyks::toCase(up->key).compare(user.name) == 0)) user.pass = getPasswordFromFile(up->value, this->log, user.id, user.name);
+								// Создаем ключ пользователя
+								const string key = Anyks::toCase(up->key);
+								// Если это параметр не для всех пользователей
+								if(key.compare("all") != 0){
+									// Если пользователь соответствует текущей, устанавливаем пароль
+									if((Anyks::isNumber(key)
+									&& (uid_t(::atoi(key.c_str())) == user.id))
+									|| (key.compare(user.name) == 0)) user.pass = getPasswordFromFile(up->value, this->log, user.id, user.name);
+								// Запоминаем что пароли хранятся для всех пользователей в одном файле
+								} else if(filepass.empty()) filepass = up->value;
 							}
 						}
 						// Если описания пользователей существуют
@@ -756,6 +764,8 @@ const bool AUsers::Users::readUsersFromFile(){
 						result = true;
 					}
 				}
+				// Если файл паролей существует то устанавливаем пароли из него
+				if(!filepass.empty()) getPasswordsFromFile(filepass, this->log, this, AMING_USER);
 			}
 		}
 	}
@@ -1030,6 +1040,25 @@ const vector <uid_t> AUsers::Users::getIdAllUsers(){
 	}
 	// Выводим результат
 	return result;
+}
+/**
+ * setPassword Метод установки пароля пользователя
+ * @param gid      идентификатор пользователя
+ * @param password пароль пользователя
+ */
+void AUsers::Users::setPassword(const uid_t uid, const string password){
+	// Если идентификатор и название переданы
+	if((uid > -1) && !password.empty() && !this->data.empty()){
+		// Выполняем поиск данных пользователя
+		if(this->data.count(uid)){
+			// Устанавливаем пароль пользователя
+			(this->data.find(uid)->second).pass = password;
+		// Если пользователь не найден
+		} else if(update()) {
+			// Устанавливаем пароль пользователя
+			setPassword(uid, password);
+		}
+	}
 }
 /**
  * setGroups Метод добавления объекта групп

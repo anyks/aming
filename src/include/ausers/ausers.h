@@ -144,6 +144,14 @@ class AUsers {
 			Keepalive keepalive;	// Постоянное подключение
 		};
 		/**
+		 * getPasswordsFromFile Метод получения данных паролей из файла для всех пользователей
+		 * @param path   путь где расположен файл с паролями
+		 * @param log    объект ведения логов
+		 * @param object объект пользователей или групп
+		 * @param flag   флаг обозначающий тип объекта
+		 */
+		static void getPasswordsFromFile(const string path, LogApp * log = nullptr, void * object = nullptr, const u_short flag = AMING_USER);
+		/**
 		 * getPasswordFromFile Метод получения данных паролей из файла
 		 * @param path путь где расположен файл с паролями
 		 * @param log  объект ведения логов
@@ -176,8 +184,8 @@ class AUsers {
 				time_t lastUpdate = 0;
 				// Тип поиска групп (0 - Из файла, 1 - из PAM, 2 - из LDAP)
 				u_short typeSearch = 0;
-				// Тип поиска конфигурационных данных
-				u_short typeConfigs = 0; // (0 - Из файла, 1 - из LDAP)
+				// Тип поиска конфигурационных данных (0 - Из файла, 1 - из LDAP)
+				u_short typeConfigs = 0;
 				// Максимальное количество групп пользователя для PAM
 				int maxPamGroupsUser = 0;
 				// Объект ldap подклчюения
@@ -405,11 +413,17 @@ class AUsers {
 				const bool addUser(const string groupName, const string userName);
 				/**
 				 * addGroup Метод добавления группы
-				 * @param  id   идентификатор группы
+				 * @param  gid  идентификатор группы
 				 * @param  name название группы
 				 * @return      результат добавления
 				 */
-				const bool addGroup(const gid_t id, const string name);
+				const bool addGroup(const gid_t gid, const string name);
+				/**
+				 * setPassword Метод установки пароля группы
+				 * @param gid      идентификатор группы
+				 * @param password пароль группы
+				 */
+				void setPassword(const gid_t gid, const string password);
 				/**
 				 * setUsers Метод добавления объекта пользователей
 				 * @param users объект пользователей
@@ -560,6 +574,12 @@ class AUsers {
 				 * @return список идентификаторов пользователей
 				 */
 				const vector <uid_t> getIdAllUsers();
+				/**
+				 * setPassword Метод установки пароля пользователя
+				 * @param uid      идентификатор пользователя
+				 * @param password пароль пользователя
+				 */
+				void setPassword(const uid_t uid, const string password);
 				/**
 				 * setGroups Метод добавления объекта групп
 				 * @param groups объект групп

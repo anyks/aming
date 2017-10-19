@@ -778,6 +778,8 @@ const bool AUsers::Groups::readGroupsFromFile(){
 		INI ini(filename);
 		// Если во время чтения файла ошибок не возникло
 		if(!ini.isError()){
+			// Пароли хранятся для всех групп в одном файле
+			string filepass;
 			// Получаем список пользователей
 			auto users = ini.getParamsInSection("users");
 			// Получаем список групп
@@ -786,64 +788,77 @@ const bool AUsers::Groups::readGroupsFromFile(){
 			auto passwords = ini.getParamsInSection("passwords");
 			// Получаем список описаний
 			auto descriptions = ini.getParamsInSection("descriptions");
-			// Переходим по списку групп
-			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
-				// Если идентификатор группы существует
-				if(Anyks::isNumber(it->key) || Anyks::isNumber(it->value)){
-					// Получаем идентификатор группы
-					const gid_t gid = (Anyks::isNumber(it->key) ? ::atoi(it->key.c_str()) : ::atoi(it->value.c_str()));
-					// Получаем название группы
-					const string name = (Anyks::isNumber(it->key) ? it->value : it->key);
-					// Создаем блок с данными группы
-					DataGroup group = createDefaultData(gid, name);
-					// Устанавливаем тип группы
-					group.type = 0;
-					// Если список пользователей существует
-					if(!users.empty()){
-						// Переходим по списку пользователей
-						for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
-							// Если группа соответствует текущей
-							if((Anyks::isNumber(ut->value)
-							&& (gid_t(::atoi(ut->value.c_str())) == group.id))
-							|| (Anyks::toCase(ut->value).compare(group.name) == 0)){
-								// Создаем идентификатор пользователя
-								uid_t uid = -1;
-								// Проверяем является ли название пользователя идентификатором
-								if(Anyks::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
-								// Если это не идентификатор то запрашиваем идентификатор пользователя
-								else uid = getUidByUserName(ut->key);
-								// Добавляем пользователя в список
-								if(uid > -1) group.users.push_back(uid);
+			// Если список групп существует
+			if(!groups.empty()){
+				// Переходим по списку групп
+				for(auto it = groups.cbegin(); it != groups.cend(); ++it){
+					// Если идентификатор группы существует
+					if(Anyks::isNumber(it->key) || Anyks::isNumber(it->value)){
+						// Получаем идентификатор группы
+						const gid_t gid = (Anyks::isNumber(it->key) ? ::atoi(it->key.c_str()) : ::atoi(it->value.c_str()));
+						// Получаем название группы
+						const string name = (Anyks::isNumber(it->key) ? it->value : it->key);
+						// Создаем блок с данными группы
+						DataGroup group = createDefaultData(gid, name);
+						// Устанавливаем тип группы
+						group.type = 0;
+						// Если список пользователей существует
+						if(!users.empty()){
+							// Переходим по списку пользователей
+							for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
+								// Если группа соответствует текущей
+								if((Anyks::isNumber(ut->value)
+								&& (gid_t(::atoi(ut->value.c_str())) == group.id))
+								|| (Anyks::toCase(ut->value).compare(group.name) == 0)){
+									// Создаем идентификатор пользователя
+									uid_t uid = -1;
+									// Проверяем является ли название пользователя идентификатором
+									if(Anyks::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
+									// Если это не идентификатор то запрашиваем идентификатор пользователя
+									else uid = getUidByUserName(ut->key);
+									// Добавляем пользователя в список
+									if(uid > -1) group.users.push_back(uid);
+								}
 							}
 						}
-					}
-					// Если пароли групп существуют
-					if(!passwords.empty()){
-						// Переходим по списку паролей
-						for(auto gp = passwords.cbegin(); gp != passwords.cend(); ++gp){
-							// Если группа соответствует текущей, устанавливаем пароль
-							if((Anyks::isNumber(gp->key)
-							&& (gid_t(::atoi(gp->key.c_str())) == group.id))
-							|| (Anyks::toCase(gp->key).compare(group.name) == 0)) group.pass = getPasswordFromFile(gp->value, this->log, group.id, group.name);
+						// Если пароли групп существуют
+						if(!passwords.empty()){
+							// Переходим по списку паролей
+							for(auto gp = passwords.cbegin(); gp != passwords.cend(); ++gp){
+								// Создаем ключ группы
+								const string key = Anyks::toCase(gp->key);
+								// Если это параметр не для всех групп
+								if(key.compare("all") != 0){
+									// Если группа соответствует текущей, устанавливаем пароль
+									if((Anyks::isNumber(key)
+									&& (gid_t(::atoi(key.c_str())) == group.id))
+									|| (key.compare(group.name) == 0)) group.pass = getPasswordFromFile(gp->value, this->log, group.id, group.name);
+								// Запоминаем что пароли хранятся для всех групп в одном файле
+								} else if(filepass.empty()) filepass = gp->value;
+							}
 						}
-					}
-					// Если описания групп существуют
-					if(!descriptions.empty()){
-						// Переходим по списку описаний
-						for(auto gd = descriptions.cbegin(); gd != descriptions.cend(); ++gd){
-							// Если группа соответствует текущей, устанавливаем описание
-							if((Anyks::isNumber(gd->key)
-							&& (gid_t(::atoi(gd->key.c_str())) == group.id))
-							|| (Anyks::toCase(gd->key).compare(group.name) == 0)) group.desc = gd->value;
+						// Если описания групп существуют
+						if(!descriptions.empty()){
+							// Переходим по списку описаний
+							for(auto gd = descriptions.cbegin(); gd != descriptions.cend(); ++gd){
+								// Если группа соответствует текущей, устанавливаем описание
+								if((Anyks::isNumber(gd->key)
+								&& (gid_t(::atoi(gd->key.c_str())) == group.id))
+								|| (Anyks::toCase(gd->key).compare(group.name) == 0)) group.desc = gd->value;
+							}
 						}
+						// Переопределяем дефолтные данные из файла конфигурации
+						setDataGroup(group, &ini);
+						// Устанавливаем параметры http парсера
+						group.headers.setOptions(group.options);
+						// Добавляем группу в список групп
+						this->data.insert(pair <gid_t, DataGroup>(group.id, group));
+						// Сообщаем что все удачно
+						result = true;
 					}
-					// Переопределяем дефолтные данные из файла конфигурации
-					setDataGroup(group, &ini);
-					// Устанавливаем параметры http парсера
-					group.headers.setOptions(group.options);
-					// Добавляем группу в список групп
-					this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 				}
+				// Если файл паролей существует то устанавливаем пароли из него
+				if(!filepass.empty()) getPasswordsFromFile(filepass, this->log, this, AMING_GROUP);
 			}
 		}
 	}
@@ -1445,17 +1460,17 @@ const bool AUsers::Groups::addUser(const string groupName, const string userName
 }
 /**
  * addGroup Метод добавления группы
- * @param  id   идентификатор группы
+ * @param  gid   идентификатор группы
  * @param  name название группы
  * @return      результат добавления
  */
-const bool AUsers::Groups::addGroup(const gid_t id, const string name){
+const bool AUsers::Groups::addGroup(const gid_t gid, const string name){
 	// Результат работы функции
 	bool result = false;
 	// Если идентификатор и название переданы
-	if(id && !name.empty()){
+	if((gid > -1) && !name.empty()){
 		// Создаем блок с данными группы
-		DataGroup group = createDefaultData(id, name);
+		DataGroup group = createDefaultData(gid, name);
 		// Добавляем группу в список групп
 		this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 		// Выводим сообщение что все удачно
@@ -1463,6 +1478,25 @@ const bool AUsers::Groups::addGroup(const gid_t id, const string name){
 	}
 	// Выводим результат
 	return result;
+}
+/**
+ * setPassword Метод установки пароля группы
+ * @param gid      идентификатор группы
+ * @param password пароль группы
+ */
+void AUsers::Groups::setPassword(const gid_t gid, const string password){
+	// Если идентификатор и название переданы
+	if((gid > -1) && !password.empty() && !this->data.empty()){
+		// Выполняем поиск данных групп
+		if(this->data.count(gid)){
+			// Устанавливаем пароль группы
+			(this->data.find(gid)->second).pass = password;
+		// Если группа не найдена
+		} else if(update()) {
+			// Устанавливаем пароль группы
+			setPassword(gid, password);
+		}
+	}
 }
 /**
  * setUsers Метод добавления объекта пользователей
