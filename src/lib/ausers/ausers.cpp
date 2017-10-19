@@ -258,6 +258,22 @@ const bool AUsers::checkGroupById(const gid_t gid){
 	return result;
 }
 /**
+ * authenticate Метод авторизации пользователя в системе
+ * @param login логин пользователя
+ * @param pass  пароль пользователя
+ */
+const bool AUsers::authenticate(const string login, const string pass){
+	// Результат работы
+	bool result = false;
+	// Если параметры переданы верные
+	if(!login.empty() && !pass.empty()){
+		// Проверяем авторизацию пользователя
+		result = this->auth->check(login, pass);
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * AUsers Конструктор
  * @param config конфигурационные данные
  * @param log    объект лога для вывода информации
@@ -275,10 +291,10 @@ AUsers::AUsers(Config * config, LogApp * log){
 		this->users = new Users(this->config, this->log);
 		// Если объекты пользователей и групп созданы
 		if((this->users != nullptr) && (this->groups != nullptr)){
-			// Добавляем объект групп пользователям
-			this->users->setGroups(this->groups);
 			// Добавляем объект пользователей группам
 			this->groups->setUsers(this->users);
+			// Добавляем объект групп пользователям
+			this->users->setGroups(this->groups);
 			// Создаем объект авторизации
 			this->auth = new Auth(this->config, this->log, this->groups, this->users);
 		}

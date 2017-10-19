@@ -731,6 +731,12 @@ class AUsers {
 		 */
 		const bool checkGroupById(const gid_t gid);
 		/**
+		 * authenticate Метод авторизации пользователя в системе
+		 * @param login логин пользователя
+		 * @param pass  пароль пользователя
+		 */
+		const bool authenticate(const string login, const string pass);
+		/**
 		 * AUsers Конструктор
 		 * @param config конфигурационные данные
 		 * @param log    объект лога для вывода информации
