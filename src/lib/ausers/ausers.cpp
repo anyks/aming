@@ -266,7 +266,7 @@ const bool AUsers::authenticate(const string login, const string pass){
 	// Результат работы
 	bool result = false;
 	// Если параметры переданы верные
-	if(!login.empty() && !pass.empty()){
+	if(!login.empty() && !pass.empty() && (this->auth != nullptr)){
 		// Проверяем авторизацию пользователя
 		result = this->auth->check(login, pass);
 	}
