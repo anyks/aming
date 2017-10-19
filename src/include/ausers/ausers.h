@@ -577,18 +577,6 @@ class AUsers {
 		 */
 		class Auth {
 			private:
-				
-				struct Pam {
-					/**
-					 * conversation Функция проверки валидности pam авторизации
-					 * @param num_msg     номер сообщения
-					 * @param msg         сообщение
-					 * @param resp        ответ системы
-					 * @param appdata_ptr указатель на объект данных системы
-					 */
-					int conversation(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr);
-				};
-				
 				/**
 				 * Ldap Структура ldap
 				 */
@@ -612,6 +600,14 @@ class AUsers {
 				void * groups = nullptr;
 				// Объект с данными пользователей
 				void * users = nullptr;
+				/**
+				 * conversation Функция проверки валидности pam авторизации
+				 * @param num_msg     номер сообщения
+				 * @param msg         сообщение
+				 * @param resp        ответ системы
+				 * @param appdata_ptr указатель на объект данных системы
+				 */
+				static int conversation(int num_msg = 0, const struct pam_message ** msg = nullptr, struct pam_response ** resp = nullptr, void * appdata_ptr = nullptr);
 				/**
 				 * checkLdap Метод проверки корректности пароля c помощью LDAP сервера
 				 * @param username имя пользователя

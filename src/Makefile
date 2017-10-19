@@ -21,6 +21,7 @@ ifeq ($(OS), Darwin)
 
 	# Сторонние модули
 	LIBS =	-lz \
+			-lpam \
 			-lldap \
 			-lstdc++ \
 			-lpthread \
@@ -36,6 +37,7 @@ ifeq ($(OS), FreeBSD)
 
 	# Сторонние модули
 	LIBS =	-lz \
+			-lpam \
 			-lldap \
 			-lstdc++ \
 			-lcrypto \
@@ -52,6 +54,7 @@ ifeq ($(OS), Linux)
 
 	# Сторонние модули
 	LIBS =	-lm \
+			-lpam \
 			-lldap \
 			-lcrypto \
 			-pthread \

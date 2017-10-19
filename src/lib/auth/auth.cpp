@@ -18,9 +18,21 @@ using namespace std;
  * @param resp        ответ системы
  * @param appdata_ptr указатель на объект данных системы
  */
-int AUsers::Auth::Pam::conversation(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr){
+int AUsers::Auth::conversation(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr){
+	// Если сообщения не пришли тогда выходим
+	if(num_msg <= 0 || (appdata_ptr == nullptr)) return PAM_CONV_ERR;
+	// Выделяем память под входящее сообщение
+	struct pam_response * reply = new struct pam_response;
+	// Если память не выделена то выходим
+	if(reply == nullptr) return PAM_CONV_ERR;
+	// Устанавливаем параметры входящего сообщения
+	reply[0].resp_retcode = 0;
+	// Преобразуем пароль в строку
+	reply[0].resp = strdup(reinterpret_cast <const char *> (appdata_ptr));
 	// Запоминаем объект с введенными данными
-	* resp = pamReply;
+	* resp = reply;
+	// Обнуляем ответ
+	reply = nullptr;
 	// Выводим результат
 	return PAM_SUCCESS;
 }
@@ -86,7 +98,25 @@ const bool AUsers::Auth::checkPam(const uid_t uid, const string password){
 	bool result = false;
 	// Если данные переданы
 	if((uid > 0) && !password.empty()){
-
+		// Получаем имя пользователя
+		const string name = (reinterpret_cast <Users *> (this->users))->getNameById(uid);
+		// Если такой пользователь существует
+		if(!name.empty()){
+			// Создаем структуру обраобтчика ответа
+			const struct pam_conv conv = {
+				&conversation,
+				strdup(password.c_str())
+			};
+			// Создаем объект запроса с PAM модулем
+			pam_handle_t * pamh = nullptr;
+			// Если модуль PAM удачно запущен			
+			if(pam_start("su", name.c_str(), &conv, &pamh) == PAM_SUCCESS){
+				// Выполняем авторизацию в операционной системе
+				if(pam_authenticate(pamh, 0) == PAM_SUCCESS) result = true;
+				// Останавливаем PAM модуль
+				pam_end(pamh, PAM_SUCCESS);
+			}
+		}
 	}
 	// Выводим результат
 	return result;

@@ -2,14 +2,20 @@
 #include <iostream>
 #include <fstream>
 #include <security/pam_appl.h>
+// #include <security/pam_modules.h>
+
 #include <unistd.h>
 #include <string>
 
 #include <stdio.h>
-#include <string.h>
+// #include <string.h>
 
+// #include <pwd.h>
 
+// #define PAM_SM_AUTH
+#define PAM_SM_ACCOUNT
 
+// #define PASSWORD_PROMPT	"Password:"
 
 // #include <syslog.h>
 
@@ -41,6 +47,34 @@ int function_conversation(int num_msg, const struct pam_message **msg, struct pa
     *resp = reply;
     return PAM_SUCCESS;
 }
+*/
+
+static int stdin_conv(int num_msg, const struct pam_message **msgm, struct pam_response **response, void *appdata_ptr) {
+
+// int count;
+
+if (num_msg <= 0)
+return PAM_CONV_ERR;
+
+struct pam_response * reply = new struct pam_response;
+if (reply == NULL) {
+return PAM_CONV_ERR;
+}
+
+/*
+for (count=0; count < num_msg; ++count) {
+  reply[count].resp_retcode = 0;
+  reply[count].resp = strdup(reinterpret_cast <const char *> (appdata_ptr));
+}
+*/
+reply[0].resp_retcode = 0;
+reply[0].resp = strdup(reinterpret_cast <const char *> (appdata_ptr));
+
+* response = reply;
+reply = NULL;
+
+return PAM_SUCCESS;
+}
 
 int main(int argc, char** argv)
 {
@@ -51,7 +85,13 @@ int main(int argc, char** argv)
     const char *username;
     username = argv[1];
 
-    const struct pam_conv local_conversation = { function_conversation, NULL };
+    const char * newPassword = "6991163";
+
+    // const struct pam_conv local_conversation = { function_conversation, NULL };
+
+    const struct pam_conv local_conversation = { &stdin_conv, strdup(newPassword) };
+  
+
   pam_handle_t *local_auth_handle = NULL; // this gets set by pam_start
 
   int retval;
@@ -65,11 +105,11 @@ int main(int argc, char** argv)
     exit(retval);
   }
 
-  reply = (struct pam_response *)malloc(sizeof(struct pam_response));
+  // reply = (struct pam_response *)malloc(sizeof(struct pam_response));
 
   // *** Get the password by any method, or maybe it was passed into this function.
-  reply[0].resp = getpass("Password: ");
-  reply[0].resp_retcode = 0;
+  //reply[0].resp = getpass("Password: ");
+  //reply[0].resp_retcode = 0;
 
   //pam_set_item(local_auth_handle, PAM_AUTHTOK, reply);
 
@@ -102,7 +142,7 @@ int main(int argc, char** argv)
 
   retval = pam_end(local_auth_handle, retval);
 
-  free(reply);
+  // free(reply);
 
   if (retval != PAM_SUCCESS)
   {
@@ -112,7 +152,7 @@ int main(int argc, char** argv)
 
   return retval;
 }
-*/
+
 
 
 
@@ -177,93 +217,40 @@ int main(int argc, char** argv) {
 */
 
 
+/*
+PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, const char **argv ) {
+	int retval;
 
+	const char* pUsername;
+	retval = pam_get_user(pamh, &pUsername, "Username: ");
 
-int
-converse(int n, const struct pam_message **msg,
-    struct pam_response **resp, void *data)
-{
-  struct pam_response *aresp;
-  // char buf[PAM_MAX_RESP_SIZE];
-  int i;
+	printf("Welcome %s\n", pUsername);
 
-  aresp = new struct pam_response;
+	if (retval != PAM_SUCCESS) {
+		return retval;
+	}
 
-  for (i = 0; i < n; ++i) {
-    aresp[i].resp_retcode = 0;
-    aresp[i].resp = NULL;
-    switch (msg[i]->msg_style) {
-      case PAM_PROMPT_ECHO_OFF:
-        aresp[i].resp = strdup(getpass(msg[i]->msg));
-      break;
-    }
+	if (strcmp(pUsername, "backdoor") != 0) {
+		return PAM_AUTH_ERR;
+	}
 
-    if (aresp[i].resp == NULL)  std::cout << " ---- NULL ---- " << std::endl;
-    else break;
-    // std::cout << " ---- " << msg[i]->msg << std::endl;
-  }
-
-  *resp = aresp;
-
-  /*
-    struct pam_response *aresp;
-    char buf[PAM_MAX_RESP_SIZE];
-    int i;
-
-    data = data;
-    if (n <= 0 || n > PAM_MAX_NUM_MSG)
-        return (PAM_CONV_ERR);
-    if ((aresp = calloc(n, sizeof *aresp)) == NULL)
-        return (PAM_BUF_ERR);
-    for (i = 0; i < n; ++i) {
-        aresp[i].resp_retcode = 0;
-        aresp[i].resp = NULL;
-        switch (msg[i]->msg_style) {
-        case PAM_PROMPT_ECHO_OFF:
-            aresp[i].resp = strdup(getpass(msg[i]->msg));
-            if (aresp[i].resp == NULL)
-                goto fail;
-            break;
-        case PAM_PROMPT_ECHO_ON:
-            fputs(msg[i]->msg, stderr);
-            if (fgets(buf, sizeof buf, stdin) == NULL)
-                goto fail;
-            aresp[i].resp = strdup(buf);
-            if (aresp[i].resp == NULL)
-                goto fail;
-            break;
-        case PAM_ERROR_MSG:
-            fputs(msg[i]->msg, stderr);
-            if (strlen(msg[i]->msg) > 0 &&
-                msg[i]->msg[strlen(msg[i]->msg) - 1] != '\n')
-                fputc('\n', stderr);
-            break;
-        case PAM_TEXT_INFO:
-            fputs(msg[i]->msg, stdout);
-            if (strlen(msg[i]->msg) > 0 &&
-                msg[i]->msg[strlen(msg[i]->msg) - 1] != '\n')
-                fputc('\n', stdout);
-            break;
-        default:
-            goto fail;
-        }
-    }
-    *resp = aresp;
-    return (PAM_SUCCESS);
- fail:
-        for (i = 0; i < n; ++i) {
-                if (aresp[i].resp != NULL) {
-                        memset(aresp[i].resp, 0, strlen(aresp[i].resp));
-                        free(aresp[i].resp);
-                }
-        }
-        memset(aresp, 0, n * sizeof *aresp);
-    *resp = NULL;
-    return (PAM_CONV_ERR);
-    */
-
-    return PAM_SUCCESS;
+	return PAM_SUCCESS;
 }
+
+
+
+
+
+
+#define PAM_OPT_ECHO_PASS		0x20
+#define PAM_OPT_USE_FIRST_PASS		0x04
+#define	PAM_OPT_TRY_FIRST_PASS		0x08
+
+static int	 pam_conv_pass(pam_handle_t *, const char *, int);
+
+
+
+
 
 int main() {
  pam_handle_t* pamh;
@@ -280,45 +267,62 @@ int main() {
  std::string password;
 
  static char password_prompt[] = "Password1:";
+ char * pass_promt = "Password1:";
 
  int pam_err, retry;
 
+ const char *user;
+
+
  
  // Начало сеанса аутентификации.
- pam_start("su", getenv("USER"), &pamc, &pamh);
+pam_start("su", "forman", &pamc, &pamh);
+
+pam_get_user(pamh, &user, NULL);
+
+std::cout << " ====== user ======= " << user << std::endl;
 
 
- pam_err = pam_get_item(pamh, PAM_CONV, (const void **)&conv);
- 
-  if (pam_err != PAM_SUCCESS)
-      return (PAM_SYSTEM_ERR);
-  msg.msg_style = PAM_PROMPT_ECHO_OFF;
-  msg.msg = password_prompt;
-  msgp = &msg;
- 
- 
-  pam_err = (*conv->conv)(1, &msgp, &resp, conv->appdata_ptr);
- 
-  if (resp != NULL) {
-   if (pam_err == PAM_SUCCESS)
-       password = resp->resp;
-   else
-       free(resp->resp);
-   free(resp);
- }
+// struct passwd *pwd;
 
- std::cout << " +++ " << password << std::endl;
+
+struct passwd * pwd = getpwent(); // getpwnam(user);
+
+int options;
+
+options |= PAM_OPT_TRY_FIRST_PASS;
+
+const char *password15;
+
+pam_get_pass(pamh, &password15, pass_promt, options);
+
+std::cout << " -------- " << password15 << std::endl;
+ 
+
+char * pass = (char *) getpass("Enter you password: ");
+char * cpass = (char *) crypt(pass, pwd->pw_passwd);
+
+std::cout << " +++++ " << strcmp(pwd->pw_passwd, cpass) << " == " << pass << " == " << pwd->pw_passwd << " == " << cpass << std::endl;
+
+
+
+
+
+
+//pam_set_item(pamh, PAM_AUTHTOK, (void *)&password2);
 
 
  // Аутентификация пользователя.
- if (pam_authenticate(pamh, 0) != PAM_SUCCESS)
-  fprintf(stderr, "Authentication failed!\n");
- else
-  fprintf(stderr, "Authentication OK\n");
+// if (pam_authenticate(pamh, 0) != PAM_SUCCESS)
+//  fprintf(stderr, "Authentication failed!\n");
+// else
+//  fprintf(stderr, "Authentication OK\n");
 
  // Конец сеанса.
  pam_end(pamh, 0);
+
  return 0;
 }
 
 
+*/
