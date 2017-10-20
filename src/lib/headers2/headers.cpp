@@ -22,6 +22,23 @@ const Headers2::IsNot Headers2::isNot(const string str){
 	return {result, (result ? str.substr(1, str.length() - 1) : str)};
 }
 /**
+ * modifyHeaders Метод модификации заголовков
+ * @param rules правила фильтрации
+ * @param http  блок с http данными
+ */
+void Headers2::modifyHeaders(unordered_map <string, Headers2::Rules> rules, HttpData &http){
+	
+}
+/**
+ * modifyHeaders Метод модификации заголовков
+ * @param rules  правила фильтрации
+ * @param data   строка с данными запроса или ответа
+ * @param http   блок с http данными
+ */
+void Headers2::modifyHeaders(unordered_map <string, Headers2::Rules> rules, string &data, HttpData &http){
+
+}
+/**
  * createRulesList Метод созданий списка правил
  * @param params список параметров
  */
@@ -731,6 +748,45 @@ void Headers2::clear(){
 void Headers2::addName(const string name){
 	// Если название существует
 	if(!name.empty()) this->names.push_front(name);
+}/**
+ * modify Метод модификации заголовков
+ * @param gid     id группы пользователя
+ * @param uid     id пользователя
+ * @param traffic направление трафика (входящий или исходящий)
+ * @param http    блок с данными запроса или ответа
+ */
+void Headers2::modify(const gid_t gid, const uid_t uid, const bool traffic, HttpData &http){
+
+}
+/**
+ * modify Метод модификации заголовков
+ * @param ip     ip адрес клиента
+ * @param mac    мак адрес клиента
+ * @param server адрес сервера
+ * @param http   блок с данными запроса или ответа
+ */
+void Headers2::modify(const string ip, const string mac, const string server, HttpData &http){
+	
+}
+/**
+ * modify Метод модификации заголовков
+ * @param gid     id группы пользователя
+ * @param uid     id пользователя
+ * @param traffic направление трафика (входящий или исходящий)
+ * @param data    строка с данными запроса или ответа
+ */
+void Headers2::modify(const gid_t gid, const uid_t uid, const bool traffic, string &data){
+	
+}
+/**
+ * modify Метод модификации заголовков
+ * @param ip     ip адрес клиента
+ * @param mac    мак адрес клиента
+ * @param server адрес сервера
+ * @param data   строка с данными запроса или ответа
+ */
+void Headers2::modify(const string ip, const string mac, const string server, string &data){
+
 }
 /**
  * Headers Конструктор

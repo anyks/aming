@@ -136,6 +136,19 @@ class Headers2 {
 		 */
 		const IsNot isNot(const string str);
 		/**
+		 * modifyHeaders Метод модификации заголовков
+		 * @param rules правила фильтрации
+		 * @param http  блок с http данными
+		 */
+		void modifyHeaders(unordered_map <string, Rules> rules, HttpData &http);
+		/**
+		 * modifyHeaders Метод модификации заголовков
+		 * @param rules  правила фильтрации
+		 * @param data   строка с данными запроса или ответа
+		 * @param http   блок с http данными
+		 */
+		void modifyHeaders(unordered_map <string, Rules> rules, string &data, HttpData &http);
+		/**
 		 * createRulesList Метод созданий списка правил
 		 * @param params список параметров
 		 */
@@ -198,6 +211,38 @@ class Headers2 {
 		 * @param name название файла с параметрами
 		 */
 		void addName(const string name);
+		/**
+		 * modify Метод модификации заголовков
+		 * @param gid     id группы пользователя
+		 * @param uid     id пользователя
+		 * @param traffic направление трафика (входящий или исходящий)
+		 * @param http    блок с данными запроса или ответа
+		 */
+		void modify(const gid_t gid, const uid_t uid, const bool traffic, HttpData &http);
+		/**
+		 * modify Метод модификации заголовков
+		 * @param ip     ip адрес клиента
+		 * @param mac    мак адрес клиента
+		 * @param server адрес сервера
+		 * @param http   блок с данными запроса или ответа
+		 */
+		void modify(const string ip, const string mac, const string server, HttpData &http);
+		/**
+		 * modify Метод модификации заголовков
+		 * @param gid     id группы пользователя
+		 * @param uid     id пользователя
+		 * @param traffic направление трафика (входящий или исходящий)
+		 * @param data    строка с данными запроса или ответа
+		 */
+		void modify(const gid_t gid, const uid_t uid, const bool traffic, string &data);
+		/**
+		 * modify Метод модификации заголовков
+		 * @param ip     ip адрес клиента
+		 * @param mac    мак адрес клиента
+		 * @param server адрес сервера
+		 * @param data   строка с данными запроса или ответа
+		 */
+		void modify(const string ip, const string mac, const string server, string &data);
 		/**
 		 * Headers Конструктор
 		 * @param config конфигурационные данные
