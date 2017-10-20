@@ -749,8 +749,6 @@ Headers2::Headers2(Config * config, LogApp * log, AUsers * ausers){
 		this->config = config;
 		// Запоминаем параметры групп
 		this->ausers = ausers;
-		// Запоминаем название конфигурационного файла
-		this->names.push_front(this->config->proxy.name);
 		// Запоминаем тип поиска параметров заголовков
 		this->typeSearch = 0;
 		// Запоминаем время в течение которого запрещено обновлять данные
@@ -761,6 +759,8 @@ Headers2::Headers2(Config * config, LogApp * log, AUsers * ausers){
 			"one",
 			"(objectClass=amingHeaders)"
 		};
+		// Запоминаем название конфигурационного файла
+		if(this->typeSearch == 0) this->names.push_front(this->config->proxy.name);
 		// Выполняем чтение файла конфигурации
 		read();
 	}

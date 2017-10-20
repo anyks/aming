@@ -528,8 +528,6 @@ const AUsers::DataGroup AUsers::Groups::createDefaultData(const gid_t id, const 
 			this->config->proxy.subnet,
 			this->config->proxy.pipelining
 		};
-		// Инициализируем модуль управления заголовками
-		group.headers = Headers(this->config, this->log);
 		// Устанавливаем параметры контроля подключений клиента к серверу
 		group.connects = {
 			this->config->connects.size,
@@ -619,8 +617,6 @@ const bool AUsers::Groups::readGroupsFromLdap(){
 			group.desc = description;
 			// Переопределяем дефолтные данные из файла конфигурации
 			setDataGroup(group);
-			// Устанавливаем параметры http парсера
-			group.headers.setOptions(group.options);
 			// Добавляем группу в список групп
 			this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 		}
@@ -744,8 +740,6 @@ const bool AUsers::Groups::readGroupsFromPam(){
 								group.users.push_back(pw->pw_uid);
 								// Переопределяем дефолтные данные из файла конфигурации
 								setDataGroup(group);
-								// Устанавливаем параметры http парсера
-								group.headers.setOptions(group.options);
 								// Добавляем группу в список групп
 								this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 							}
@@ -849,8 +843,6 @@ const bool AUsers::Groups::readGroupsFromFile(){
 						}
 						// Переопределяем дефолтные данные из файла конфигурации
 						setDataGroup(group, &ini);
-						// Устанавливаем параметры http парсера
-						group.headers.setOptions(group.options);
 						// Добавляем группу в список групп
 						this->data.insert(pair <gid_t, DataGroup>(group.id, group));
 						// Сообщаем что все удачно

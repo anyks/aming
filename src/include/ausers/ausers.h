@@ -28,7 +28,6 @@
 #include "system/system.h"
 #include "general/general.h"
 #include "ldap2/ldap.h"
-#include "headers/headers.h"
 
 // Устанавливаем область видимости
 using namespace std;
@@ -114,7 +113,6 @@ class AUsers {
 			IP ipv6;				// Блок ip адресов для протокола версии 6
 			Gzip gzip;				// Параметры gzip
 			Proxy proxy;			// Параметры самого прокси-сервера
-			Headers headers;		// Объект управления заголовками
 			Connects connects;		// Контроль подключений клиента к серверу
 			Timeouts timeouts;		// Таймауты подключений
 			BufferSize buffers;		// Размеры буферов передачи данных
@@ -137,7 +135,6 @@ class AUsers {
 			IP ipv6;				// Блок ip адресов для протокола версии 6
 			Gzip gzip;				// Параметры gzip
 			Proxy proxy;			// Параметры самого прокси-сервера
-			Headers headers;		// Объект управления заголовками
 			Connects connects;		// Контроль подключений клиента к серверу
 			Timeouts timeouts;		// Таймауты подключений
 			BufferSize buffers;		// Размеры буферов передачи данных

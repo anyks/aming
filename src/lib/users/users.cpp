@@ -545,8 +545,6 @@ void AUsers::Users::setDataUserFromFile(AUsers::DataUser &user, INI * ini){
 						group->proxy.subnet,
 						group->proxy.pipelining
 					};
-					// Инициализируем модуль управления заголовками
-					user.headers = group->headers;
 					// Устанавливаем параметры контроля подключений клиента к серверу
 					user.connects = {
 						group->connects.size,
@@ -635,8 +633,6 @@ const bool AUsers::Users::readUsersFromLdap(){
 			user.desc = (!firstName.empty() ? (!lastName.empty() ? (!secondName.empty() ? firstName + string(" ") + lastName + string(" ") + secondName : firstName + string(" ") + lastName) : firstName) : !description.empty() ? description : name);
 			// Переопределяем дефолтные данные из файла конфигурации
 			setDataUser(user);
-			// Устанавливаем параметры http парсера
-			user.headers.setOptions(user.options);
 			// Добавляем пользователя в список
 			this->data.insert(pair <uid_t, DataUser>(user.id, user));
 		}
@@ -679,8 +675,6 @@ const bool AUsers::Users::readUsersFromPam(){
 				user.desc = pw->pw_name;
 				// Переопределяем дефолтные данные из файла конфигурации
 				setDataUser(user);
-				// Устанавливаем параметры http парсера
-				user.headers.setOptions(user.options);
 				// Добавляем пользователя в список
 				this->data.insert(pair <uid_t, DataUser>(user.id, user));
 				// Сообщаем что все удачно
@@ -756,8 +750,6 @@ const bool AUsers::Users::readUsersFromFile(){
 						}
 						// Переопределяем дефолтные данные из файла конфигурации
 						setDataUser(user, &ini);
-						// Устанавливаем параметры http парсера
-						user.headers.setOptions(user.options);
 						// Добавляем пользователя в список пользователей
 						this->data.insert(pair <uid_t, DataUser>(user.id, user));
 						// Сообщаем что все удачно
