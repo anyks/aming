@@ -426,6 +426,30 @@ const bool AUsers::checkGroupById(const gid_t gid){
 	return result;
 }
 /**
+ * searchUser Метод поиска данных пользователя по данным коннекта
+ * @param ip  адрес интернет протокола клиента
+ * @param mac аппаратный адрес сетевого интерфейса клиента
+ * @return    данные пользователя
+ */
+const AParams::AUser AUsers::searchUser(const string ip, const string mac){
+	// Результат работы
+	AParams::AUser result;
+	// Если данные ip и мак адреса существуют
+	if(!ip.empty() && !mac.empty()){
+		// Выполняем поиск пользователя
+		auto * user = this->users->getUserByConnect(ip, mac);
+		// Если пользователь найден то выводим результат
+		if(user != nullptr){
+			// Получаем данные пользователя
+			result = getUser(user->id);
+			// Запоминаем что авторизация прошла успешно
+			result.auth = true;
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * authenticate Метод авторизации пользователя в системе
  * @param login логин пользователя
  * @param pass  пароль пользователя

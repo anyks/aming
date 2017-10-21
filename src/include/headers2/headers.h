@@ -54,6 +54,7 @@ class Headers2 {
  		* Node Структура данных рабочей ноды
  		*/
 		struct Node {
+			bool any;		// Разрешены любые протоколы
 			u_int prefix;	// Префикс сети
 			string mac;		// Мак адрес ноды
 			string ip4;		// IP адрес протокола версии 4
@@ -137,10 +138,14 @@ class Headers2 {
 		const IsNot isNot(const string str);
 		/**
 		 * modifyHeaders Метод модификации заголовков
-		 * @param rules правила фильтрации
-		 * @param http  блок с http данными
+		 * @param ip      IP адрес клиента
+		 * @param mac     MAC адрес клиента
+		 * @param sip     IP адрес сервера
+		 * @param traffic направление трафика
+		 * @param rules   правила фильтрации
+		 * @param http    блок с http данными
 		 */
-		void modifyHeaders(unordered_map <string, Rules> rules, HttpData &http);
+		void modifyHeaders(const string ip, const string mac, const string sip, const bool traffic, unordered_map <string, Rules> rules, HttpData &http);
 		/**
 		 * modifyHeaders Метод модификации заголовков
 		 * @param rules  правила фильтрации
@@ -182,6 +187,17 @@ class Headers2 {
 		 * @return        сформированный список правил
 		 */
 		const unordered_map <string, Rules> get(const gid_t gid, const uid_t uid, const bool action = false, const bool traffic = false, const string method = "*");
+		/**
+		 * get Метод получения правил клиента
+		 * @param ip      IP адрес пользователя
+		 * @param mac     MAC адрес пользователя
+		 * @param sip     IP адрес сервера
+		 * @param action  экшен
+		 * @param traffic направление трафика
+		 * @param method  метод запроса
+		 * @return        сформированный список правил
+		 */
+		const vector <unordered_map <string, Rules>> get(const string ip, const string mac, const string sip, const bool action = false, const bool traffic = false, const string method = "*");
 		/**
 		 * add Метод добавления новых параметров фильтрации заголовков
 		 * @param gid     идентификатор группы

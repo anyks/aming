@@ -810,9 +810,17 @@ class AUsers {
 		 */
 		const bool checkGroupById(const gid_t gid);
 		/**
+		 * searchUser Метод поиска данных пользователя по данным коннекта
+		 * @param ip  адрес интернет протокола клиента
+		 * @param mac аппаратный адрес сетевого интерфейса клиента
+		 * @return    данные пользователя
+		 */
+		const AParams::AUser searchUser(const string ip = "", const string mac = "");
+		/**
 		 * authenticate Метод авторизации пользователя в системе
 		 * @param login логин пользователя
 		 * @param pass  пароль пользователя
+		 * @return      данные пользователя
 		 */
 		const AParams::AUser authenticate(const string login, const string pass);
 		/**
