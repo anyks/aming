@@ -49,6 +49,21 @@ int function_conversation(int num_msg, const struct pam_message **msg, struct pa
 }
 */
 
+
+void test(void * a){
+
+  struct M {
+    bool flag;
+    std::string name;
+  };
+
+  M * k = reinterpret_cast <M *> (a);
+
+  std::cout << " ========== " << k->name << std::endl;
+
+}
+
+
 static int stdin_conv(int num_msg, const struct pam_message **msgm, struct pam_response **response, void *appdata_ptr) {
 
 // int count;
@@ -78,7 +93,20 @@ return PAM_SUCCESS;
 
 int main(int argc, char** argv)
 {
-    if(argc != 2) {
+  
+  
+    
+  struct MTest {
+    bool param;
+    std::string nameTest;
+  };
+
+  MTest k = {true, "Forman"};
+
+  test(&k);
+  
+  
+  if(argc != 2) {
         fprintf(stderr, "Usage: check_user <username>\n");
         exit(1);
     }

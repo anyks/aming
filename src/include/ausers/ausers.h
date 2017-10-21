@@ -33,112 +33,162 @@
 using namespace std;
 
 /**
+ * AParams Основные схемы параметров модуля
+ */
+namespace AParams {
+	/**
+	 * Gzip Структура параметров сжатия данных на уровне прокси сервера
+	 */
+	struct Gzip {
+		bool vary;					// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
+		int level;					// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
+		long length;				// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
+		size_t chunk;				// Максимальный размер чанка в байтах
+		string regex;				// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
+		vector <string> vhttp;		// Версия http протокола
+		vector <string> proxied;	// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
+		vector <string> types;		// Разрешает сжатие ответа методом gzip для указанных MIME-типов
+	};
+	/**
+	 * IP Структура ip адреса
+	 */
+	struct IP {
+		vector <string> ip;			// Список ip адресов
+		vector <string> resolver;	// Список dns серверов
+	};
+	/**
+	 * Proxy Структура параметров самого прокси-сервера
+	 */
+	struct Proxy {
+		bool reverse;		// Обратный прокси (доступ из сети в локальную сеть)
+		bool transfer;		// Активация поддержки прокси листа
+		bool forward;		// Прямой прокси (доступ во внешнюю сеть)
+		bool subnet;		// Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть
+		bool pipelining;	// Активация конвеерной обработки
+	};
+	/**
+	 * Connects Структура контроля подключений клиента к серверу
+	 */
+	struct Connects {
+		size_t size;	// Максимальный размер скачиваемых данных в байтах
+		u_int connect;	// Максимальное количество подключений (одного клиента к прокси серверу)
+	};
+	/**
+	 * Timeout Структура таймаутов
+	 */
+	struct Timeouts {
+		size_t read;	// Таймаут на чтение данных
+		size_t write;	// Таймаут на запись данных
+		size_t upgrade;	// Таймаут на работу в режиме переключения протоколов
+	};
+	/**
+	 * BufferSize Структура размеров буфера
+	 */
+	struct BufferSize {
+		long read;		// Буфер на чтение
+		long write;		// Буфер на запись
+	};
+	/**
+	 * Keepalive Структура параметров постоянного подключения
+	 */
+	struct Keepalive {
+		int keepcnt;	// Максимальное количество попыток
+		int keepidle;	// Интервал времени в секундах через которое происходит проверка подключения
+		int keepintvl;	// Интервал времени в секундах между попытками
+	};
+	/**
+	 * Group Структура данных группы
+	 */
+	struct Group {
+		gid_t gid;		// Идентификатор группы
+		string name;	// Название группы
+		string desc;	// Описание группы
+		string pass;	// Пароль группы
+	};
+	/**
+	 * User Структура данных пользователя
+	 */
+	struct User {
+		uid_t uid;		// Идентификатор пользователя
+		string name;	// Имя пользователя
+		string desc;	// Описание пользователя
+		string pass;	// Пароль пользователя
+	};
+	/**
+	 * AUser Структура данных пользователя прокси сервера AMING
+	 */
+	struct AUser {
+		bool auth = false;		// Результат авторизации клиента
+		vector <string> idnt;	// Список ip4/ip6/mac адресов
+		vector <Group> groups;	// Данные группы
+		User user;				// Данные пользователя
+		IP ipv4;				// Блок ip адресов для протокола версии 4
+		IP ipv6;				// Блок ip адресов для протокола версии 6
+		Gzip gzip;				// Параметры gzip
+		Proxy proxy;			// Параметры самого прокси-сервера
+		Connects connects;		// Контроль подключений клиента к серверу
+		Timeouts timeouts;		// Таймауты подключений
+		BufferSize buffers;		// Размеры буферов передачи данных
+		Keepalive keepalive;	// Постоянное подключение
+	};
+	/**
+	 * Client Структура клиента подключившегося к прокси серверу
+	 */
+	struct Client {
+		const string ip;				// IP адрес клиента
+		const string mac;				// MAC адрес клиента
+		const string sip;				// IP адрес удаленного сервера куда подключается клиент
+		const AUser * user = nullptr;	// Указатель на объект данных пользователя (если он авторизован)
+	};
+};
+
+/**
  * AUsers Класс пользователей AMING
  */
 class AUsers {
 	private:
 		/**
-		 * Gzip Структура параметров сжатия данных на уровне прокси сервера
-		 */
-		struct Gzip {
-			bool vary;					// Разрешает или запрещает выдавать в ответе поле заголовка “Vary: Accept-Encoding”
-			int level;					// Тип сжатия (default - по умолчанию, best - лучшее сжатие, speed - лучшая скорость, no - без сжатия)
-			long length;				// Минимальная длина данных после которых включается сжатие (работает только с Content-Length)
-			size_t chunk;				// Максимальный размер чанка в байтах
-			string regex;				// Не сжимать контент, UserAgent которого соответсвует регулярному выражению
-			vector <string> vhttp;		// Версия http протокола
-			vector <string> proxied;	// Разрешает или запрещает сжатие ответа методом gzip для проксированных запросов
-			vector <string> types;		// Разрешает сжатие ответа методом gzip для указанных MIME-типов
-		};
-		/**
-		 * IP Структура ip адреса
-		 */
-		struct IP {
-			vector <string> ip;			// Список ip адресов
-			vector <string> resolver;	// Список dns серверов
-		};
-		/**
-		 * Proxy Структура параметров самого прокси-сервера
-		 */
-		struct Proxy {
-			bool reverse;		// Обратный прокси (доступ из сети в локальную сеть)
-			bool transfer;		// Активация поддержки прокси листа
-			bool forward;		// Прямой прокси (доступ во внешнюю сеть)
-			bool subnet;		// Активация режима мульти-сетевого взаимодействия когда выход на сеть определяется по ip адресу и в зависимости от него выбирается ipv6 или ipv4 сеть
-			bool pipelining;	// Активация конвеерной обработки
-		};
-		/**
-		 * Connects Структура контроля подключений клиента к серверу
-		 */
-		struct Connects {
-			size_t size;	// Максимальный размер скачиваемых данных в байтах
-			u_int connect;	// Максимальное количество подключений (одного клиента к прокси серверу)
-		};
-		/**
-		 * Timeout Структура таймаутов
-		 */
-		struct Timeouts {
-			size_t read;	// Таймаут на чтение данных
-			size_t write;	// Таймаут на запись данных
-			size_t upgrade;	// Таймаут на работу в режиме переключения протоколов
-		};
-		/**
-		 * BufferSize Структура размеров буфера
-		 */
-		struct BufferSize {
-			long read;		// Буфер на чтение
-			long write;		// Буфер на запись
-		};
-		/**
-		 * Keepalive Структура параметров постоянного подключения
-		 */
-		struct Keepalive {
-			int keepcnt;	// Максимальное количество попыток
-			int keepidle;	// Интервал времени в секундах через которое происходит проверка подключения
-			int keepintvl;	// Интервал времени в секундах между попытками
-		};
-		/**
 		 * DataGroup Структура данных группы
 		 */
 		struct DataGroup {
-			gid_t id;				// Идентификатор группы
-			u_short options;		// Основные параметры прокси
-			u_short type;			// Тип группы (0 - файлы, 1 - PAM, 2 - LDAP)
-			string name;			// Название группы
-			string pass;			// Пароль группы
-			string auth;			// Тип авторизации клиентов
-			string desc;			// Описание групп
-			vector <string> idnt;	// Список ip4/ip6/nwk/mac адресов
-			IP ipv4;				// Блок ip адресов для протокола версии 4
-			IP ipv6;				// Блок ip адресов для протокола версии 6
-			Gzip gzip;				// Параметры gzip
-			Proxy proxy;			// Параметры самого прокси-сервера
-			Connects connects;		// Контроль подключений клиента к серверу
-			Timeouts timeouts;		// Таймауты подключений
-			BufferSize buffers;		// Размеры буферов передачи данных
-			Keepalive keepalive;	// Постоянное подключение
+			gid_t id;						// Идентификатор группы
+			u_short options;				// Основные параметры прокси
+			u_short type;					// Тип группы (0 - файлы, 1 - PAM, 2 - LDAP)
+			string name;					// Название группы
+			string pass;					// Пароль группы
+			string auth;					// Тип авторизации клиентов
+			string desc;					// Описание групп
+			vector <string> idnt;			// Список ip4/ip6/nwk/mac адресов
+			AParams::IP ipv4;				// Блок ip адресов для протокола версии 4
+			AParams::IP ipv6;				// Блок ip адресов для протокола версии 6
+			AParams::Gzip gzip;				// Параметры gzip
+			AParams::Proxy proxy;			// Параметры самого прокси-сервера
+			AParams::Connects connects;		// Контроль подключений клиента к серверу
+			AParams::Timeouts timeouts;		// Таймауты подключений
+			AParams::BufferSize buffers;	// Размеры буферов передачи данных
+			AParams::Keepalive keepalive;	// Постоянное подключение
 			vector <uid_t> users;	// Список идентификаторов пользователей
 		};
 		/**
 		 * DataUser Структура данных пользователя
 		 */
 		struct DataUser {
-			uid_t id;				// Идентификатор пользователя
-			u_short options;		// Основные параметры прокси
-			u_short type;			// Тип пользователя (0 - файлы, 1 - PAM, 2 - LDAP)
-			string name;			// Название пользователя
-			string pass;			// Пароль пользователя
-			string auth;			// Тип авторизации клиентов
-			string desc;			// Описание пользователя
-			vector <string> idnt;	// Список ip4/ip6/mac адресов
-			IP ipv4;				// Блок ip адресов для протокола версии 4
-			IP ipv6;				// Блок ip адресов для протокола версии 6
-			Gzip gzip;				// Параметры gzip
-			Proxy proxy;			// Параметры самого прокси-сервера
-			Connects connects;		// Контроль подключений клиента к серверу
-			Timeouts timeouts;		// Таймауты подключений
-			BufferSize buffers;		// Размеры буферов передачи данных
-			Keepalive keepalive;	// Постоянное подключение
+			uid_t id;						// Идентификатор пользователя
+			u_short options;				// Основные параметры прокси
+			u_short type;					// Тип пользователя (0 - файлы, 1 - PAM, 2 - LDAP)
+			string name;					// Название пользователя
+			string pass;					// Пароль пользователя
+			string auth;					// Тип авторизации клиентов
+			string desc;					// Описание пользователя
+			vector <string> idnt;			// Список ip4/ip6/mac адресов
+			AParams::IP ipv4;				// Блок ip адресов для протокола версии 4
+			AParams::IP ipv6;				// Блок ip адресов для протокола версии 6
+			AParams::Gzip gzip;				// Параметры gzip
+			AParams::Proxy proxy;			// Параметры самого прокси-сервера
+			AParams::Connects connects;		// Контроль подключений клиента к серверу
+			AParams::Timeouts timeouts;		// Таймауты подключений
+			AParams::BufferSize buffers;	// Размеры буферов передачи данных
+			AParams::Keepalive keepalive;	// Постоянное подключение
 		};
 		/**
 		 * getPasswordsFromFile Метод получения данных паролей из файла для всех пользователей
@@ -669,6 +719,18 @@ class AUsers {
 		Users * users = nullptr;
 		// Объект с данными авторизации
 		Auth * auth = nullptr;
+		/**
+		 * getUser Метод получения данных пользователя
+		 * @param uid идентификатор пользователя
+		 * @return    объект с зданными пользователя
+		 */
+		const AParams::AUser getUser(const uid_t uid);
+		/**
+		 * getUser Метод получения данных пользователя
+		 * @param userName имя пользователя
+		 * @return         объект с зданными пользователя
+		 */
+		const AParams::AUser getUser(const string userName);
 	public:
 		/**
 		 * getAllGroups Метод получения данных всех групп
@@ -752,7 +814,7 @@ class AUsers {
 		 * @param login логин пользователя
 		 * @param pass  пароль пользователя
 		 */
-		const bool authenticate(const string login, const string pass);
+		const AParams::AUser authenticate(const string login, const string pass);
 		/**
 		 * AUsers Конструктор
 		 * @param config конфигурационные данные

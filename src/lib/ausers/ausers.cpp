@@ -179,6 +179,67 @@ const string AUsers::getPasswordFromFile(const string path, LogApp * log, const 
 	return result;
 }
 /**
+ * getUser Метод получения данных пользователя
+ * @param uid идентификатор пользователя
+ * @return    объект с зданными пользователя
+ */
+const AParams::AUser AUsers::getUser(const uid_t uid){
+	// Создаем объект данных пользователя
+	AParams::AUser result;
+	// Если идентификатор пользователя передан верный
+	if((uid > 0) && (this->users != nullptr) && (this->groups != nullptr)){
+		// Получаем данные пользователя
+		auto * user = this->users->getDataById(uid);
+		// Если данные пользователя получены
+		if(user != nullptr){
+			// Запрашиваем группы в которых он состоит
+			auto gits = this->groups->getGroupIdByUser(uid);
+			// Переходим по всему списку идентификаторов групп
+			for(auto it = gits.cbegin(); it != gits.cend(); it++){
+				// Запрашиваем данные группы
+				auto * group = this->groups->getDataById(* it);
+				// Если данные группы получены
+				if(group != nullptr){
+					// Добавляем группы в список групп пользователя
+					result.groups.push_back({group->id, group->name, group->desc, group->pass});
+				}
+			}
+			// Добавляем данные пользователя
+			result.user = {user->id, user->name, user->desc, user->pass};
+			// Запоминаем остальные параметры
+			result.idnt = user->idnt;
+			result.ipv4 = user->ipv4;
+			result.ipv6 = user->ipv6;
+			result.gzip = user->gzip;
+			result.proxy = user->proxy;
+			result.connects = user->connects;
+			result.timeouts = user->timeouts;
+			result.buffers = user->buffers;
+			result.keepalive = user->keepalive;
+		}
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getUser Метод получения данных пользователя
+ * @param userName имя пользователя
+ * @return         объект с зданными пользователя
+ */
+const AParams::AUser AUsers::getUser(const string userName){
+	// Создаем объект данных пользователя
+	AParams::AUser result;
+	// Если имя пользователя получено
+	if(!userName.empty()){
+		// Если пользователи найдены
+		const uid_t uid = (this->users != nullptr ? this->users->getIdByName(userName) : -1);
+		// Если идентификатор найден то запрашиваем данные пользователя
+		if(uid > 0) result = getUser(uid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * getAllGroups Метод получения данных всех групп
  * @return      список данных всех групп
  */
@@ -369,13 +430,18 @@ const bool AUsers::checkGroupById(const gid_t gid){
  * @param login логин пользователя
  * @param pass  пароль пользователя
  */
-const bool AUsers::authenticate(const string login, const string pass){
+const AParams::AUser AUsers::authenticate(const string login, const string pass){
 	// Результат работы
-	bool result = false;
+	AParams::AUser result;
 	// Если параметры переданы верные
 	if(!login.empty() && !pass.empty() && (this->auth != nullptr)){
 		// Проверяем авторизацию пользователя
-		result = this->auth->check(login, pass);
+		if(this->auth->check(login, pass)){
+			// Получаем данные пользователя
+			result = getUser(login);
+			// Запоминаем что авторизация прошла успешно
+			result.auth = true;
+		}
 	}
 	// Выводим результат
 	return result;

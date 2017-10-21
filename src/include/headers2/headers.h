@@ -213,36 +213,16 @@ class Headers2 {
 		void addName(const string name);
 		/**
 		 * modify Метод модификации заголовков
-		 * @param gid     id группы пользователя
-		 * @param uid     id пользователя
-		 * @param traffic направление трафика (входящий или исходящий)
-		 * @param http    блок с данными запроса или ответа
-		 */
-		void modify(const gid_t gid, const uid_t uid, const bool traffic, HttpData &http);
-		/**
-		 * modify Метод модификации заголовков
-		 * @param ip     ip адрес клиента
-		 * @param mac    мак адрес клиента
-		 * @param server адрес сервера
+		 * @param client данные клиента
 		 * @param http   блок с данными запроса или ответа
 		 */
-		void modify(const string ip, const string mac, const string server, HttpData &http);
+		void modify(AParams::Client client, HttpData &http);
 		/**
 		 * modify Метод модификации заголовков
-		 * @param gid     id группы пользователя
-		 * @param uid     id пользователя
-		 * @param traffic направление трафика (входящий или исходящий)
-		 * @param data    строка с данными запроса или ответа
-		 */
-		void modify(const gid_t gid, const uid_t uid, const bool traffic, string &data);
-		/**
-		 * modify Метод модификации заголовков
-		 * @param ip     ip адрес клиента
-		 * @param mac    мак адрес клиента
-		 * @param server адрес сервера
+		 * @param client данные клиента
 		 * @param data   строка с данными запроса или ответа
 		 */
-		void modify(const string ip, const string mac, const string server, string &data);
+		void modify(AParams::Client client, string &data);
 		/**
 		 * Headers Конструктор
 		 * @param config конфигурационные данные
