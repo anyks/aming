@@ -388,6 +388,46 @@ const string Anyks::addToPath(const string path, const string file){
 	return result;
 }
 /**
+ * getPathByString Метод извлечения правильной записи адреса
+ * @param  path первоначальная строка адреса
+ * @return      правильная строка адреса
+ */
+const string Anyks::getPathByString(const string path){
+	// Результат проверки домена
+	string result = path;
+	// Если адрес передан
+	if(!path.empty()){
+		// Регулярное выражение для поиска завершающего символа
+		regex e("(^\\/[\\w\\/]+\\w+)(?:\\/$|\\/?\\?.+)", regex::ECMAScript | regex::icase);
+		// Вырезаем последний символ из адреса (/)
+		result = regex_replace(path, e, "$1");
+		// Если полученный результат не является параметрами
+		if(!result.empty() && (result.substr(0, 1).compare("/") != 0)) result = "";
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getQueryByString Метод извлечения параметров запроса из строки адреса
+ * @param  path первоначальная строка адреса
+ * @return      параметры запроса
+ */
+const string Anyks::getQueryByString(const string path){
+	// Результат проверки домена
+	string result = path;
+	// Если адрес передан
+	if(!path.empty()){
+		// Регулярное выражение для поиска параметров запроса
+		regex e("(?:^\\/[\\w\\/]+\\w+)(?:\\/$|\\/?(\\?.+))", regex::ECMAScript | regex::icase);
+		// Вырезаем параметры запроса
+		result = regex_replace(path, e, "$1");
+		// Если полученный результат не является параметрами
+		if(!result.empty() && (result.substr(0, 1).compare("?") != 0)) result = "";
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * md5 Метод получения md5 хэша из строки
  * @param text текст для перевода в строку
  */

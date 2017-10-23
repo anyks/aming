@@ -10,9 +10,9 @@
 # Фильтрация по User-Agent с помощью регулярных выражений, возможна только для исходящих запросов
 # К параметрам: server, method, path, query, user, group - можно применять инверсию (!)
 #
-# action       traffic       client       server       method       path       query       agent       user       group       headers
+# action       traffic       client       server       method       path       query       agent           user       group       headers
 
-    rm          out        127.0.0.1     vipmake.com    get | post    /          *     mozilla\/\d\.\d   1        admins   Accept-Encoding
-    rm          in             *        *.vipmake.com  !connect       *          *            *          *          *      Link | Via | X-Generator | Server | X-Drupal-Cache | X-Frame-Options | X-Powered-By | X-UA-Compatible
-    add         in             *             *           *            *          *            *          *          *      Server: Aming/1.0
-    add         *              *             *           *            *  		 *            *          *          *      Aming: Proxy | Rembo: server
+    rm          out        127.0.0.1     vipmake.com    get | post    /         .?     mozilla\/\d\.\d      1        admins   Accept-Encoding
+    rm          in             *        *.vipmake.com  !connect       *          *            *             *          *      Link | Via | X-Generator | Server | X-Drupal-Cache | X-Frame-Options | X-Powered-By | X-UA-Compatible
+    add         in             *             *           *            *          *            *             *          *      Server: Aming/1.0
+    add         *              *             *           *            *  		 *            *             *          *      Aming: Proxy | Rembo: server

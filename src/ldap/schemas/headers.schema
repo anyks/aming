@@ -72,8 +72,7 @@ attributetype ( 2.2.2.0.2.12
 	NAME 'amingHeadersPath'
 	DESC 'Путь запроса, например /aming.html'
 	EQUALITY caseExactIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26
-	SINGLE-VALUE )
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
 
 attributeTypes: ( 2.2.2.0.2.13
 	NAME 'amingHeadersQuery'

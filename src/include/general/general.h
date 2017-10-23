@@ -183,6 +183,18 @@ namespace Anyks {
 	*/
 	const string addToPath(const string path, const string file);
 	/**
+	 * getPathByString Метод извлечения правильной записи адреса
+	 * @param  path первоначальная строка адреса
+	 * @return      правильная строка адреса
+	 */
+	const string getPathByString(const string path);
+	/**
+	 * getQueryByString Метод извлечения параметров запроса из строки адреса
+	 * @param  path первоначальная строка адреса
+	 * @return      параметры запроса
+	 */
+	const string getQueryByString(const string path);
+	/**
 	 * md5 Метод получения md5 хэша из строки
 	 * @param text текст для перевода в строку
 	 */

@@ -8,6 +8,11 @@
 #include <string>
 
 #include <stdio.h>
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
 // #include <string.h>
 
 // #include <pwd.h>
@@ -94,7 +99,9 @@ return PAM_SUCCESS;
 int main(int argc, char** argv)
 {
   
-  
+  std::vector <std::string> a1 = {"hello", "hi"};
+
+  std::cout << *std::find(a1.begin(), a1.end(), "hello1") << std::endl;
     
   struct MTest {
     bool param;
