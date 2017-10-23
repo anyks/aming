@@ -8,7 +8,7 @@
 # Конфигурационный фал управления заголовками
 # Параметр (*) - обозначает для всех возможных вариантов
 # Фильтрация по User-Agent с помощью регулярных выражений, возможна только для исходящих запросов
-# К параметрам: server, method, path, query, user, group - можно применять инверсию (!)
+# К параметрам: action, traffic, client, server, method, path, user, group - можно применять инверсию (!)
 #
 # action       traffic       client       server       method       path       query       agent           user       group       headers
 

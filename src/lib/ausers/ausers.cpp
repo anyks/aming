@@ -316,6 +316,32 @@ const vector <string> AUsers::getNameUsersInGroup(const string groupName){
 	return result;
 }
 /**
+ * getGroupNameByGid Метод извлечения имени группы по ее идентификатору
+ * @param  gid идентификатор группы
+ * @return     название группы
+ */
+const string AUsers::getGroupNameByGid(const gid_t gid){
+	// Результат работы
+	string result;
+	// Если группы найдены
+	if(this->groups != nullptr) result = this->groups->getNameById(gid);
+	// Выводим результат
+	return result;
+}
+/**
+ * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
+ * @param  uid идентификатор пользователя
+ * @return     имя пользователя
+ */
+const string AUsers::getUserNameByUid(const uid_t uid){
+	// Результат работы
+	string result;
+	// Если пользователи найдены
+	if(this->users != nullptr) result = this->users->getNameById(uid);
+	// Выводим результат
+	return result;
+}
+/**
  * getGidByName Метод извлечения идентификатора группы по ее имени
  * @param  groupName название группы
  * @return           идентификатор группы
@@ -323,7 +349,7 @@ const vector <string> AUsers::getNameUsersInGroup(const string groupName){
 const gid_t AUsers::getGidByName(const string groupName){
 	// Результат работы
 	gid_t result = -1;
-	// Если пользователи найдены
+	// Если группы найдены
 	if(this->groups != nullptr) result = this->groups->getIdByName(groupName);
 	// Выводим результат
 	return result;

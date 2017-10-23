@@ -180,13 +180,14 @@ class Headers2 {
 		 * @param mac        MAC адрес пользователя
 		 * @param sip        IP адрес сервера
 		 * @param userAgent  юзер-агент браузера
+		 * @param hostServer доменное имя сервера
 		 * @param path       путь запроса 
 		 * @param query      параметры запроса
 		 * @param method     метод запроса
 		 * @param rules      список правил
 		 * @return           сформированный список заголовков
 		 */
-		const vector <string> findHeaders(const string ip, const string mac, const string sip, const string userAgent, const string path, const string query, const string method, const Rules * rules = nullptr);
+		const vector <string> findHeaders(const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const Rules * rules = nullptr);
 		/**
 		 * get Метод получения правил клиента
 		 * @param gid        идентификатор группы
@@ -195,6 +196,7 @@ class Headers2 {
 		 * @param mac        MAC адрес пользователя
 		 * @param sip        IP адрес сервера
 		 * @param userAgent  юзер-агент браузера
+		 * @param hostServer доменное имя сервера
 		 * @param path       путь запроса 
 		 * @param query      параметры запроса
 		 * @param method     метод запроса
@@ -202,13 +204,14 @@ class Headers2 {
 		 * @param action     экшен
 		 * @return           сформированный список правил
 		 */
-		const vector <string> get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string userAgent, const string path, const string query, const string method, const bool traffic, const bool action);
+		const vector <string> get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const bool traffic, const bool action);
 		/**
 		 * get Метод получения правил клиента
 		 * @param ip         IP адрес пользователя
 		 * @param mac        MAC адрес пользователя
 		 * @param sip        IP адрес сервера
 		 * @param userAgent  юзер-агент браузера
+		 * @param hostServer доменное имя сервера
 		 * @param path       путь запроса 
 		 * @param query      параметры запроса
 		 * @param method     метод запроса
@@ -216,7 +219,7 @@ class Headers2 {
 		 * @param action     экшен
 		 * @return           сформированный список правил
 		 */
-		const vector <string> get(const string ip, const string mac, const string sip, const string userAgent, const string path, const string query, const string method, const bool traffic, const bool action);
+		const vector <string> get(const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const bool traffic, const bool action);
 		/**
 		 * add Метод добавления новых параметров фильтрации заголовков
 		 * @param gid     идентификатор группы

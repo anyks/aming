@@ -156,8 +156,20 @@ void Headers2::createRulesList(const Headers2::Params params){
 			method = Anyks::toCase(method);
 			// Если метод не является звездочкой
 			if(method.compare("*") != 0){
+				// Выполняем проверку на инверсию
+				auto check = isNot(method);
 				// Получаем нужный нам метод и добавляем туда правила
-				methods.at(method) = rules;
+				if(!check.inv) methods.at(check.str) = rules;
+				// Если это инверсия
+				else {
+					// Переходим по всему списку методов
+					for(auto mt = methods.cbegin(); mt != methods.cend(); ++mt){
+						// Добавляем правила
+						if(mt->first.compare(check.str) != 0) methods.at(mt->first) = rules;
+					}
+					// Выходим из цикла
+					break;
+				}
 			// Если найдена звездочка то добавляем во все методы
 			} else {
 				// Переходим по всему списку методов
@@ -177,10 +189,21 @@ void Headers2::createRulesList(const Headers2::Params params){
 			traffic = Anyks::toCase(traffic);
 			// Если трафик не является звездочкой
 			if(traffic.compare("*") != 0){
-				// Если это входящий трафик
-				if(traffic.compare("in") == 0) traffics.at(true) = methods;
-				// Если это исходящий трафик
-				if(traffic.compare("out") == 0) traffics.at(false) = methods;
+				// Выполняем проверку на инверсию
+				auto check = isNot(traffic);
+				// Если это не инверсия
+				if(!check.inv){
+					// Если это входящий трафик
+					if(check.str.compare("in") == 0) traffics.at(true) = methods;
+					// Если это исходящий трафик
+					if(check.str.compare("out") == 0) traffics.at(false) = methods;
+				// Если это инверсия
+				} else {
+					// Если это входящий трафик
+					if(check.str.compare("in") == 0) traffics.at(false) = methods;
+					// Если это исходящий трафик
+					if(check.str.compare("out") == 0) traffics.at(true) = methods;
+				}
 			// Если найдена звездочка то добавляем во все методы
 			} else {
 				// Запоминаем параметры для всех видов трафика
@@ -198,10 +221,21 @@ void Headers2::createRulesList(const Headers2::Params params){
 			action = Anyks::toCase(action);
 			// Если экшен не является звездочкой
 			if(action.compare("*") != 0){
-				// Если это добавление заголовков
-				if(action.compare("add") == 0) actions.at(true) = traffics;
-				// Если это удаление заголовков
-				if(action.compare("rm") == 0) actions.at(false) = traffics;
+				// Выполняем проверку на инверсию
+				auto check = isNot(action);
+				// Если это не инверсия
+				if(!check.inv){
+					// Если это добавление заголовков
+					if(check.str.compare("add") == 0) actions.at(true) = traffics;
+					// Если это удаление заголовков
+					if(check.str.compare("rm") == 0) actions.at(false) = traffics;
+				// Если это инверсия
+				} else {
+					// Если это добавление заголовков
+					if(check.str.compare("add") == 0) actions.at(false) = traffics;
+					// Если это удаление заголовков
+					if(check.str.compare("rm") == 0) actions.at(true) = traffics;
+				}
 			// Если найдена звездочка то добавляем во все экшены
 			} else {
 				// Запоминаем параметры для всех видов экшенов
@@ -222,16 +256,37 @@ void Headers2::createRulesList(const Headers2::Params params){
 				string user = * it;
 				// Если пользователь не является звездочкой
 				if(user.compare("*") != 0){
-					// Идентификатор пользователя
-					uid_t uid = 0;
-					// Определяем идентификатор пользователя
-					if(Anyks::isNumber(user)) uid = ::atoi(user.c_str());
-					// Если это название пользователя
-					else uid = this->ausers->getUidByName(user);
-					// Если пользователь принадлежит группе
-					if(this->ausers->checkUserInGroup(gid, uid)){
-						// Добавляем список экшенов к пользователю
-						users.emplace(uid, actions);
+					// Выполняем проверку на инверсию
+					auto check = isNot(user);
+					// Если это не инверсия
+					if(!check.inv){
+						// Идентификатор пользователя
+						uid_t uid = -1;
+						// Определяем идентификатор пользователя
+						if(Anyks::isNumber(check.str)) uid = ::atoi(check.str.c_str());
+						// Если это название пользователя
+						else uid = this->ausers->getUidByName(check.str);
+						// Если пользователь принадлежит группе
+						if(this->ausers->checkUserInGroup(gid, uid)){
+							// Добавляем список экшенов к пользователю
+							users.emplace(uid, actions);
+						}
+					// Если это инверсия
+					} else {
+						// Очищаем список пользователей
+						users.clear();
+						// Запрашиваем список всех пользователей группы
+						auto uids = this->ausers->getIdUsersInGroup(gid);
+						// Проверяем является ли это идентификатором
+						const bool numberFlag = Anyks::isNumber(check.str);
+						// Переходим по всем идентификаторам пользователей и добавляем туда экшены
+						for(auto it = uids.cbegin(); it != uids.cend(); ++it){
+							// Выполняем создание правила
+							if((numberFlag && ((* it) != uid_t(::atoi(check.str.c_str()))))
+							|| (!numberFlag && (this->ausers->getUserNameByUid(* it).compare(check.str) != 0))) users.emplace(* it, actions);
+						}
+						// Выходим из цикла
+						break;
 					}
 				// Если найдена звездочка то добавляем во все экшены
 				} else {
@@ -256,14 +311,31 @@ void Headers2::createRulesList(const Headers2::Params params){
 			users.clear();
 			// Если группа не является звездочкой
 			if(group.compare("*") != 0){
-				// Идентификатор группы
-				gid_t gid = 0;
-				// Если это идентификатор группы
-				if(Anyks::isNumber(group)) gid = ::atoi(group.c_str());
-				// Если это название группы
-				else gid = this->ausers->getGidByName(group);
-				// Выполняем создание правила
-				if(this->ausers->checkGroupById(gid)) createRules(gid);
+				// Выполняем проверку на инверсию
+				auto check = isNot(group);
+				// Если это не инверсия
+				if(!check.inv){
+					// Идентификатор группы
+					gid_t gid = -1;
+					// Если это идентификатор группы
+					if(Anyks::isNumber(check.str)) gid = ::atoi(check.str.c_str());
+					// Если это название группы
+					else gid = this->ausers->getGidByName(check.str);
+					// Выполняем создание правила
+					if(this->ausers->checkGroupById(gid)) createRules(gid);
+				// Если это инверсия
+				} else {
+					// Проверяем является ли это идентификатором
+					const bool numberFlag = Anyks::isNumber(check.str);
+					// Переходим по всему списку групп
+					for(auto it = data_groups.cbegin(); it != data_groups.cend(); ++it){
+						// Выполняем создание правила
+						if((numberFlag && ((* it)->id != gid_t(::atoi(check.str.c_str()))))
+						|| (!numberFlag && (this->ausers->getGroupNameByGid((* it)->id).compare(check.str) != 0))) createRules((* it)->id);
+					}
+					// Выходим из цикла
+					break;
+				}
 			// Если найдена звездочка то добавляем во все группы
 			} else {
 				// Переходим по всему списку групп
@@ -577,13 +649,14 @@ const string Headers2::getName(){
  * @param mac        MAC адрес пользователя
  * @param sip        IP адрес сервера
  * @param userAgent  юзер-агент браузера
+ * @param hostServer доменное имя сервера
  * @param path       путь запроса 
  * @param query      параметры запроса
  * @param method     метод запроса
  * @param rules      список правил
  * @return           сформированный список заголовков
  */
-const vector <string> Headers2::findHeaders(const string ip, const string mac, const string sip, const string userAgent, const string path, const string query, const string method, const Rules * rules){
+const vector <string> Headers2::findHeaders(const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const Rules * rules){
 	// Список правил
 	vector <string> result;
 	// Если входящие параметры верные
@@ -602,17 +675,67 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
 				// Проверяем ip адрес клиента
 				switch(cipType){
 					// Если это IPv4
-					case AMING_IPV4: checkCIP = (it->ip4.compare(ip) == 0); break;
+					case AMING_IPV4: {
+						// Выполняем проверку на инверсию
+						auto check = isNot(it->ip4);
+						// Если это не инверсия
+						if(!check.inv){
+							// Выполняем проверку на совпадение ip адресов
+							checkCIP = (check.str.compare(ip) == 0);
+							// Выходим из цикла
+							if(checkCIP) goto stopClients;
+						// Если это инверсия
+						} else {
+							// Выполняем проверку на не совпадение ip адресов
+							checkCIP = (check.str.compare(ip) != 0);
+							// Выходим из цикла
+							if(!checkCIP) goto stopClients;
+						}
+					} break;
 					// Если это IPv6
-					case AMING_IPV6: checkCIP = nwk.compareIP6(it->ip6, ip); break;
+					case AMING_IPV6: {
+						// Выполняем проверку на инверсию
+						auto check = isNot(it->ip6);
+						// Если это не инверсия
+						if(!check.inv){
+							// Выполняем проверку на совпадение ip адресов
+							checkCIP = nwk.compareIP6(check.str, ip);
+							// Выходим из цикла
+							if(checkCIP) goto stopClients;
+						// Если это инверсия
+						} else {
+							// Выполняем проверку на не совпадение ip адресов
+							checkCIP = !nwk.compareIP6(check.str, ip);
+							// Выходим из цикла
+							if(!checkCIP) goto stopClients;
+						}
+					} break;
 				}
-				// Проверяем mac адреса
-				if(Anyks::toCase(it->mac).compare(Anyks::toCase(mac)) == 0) checkCMac = true;
+				// Выполняем проверку на инверсию
+				auto check = isNot(Anyks::toCase(it->mac));
+				// Если это не инверсия
+				if(!check.inv){
+					// Проверяем на совпадение mac адресов
+					checkCMac = (check.str.compare(Anyks::toCase(mac)) == 0);
+					// Выходим из цикла
+					if(checkCMac) goto stopClients;
+				// Если это инверсия
+				} else {
+					// Проверяем на не совпадение mac адресов
+					checkCMac = (check.str.compare(Anyks::toCase(mac)) != 0);
+					// Выходим из цикла
+					if(!checkCMac) goto stopClients;
+				}
 			// Если разрешены любые протоколы
-			} else checkCAny = true;
-			// Если нашли совпадение то выходим из цикла
-			if(checkCMac || checkCIP || checkCAny) break;
+			} else {
+				// Запоминаем что все проверки пройдены
+				checkCAny = true;
+				// Выходим из цикла
+				break;
+			}
 		}
+		// Ставим метку остановки цикла для перебора клиентских данных
+		stopClients:
 		// Переходим по всем спискам серверов
 		for(auto it = rules->servers.cbegin(); it != rules->servers.cend(); ++it){
 			// Если не разрешены любые протоколы
@@ -620,15 +743,71 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
 				// Проверяем ip адрес клиента
 				switch(sipType){
 					// Если это IPv4
-					case AMING_IPV4: checkSIP = (it->ip4.compare(sip) == 0); break;
+					case AMING_IPV4: {
+						// Выполняем проверку на инверсию
+						auto check = isNot(it->ip4);
+						// Если это не инверсия
+						if(!check.inv){
+							// Выполняем проверку на совпадение ip адресов
+							checkSIP = (check.str.compare(sip) == 0);
+							// Выходим из цикла
+							if(checkSIP) goto stopServers;
+						// Если это инверсия
+						} else {
+							// Выполняем проверку на не совпадение ip адресов
+							checkSIP = (check.str.compare(sip) != 0);
+							// Выходим из цикла
+							if(!checkSIP) goto stopServers;
+						}
+					} break;
 					// Если это IPv6
-					case AMING_IPV6: checkSIP = nwk.compareIP6(it->ip6, sip); break;
+					case AMING_IPV6: {
+						// Выполняем проверку на инверсию
+						auto check = isNot(it->ip6);
+						// Если это не инверсия
+						if(!check.inv){
+							// Выполняем проверку на совпадение ip адресов
+							checkSIP = nwk.compareIP6(check.str, sip);
+							// Выходим из цикла
+							if(checkSIP) goto stopServers;
+						// Если это инверсия
+						} else {
+							// Выполняем проверку на не совпадение ip адресов
+							checkSIP = !nwk.compareIP6(check.str, sip);
+							// Выходим из цикла
+							if(!checkSIP) goto stopServers;
+						}
+						
+					} break;
+				}
+				// Если домен существует
+				if(!it->domain.empty() && !hostServer.empty()){
+					// Выполняем проверку на инверсию
+					auto check = isNot(Anyks::toCase(it->domain));
+					// Если это не инверсия
+					if(!check.inv){
+						// Проверяем на совпадение mac адресов
+						checkSIP = (check.str.compare(hostServer) == 0);
+						// Выходим из цикла
+						if(checkSIP) goto stopServers;
+					// Если это инверсия
+					} else {
+						// Проверяем на не совпадение mac адресов
+						checkSIP = (check.str.compare(hostServer) != 0);
+						// Выходим из цикла
+						if(!checkSIP) goto stopServers;
+					}
 				}
 			// Если разрешены любые протоколы
-			} else checkSAny = true;
-			// Если нашли совпадение то выходим из цикла
-			if(checkSIP || checkSAny) break;
+			} else {
+				// Запоминаем что все проверки пройдены
+				checkSAny = true;
+				// Выходим из цикла
+				break;
+			}
 		}
+		// Ставим метку остановки цикла для перебора серверных данных
+		stopServers:
 		// Найден ли path, query и userAgent
 		bool pathFound = false, queryFound = false, userAgentFound = false;
 		// Определяем найден ли клиент
@@ -661,12 +840,37 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
 		} else userAgentFound = true;
 		// Переходим по всему списку путей
 		for(auto it = rules->paths.cbegin(); it != rules->paths.cend(); ++it){
-			// Получаем первую строку адреса
-			const string queryPath = Anyks::getPathByString(* it);
-			// Если путь запроса соответствует любым путям
-			if((queryPath.compare("*") == 0) || (queryPath.compare(path) == 0)) pathFound = true;
-			// Если путь найден то выходим из цикла
-			if(pathFound) break;
+			// Если это не для любых путей
+			if(it->compare("*") == 0){
+				// Выполняем проверку на инверсию
+				auto check = isNot(* it);
+				// Получаем первую строку адреса
+				const string queryPath = Anyks::getPathByString(check.str);
+				// Если это не инверсия
+				if(!check.inv && (queryPath.compare(path) == 0)){
+					// Запоминаем что все проверки пройдены
+					pathFound = true;
+					// Выходим из цикла
+					break;
+				// Если это инверсия
+				} else {
+					// Если пути не совпадают
+					if(queryPath.compare(path) != 0) pathFound = true;
+					// Если хотябы один путь совпал то выходим
+					else {
+						// Запоминаем что проверка не пройдена
+						pathFound = false;
+						// Выходим из цикла
+						break;
+					}
+				}
+			// Если это для любых путей
+			} else {
+				// Запоминаем что все проверки пройдены
+				pathFound = true;
+				// Выходим из цикла
+				break;
+			}
 		}
 		// Если и сервер и клиент найдены тогда добавляем в список правила
 		if(clientFound && serverFound && queryFound && userAgentFound && pathFound){
@@ -690,6 +894,7 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
  * @param mac        MAC адрес пользователя
  * @param sip        IP адрес сервера
  * @param userAgent  юзер-агент браузера
+ * @param hostServer доменное имя сервера
  * @param path       путь запроса 
  * @param query      параметры запроса
  * @param method     метод запроса
@@ -697,7 +902,7 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
  * @param action     экшен
  * @return           сформированный список правил
  */
-const vector <string> Headers2::get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string userAgent, const string path, const string query, const string method, const bool traffic, const bool action){
+const vector <string> Headers2::get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const bool traffic, const bool action){
 	// Правила вывода данных
 	vector <string> result;
 	// Если данные клиента переданы
@@ -717,14 +922,14 @@ const vector <string> Headers2::get(const gid_t gid, const uid_t uid, const stri
 					// Переходим по всем методам запросов
 					for(auto it = methods.cbegin(); it != methods.cend(); ++it){
 						// Выполняем запрос для каждого метода
-						result = findHeaders(ip, mac, sip, userAgent, path, query, it->first, &it->second);
+						result = findHeaders(ip, mac, sip, userAgent, hostServer, path, query, it->first, &it->second);
 					}
 				// Добавляем правила
 				} else if(methods.count(tmpMethod) > 0){
 					// Извлекаем правило
 					auto rules = methods.find(tmpMethod)->second;
 					// Добавляем правила для конкретного метода
-					result = findHeaders(ip, mac, sip, userAgent, path, query, tmpMethod, &rules);
+					result = findHeaders(ip, mac, sip, userAgent, hostServer, path, query, tmpMethod, &rules);
 				}
 			}
 		}
@@ -738,6 +943,7 @@ const vector <string> Headers2::get(const gid_t gid, const uid_t uid, const stri
  * @param mac        MAC адрес пользователя
  * @param sip        IP адрес сервера
  * @param userAgent  юзер-агент браузера
+ * @param hostServer доменное имя сервера
  * @param path       путь запроса 
  * @param query      параметры запроса
  * @param method     метод запроса
@@ -745,7 +951,7 @@ const vector <string> Headers2::get(const gid_t gid, const uid_t uid, const stri
  * @param action     экшен
  * @return           сформированный список правил
  */
-const vector <string> Headers2::get(const string ip, const string mac, const string sip, const string userAgent, const string path, const string query, const string method, const bool traffic, const bool action){
+const vector <string> Headers2::get(const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const bool traffic, const bool action){
 	// Правила вывода данных
 	vector <string> result;
 	// Если данные клиента переданы
@@ -763,14 +969,14 @@ const vector <string> Headers2::get(const string ip, const string mac, const str
 					// Переходим по всем методам запросов
 					for(auto it = methods.cbegin(); it != methods.cend(); ++it){
 						// Выполняем запрос для каждого метода
-						result = findHeaders(ip, mac, sip, userAgent, path, query, it->first, &it->second);
+						result = findHeaders(ip, mac, sip, userAgent, hostServer, path, query, it->first, &it->second);
 					}
 				// Добавляем правила
 				} else if(methods.count(tmpMethod) > 0){
 					// Извлекаем правило
 					auto rules = methods.find(tmpMethod)->second;
 					// Добавляем правила для конкретного метода
-					result = findHeaders(ip, mac, sip, userAgent, path, query, tmpMethod, &rules);
+					result = findHeaders(ip, mac, sip, userAgent, hostServer, path, query, tmpMethod, &rules);
 				}
 			}
 		}
@@ -940,6 +1146,8 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 		const string method = http.getMethod();
 		// Получаем UserAgent
 		const string userAgent = http.getUseragent();
+		// Получаем хост сервера
+		const string hostServer = http.getHost();
 		// Получаем путь запроса
 		string path = Anyks::toCase(http.getPath());
 		// Запоминаем параметры запроса
@@ -955,7 +1163,7 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 		 * @param data указатель на блок с данными пользователя
 		 * @param http объект http данных запроса
 		 */
-		auto modifyHeadersForUser = [&userAgent, &path, &query, &method, &traffic, this](const string ip, const string mac, const string sip, const AParams::AUser * data, HttpData &http){
+		auto modifyHeadersForUser = [&userAgent, &path, &query, &hostServer, &method, &traffic, this](const string ip, const string mac, const string sip, const AParams::AUser * data, HttpData &http){
 			// Получаем идентификатор пользователя
 			const uid_t uid = data->user.uid;
 			// Если группы существуют
@@ -965,8 +1173,8 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 					// Получаем идентификатор группы
 					const gid_t gid = it->gid;
 					// Запрашиваем список правил
-					auto rulesAdd = get(gid, uid, ip, mac, sip, userAgent, path, query, method, traffic, true);
-					auto rulesRm = get(gid, uid, ip, mac, sip, userAgent, path, query, method, traffic, false);
+					auto rulesAdd = get(gid, uid, ip, mac, sip, userAgent, hostServer, path, query, method, traffic, true);
+					auto rulesRm = get(gid, uid, ip, mac, sip, userAgent, hostServer, path, query, method, traffic, false);
 					// Добавляем заголовки
 					modifyHeaders(rulesAdd, http);
 					// Удаляем заголовки
@@ -987,8 +1195,8 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 			// Если пользователь не найден тогда запрашиваем общие данные для всех пользователей
 			else {
 				// Запрашиваем списоки правил
-				auto listRulesAdd = get(client.ip, client.mac, client.sip, userAgent, path, query, method, traffic, true);
-				auto listRulesRm = get(client.ip, client.mac, client.sip, userAgent, path, query, method, traffic, false);
+				auto listRulesAdd = get(client.ip, client.mac, client.sip, userAgent, hostServer, path, query, method, traffic, true);
+				auto listRulesRm = get(client.ip, client.mac, client.sip, userAgent, hostServer, path, query, method, traffic, false);
 				// Добавляем заголовки
 				modifyHeaders(listRulesAdd, http);
 				// Удаляем заголовки

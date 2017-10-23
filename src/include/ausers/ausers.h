@@ -764,6 +764,18 @@ class AUsers {
 		 */
 		const vector <string> getNameUsersInGroup(const string groupName);
 		/**
+		 * getGroupNameByGid Метод извлечения имени группы по ее идентификатору
+		 * @param  gid идентификатор группы
+		 * @return     название группы
+		 */
+		const string getGroupNameByGid(const gid_t gid);
+		/**
+		 * getUserNameByUid Метод извлечения имени пользователя по его идентификатору
+		 * @param  uid идентификатор пользователя
+		 * @return     имя пользователя
+		 */
+		const string getUserNameByUid(const uid_t uid);
+		/**
 		 * getGidByName Метод извлечения идентификатора группы по ее имени
 		 * @param  groupName название группы
 		 * @return           идентификатор группы
