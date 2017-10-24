@@ -40,6 +40,139 @@ void Headers2::modifyHeaders(const vector <string> rules, string &data, HttpData
 
 }
 /**
+ * addParams Метод добавления новых параметров в список правил
+ * @param gid    идентификатор группы
+ * @param params параметры для добавления
+ */
+void Headers2::addParams(const gid_t gid, const map <uid_t, map <bool, map <bool, unordered_map <string, Headers2::Rules>>>> * params){
+	// Если входящие параметры верные
+	if((gid > 0) && (params != nullptr) && !params->empty()){
+		// Проверяем существует ли такая группа
+		if(this->rules.count(gid) > 0){
+			// Получаем данные пользователей
+			auto * users = &this->rules.find(gid)->second;
+			// Если данные пользователя получены
+			if(!users->empty()){
+				/**
+				 * copyListNodes Функция копирования нод которых нет в списке
+				 * @param node1 ноды существуещего списка
+				 * @param node2 ноды которые нужно добавить
+				 */
+				auto copyListNodes = [](vector <Node> &node1, vector <Node> node2){
+					// Переходим по всему объекту нод 1
+					for(auto it1 = node2.cbegin(); it1 != node2.cend(); ++it1){
+						// Результат поиска
+						bool result = false;
+						// Переходим по всему объекту нод 2
+						for(auto it2 = node1.cbegin(); it2 != node1.cend(); ++it2){
+							// Выполняем проверку на совпадение данных
+							if((it1->prefix != it2->prefix)
+							|| (it1->type != it2->type)
+							|| (it1->data.compare(it2->data) != 0)) result = true;
+						}
+						// Если параметры не найдены в списке
+						if(!result) node1.push_back(* it1);
+					}
+				};
+				/**
+				 * copyListParams Функция копирования параметров которых нет в списке
+				 * @param list1 объекты существуещего списка
+				 * @param list2 объекты которые нужно добавить
+				 */
+				auto copyListParams = [](vector <string> &list1, vector <string> list2){
+					// Переходим по всему списку копируемых объектов
+					for(auto it = list2.cbegin(); it != list2.cend(); ++it){
+						// Выполняем проверку на существование записи в списке
+						const string str = * find(list1.begin(), list1.end(), * it);
+						// Если запись не существует то добавляем его в список
+						if(str.empty()) list1.push_back(* it);
+					}
+				};
+				// Переходим по всему списку пользователей
+				for(auto it = params->cbegin(); it != params->cend(); ++it){
+					// Получаем идентификатор пользователя
+					const uid_t uid = it->first;
+					// Получаем список экшенов
+					const auto * actions = &it->second;
+					// Если экшен существует в списке
+					if(users->count(uid) > 0){
+						// Запоминаем экшены существующие
+						auto * realActions = &users->find(uid)->second;
+						// Если экшены существуют
+						if(!actions->empty()){
+							// Переходим по всему списку экшенов
+							for(auto it = actions->cbegin(); it != actions->cend(); ++it){
+								// Получаем тип экшена
+								const bool action = it->first;
+								// Получаем список трафика
+								const auto * traffics = &it->second;
+								// Если такой экшен существует
+								if(realActions->count(action) > 0){
+									// Запоминаем данные трафика
+									auto * realTraffics = &realActions->find(action)->second;
+									// Если трафик существуют
+									if(!traffics->empty()){
+										// Переходим по всему списку трафика
+										for(auto it = traffics->cbegin(); it != traffics->cend(); ++it){
+											// Получаем тип трафика
+											const bool traffic = it->first;
+											// Получаем список методов
+											const auto * methods = &it->second;
+											// Если такой трафик существует
+											if(realTraffics->count(traffic) > 0){
+												// Запоминаем данные методов
+												auto * realMethods = &realTraffics->find(traffic)->second;
+												// Если методы существуют
+												if(!methods->empty()){
+													// Переходим по всему списку методов
+													for(auto it = methods->cbegin(); it != methods->cend(); ++it){
+														// Получаем название метода
+														const string method = it->first;
+														// Получаем список правил
+														const auto * rules = &it->second;
+														// Если такой метод существует
+														if(realMethods->count(method) > 0){
+															// Запоминаем данные правил
+															auto * realRules = &realMethods->find(method)->second;
+															// Если правила существуют
+															if(rules != nullptr){
+																// Заменяем данные запросов
+																realRules->query = rules->query;
+																// Заменяем данные userAgent
+																realRules->userAgent = rules->userAgent;
+																// Выполняем копирование нод клиента
+																copyListNodes(realRules->clients, rules->clients);
+																// Выполняем копирование нод сервера
+																copyListNodes(realRules->servers, rules->servers);
+																// Выполняем копирование путей
+																copyListParams(realRules->paths, rules->paths);
+																// Выполняем копирование заголовков
+																copyListParams(realRules->headers, rules->headers);
+															}
+														// Если такой метод не существует
+														} else realMethods->emplace(method, * rules);
+													}
+												}
+											// Если такой трафик не существует
+											} else realTraffics->emplace(traffic, * methods);
+										}
+									}
+								// Если такой экшен не существует
+								} else realActions->emplace(action, * traffics);
+							}
+						}
+					// Добавляем список экшенов к пользователю
+					} else users->emplace(uid, * actions);
+				}
+				// Обновляем данные пользователей
+				this->rules.at(gid) = * users;
+			// Если пользователи не найдены, то просто добавляем данные
+			} else this->rules.at(gid) = * params;
+		// Иначе просто добавляем данные
+		} else this->rules.emplace(gid, * params);
+	}
+}
+/**
  * createRulesList Метод созданий списка правил
  * @param params список параметров
  */
@@ -279,7 +412,7 @@ void Headers2::createRulesList(const Headers2::Params params){
 				}
 			}
 			// Добавляем в список правил
-			this->rules.emplace(gid, users);
+			addParams(gid, &users);
 		};
 		// Переходим по всему массиву групп
 		for(auto it = params.groups.cbegin(); it != params.groups.cend(); ++it){
@@ -864,12 +997,12 @@ const vector <string> Headers2::get(const gid_t gid, const uid_t uid, const stri
 	if((gid > -1) && (uid > -1) && !ip.empty() && !mac.empty() && !sip.empty() && !this->rules.empty()){
 		// Проверяем существует ли такая группа
 		if(this->rules.count(gid) > 0){
-			// Получаем данные группы
-			auto group = this->rules.find(gid)->second;
+			// Получаем данные пользователей
+			auto users = this->rules.find(gid)->second;
 			// Проверяем существует ли данный пользователь
-			if(group.count(uid) > 0){
+			if(users.count(uid) > 0){
 				// Получаем список методов
-				auto methods = group.find(uid)->second.find(action)->second.find(traffic)->second;
+				auto methods = users.find(uid)->second.find(action)->second.find(traffic)->second;
 				// Приводим к нижнему регистру
 				const string tmpMethod = Anyks::toCase(method);
 				// Если это звездочка

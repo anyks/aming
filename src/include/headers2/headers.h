@@ -148,6 +148,12 @@ class Headers2 {
 		 */
 		void modifyHeaders(const vector <string> rules, string &data, HttpData &http);
 		/**
+		 * addParams Метод добавления новых параметров в список правил
+		 * @param gid    идентификатор группы
+		 * @param params параметры для добавления
+		 */
+		void addParams(const gid_t gid = -1, const map <uid_t, map <bool, map <bool, unordered_map <string, Rules>>>> * params = nullptr);
+		/**
 		 * createRulesList Метод созданий списка правил
 		 * @param params список параметров
 		 */
