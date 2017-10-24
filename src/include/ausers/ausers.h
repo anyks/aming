@@ -796,6 +796,18 @@ class AUsers {
 		 */
 		const uid_t getUidByName(const string userName);
 		/**
+		 * getOptionsByUid Метод получения опций прокси сервера по идентификатору пользователя
+		 * @param uid идентификатор пользователя
+		 * @return    опции прокси сервера
+		 */
+		const u_short getOptionsByUid(const uid_t uid);
+		/**
+		 * getOptionsByUserName Метод получения опций прокси сервера по имени пользователя
+		 * @param userName название пользователя
+		 * @return         опции прокси сервера
+		 */
+		const u_short getOptionsByUserName(const string userName);
+		/**
 		 * checkUserInGroup Метод проверки принадлежности пользователя к группе
 		 * @param  gid идентификатор группы
 		 * @param  uid идентификатор пользователя

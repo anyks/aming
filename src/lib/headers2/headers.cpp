@@ -23,21 +23,70 @@ const Headers2::IsNot Headers2::isNot(const string str){
 }
 /**
  * modifyHeaders Метод модификации заголовков
- * @param rules   правила фильтрации
+ * @param action  метод работы с заголовками
+ * @param headers список заголовков
  * @param http    блок с http данными
  */
-void Headers2::modifyHeaders(const vector <string> rules, HttpData &http){
-
-
+void Headers2::modifyHeaders(const bool action, const vector <string> headers, HttpData &http){
+	// Если данные существуют
+	if(!headers.empty()){
+		// Переходим по всему списку заголовков
+		for(auto it = headers.cbegin(); it != headers.cend(); ++it){
+			// Результат работы регулярного выражения
+			smatch match;
+			// Если нужно добавить заголовоки
+			if(action){
+				// Устанавливаем правило регулярного выражения
+				regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
+				// Выполняем проверку
+				regex_search(* it, match, e);
+				// Если данные найдены
+				if(!match.empty()) http.setHeader(match[1].str(), match[2].str());
+			// Если нужно удалить заголовки
+			} else {
+				// Устанавливаем правило регулярного выражения
+				regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
+				// Выполняем проверку
+				regex_search(* it, match, e);
+				// Если данные найдены
+				if(!match.empty()) http.rmHeader(match[1].str());
+			}
+		}
+	}
 }
 /**
  * modifyHeaders Метод модификации заголовков
- * @param rules  правила фильтрации
- * @param data   строка с данными запроса или ответа
- * @param http   блок с http данными
+ * @param action  метод работы с заголовками
+ * @param headers список заголовков
+ * @param data    строка с данными запроса или ответа
+ * @param http    блок с http данными
  */
-void Headers2::modifyHeaders(const vector <string> rules, string &data, HttpData &http){
-
+void Headers2::modifyHeaders(const bool action, const vector <string> headers, string &data, HttpData &http){
+	// Если данные существуют
+	if(!headers.empty() && !data.empty()){
+		// Переходим по всему списку заголовков
+		for(auto it = headers.cbegin(); it != headers.cend(); ++it){
+			// Результат работы регулярного выражения
+			smatch match;
+			// Если нужно добавить заголовоки
+			if(action){
+				// Устанавливаем правило регулярного выражения
+				regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
+				// Выполняем проверку
+				regex_search(* it, match, e);
+				// Если данные найдены
+				if(!match.empty()) http.addHeaderToString(match[1].str(), match[2].str(), data);
+			// Если нужно удалить заголовки
+			} else {
+				// Устанавливаем правило регулярного выражения
+				regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
+				// Выполняем проверку
+				regex_search(* it, match, e);
+				// Если данные найдены
+				if(!match.empty()) http.rmHeaderInString(match[1].str(), data);
+			}
+		}
+	}
 }
 /**
  * addParams Метод добавления новых параметров в список правил
@@ -1223,6 +1272,14 @@ void Headers2::addName(const string name){
 	if(!name.empty()) this->names.push_front(name);
 }
 /**
+ * setOptions Метод установки новых параметров для парсинга http данных
+ * @param options параметры для парсинга http данных
+ */
+void Headers2::setOptions(const u_short options){
+	// Запоминаем основные параметры прокси
+	if(options != 0x00) this->options = options;
+}
+/**
  * modify Метод модификации заголовков
  * @param client данные клиента
  * @param http   блок с данными запроса или ответа
@@ -1248,25 +1305,25 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 		const bool traffic = (http.getStatus() != 0);
 		/**
 		 * modifyHeadersForUser Функция модификации заголовков по пользовательским данным
-		 * @param data указатель на блок с данными пользователя
-		 * @param http объект http данных запроса
+		 * @param client указатель на блок с данными пользователя
+		 * @param http   объект http данных запроса
 		 */
-		auto modifyHeadersForUser = [&agent, &path, &query, &host, &method, &traffic, this](const string ip, const string mac, const string sip, const AParams::AUser * data, HttpData &http){
+		auto modifyHeadersForUser = [&agent, &path, &query, &host, &method, &traffic, this](const string ip, const string mac, const string sip, const AParams::AUser * client, HttpData &http){
 			// Получаем идентификатор пользователя
-			const uid_t uid = data->user.uid;
+			const uid_t uid = client->user.uid;
 			// Если группы существуют
-			if(!data->groups.empty()){
+			if(!client->groups.empty()){
 				// Переходим по всему списку групп
-				for(auto it = data->groups.cbegin(); it != data->groups.cend(); it++){
+				for(auto it = client->groups.cbegin(); it != client->groups.cend(); it++){
 					// Получаем идентификатор группы
 					const gid_t gid = it->gid;
 					// Запрашиваем список правил
 					auto rulesAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
 					auto rulesRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
 					// Добавляем заголовки
-					modifyHeaders(rulesAdd, http);
+					modifyHeaders(true, rulesAdd, http);
 					// Удаляем заголовки
-					modifyHeaders(rulesRm, http);
+					modifyHeaders(false, rulesRm, http);
 				}
 			}
 		};
@@ -1286,9 +1343,9 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 				auto listRulesAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
 				auto listRulesRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
 				// Добавляем заголовки
-				modifyHeaders(listRulesAdd, http);
+				modifyHeaders(true, listRulesAdd, http);
 				// Удаляем заголовки
-				modifyHeaders(listRulesRm, http);
+				modifyHeaders(false, listRulesRm, http);
 			}
 		}
 	}
@@ -1299,7 +1356,81 @@ void Headers2::modify(AParams::Client client, HttpData &http){
  * @param data   строка с данными запроса или ответа
  */
 void Headers2::modify(AParams::Client client, string &data){
-	
+	// Если правило для клиента найдено
+	if(!client.ip.empty() && !client.mac.empty() && !client.sip.empty()){
+		// Создаем http объект
+		HttpData http;
+		// Получаем опции прокси сервера
+		const u_short options = ((client.user != nullptr) && (this->ausers != nullptr) ? this->ausers->getOptionsByUid(client.user->user.uid) : this->options);
+		// Выполняем обработку данных
+		if(http.parse(data.c_str(), data.size(), this->config->proxy.name, options)){
+			// Определяем метод запроса
+			const string method = http.getMethod();
+			// Получаем UserAgent
+			const string agent = http.getUseragent();
+			// Получаем хост сервера
+			const string host = http.getHost();
+			// Получаем путь запроса
+			string path = Anyks::toCase(http.getPath());
+			// Запоминаем параметры запроса
+			string query = path;
+			// Приводим путь к нормальному виду
+			path = Anyks::getPathByString(path);
+			// Приводим параметры запроса к нормальному виду
+			query = Anyks::getQueryByString(query);
+			// Определяем направление трафика
+			const bool traffic = (http.getStatus() != 0);
+			/**
+			 * modifyHeadersForUser Функция модификации заголовков по пользовательским данным
+			 * @param client указатель на блок с данными пользователя
+			 * @param http   объект http данных запроса
+			 */
+			auto modifyHeadersForUser = [&agent, &path, &query, &host, &method, &traffic, &data, this](const string ip, const string mac, const string sip, const AParams::AUser * client, HttpData &http){
+				// Получаем идентификатор пользователя
+				const uid_t uid = client->user.uid;
+				// Если группы существуют
+				if(!client->groups.empty()){
+					// Переходим по всему списку групп
+					for(auto it = client->groups.cbegin(); it != client->groups.cend(); it++){
+						// Получаем идентификатор группы
+						const gid_t gid = it->gid;
+						// Запрашиваем список правил
+						auto rulesAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
+						auto rulesRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
+						// Добавляем заголовки
+						modifyHeaders(true, rulesAdd, data, http);
+						// Удаляем заголовки
+						modifyHeaders(false, rulesRm, data, http);
+						// Выполняем модификацию основных заголовков
+						data = http.modifyHeaderString(data);
+					}
+				}
+			};
+			// Если данные пользователя существуют
+			if(client.user != nullptr){
+				// Выполняем модификацию заголовков для пользователя
+				modifyHeadersForUser(client.ip, client.mac, client.sip, client.user, http);
+			// Если пользователь не установлен
+			} else {
+				// Пытаемся найти по ip и mac адресу
+				auto user = this->ausers->searchUser(client.ip, client.mac);
+				// Выполняем модификацию заголовков для пользователя
+				if(user.auth) modifyHeadersForUser(client.ip, client.mac, client.sip, &user, http);
+				// Если пользователь не найден тогда запрашиваем общие данные для всех пользователей
+				else {
+					// Запрашиваем списоки правил
+					auto listRulesAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
+					auto listRulesRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
+					// Добавляем заголовки
+					modifyHeaders(true, listRulesAdd, data, http);
+					// Удаляем заголовки
+					modifyHeaders(false, listRulesRm, data, http);
+					// Выполняем модификацию основных заголовков
+					data = http.modifyHeaderString(data);
+				}
+			}
+		}
+	}
 }
 /**
  * Headers Конструктор
@@ -1316,6 +1447,8 @@ Headers2::Headers2(Config * config, LogApp * log, AUsers * ausers){
 		this->log = log;
 		// Запоминаем параметры конфига
 		this->config = config;
+		// Запоминаем основные параметры прокси
+		this->options = this->config->options;
 		// Запоминаем параметры групп
 		this->ausers = ausers;
 		// Запоминаем тип поиска параметров заголовков

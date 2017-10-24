@@ -122,6 +122,8 @@ class Headers2 {
 		LogApp * log = nullptr;
 		Config * config = nullptr;
 		AUsers * ausers = nullptr;
+		// Параметры для парсинга http данных
+		u_short options = 0x00;
 		// Время в течение которого обновлять нельзя
 		time_t maxUpdate = 0;
 		// Время последнего обновления данных
@@ -136,17 +138,19 @@ class Headers2 {
 		const IsNot isNot(const string str);
 		/**
 		 * modifyHeaders Метод модификации заголовков
-		 * @param rules   правила фильтрации
+		 * @param action  метод работы с заголовками
+		 * @param headers список заголовков
 		 * @param http    блок с http данными
 		 */
-		void modifyHeaders(const vector <string> rules, HttpData &http);
+		void modifyHeaders(const bool action, const vector <string> headers, HttpData &http);
 		/**
 		 * modifyHeaders Метод модификации заголовков
-		 * @param rules  правила фильтрации
-		 * @param data   строка с данными запроса или ответа
-		 * @param http   блок с http данными
+		 * @param action  метод работы с заголовками
+		 * @param headers список заголовков
+		 * @param data    строка с данными запроса или ответа
+		 * @param http    блок с http данными
 		 */
-		void modifyHeaders(const vector <string> rules, string &data, HttpData &http);
+		void modifyHeaders(const bool action, const vector <string> headers, string &data, HttpData &http);
 		/**
 		 * addParams Метод добавления новых параметров в список правил
 		 * @param gid    идентификатор группы
@@ -252,6 +256,11 @@ class Headers2 {
 		 * @param name название файла с параметрами
 		 */
 		void addName(const string name);
+		/**
+		* setOptions Метод установки новых параметров для парсинга http данных
+		* @param options параметры для парсинга http данных
+		*/
+		void setOptions(const u_short options = 0x00);
 		/**
 		 * modify Метод модификации заголовков
 		 * @param client данные клиента

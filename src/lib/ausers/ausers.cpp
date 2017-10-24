@@ -369,6 +369,42 @@ const uid_t AUsers::getUidByName(const string userName){
 	return result;
 }
 /**
+ * getOptionsByUid Метод получения опций прокси сервера по идентификатору пользователя
+ * @param uid идентификатор пользователя
+ * @return    опции прокси сервера
+ */
+const u_short AUsers::getOptionsByUid(const uid_t uid){
+	// Результат работы
+	u_short result = AMING_NULL;
+	// Если пользователи найдены
+	if(this->users != nullptr){
+		// Получаем данные пользователя
+		auto * user = this->users->getDataById(uid);
+		// Если данные существуют
+		if(user != nullptr) result = user->options;
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * getOptionsByUserName Метод получения опций прокси сервера по имени пользователя
+ * @param userName название пользователя
+ * @return         опции прокси сервера
+ */
+const u_short AUsers::getOptionsByUserName(const string userName){
+	// Результат работы
+	u_short result = AMING_NULL;
+	// Если пользователи найдены
+	if(this->users != nullptr){
+		// Получаем данные пользователя
+		auto * user = this->users->getDataByName(userName);
+		// Если данные существуют
+		if(user != nullptr) result = user->options;
+	}
+	// Выводим результат
+	return result;
+}
+/**
  * checkUserInGroup Метод проверки принадлежности пользователя к группе
  * @param  gid идентификатор группы
  * @param  uid идентификатор пользователя
