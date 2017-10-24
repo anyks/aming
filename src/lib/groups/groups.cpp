@@ -859,6 +859,7 @@ const bool AUsers::Groups::readGroupsFromFile(){
 }
 /**
  * update Метод обновления групп
+ * @return статус обновления
  */
 const bool AUsers::Groups::update(){
 	// Результат проверки

@@ -766,6 +766,7 @@ const bool AUsers::Users::readUsersFromFile(){
 }
 /**
  * update Метод обновления пользователей
+ * @return статус обновления
  */
 const bool AUsers::Users::update(){
 	// Результат проверки

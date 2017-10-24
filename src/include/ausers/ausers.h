@@ -204,6 +204,7 @@ class AUsers {
 		 * @param log  объект ведения логов
 		 * @param uid  идентификатор пользователя
 		 * @param name название пользователя
+		 * @return     пароль из файла
 		 */
 		static const string getPasswordFromFile(const string path, LogApp * log = nullptr, const uid_t uid = -1, const string name = "");
 		/**
@@ -293,6 +294,7 @@ class AUsers {
 				const bool readGroupsFromFile();
 				/**
 				 * update Метод обновления групп
+				 * @return статус обновления
 				 */
 				const bool update();
 			public:
@@ -565,6 +567,7 @@ class AUsers {
 				const bool readUsersFromFile();
 				/**
 				 * update Метод обновления пользователей
+				 * @return статус обновления
 				 */
 				const bool update();
 			public:
@@ -673,24 +676,28 @@ class AUsers {
 				 * @param msg         сообщение
 				 * @param resp        ответ системы
 				 * @param appdata_ptr указатель на объект данных системы
+				 * @return            результат проверки
 				 */
 				static int pamconv(int num_msg = 0, const struct pam_message ** msg = nullptr, struct pam_response ** resp = nullptr, void * appdata_ptr = nullptr);
 				/**
 				 * checkLdap Метод проверки корректности пароля c помощью LDAP сервера
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
+				 * @return         результат проверки
 				 */
 				const bool checkLdap(const uid_t uid, const string password);
 				/**
 				 * checkPam Метод проверки корректности пароля c помощью операционной системы
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
+				 * @return         результат проверки
 				 */
 				const bool checkPam(const uid_t uid, const string password);
 				/**
 				 * checkPam Метод проверки корректности пароля c помощью конфигурационного файла
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
+				 * @return         результат проверки
 				 */
 				const bool checkFile(const uid_t uid, const string password);
 			public:
@@ -698,6 +705,7 @@ class AUsers {
 				 * check Метод проверки корректности пароля
 				 * @param username имя пользователя
 				 * @param password пароль пользователя
+				 * @return         результат проверки
 				 */
 				const bool check(const string username = "", const string password = "");
 				/**

@@ -17,6 +17,7 @@ using namespace std;
  * @param msg         сообщение
  * @param resp        ответ системы
  * @param appdata_ptr указатель на объект данных системы
+ * @return            результат проверки
  */
 int AUsers::Auth::pamconv(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr){
 	// Если сообщения не пришли тогда выходим
@@ -40,6 +41,7 @@ int AUsers::Auth::pamconv(int num_msg, const struct pam_message ** msg, struct p
  * checkLdap Метод проверки корректности пароля c помощью LDAP сервера
  * @param username имя пользователя
  * @param password пароль пользователя
+ * @return         результат проверки
  */
 const bool AUsers::Auth::checkLdap(const uid_t uid, const string password){
 	// Результат проверки
@@ -92,6 +94,7 @@ const bool AUsers::Auth::checkLdap(const uid_t uid, const string password){
  * checkPam Метод проверки корректности пароля c помощью операционной системы
  * @param username имя пользователя
  * @param password пароль пользователя
+ * @return         результат проверки
  */
 const bool AUsers::Auth::checkPam(const uid_t uid, const string password){
 	// Результат проверки
@@ -125,6 +128,7 @@ const bool AUsers::Auth::checkPam(const uid_t uid, const string password){
  * checkPam Метод проверки корректности пароля c помощью конфигурационного файла
  * @param username имя пользователя
  * @param password пароль пользователя
+ * @return         результат проверки
  */
 const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 	// Результат проверки
@@ -206,6 +210,7 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
  * check Метод проверки корректности пароля
  * @param username имя пользователя
  * @param password пароль пользователя
+ * @return         результат проверки
  */
 const bool AUsers::Auth::check(const string username, const string password){
 	// Результат проверки

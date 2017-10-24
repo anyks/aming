@@ -197,21 +197,25 @@ namespace Anyks {
 	/**
 	 * md5 Метод получения md5 хэша из строки
 	 * @param text текст для перевода в строку
+	 * @return     хэш md5
 	 */
 	const string md5(const string text);
 	/**
 	 * sha1 Метод получения sha1 хэша из строки
 	 * @param text текст для перевода в строку
+	 * @return     хэш sha1
 	 */
 	const string sha1(const string text);
 	/**
 	 * sha256 Метод получения sha256 хэша из строки
 	 * @param text текст для перевода в строку
+	 * @return     хэш sha256
 	 */
 	const string sha256(const string text);
 	/**
 	 * sha512 Метод получения sha512 хэша из строки
 	 * @param text текст для перевода в строку
+	 * @return     хэш sha512
 	 */
 	const string sha512(const string text);
 	/**

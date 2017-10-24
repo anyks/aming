@@ -124,6 +124,7 @@ void AUsers::getPasswordsFromFile(const string path, LogApp * log, void * object
  * @param log  объект ведения логов
  * @param uid  идентификатор пользователя
  * @param name название пользователя
+ * @return     пароль из файла
  */
 const string AUsers::getPasswordFromFile(const string path, LogApp * log, const uid_t uid, const string name){
 	// Результат работы
