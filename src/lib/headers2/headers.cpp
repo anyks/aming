@@ -115,8 +115,7 @@ void Headers2::addParams(const gid_t gid, const map <uid_t, map <bool, map <bool
 						// Переходим по всему объекту нод 2
 						for(auto it2 = node1.cbegin(); it2 != node1.cend(); ++it2){
 							// Выполняем проверку на совпадение данных
-							if((it1->prefix != it2->prefix)
-							|| (it1->type != it2->type)
+							if((it1->type != it2->type)
 							|| (it1->data.compare(it2->data) != 0)) result = true;
 						}
 						// Если параметры не найдены в списке
@@ -252,13 +251,6 @@ void Headers2::createRulesList(const Headers2::Params params){
 					if(node.type != AMING_NULL){
 						// Запоминаем сами данные
 						node.data = str;
-						// Если это сеть
-						if(node.type == AMING_NETWORK){
-							// Создаем объект сети
-							Network nwk;
-							// Запоминаем данные префикса
-							node.prefix = nwk.getPrefixByNetwork(str);
-						}
 						// Добавляем в список нод
 						nodes.push_back(node);
 					}
@@ -911,6 +903,30 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
 										if(!result) goto stop;
 									}
 								} break;
+							}
+						// Если нужно проверить принадлежит ли ip адрес указанной сети
+						} else if((it->type == AMING_NETWORK) && ((type == AMING_IPV4) || (type == AMING_IPV6))){
+							// Создаем объект сети
+							Network nwk;
+							// Выполняем проверку на инверсию
+							auto check = isNot(Anyks::toCase(it->data));
+							// Получаем ip адрес сети
+							const string ip = nwk.getIPByNetwork(check.str);
+							// Если типы протоколов совпадают
+							if(type == Anyks::getTypeAmingByString(ip)){
+								// Если это не инверсия
+								if(!check.inv){
+									// Проверяем на совпадение mac адресов
+									result = (type == AMING_IPV4 ? nwk.checkIPByNetwork(tmpData, check.str) : nwk.checkIPByNetwork6(tmpData, check.str));
+									// Выходим из цикла
+									if(result) goto stop;
+								// Если это инверсия
+								} else {
+									// Проверяем на совпадение mac адресов
+									result = (type == AMING_IPV4 ? !nwk.checkIPByNetwork(tmpData, check.str) : !nwk.checkIPByNetwork6(tmpData, check.str));
+									// Выходим из цикла
+									if(!result) goto stop;
+								}
 							}
 						}
 					// Если разрешены любые протоколы

@@ -55,7 +55,6 @@ class Headers2 {
  		* Node Структура данных рабочей ноды
  		*/
 		struct Node {
-			u_int prefix;	// Префикс сети
 			u_short type;	// Тип данных
 			string data;	// Данные ноды
 		};

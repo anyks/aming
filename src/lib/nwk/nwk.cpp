@@ -251,7 +251,7 @@ const bool Network::checkMaskByNumber(string ip, u_int mask){
 	return checkMask(ipdata, maskdata);
 }
 /**
- * checkIPByNetwork Метод проверки, принадлежит ли ip адресу указанной сети
+ * checkIPByNetwork Метод проверки, принадлежит ли ip адрес указанной сети
  * @param  ip  данные ip адреса интернет протокола версии 4
  * @param  nwk адрес сети (192.168.0.0/16)
  * @return     результат проверки
@@ -270,7 +270,7 @@ const bool Network::checkIPByNetwork(const string ip, const string nwk){
 	return false;
 }
 /**
- * checkIPByNetwork6 Метод проверки, принадлежит ли ip адресу указанной сети
+ * checkIPByNetwork6 Метод проверки, принадлежит ли ip адрес указанной сети
  * @param  ip  данные ip адреса интернет протокола версии 6
  * @param  nwk адрес сети (2001:db8::/32)
  * @return     результат проверки
