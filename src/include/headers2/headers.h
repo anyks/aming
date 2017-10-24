@@ -55,12 +55,9 @@ class Headers2 {
  		* Node Структура данных рабочей ноды
  		*/
 		struct Node {
-			bool any;		// Разрешены любые протоколы
 			u_int prefix;	// Префикс сети
-			string mac;		// Мак адрес ноды
-			string ip4;		// IP адрес протокола версии 4
-			string ip6;		// IP адрес протокола версии 6
-			string domain;	// Домен ноды (домены могут быть с маской вида www.domain.com, *.domain.com, domain.com, *.domain.*, *.com, *.*)
+			u_short type;	// Тип данных
+			string data;	// Данные ноды
 		};
 		/**
  		* Rules Структура правил заголовков
@@ -176,50 +173,50 @@ class Headers2 {
 		const string getName();
 		/**
 		 * findRules Метод поиска заголовков
-		 * @param ip         IP адрес пользователя
-		 * @param mac        MAC адрес пользователя
-		 * @param sip        IP адрес сервера
-		 * @param userAgent  юзер-агент браузера
-		 * @param hostServer доменное имя сервера
-		 * @param path       путь запроса 
-		 * @param query      параметры запроса
-		 * @param method     метод запроса
-		 * @param rules      список правил
-		 * @return           сформированный список заголовков
+		 * @param ip     IP адрес пользователя
+		 * @param mac    MAC адрес пользователя
+		 * @param sip    IP адрес сервера
+		 * @param sdm    доменное имя сервера
+		 * @param uat    юзер-агент браузера
+		 * @param path   путь запроса 
+		 * @param query  параметры запроса
+		 * @param method метод запроса
+		 * @param rules  список правил
+		 * @return       сформированный список заголовков
 		 */
-		const vector <string> findHeaders(const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const Rules * rules = nullptr);
+		const vector <string> findHeaders(const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const Rules * rules = nullptr);
 		/**
 		 * get Метод получения правил клиента
-		 * @param gid        идентификатор группы
-		 * @param uid        идентификатор пользователя
-		 * @param ip         IP адрес пользователя
-		 * @param mac        MAC адрес пользователя
-		 * @param sip        IP адрес сервера
-		 * @param userAgent  юзер-агент браузера
-		 * @param hostServer доменное имя сервера
-		 * @param path       путь запроса 
-		 * @param query      параметры запроса
-		 * @param method     метод запроса
-		 * @param traffic    направление трафика
-		 * @param action     экшен
-		 * @return           сформированный список правил
+		 * @param gid     идентификатор группы
+		 * @param uid     идентификатор пользователя
+		 * @param ip      IP адрес пользователя
+		 * @param mac     MAC адрес пользователя
+		 * @param sip     IP адрес сервера
+		 * @param sdm     доменное имя сервера
+		 * @param uat     юзер-агент браузера
+		 * @param path    путь запроса 
+		 * @param query   параметры запроса
+		 * @param method  метод запроса
+		 * @param traffic направление трафика
+		 * @param action  экшен
+		 * @return        сформированный список правил
 		 */
-		const vector <string> get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const bool traffic, const bool action);
+		const vector <string> get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const bool traffic, const bool action);
 		/**
 		 * get Метод получения правил клиента
-		 * @param ip         IP адрес пользователя
-		 * @param mac        MAC адрес пользователя
-		 * @param sip        IP адрес сервера
-		 * @param userAgent  юзер-агент браузера
-		 * @param hostServer доменное имя сервера
-		 * @param path       путь запроса 
-		 * @param query      параметры запроса
-		 * @param method     метод запроса
-		 * @param traffic    направление трафика
-		 * @param action     экшен
-		 * @return           сформированный список правил
+		 * @param ip      IP адрес пользователя
+		 * @param mac     MAC адрес пользователя
+		 * @param sip     IP адрес сервера
+		 * @param sdm     доменное имя сервера
+		 * @param uat     юзер-агент браузера
+		 * @param path    путь запроса 
+		 * @param query   параметры запроса
+		 * @param method  метод запроса
+		 * @param traffic направление трафика
+		 * @param action  экшен
+		 * @return        сформированный список правил
 		 */
-		const vector <string> get(const string ip, const string mac, const string sip, const string userAgent, const string hostServer, const string path, const string query, const string method, const bool traffic, const bool action);
+		const vector <string> get(const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const bool traffic, const bool action);
 		/**
 		 * add Метод добавления новых параметров фильтрации заголовков
 		 * @param gid     идентификатор группы
