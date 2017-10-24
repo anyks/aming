@@ -1318,12 +1318,12 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 					// Получаем идентификатор группы
 					const gid_t gid = it->gid;
 					// Запрашиваем список правил
-					auto rulesAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
-					auto rulesRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
+					auto headersAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
+					auto headersRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
 					// Добавляем заголовки
-					modifyHeaders(true, rulesAdd, http);
+					modifyHeaders(true, headersAdd, http);
 					// Удаляем заголовки
-					modifyHeaders(false, rulesRm, http);
+					modifyHeaders(false, headersRm, http);
 				}
 			}
 		};
@@ -1340,12 +1340,12 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 			// Если пользователь не найден тогда запрашиваем общие данные для всех пользователей
 			else {
 				// Запрашиваем списоки правил
-				auto listRulesAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
-				auto listRulesRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
+				auto headersAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
+				auto headersRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
 				// Добавляем заголовки
-				modifyHeaders(true, listRulesAdd, http);
+				modifyHeaders(true, headersAdd, http);
 				// Удаляем заголовки
-				modifyHeaders(false, listRulesRm, http);
+				modifyHeaders(false, headersRm, http);
 			}
 		}
 	}
@@ -1395,12 +1395,12 @@ void Headers2::modify(AParams::Client client, string &data){
 						// Получаем идентификатор группы
 						const gid_t gid = it->gid;
 						// Запрашиваем список правил
-						auto rulesAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
-						auto rulesRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
+						auto headersAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
+						auto headersRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
 						// Добавляем заголовки
-						modifyHeaders(true, rulesAdd, data, http);
+						modifyHeaders(true, headersAdd, data, http);
 						// Удаляем заголовки
-						modifyHeaders(false, rulesRm, data, http);
+						modifyHeaders(false, headersRm, data, http);
 						// Выполняем модификацию основных заголовков
 						data = http.modifyHeaderString(data);
 					}
@@ -1419,12 +1419,12 @@ void Headers2::modify(AParams::Client client, string &data){
 				// Если пользователь не найден тогда запрашиваем общие данные для всех пользователей
 				else {
 					// Запрашиваем списоки правил
-					auto listRulesAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
-					auto listRulesRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
+					auto headersAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
+					auto headersRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
 					// Добавляем заголовки
-					modifyHeaders(true, listRulesAdd, data, http);
+					modifyHeaders(true, headersAdd, data, http);
 					// Удаляем заголовки
-					modifyHeaders(false, listRulesRm, data, http);
+					modifyHeaders(false, headersRm, data, http);
 					// Выполняем модификацию основных заголовков
 					data = http.modifyHeaderString(data);
 				}
