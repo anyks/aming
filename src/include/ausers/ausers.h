@@ -746,6 +746,11 @@ class AUsers {
 		 */
 		const vector <const DataGroup *> getAllGroups();
 		/**
+		 * getAllUsers Метод получения данных всех пользователей
+		 * @return     список данных всех пользователей
+		 */
+		const vector <const DataUser *> getAllUsers();
+		/**
 		 * getIdUsersInGroup Метод получения списка пользователей в группе
 		 * @param  gid идентификатор группы
 		 * @return     список идентификаторов пользователей
@@ -841,6 +846,12 @@ class AUsers {
 		 * @return     результат проверки
 		 */
 		const bool checkGroupById(const gid_t gid);
+		/**
+		 * checkUserById Метод проверки на существование пользователя
+		 * @param  uid идентификатор пользователя
+		 * @return     результат проверки
+		 */
+		const bool checkUserById(const uid_t uid);
 		/**
 		 * searchUser Метод поиска данных пользователя по данным коннекта
 		 * @param ip  адрес интернет протокола клиента

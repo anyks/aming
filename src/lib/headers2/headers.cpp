@@ -11,6 +11,24 @@
 using namespace std;
 
 /**
+ * copyListParams Реализация функции копирования параметров которых нет в списке
+ * @param list1 объекты существуещего списка
+ * @param list2 объекты которые нужно добавить
+ */
+struct {
+	template <typename T>
+	void operator()(T &list1, T list2) const {
+		// Переходим по всему списку копируемых объектов
+		for(auto it = list2.cbegin(); it != list2.cend(); ++it){
+			// Если группа не существует
+			if(find(list1.begin(), list1.end(), * it) == list1.end()){
+				// Если запись не существует то добавляем его в список
+				list1.push_back(* it);
+			}
+		}
+	};
+} copyListParams;
+/**
  * isNot Метод проверки на инверсию
  * @param  str строка для проверки
  * @return     результат проверки
@@ -90,134 +108,95 @@ void Headers2::modifyHeaders(const bool action, const vector <string> headers, s
 }
 /**
  * addParams Метод добавления новых параметров в список правил
- * @param gid    идентификатор группы
  * @param params параметры для добавления
  */
-void Headers2::addParams(const gid_t gid, const map <uid_t, map <bool, map <bool, unordered_map <string, Headers2::Rules>>>> * params){
+void Headers2::addParams(const map <bool, map <bool, unordered_map <string, Headers2::Rules>>> * params){
 	// Если входящие параметры верные
-	if((gid > 0) && (params != nullptr) && !params->empty()){
-		// Проверяем существует ли такая группа
-		if(this->rules.count(gid) > 0){
-			// Получаем данные пользователей
-			auto * users = &this->rules.find(gid)->second;
-			// Если данные пользователя получены
-			if(!users->empty()){
-				/**
-				 * copyListNodes Функция копирования нод которых нет в списке
-				 * @param node1 ноды существуещего списка
-				 * @param node2 ноды которые нужно добавить
-				 */
-				auto copyListNodes = [](vector <Node> &node1, vector <Node> node2){
-					// Переходим по всему объекту нод 1
-					for(auto it1 = node2.cbegin(); it1 != node2.cend(); ++it1){
-						// Результат поиска
-						bool result = false;
-						// Переходим по всему объекту нод 2
-						for(auto it2 = node1.cbegin(); it2 != node1.cend(); ++it2){
-							// Выполняем проверку на совпадение данных
-							if((it1->type != it2->type)
-							|| (it1->data.compare(it2->data) != 0)) result = true;
-						}
-						// Если параметры не найдены в списке
-						if(!result) node1.push_back(* it1);
-					}
-				};
-				/**
-				 * copyListParams Функция копирования параметров которых нет в списке
-				 * @param list1 объекты существуещего списка
-				 * @param list2 объекты которые нужно добавить
-				 */
-				auto copyListParams = [](vector <string> &list1, vector <string> list2){
-					// Переходим по всему списку копируемых объектов
-					for(auto it = list2.cbegin(); it != list2.cend(); ++it){
-						// Выполняем проверку на существование записи в списке
-						const string str = * find(list1.begin(), list1.end(), * it);
-						// Если запись не существует то добавляем его в список
-						if(str.empty()) list1.push_back(* it);
-					}
-				};
-				// Переходим по всему списку пользователей
-				for(auto it = params->cbegin(); it != params->cend(); ++it){
-					// Получаем идентификатор пользователя
-					const uid_t uid = it->first;
-					// Получаем список экшенов
-					const auto * actions = &it->second;
-					// Если экшен существует в списке
-					if(users->count(uid) > 0){
-						// Запоминаем экшены существующие
-						auto * realActions = &users->find(uid)->second;
-						// Если экшены существуют
-						if(!actions->empty()){
-							// Переходим по всему списку экшенов
-							for(auto it = actions->cbegin(); it != actions->cend(); ++it){
-								// Получаем тип экшена
-								const bool action = it->first;
-								// Получаем список трафика
-								const auto * traffics = &it->second;
-								// Если такой экшен существует
-								if(realActions->count(action) > 0){
-									// Запоминаем данные трафика
-									auto * realTraffics = &realActions->find(action)->second;
-									// Если трафик существуют
-									if(!traffics->empty()){
-										// Переходим по всему списку трафика
-										for(auto it = traffics->cbegin(); it != traffics->cend(); ++it){
-											// Получаем тип трафика
-											const bool traffic = it->first;
-											// Получаем список методов
-											const auto * methods = &it->second;
-											// Если такой трафик существует
-											if(realTraffics->count(traffic) > 0){
-												// Запоминаем данные методов
-												auto * realMethods = &realTraffics->find(traffic)->second;
-												// Если методы существуют
-												if(!methods->empty()){
-													// Переходим по всему списку методов
-													for(auto it = methods->cbegin(); it != methods->cend(); ++it){
-														// Получаем название метода
-														const string method = it->first;
-														// Получаем список правил
-														const auto * rules = &it->second;
-														// Если такой метод существует
-														if(realMethods->count(method) > 0){
-															// Запоминаем данные правил
-															auto * realRules = &realMethods->find(method)->second;
-															// Если правила существуют
-															if(rules != nullptr){
-																// Заменяем данные запросов
-																realRules->query = rules->query;
-																// Заменяем данные userAgent
-																realRules->userAgent = rules->userAgent;
-																// Выполняем копирование нод клиента
-																copyListNodes(realRules->clients, rules->clients);
-																// Выполняем копирование нод сервера
-																copyListNodes(realRules->servers, rules->servers);
-																// Выполняем копирование путей
-																copyListParams(realRules->paths, rules->paths);
-																// Выполняем копирование заголовков
-																copyListParams(realRules->headers, rules->headers);
-															}
-														// Если такой метод не существует
-														} else realMethods->emplace(method, * rules);
-													}
-												}
-											// Если такой трафик не существует
-											} else realTraffics->emplace(traffic, * methods);
-										}
-									}
-								// Если такой экшен не существует
-								} else realActions->emplace(action, * traffics);
-							}
-						}
-					// Добавляем список экшенов к пользователю
-					} else users->emplace(uid, * actions);
+	if((params != nullptr) && !params->empty()){
+		/**
+		 * copyListNodes Функция копирования нод которых нет в списке
+		 * @param node1 ноды существуещего списка
+		 * @param node2 ноды которые нужно добавить
+		 */
+		auto copyListNodes = [](vector <Node> &node1, vector <Node> node2){
+			// Переходим по всему объекту нод 1
+			for(auto it1 = node2.cbegin(); it1 != node2.cend(); ++it1){
+				// Результат поиска
+				bool result = false;
+				// Переходим по всему объекту нод 2
+				for(auto it2 = node1.cbegin(); it2 != node1.cend(); ++it2){
+					// Выполняем проверку на совпадение данных
+					if((it1->type != it2->type)
+					|| (it1->data.compare(it2->data) != 0)) result = true;
 				}
-				// Обновляем данные пользователей
-				this->rules.at(gid) = * users;
-			// Если пользователи не найдены, то просто добавляем данные
-			} else this->rules.at(gid) = * params;
-		// Иначе просто добавляем данные
-		} else this->rules.emplace(gid, * params);
+				// Если параметры не найдены в списке
+				if(!result) node1.push_back(* it1);
+			}
+		};
+		// Переходим по всему списку пользователей
+		for(auto it = params->cbegin(); it != params->cend(); ++it){
+			// Получаем тип экшена
+			const bool action = it->first;
+			// Получаем список трафика
+			const auto * traffics = &it->second;
+			// Если такой экшен существует
+			if(this->rules.count(action) > 0){
+				// Запоминаем данные трафика
+				auto * realTraffics = &this->rules.find(action)->second;
+				// Если трафик существуют
+				if(!traffics->empty()){
+					// Переходим по всему списку трафика
+					for(auto it = traffics->cbegin(); it != traffics->cend(); ++it){
+						// Получаем тип трафика
+						const bool traffic = it->first;
+						// Получаем список методов
+						const auto * methods = &it->second;
+						// Если такой трафик существует
+						if(realTraffics->count(traffic) > 0){
+							// Запоминаем данные методов
+							auto * realMethods = &realTraffics->find(traffic)->second;
+							// Если методы существуют
+							if(!methods->empty()){
+								// Переходим по всему списку методов
+								for(auto it = methods->cbegin(); it != methods->cend(); ++it){
+									// Получаем название метода
+									const string method = it->first;
+									// Получаем список правил
+									const auto * rules = &it->second;
+									// Если такой метод существует
+									if(realMethods->count(method) > 0){
+										// Запоминаем данные правил
+										auto * realRules = &realMethods->find(method)->second;
+										// Если правила существуют
+										if(rules != nullptr){
+											// Заменяем данные запросов
+											realRules->query = rules->query;
+											// Заменяем данные userAgent
+											realRules->userAgent = rules->userAgent;
+											// Выполняем копирование нод клиента
+											copyListNodes(realRules->clients, rules->clients);
+											// Выполняем копирование нод сервера
+											copyListNodes(realRules->servers, rules->servers);
+											// Выполняем копирование групп пользователей
+											copyListParams(realRules->groups, rules->groups);
+											// Выполняем копирование пользователей
+											copyListParams(realRules->users, rules->users);
+											// Выполняем копирование путей
+											copyListParams(realRules->paths, rules->paths);
+											// Выполняем копирование заголовков
+											copyListParams(realRules->headers, rules->headers);
+										}
+									// Если такой метод не существует
+									} else realMethods->emplace(method, * rules);
+								}
+							}
+						// Если такой трафик не существует
+						} else realTraffics->emplace(traffic, * methods);
+					}
+				}
+			// Если такой экшен не существует
+			} else this->rules.emplace(action, * traffics);
+		}
 	}
 }
 /**
@@ -227,8 +206,10 @@ void Headers2::addParams(const gid_t gid, const map <uid_t, map <bool, map <bool
 void Headers2::createRulesList(const Headers2::Params params){
 	// Получаем список всех групп
 	auto dataGroups = this->ausers->getAllGroups();
-	// Если группы существуют
-	if(!dataGroups.empty()){
+	// Получаем список всех пользователей
+	auto dataUsers = this->ausers->getAllUsers();
+	// Если группы и пользователи существуют
+	if(!dataGroups.empty() && !dataUsers.empty()){
 		/**
 		 * createNode Функция создания списка нод
 		 * @param [Array] список значений которые необходимо обработать
@@ -267,12 +248,102 @@ void Headers2::createRulesList(const Headers2::Params params){
 			// Выводим результат
 			return nodes;
 		};
+		// Список групп пользователей
+		vector <gid_t> groups;
+		// Список пользователей
+		vector <uid_t> users;
+		// Переходим по всему массиву групп
+		for(auto it = params.groups.cbegin(); it != params.groups.cend(); ++it){
+			// Определяем группу
+			string group = * it;
+			// Если группа не является звездочкой
+			if(group.compare("*") != 0){
+				// Выполняем проверку на инверсию
+				auto check = isNot(group);
+				// Если это не инверсия
+				if(!check.inv){
+					// Идентификатор группы
+					gid_t gid = -1;
+					// Если это идентификатор группы
+					if(Anyks::isNumber(check.str)) gid = ::atoi(check.str.c_str());
+					// Если это название группы
+					else gid = this->ausers->getGidByName(check.str);
+					// Выполняем добавление группы
+					if(this->ausers->checkGroupById(gid)) groups.push_back(gid);
+				// Если это инверсия
+				} else {
+					// Проверяем является ли это идентификатором
+					const bool numberFlag = Anyks::isNumber(check.str);
+					// Переходим по всему списку групп
+					for(auto it = dataGroups.cbegin(); it != dataGroups.cend(); ++it){
+						// Выполняем добавление группы
+						if((numberFlag && ((* it)->id != gid_t(::atoi(check.str.c_str()))))
+						|| (!numberFlag && (this->ausers->getGroupNameByGid((* it)->id).compare(check.str) != 0))) groups.push_back((* it)->id);
+					}
+					// Выходим из цикла
+					break;
+				}
+			// Если найдена звездочка то добавляем во все группы
+			} else {
+				// Переходим по всему списку групп
+				for(auto it = dataGroups.cbegin(); it != dataGroups.cend(); ++it){
+					// Выполняем добавление группы
+					groups.push_back((* it)->id);
+				}
+				// Выходим из цикла
+				break;
+			}
+		}
+		// Переходим по всему списку пользователей
+		for(auto it = params.users.cbegin(); it != params.users.cend(); ++it){
+			// Определяем пользователя
+			string user = * it;
+			// Если пользователь не является звездочкой
+			if(user.compare("*") != 0){
+				// Выполняем проверку на инверсию
+				auto check = isNot(user);
+				// Если это не инверсия
+				if(!check.inv){
+					// Идентификатор пользователя
+					uid_t uid = -1;
+					// Определяем идентификатор пользователя
+					if(Anyks::isNumber(check.str)) uid = ::atoi(check.str.c_str());
+					// Если это название пользователя
+					else uid = this->ausers->getUidByName(check.str);
+					// Выполняем добавление пользователя
+					if(this->ausers->checkUserById(uid)) users.push_back(uid);
+				// Если это инверсия
+				} else {
+					// Проверяем является ли это идентификатором
+					const bool numberFlag = Anyks::isNumber(check.str);
+					// Переходим по всему списку пользователей
+					for(auto it = dataUsers.cbegin(); it != dataUsers.cend(); ++it){
+						// Выполняем добавление пользователя
+						if((numberFlag && ((* it)->id != uid_t(::atoi(check.str.c_str()))))
+						|| (!numberFlag && (this->ausers->getUserNameByUid((* it)->id).compare(check.str) != 0))) users.push_back((* it)->id);
+					}
+					// Выходим из цикла
+					break;
+				}
+			// Если найдена звездочка то добавляем во все экшены
+			} else {
+				// Переходим по всему списку групп
+				for(auto it = dataUsers.cbegin(); it != dataUsers.cend(); ++it){
+					// Выполняем добавление группы
+					users.push_back((* it)->id);
+				}
+				// Выходим из цикла
+				break;
+			}
+		}
 		// Создаем объект с правилами
 		const Rules rules = {
 			// Список запросов
 			params.query,
 			// Запоминаем данные агента
 			params.userAgent,
+			// Список групп и пользователей
+			users, groups,
 			// Список клиентов
 			createNode(params.clients),
 			// Список серверов
@@ -298,8 +369,6 @@ void Headers2::createRulesList(const Headers2::Params params){
 		map <bool, unordered_map <string, Rules>> traffics = {{true, {}}, {false, {}}};
 		// Объект со списком экшенов
 		map <bool, map <bool, unordered_map <string, Rules>>> actions = {{true, {}}, {false, {}}};
-		// Объект со списком пользователей
-		map <uid_t, map <bool, map <bool, unordered_map <string, Rules>>>> users;
 		// Переходим по всему списку методов
 		for(auto it = params.methods.cbegin(); it != params.methods.cend(); ++it){
 			// Определяем метод
@@ -397,108 +466,8 @@ void Headers2::createRulesList(const Headers2::Params params){
 				break;
 			}
 		}
-		/**
-		 * createRules Функция создания правил
-		 * @param [gid_t] идентификатор группы
-		 */
-		auto createRules = [&users, &actions, &params, this](gid_t gid){
-			// Переходим по всему списку пользователей
-			for(auto it = params.users.cbegin(); it != params.users.cend(); ++it){
-				// Определяем пользователя
-				string user = * it;
-				// Если пользователь не является звездочкой
-				if(user.compare("*") != 0){
-					// Выполняем проверку на инверсию
-					auto check = isNot(user);
-					// Если это не инверсия
-					if(!check.inv){
-						// Идентификатор пользователя
-						uid_t uid = -1;
-						// Определяем идентификатор пользователя
-						if(Anyks::isNumber(check.str)) uid = ::atoi(check.str.c_str());
-						// Если это название пользователя
-						else uid = this->ausers->getUidByName(check.str);
-						// Если пользователь принадлежит группе
-						if(this->ausers->checkUserInGroup(gid, uid)){
-							// Добавляем список экшенов к пользователю
-							users.emplace(uid, actions);
-						}
-					// Если это инверсия
-					} else {
-						// Очищаем список пользователей
-						users.clear();
-						// Запрашиваем список всех пользователей группы
-						auto uids = this->ausers->getIdUsersInGroup(gid);
-						// Проверяем является ли это идентификатором
-						const bool numberFlag = Anyks::isNumber(check.str);
-						// Переходим по всем идентификаторам пользователей и добавляем туда экшены
-						for(auto it = uids.cbegin(); it != uids.cend(); ++it){
-							// Выполняем создание правила
-							if((numberFlag && ((* it) != uid_t(::atoi(check.str.c_str()))))
-							|| (!numberFlag && (this->ausers->getUserNameByUid(* it).compare(check.str) != 0))) users.emplace(* it, actions);
-						}
-						// Выходим из цикла
-						break;
-					}
-				// Если найдена звездочка то добавляем во все экшены
-				} else {
-					// Очищаем список пользователей
-					users.clear();
-					// Запрашиваем список всех пользователей группы
-					auto uids = this->ausers->getIdUsersInGroup(gid);
-					// Переходим по всем идентификаторам пользователей и добавляем туда экшены
-					for(auto it = uids.cbegin(); it != uids.cend(); ++it) users.emplace(* it, actions);
-					// Выходим из цикла
-					break;
-				}
-			}
-			// Добавляем в список правил
-			addParams(gid, &users);
-		};
-		// Переходим по всему массиву групп
-		for(auto it = params.groups.cbegin(); it != params.groups.cend(); ++it){
-			// Определяем группу
-			string group = * it;
-			// Очищаем список пользователей
-			users.clear();
-			// Если группа не является звездочкой
-			if(group.compare("*") != 0){
-				// Выполняем проверку на инверсию
-				auto check = isNot(group);
-				// Если это не инверсия
-				if(!check.inv){
-					// Идентификатор группы
-					gid_t gid = -1;
-					// Если это идентификатор группы
-					if(Anyks::isNumber(check.str)) gid = ::atoi(check.str.c_str());
-					// Если это название группы
-					else gid = this->ausers->getGidByName(check.str);
-					// Выполняем создание правила
-					if(this->ausers->checkGroupById(gid)) createRules(gid);
-				// Если это инверсия
-				} else {
-					// Проверяем является ли это идентификатором
-					const bool numberFlag = Anyks::isNumber(check.str);
-					// Переходим по всему списку групп
-					for(auto it = dataGroups.cbegin(); it != dataGroups.cend(); ++it){
-						// Выполняем создание правила
-						if((numberFlag && ((* it)->id != gid_t(::atoi(check.str.c_str()))))
-						|| (!numberFlag && (this->ausers->getGroupNameByGid((* it)->id).compare(check.str) != 0))) createRules((* it)->id);
-					}
-					// Выходим из цикла
-					break;
-				}
-			// Если найдена звездочка то добавляем во все группы
-			} else {
-				// Переходим по всему списку групп
-				for(auto it = dataGroups.cbegin(); it != dataGroups.cend(); ++it){
-					// Выполняем создание правила
-					createRules((* it)->id);
-				}
-				// Выходим из цикла
-				break;
-			}
-		}
+		// Добавляем в список правил
+		addParams(&actions);
 	// Если группы не найдены, выводим сообщение об ошибке
 	} else if(this->log) this->log->write(LOG_ERROR, 0, "groups not found for headers rules");
 }
@@ -797,22 +766,16 @@ const string Headers2::getName(){
 }
 /**
  * findRules Метод поиска заголовков
- * @param ip     IP адрес пользователя
- * @param mac    MAC адрес пользователя
- * @param sip    IP адрес сервера
- * @param sdm    доменное имя сервера
- * @param uat    юзер-агент браузера
- * @param path   путь запроса 
- * @param query  параметры запроса
- * @param method метод запроса
- * @param rules  список правил
- * @return       сформированный список заголовков
+ * @param request запрос на получение данных
+ * @param method  метод запроса
+ * @param rules   список правил
+ * @return        сформированный список заголовков
  */
-const vector <string> Headers2::findHeaders(const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const Rules * rules){
+const vector <string> Headers2::findHeaders(Headers2::Client * request, const string method, const Rules * rules){
 	// Список правил
 	vector <string> result;
 	// Если входящие параметры верные
-	if(!ip.empty() && !mac.empty() && !sip.empty() && !sdm.empty() && (rules != nullptr)){
+	if((request != nullptr) && (rules != nullptr)){
 		/**
 		 * checkData Функция сравнения данных
 		 * @param data  данные для сравнения
@@ -1007,26 +970,71 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
 			// Выводим результат
 			return result;
 		};
+		/**
+		 * checkGroups Функция проверки данных групп пользователя
+		 * @param list1 список групп для проверки
+		 * @param list2 список групп у правил заголовков
+		 */
+		auto checkGroups = [](const vector <gid_t> * list1, const vector <gid_t> * list2){
+			// Результат проверки
+			bool result = false;
+			// Если список групп для заголовков не существует
+			if(list2->empty()) result = true;
+			// Если же список групп существует
+			else {
+				// Переходим по всему списку переданных групп
+				for(auto it = list1->cbegin(); it != list1->cend(); ++it){
+					// Если группа найдена в списке тогда останавливаем поиск
+					if(find(list2->begin(), list2->end(), * it) != list2->end()){
+						// Запоминаем что группа найдена
+						result = true;
+						// Выходим из цикла
+						break;
+					}
+				}
+			}
+			// Выводим результат
+			return result;
+		};
+		/**
+		 * checkUsers Функция проверки данных пользователя
+		 * @param uid  идентификатор пользователя
+		 * @param list список пользователей у правил заголовков
+		 */
+		auto checkUsers = [](const uid_t uid, const vector <uid_t> * list){
+			// Результат проверки
+			bool result = false;
+			// Если список пользователей для заголовков не существует
+			if(list->empty()) result = true;
+			// Если же список пользователей существует
+			else result = (find(list->begin(), list->end(), uid) != list->end());
+			// Выводим результат
+			return result;
+		};
 		// Проверяем ip адрес клиента
-		const bool checkCIP = checkData(ip, &rules->clients);
+		const bool checkCIP = checkData(request->ip, &rules->clients);
 		// Проверяем mac адрес клиента
-		const bool checkCMac = (!checkCIP ? checkData(mac, &rules->clients) : checkCIP);
+		const bool checkCMac = (!checkCIP ? checkData(request->mac, &rules->clients) : checkCIP);
 		// Проверяем  ip адрес сервера
-		const bool checkSIP = checkData(sip, &rules->servers);
+		const bool checkSIP = checkData(request->sip, &rules->servers);
 		// Проверяем доменное имя сервера
-		const bool checkSDM = (!checkSIP ? checkData(sdm, &rules->servers) : checkSIP);
+		const bool checkSDM = (!checkSIP ? checkData(request->domain, &rules->servers) : checkSIP);
 		// Выполняем проверку путей
-		const bool pathFound = checkPath(path, &rules->paths);
+		const bool pathFound = checkPath(request->path, &rules->paths);
 		// Проверяем на корректность запроса к серверу
-		const bool queryFound = checkRegexp(query, rules->query);
+		const bool queryFound = checkRegexp(request->query, rules->query);
 		// Проверяем на корректность UserAgent
-		const bool userAgentFound = checkRegexp(uat, rules->userAgent);
+		const bool userAgentFound = checkRegexp(request->agent, rules->userAgent);
+		// Проверяем корректность групп
+		const bool groupFound = checkGroups(&request->groups, &rules->groups);
+		// Проверяем корректность пользователя
+		const bool userFound = checkUsers(request->user, &rules->users);
 		// Определяем найден ли клиент
 		const bool clientFound = (checkCIP || checkCMac);
 		// Определяем найден ли сервер
 		const bool serverFound = (checkSIP || checkSDM);
 		// Если и сервер и клиент найдены тогда добавляем в список правила
-		if(clientFound && serverFound && queryFound && userAgentFound && pathFound){
+		if(clientFound && serverFound && queryFound && userAgentFound && pathFound && groupFound && userFound){
 			// Переходим по всему списку заголовков
 			for(auto it = rules->headers.cbegin(); it != rules->headers.cend(); ++it){
 				// Выполняем проверку на существование заголовка в списке
@@ -1041,96 +1049,33 @@ const vector <string> Headers2::findHeaders(const string ip, const string mac, c
 }
 /**
  * get Метод получения правил клиента
- * @param gid     идентификатор группы
- * @param uid     идентификатор пользователя
- * @param ip      IP адрес пользователя
- * @param mac     MAC адрес пользователя
- * @param sip     IP адрес сервера
- * @param sdm     доменное имя сервера
- * @param uat     юзер-агент браузера
- * @param path    путь запроса 
- * @param query   параметры запроса
- * @param method  метод запроса
- * @param traffic направление трафика
- * @param action  экшен
+ * @param request запрос на получение данных
  * @return        сформированный список правил
  */
-const vector <string> Headers2::get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const bool traffic, const bool action){
+const vector <string> Headers2::get(Headers2::Client * request){
 	// Правила вывода данных
 	vector <string> result;
 	// Если данные клиента переданы
-	if((gid > -1) && (uid > -1) && !ip.empty() && !mac.empty() && !sip.empty() && !this->rules.empty()){
-		// Проверяем существует ли такая группа
-		if(this->rules.count(gid) > 0){
-			// Получаем данные пользователей
-			auto users = this->rules.find(gid)->second;
-			// Проверяем существует ли данный пользователь
-			if(users.count(uid) > 0){
-				// Получаем список методов
-				auto methods = users.find(uid)->second.find(action)->second.find(traffic)->second;
-				// Приводим к нижнему регистру
-				const string tmpMethod = Anyks::toCase(method);
-				// Если это звездочка
-				if(tmpMethod.compare("*") == 0){
-					// Переходим по всем методам запросов
-					for(auto it = methods.cbegin(); it != methods.cend(); ++it){
-						// Выполняем запрос для каждого метода
-						result = findHeaders(ip, mac, sip, sdm, uat, path, query, it->first, &it->second);
-					}
-				// Добавляем правила
-				} else if(methods.count(tmpMethod) > 0){
-					// Извлекаем правило
-					auto rules = methods.find(tmpMethod)->second;
-					// Добавляем правила для конкретного метода
-					result = findHeaders(ip, mac, sip, sdm, uat, path, query, tmpMethod, &rules);
+	if((request != nullptr) && !request->ip.empty() && !request->mac.empty() && !request->sip.empty() && !this->rules.empty()){
+		// Проверяем существует ли такой экшен
+		if(this->rules.count(request->action) > 0){
+			// Получаем список методов
+			auto methods = this->rules.find(request->action)->second.find(request->traffic)->second;
+			// Приводим к нижнему регистру
+			const string tmpMethod = Anyks::toCase(request->method);
+			// Если это звездочка
+			if(tmpMethod.compare("*") == 0){
+				// Переходим по всем методам запросов
+				for(auto it = methods.cbegin(); it != methods.cend(); ++it){
+					// Выполняем запрос для каждого метода
+					result = findHeaders(request, it->first, &it->second);
 				}
-			}
-		}
-	}
-	// Выводим результат
-	return result;
-}
-/**
- * get Метод получения правил клиента
- * @param ip      IP адрес пользователя
- * @param mac     MAC адрес пользователя
- * @param sip     IP адрес сервера
- * @param sdm     доменное имя сервера
- * @param uat     юзер-агент браузера
- * @param path    путь запроса 
- * @param query   параметры запроса
- * @param method  метод запроса
- * @param traffic направление трафика
- * @param action  экшен
- * @return        сформированный список правил
- */
-const vector <string> Headers2::get(const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const bool traffic, const bool action){
-	// Правила вывода данных
-	vector <string> result;
-	// Если данные клиента переданы
-	if(!ip.empty() && !mac.empty() && !sip.empty() && !this->rules.empty()){
-		// Переходим по всему объекту групп
-		for(auto ig = this->rules.cbegin(); ig != this->rules.cend(); ++ig){
-			// Переходим по всему объекту пользователей
-			for(auto iu = ig->second.cbegin(); iu != ig->second.cend(); ++iu){
-				// Получаем список методов
-				auto methods = iu->second.find(action)->second.find(traffic)->second;
-				// Приводим к нижнему регистру
-				const string tmpMethod = Anyks::toCase(method);
-				// Если это звездочка
-				if(tmpMethod.compare("*") == 0){
-					// Переходим по всем методам запросов
-					for(auto it = methods.cbegin(); it != methods.cend(); ++it){
-						// Выполняем запрос для каждого метода
-						result = findHeaders(ip, mac, sip, sdm, uat, path, query, it->first, &it->second);
-					}
-				// Добавляем правила
-				} else if(methods.count(tmpMethod) > 0){
-					// Извлекаем правило
-					auto rules = methods.find(tmpMethod)->second;
-					// Добавляем правила для конкретного метода
-					result = findHeaders(ip, mac, sip, sdm, uat, path, query, tmpMethod, &rules);
-				}
+			// Добавляем правила
+			} else if(methods.count(tmpMethod) > 0){
+				// Извлекаем правило
+				auto rules = methods.find(tmpMethod)->second;
+				// Добавляем правила для конкретного метода
+				result = findHeaders(request, tmpMethod, &rules);
 			}
 		}
 	}
@@ -1139,27 +1084,20 @@ const vector <string> Headers2::get(const string ip, const string mac, const str
 }
 /**
  * add Метод добавления новых параметров фильтрации заголовков
- * @param gid     идентификатор группы
- * @param uid     идентификатор пользователя
  * @param action  экшен
  * @param traffic направление трафика
  * @param method  метод запроса
  * @param ctx     правила работы с заголовками
  */
-void Headers2::add(const gid_t gid, const uid_t uid, const bool action, const bool traffic, const string method, void * ctx){
+void Headers2::add(const bool action, const bool traffic, const string method, void * ctx){
 	// Если данные клиента переданы
-	if(gid && uid && ctx){
+	if(ctx != nullptr){
 		// Получаем данные подключения
 		Rules * rules = reinterpret_cast <Rules *> (ctx);
 		// Проверка на существование данных
 		bool exist = false;
-		// Проверяем существует ли такая группа
-		if(this->rules.count(gid) > 0){
-			// Получаем данные группы
-			auto group = this->rules.find(gid)->second;
-			// Проверяем существует ли данный пользователь
-			if(group.count(uid) > 0) exist = true;
-		}
+		// Проверяем существует ли такой экшен
+		if(this->rules.count(action) > 0) exist = true;
 		// Если данные не существуют
 		if(!exist){
 			// Проверка на существование данных
@@ -1178,10 +1116,6 @@ void Headers2::add(const gid_t gid, const uid_t uid, const bool action, const bo
 			};
 			// Объект со списком направлений траффика
 			map <bool, unordered_map <string, Rules>> traffics = {{true, {}}, {false, {}}};
-			// Объект со списком экшенов
-			map <bool, map <bool, unordered_map <string, Rules>>> actions = {{true, {}}, {false, {}}};
-			// Объект со списком пользователей
-			map <uid_t, map <bool, map <bool, unordered_map <string, Rules>>>> users;
 			// Приводим к нижнему регистру
 			const string tmpMethod = Anyks::toCase(method);
 			// Если это звездочка
@@ -1200,23 +1134,14 @@ void Headers2::add(const gid_t gid, const uid_t uid, const bool action, const bo
 				// Добавляем методы
 				traffics.at(traffic) = methods;
 				// Добавляем трафик
-				actions.at(action) = traffics;
-				// Если пользователь принадлежит группе
-				if(this->ausers->checkUserInGroup(gid, uid)){
-					// Добавляем экшены
-					users.emplace(uid, actions);
-					// Добавляем в список правил
-					this->rules.emplace(gid, users);
-				}
+				this->rules.emplace(action, traffics);
 			}
 		// Если данные уже существуют
 		} else {
 			// Приводим к нижнему регистру
 			const string tmpMethod = Anyks::toCase(method);
-			// Получаем список пользователей
-			auto users = this->rules.find(gid)->second;
 			// Получаем список методов
-			auto * methods = &users.find(uid)->second.find(action)->second.find(traffic)->second;
+			auto * methods = &this->rules.find(action)->second.find(traffic)->second;
 			// Если это звездочка
 			if(tmpMethod.compare("*") == 0){
 				// Переходим по всему списку и добавляем правила
@@ -1226,8 +1151,6 @@ void Headers2::add(const gid_t gid, const uid_t uid, const bool action, const bo
 				}
 			// Добавляем правила
 			} else if(methods->count(tmpMethod) > 0) methods->at(tmpMethod) = * rules;
-			// Добавляем в список правил
-			this->rules.at(gid) = users;
 		}
 	}
 }
@@ -1319,50 +1242,51 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 		query = Anyks::getQueryByString(query);
 		// Определяем направление трафика
 		const bool traffic = (http.getStatus() != 0);
+		// Экшен добавления заголовков
+		const bool actionAdd = true;
+		// Экшен удаления заголовков
+		const bool actionRm = false;
+		// Объект клиента
+		Client requestAdd	= {actionAdd, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+		Client requestRm	= {actionRm, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
 		/**
 		 * modifyHeadersForUser Функция модификации заголовков по пользовательским данным
 		 * @param client указатель на блок с данными пользователя
 		 * @param http   объект http данных запроса
 		 */
-		auto modifyHeadersForUser = [&agent, &path, &query, &host, &method, &traffic, this](const string ip, const string mac, const string sip, const AParams::AUser * client, HttpData &http){
-			// Получаем идентификатор пользователя
-			const uid_t uid = client->user.uid;
-			// Если группы существуют
-			if(!client->groups.empty()){
+		auto modifyHeadersForUser = [&requestAdd, &requestRm, &actionAdd, &actionRm, this](const AParams::AUser * client, HttpData &http){
+			// Если клиент существует
+			if(client != nullptr){
+				// Запоминаем данные пользователя
+				requestAdd.user	= client->user.uid;
+				requestRm.user	= client->user.uid;
 				// Переходим по всему списку групп
-				for(auto it = client->groups.cbegin(); it != client->groups.cend(); it++){
-					// Получаем идентификатор группы
-					const gid_t gid = it->gid;
-					// Запрашиваем список правил
-					auto headersAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
-					auto headersRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
-					// Добавляем заголовки
-					modifyHeaders(true, headersAdd, http);
-					// Удаляем заголовки
-					modifyHeaders(false, headersRm, http);
+				for(auto it = client->groups.cbegin(); it != client->groups.cend(); ++it){
+					// Запоминаем данные групп
+					requestAdd.groups.push_back(it->gid);
+					requestRm.groups.push_back(it->gid);
 				}
 			}
+			// Запрашиваем список правил
+			auto headersAdd = get(&requestAdd);
+			auto headersRm = get(&requestRm);
+			// Добавляем заголовки
+			modifyHeaders(actionAdd, headersAdd, http);
+			// Удаляем заголовки
+			modifyHeaders(actionRm, headersRm, http);
 		};
 		// Если данные пользователя существуют
 		if(client.user != nullptr){
 			// Выполняем модификацию заголовков для пользователя
-			modifyHeadersForUser(client.ip, client.mac, client.sip, client.user, http);
+			modifyHeadersForUser(client.user, http);
 		// Если пользователь не установлен
 		} else {
 			// Пытаемся найти по ip и mac адресу
 			auto user = this->ausers->searchUser(client.ip, client.mac);
 			// Выполняем модификацию заголовков для пользователя
-			if(user.auth) modifyHeadersForUser(client.ip, client.mac, client.sip, &user, http);
+			if(user.auth) modifyHeadersForUser(&user, http);
 			// Если пользователь не найден тогда запрашиваем общие данные для всех пользователей
-			else {
-				// Запрашиваем списоки правил
-				auto headersAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
-				auto headersRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
-				// Добавляем заголовки
-				modifyHeaders(true, headersAdd, http);
-				// Удаляем заголовки
-				modifyHeaders(false, headersRm, http);
-			}
+			else modifyHeadersForUser(nullptr, http);
 		}
 	}
 }
@@ -1396,54 +1320,53 @@ void Headers2::modify(AParams::Client client, string &data){
 			query = Anyks::getQueryByString(query);
 			// Определяем направление трафика
 			const bool traffic = (http.getStatus() != 0);
+			// Экшен добавления заголовков
+			const bool actionAdd = true;
+			// Экшен удаления заголовков
+			const bool actionRm = false;
+			// Объект клиента
+			Client requestAdd	= {actionAdd, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+			Client requestRm	= {actionRm, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
 			/**
 			 * modifyHeadersForUser Функция модификации заголовков по пользовательским данным
 			 * @param client указатель на блок с данными пользователя
 			 * @param http   объект http данных запроса
 			 */
-			auto modifyHeadersForUser = [&agent, &path, &query, &host, &method, &traffic, &data, this](const string ip, const string mac, const string sip, const AParams::AUser * client, HttpData &http){
-				// Получаем идентификатор пользователя
-				const uid_t uid = client->user.uid;
-				// Если группы существуют
-				if(!client->groups.empty()){
+			auto modifyHeadersForUser = [&requestAdd, &requestRm, &actionAdd, &actionRm, &data, this](const AParams::AUser * client, HttpData &http){
+				// Если клиент существует
+				if(client != nullptr){
+					// Запоминаем данные пользователя
+					requestAdd.user	= client->user.uid;
+					requestRm.user	= client->user.uid;
 					// Переходим по всему списку групп
-					for(auto it = client->groups.cbegin(); it != client->groups.cend(); it++){
-						// Получаем идентификатор группы
-						const gid_t gid = it->gid;
-						// Запрашиваем список правил
-						auto headersAdd = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, true);
-						auto headersRm = get(gid, uid, ip, mac, sip, host, agent, path, query, method, traffic, false);
-						// Добавляем заголовки
-						modifyHeaders(true, headersAdd, data, http);
-						// Удаляем заголовки
-						modifyHeaders(false, headersRm, data, http);
-						// Выполняем модификацию основных заголовков
-						data = http.modifyHeaderString(data);
+					for(auto it = client->groups.cbegin(); it != client->groups.cend(); ++it){
+						// Запоминаем данные групп
+						requestAdd.groups.push_back(it->gid);
+						requestRm.groups.push_back(it->gid);
 					}
 				}
+				// Запрашиваем список правил
+				auto headersAdd = get(&requestAdd);
+				auto headersRm = get(&requestRm);
+				// Добавляем заголовки
+				modifyHeaders(actionAdd, headersAdd, data, http);
+				// Удаляем заголовки
+				modifyHeaders(actionRm, headersRm, data, http);
+				// Выполняем модификацию основных заголовков
+				data = http.modifyHeaderString(data);
 			};
 			// Если данные пользователя существуют
 			if(client.user != nullptr){
 				// Выполняем модификацию заголовков для пользователя
-				modifyHeadersForUser(client.ip, client.mac, client.sip, client.user, http);
+				modifyHeadersForUser(client.user, http);
 			// Если пользователь не установлен
 			} else {
 				// Пытаемся найти по ip и mac адресу
 				auto user = this->ausers->searchUser(client.ip, client.mac);
 				// Выполняем модификацию заголовков для пользователя
-				if(user.auth) modifyHeadersForUser(client.ip, client.mac, client.sip, &user, http);
+				if(user.auth) modifyHeadersForUser(&user, http);
 				// Если пользователь не найден тогда запрашиваем общие данные для всех пользователей
-				else {
-					// Запрашиваем списоки правил
-					auto headersAdd = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, true);
-					auto headersRm = get(client.ip, client.mac, client.sip, host, agent, path, query, method, traffic, false);
-					// Добавляем заголовки
-					modifyHeaders(true, headersAdd, data, http);
-					// Удаляем заголовки
-					modifyHeaders(false, headersRm, data, http);
-					// Выполняем модификацию основных заголовков
-					data = http.modifyHeaderString(data);
-				}
+				else modifyHeadersForUser(nullptr, http);
 			}
 		}
 	}

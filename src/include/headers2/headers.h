@@ -64,6 +64,8 @@ class Headers2 {
 		struct Rules {
 			string query;				// Регулярное выражение параметров запроса
 			string userAgent;			// Регулярное выражение UserAgent
+			vector <uid_t> users;		// Список идентификаторов пользователей
+			vector <gid_t> groups;		// Список идентификаторов групп
 			vector <Node> clients;		// Данные клиента
 			vector <Node> servers;		// Данные сервера
 			vector <string> paths;		// Путь запроса на сервере
@@ -85,31 +87,40 @@ class Headers2 {
 			vector <string> groups;		// Список групп
 			vector <string> headers;	// Список заголовков
 		};
+		/**
+ 		* Client Структура параметров клиента
+ 		*/
+		struct Client {
+			bool action;
+			bool traffic;
+			uid_t user;
+			vector <gid_t> groups;
+			string ip;
+			string mac;
+			string sip;
+			string domain;
+			string agent;
+			string path;
+			string query;
+			string method;
+		};
 		/*
-		* Список правил (gid -> uid -> action -> traffic -> method -> {client, server, headers})
+		* Список правил (action -> traffic -> method -> {client, server, headers})
 		*/
 		/*
-		* gid ->
-		*       | uid ->
-		*       |       | action ->
-		*       |       |          | traffic ->
-		*       |       |          |           | method ->
-		*       |       |          |           |          | rules
-		* -------------------------------------------------------
+		* action ->
+		*         | traffic ->
+		*         |           | method ->
+		*         |           |          | rules
+		* ---------------------------------------
 		*/
 		map <
-			gid_t,
+			bool,
 			map <
-				uid_t,
-				map <
-					bool,
-					map <
-						bool,
-						unordered_map <
-							string,
-							Rules
-						>
-					>
+				bool,
+				unordered_map <
+					string,
+					Rules
 				>
 			>
 		> rules;
@@ -152,10 +163,9 @@ class Headers2 {
 		void modifyHeaders(const bool action, const vector <string> headers, string &data, HttpData &http);
 		/**
 		 * addParams Метод добавления новых параметров в список правил
-		 * @param gid    идентификатор группы
 		 * @param params параметры для добавления
 		 */
-		void addParams(const gid_t gid = -1, const map <uid_t, map <bool, map <bool, unordered_map <string, Rules>>>> * params = nullptr);
+		void addParams(const map <bool, map <bool, unordered_map <string, Rules>>> * params = nullptr);
 		/**
 		 * createRulesList Метод созданий списка правил
 		 * @param params список параметров
@@ -182,60 +192,26 @@ class Headers2 {
 		const string getName();
 		/**
 		 * findRules Метод поиска заголовков
-		 * @param ip     IP адрес пользователя
-		 * @param mac    MAC адрес пользователя
-		 * @param sip    IP адрес сервера
-		 * @param sdm    доменное имя сервера
-		 * @param uat    юзер-агент браузера
-		 * @param path   путь запроса 
-		 * @param query  параметры запроса
-		 * @param method метод запроса
-		 * @param rules  список правил
-		 * @return       сформированный список заголовков
+		 * @param request запрос на получение данных
+		 * @param method  метод запроса
+		 * @param rules   список правил
+		 * @return        сформированный список заголовков
 		 */
-		const vector <string> findHeaders(const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const Rules * rules = nullptr);
+		const vector <string> findHeaders(Client * request, const string method, const Rules * rules = nullptr);
 		/**
 		 * get Метод получения правил клиента
-		 * @param gid     идентификатор группы
-		 * @param uid     идентификатор пользователя
-		 * @param ip      IP адрес пользователя
-		 * @param mac     MAC адрес пользователя
-		 * @param sip     IP адрес сервера
-		 * @param sdm     доменное имя сервера
-		 * @param uat     юзер-агент браузера
-		 * @param path    путь запроса 
-		 * @param query   параметры запроса
-		 * @param method  метод запроса
-		 * @param traffic направление трафика
-		 * @param action  экшен
+		 * @param request запрос на получение данных
 		 * @return        сформированный список правил
 		 */
-		const vector <string> get(const gid_t gid, const uid_t uid, const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const bool traffic, const bool action);
-		/**
-		 * get Метод получения правил клиента
-		 * @param ip      IP адрес пользователя
-		 * @param mac     MAC адрес пользователя
-		 * @param sip     IP адрес сервера
-		 * @param sdm     доменное имя сервера
-		 * @param uat     юзер-агент браузера
-		 * @param path    путь запроса 
-		 * @param query   параметры запроса
-		 * @param method  метод запроса
-		 * @param traffic направление трафика
-		 * @param action  экшен
-		 * @return        сформированный список правил
-		 */
-		const vector <string> get(const string ip, const string mac, const string sip, const string sdm, const string uat, const string path, const string query, const string method, const bool traffic, const bool action);
+		const vector <string> get(Client * request = nullptr);
 		/**
 		 * add Метод добавления новых параметров фильтрации заголовков
-		 * @param gid     идентификатор группы
-		 * @param uid     идентификатор пользователя
 		 * @param action  экшен
 		 * @param traffic направление трафика
 		 * @param method  метод запроса
 		 * @param ctx     правила работы с заголовками
 		 */
-		void add(const gid_t gid, const uid_t uid, const bool action = false, const bool traffic = false, const string method = "*", void * ctx = nullptr);
+		void add(const bool action = false, const bool traffic = false, const string method = "*", void * ctx = nullptr);
 		/**
 		 * rm Метод удаления параметров фильтрации заголовков
 		 * @param gid идентификатор группы

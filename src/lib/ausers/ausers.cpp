@@ -246,9 +246,21 @@ const AParams::AUser AUsers::getUser(const string userName){
  */
 const vector <const AUsers::DataGroup *> AUsers::getAllGroups(){
 	// Результат получения данных
-	vector <const AUsers::DataGroup *> result;
+	vector <const DataGroup *> result;
 	// Если объект групп существует
 	if(this->groups != nullptr) result = this->groups->getAllGroups();
+	// Выводим результат
+	return result;
+}
+/**
+ * getAllUsers Метод получения данных всех пользователей
+ * @return     список данных всех пользователей
+ */
+const vector <const AUsers::DataUser *> AUsers::getAllUsers(){
+	// Результат получения данных
+	vector <const DataUser *> result;
+	// Если объект пользователей существует
+	if(this->users != nullptr) result = this->users->getAllUsers();
 	// Выводим результат
 	return result;
 }
@@ -480,10 +492,26 @@ const bool AUsers::checkUserInGroup(const string groupName, const string userNam
 const bool AUsers::checkGroupById(const gid_t gid){
 	// Результат работы
 	bool result = false;
-	// Если идентификаторы группы и пользователя переданы
+	// Если идентификаторы группы переданы
 	if(gid && (this->groups != nullptr)){
 		// Выполняем проверку
 		result = this->groups->checkGroupById(gid);
+	}
+	// Выводим результат
+	return result;
+}
+/**
+ * checkUserById Метод проверки на существование пользователя
+ * @param  uid идентификатор пользователя
+ * @return     результат проверки
+ */
+const bool AUsers::checkUserById(const uid_t uid){
+	// Результат работы
+	bool result = false;
+	// Если идентификаторы пользователя переданы
+	if(uid && (this->users != nullptr)){
+		// Выполняем проверку
+		result = this->users->checkUserById(uid);
 	}
 	// Выводим результат
 	return result;
