@@ -1,10 +1,12 @@
 /* МОДУЛЬ ЧТЕНИЯ КОНФИГУРАЦИОННЫХ ФАЙЛОВ AMING */
 /*
-*	автор:				Юрий Николаевич Лобарев
-*	skype:				efrantick
-*	телефон:			+7(920)672-33-22
-*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
+*  author:     Yuriy Lobarev
+*  phone:      +7(910)983-95-90
+*  telegram:   @forman
+*  email:      info@anyks.com
+*  copyright:  © 2017 anyks.com
 */
+
 #ifndef _CONFIG_INI_AMING_
 #define _CONFIG_INI_AMING_
 

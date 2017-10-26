@@ -3,6 +3,7 @@
 #define _XOPEN_SOURCE
 
 #include <regex>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -11,7 +12,6 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 using namespace std;
 

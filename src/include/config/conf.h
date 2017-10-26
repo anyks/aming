@@ -1,10 +1,12 @@
 /* МОДУЛЬ CONFIG ДЛЯ ПРОКСИ СЕРВЕРА AMING */
 /*
-*	автор:				Юрий Николаевич Лобарев
-*	skype:				efrantick
-*	телефон:			+7(920)672-33-22
-*	авторские права:	Все права принадлежат автору © Юрий Лобарев, 2017
+*  author:     Yuriy Lobarev
+*  phone:      +7(910)983-95-90
+*  telegram:   @forman
+*  email:      info@anyks.com
+*  copyright:  © 2017 anyks.com
 */
+
 #ifndef _CONFIG_AMING_
 #define _CONFIG_AMING_
 
@@ -22,10 +24,13 @@
 #define APP_VERSION "1.0"
 #define APP_YEAR "2017"
 #define APP_COPYRIGHT "ANYKS LLC"
+#define APP_DOMAIN "anyks.com"
 #define APP_SITE "http://anyks.com"
 #define APP_EMAIL "info@anyks.com"
 #define APP_SUPPORT "support@anyks.com"
-#define APP_AUTHOR "forman"
+#define APP_AUTHOR "Yuriy Lobarev"
+#define APP_TELEGRAM "@forman"
+#define APP_PHONE "+7(910)983-95-90"
 
 // Основные флаги прокси сервера
 #define OPT_NULL 0x00		// Флаг устанавливающий пустые данные NULL

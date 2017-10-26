@@ -2,6 +2,7 @@
 // $ ./bin/tests
 
 #include <regex>
+#include <ctime>
 #include <string>
 #include <map>
 #include <vector>
@@ -11,7 +12,6 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 using namespace std;
 
