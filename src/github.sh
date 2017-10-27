@@ -43,15 +43,19 @@ clearComments "h"
 git add $root
 
 # Удаляем файлы из репозитория
-git rm --cached github.sh
+git rm --cached ${root}/github.sh
 git rm --cached ${root}/Makefile
-git rm --cached ${root}/tools/aming_clear.cpp
+git rm ${root}/tools/aming_clear.cpp
 
 # Комитим изменения
 git commit -am "First commit"
 
 # Выполняем заливку в репозиторий
 git push github github:master
+
+# Добавляем файлы обратно
+git add ${root}/github.sh
+git add ${root}/Makefile
 
 # Переключаемся обратно в основную ветку
 git checkout master
