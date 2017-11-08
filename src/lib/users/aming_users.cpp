@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,764 +16,105 @@
 using namespace std;
 
  
-void AUsers::Users::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
+void AUsers::Users::setUserParams(const uid_t uid, const string name, const u_short type){
+	 
+	auto setParams = [this](const uid_t uid, AParams::Params params, const u_short type){
+		
+		auto key = make_pair(uid, type);
+		
+		this->params.insert(pair <pair <uid_t, u_short>, AParams::Params> (key, params));
+	};
 	
-	u_short options = proxyOptions;
-	
-	if(flag) options = options | option;
-	
-	else {
+	switch(this->config->proxy.configs){
 		
-		options = options ^ option;
+		case AUSERS_TYPE_FILE: setParams(uid, this->ufiles->setParams(uid, name), type); break;
 		
-		if(options > proxyOptions) options = proxyOptions;
-	}
-	
-	proxyOptions = options;
-}
- 
-void AUsers::Users::setDataUserFromLdap(AUsers::DataUser &user){
-	
-	const char * key = "%u";
-	
-	size_t pos = this->ldap.filterConfig.find(key);
-	
-	if(pos != string::npos){
+		case AUSERS_TYPE_LDAP: setParams(uid, this->uldap->setParams(uid, name), type); break;
 		
-		ALDAP ldap(this->config, this->log);
-		
-		string filter = this->ldap.filterConfig;
-		
-		filter = filter.replace(pos, strlen(key), to_string(user.id));
-		
-		const string dn = (string("ac=") + this->config->proxy.name + string(",") + this->ldap.dnConfig);
-		
-		const string params =	"amingConfigsConnectsConnect,amingConfigsConnectsSize,amingConfigsGzipChunk,"
-								"amingConfigsGzipLength,amingConfigsGzipLevel,amingConfigsGzipProxied,"
-								"amingConfigsGzipRegex,amingConfigsGzipResponse,amingConfigsGzipTransfer,"
-								"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,amingConfigsAuth,"
-								"amingConfigsIdnt,amingConfigsIpExternal4,amingConfigsIpExternal6,"
-								"amingConfigsIpResolver4,amingConfigsIpResolver6,amingConfigsKeepAliveCnt,"
-								"amingConfigsKeepAliveEnabled,amingConfigsKeepAliveIdle,amingConfigsKeepAliveIntvl,"
-								"amingConfigsProxyAgent,amingConfigsProxyConnect,amingConfigsProxyDeblock,"
-								"amingConfigsProxyForward,amingConfigsProxyPipelining,amingConfigsProxyReverse,"
-								"amingConfigsProxySkill,amingConfigsProxySubnet,amingConfigsProxyTransfer,"
-								"amingConfigsProxyUpgrade,amingConfigsSpeedInput,amingConfigsSpeedOutput,"
-								"amingConfigsTimeoutsRead,amingConfigsTimeoutsUpgrade,amingConfigsTimeoutsWrite";
-		
-		auto users = ldap.data(dn, params, this->ldap.scopeConfig, filter);
-		
-		if(!users.empty()){
-			 
-			auto getBoolean = [](const string value){
-				
-				bool check = false;
-				
-				string param = value;
-				
-				param = Anyks::toCase(param);
-				
-				if(param.compare("true") == 0) check = true;
-				
-				return check;
-			};
+		case AUSERS_TYPE_FILE_LDAP: {
 			
-			for(auto it = users.cbegin(); it != users.cend(); ++it){
-				
-				for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
-					
-					if(!dt->second.empty()){
-						
-						if(dt->first.compare("amingConfigsIdnt") == 0) user.idnt = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpExternal4") == 0) user.ipv4.ip = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpExternal6") == 0) user.ipv6.ip = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpResolver4") == 0) user.ipv4.resolver = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpResolver6") == 0) user.ipv6.resolver = dt->second;
-						
-						else if(dt->first.compare("amingConfigsAuth") == 0) user.auth = Anyks::toCase(dt->second[0]);
-						
-						else if(dt->first.compare("amingConfigsProxyConnect") == 0){
-							
-							setProxyOptions(OPT_CONNECT, user.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxyUpgrade") == 0){
-							
-							setProxyOptions(OPT_UPGRADE, user.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxyAgent") == 0){
-							
-							setProxyOptions(OPT_AGENT, user.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxyDeblock") == 0){
-							
-							setProxyOptions(OPT_DEBLOCK, user.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsGzipTransfer") == 0){
-							
-							setProxyOptions(OPT_GZIP, user.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsGzipResponse") == 0){
-							
-							setProxyOptions(OPT_PGZIP, user.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveEnabled") == 0){
-							
-							setProxyOptions(OPT_KEEPALIVE, user.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxySkill") == 0){
-							
-							const bool check = (dt->second[0].compare("smart") == 0);
-							
-							setProxyOptions(OPT_SMART, user.options, check);
-						
-						} else if(dt->first.compare("amingConfigsTimeoutsRead") == 0){
-							
-							user.timeouts.read = (size_t) Anyks::getSeconds(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsTimeoutsWrite") == 0){
-							
-							user.timeouts.write = (size_t) Anyks::getSeconds(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsTimeoutsUpgrade") == 0){
-							
-							user.timeouts.upgrade = (size_t) Anyks::getSeconds(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsSpeedInput") == 0){
-							
-							user.buffers.read = Anyks::getSizeBuffer(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsSpeedOutput") == 0){
-							
-							user.buffers.write = Anyks::getSizeBuffer(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveCnt") == 0){
-							
-							user.keepalive.keepcnt = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveIdle") == 0){
-							
-							user.keepalive.keepidle = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveIntvl") == 0){
-							
-							user.keepalive.keepintvl = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsConnectsSize") == 0){
-							
-							user.connects.size = Anyks::getBytes(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsConnectsConnect") == 0){
-							
-							user.connects.connect = (u_int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsProxySubnet") == 0){
-							
-							user.proxy.subnet = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyReverse") == 0){
-							
-							user.proxy.reverse = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyForward") == 0){
-							
-							user.proxy.forward = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyTransfer") == 0){
-							
-							user.proxy.transfer = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyPipelining") == 0){
-							
-							user.proxy.pipelining = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsGzipRegex") == 0){
-							
-							user.gzip.regex = dt->second[0];
-						
-						} else if(dt->first.compare("amingConfigsGzipVary") == 0){
-							
-							user.gzip.vary = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsGzipLength") == 0){
-							
-							user.gzip.length = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsGzipChunk") == 0){
-							
-							user.gzip.chunk = Anyks::getBytes(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsGzipVhttp") == 0){
-							
-							user.gzip.vhttp = dt->second;
-						
-						} else if(dt->first.compare("amingConfigsGzipTypes") == 0){
-							
-							user.gzip.types = dt->second;
-						
-						} else if(dt->first.compare("amingConfigsGzipProxied") == 0){
-							
-							user.gzip.proxied = dt->second;
-						
-						} else if(dt->first.compare("amingConfigsGzipLevel") == 0){
-							
-							u_int level = OPT_NULL;
-							
-							const string gzipLevel = dt->second[0];
-							
-							if(!gzipLevel.empty()){
-								
-								if(gzipLevel.compare("default") == 0)		level = Z_DEFAULT_COMPRESSION;
-								else if(gzipLevel.compare("best") == 0)		level = Z_BEST_COMPRESSION;
-								else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
-								else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
-							}
-							if(level != OPT_NULL) user.gzip.level = level;
-						}
-					}
-				}
-			}
-		}
+			setParams(uid, this->ufiles->setParams(uid, name), type);
+			
+			setParams(uid, this->uldap->setParams(uid, name), type);
+		} break;
 	}
 }
  
-void AUsers::Users::setDataUserFromFile(AUsers::DataUser &user, INI * ini){
+const gid_t AUsers::Users::getGidByGroupName(const string groupName, const u_short type){
 	
-	bool rmINI = false;
+	gid_t result = 0;
 	
-	if(!ini){
+	if(!groupName.empty() && (this->groups != nullptr)){
 		
-		const string filename = Anyks::addToPath(this->config->proxy.dir, "users.ini");
-		
-		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
-			
-			ini = new INI(filename);
-			
-			rmINI = true;
-		
-		} else return;
-	}
-	
-	user.idnt = Anyks::split(ini->getString("identificators", user.name), "|");
-	
-	if(ini->checkParam(user.name + "_proxy", "connect")){
-		
-		const bool check = ini->getBoolean(user.name + "_proxy", "connect");
-		
-		setProxyOptions(OPT_CONNECT, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "upgrade")){
-		
-		const bool check = ini->getBoolean(user.name + "_proxy", "upgrade");
-		
-		setProxyOptions(OPT_UPGRADE, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "agent")){
-		
-		const bool check = ini->getBoolean(user.name + "_proxy", "agent");
-		
-		setProxyOptions(OPT_AGENT, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "deblock")){
-		
-		const bool check = ini->getBoolean(user.name + "_proxy", "deblock");
-		
-		setProxyOptions(OPT_DEBLOCK, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "transfer")){
-		
-		const bool check = ini->getBoolean(user.name + "_gzip", "transfer");
-		
-		setProxyOptions(OPT_GZIP, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "response")){
-		
-		const bool check = ini->getBoolean(user.name + "_gzip", "response");
-		
-		setProxyOptions(OPT_PGZIP, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "skill")){
-		
-		const bool check = (ini->getString(user.name + "_proxy", "skill", "dumb").compare("smart") == 0);
-		
-		setProxyOptions(OPT_SMART, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_keepalive", "enabled")){
-		
-		const bool check = ini->getBoolean(user.name + "_keepalive", "enabled");
-		
-		setProxyOptions(OPT_KEEPALIVE, user.options, check);
-	}
-	
-	if(ini->checkParam(user.name + "_ipv4", "external")){
-		
-		user.ipv4.ip = Anyks::split(ini->getString(user.name + "_ipv4", "external"), "|");
-	}
-	
-	if(ini->checkParam(user.name + "_ipv6", "external")){
-		
-		user.ipv6.ip = Anyks::split(ini->getString(user.name + "_ipv6", "external"), "|");
-	}
-	
-	if(ini->checkParam(user.name + "_ipv4", "resolver")){
-		
-		user.ipv4.resolver = Anyks::split(ini->getString(user.name + "_ipv4", "resolver"), "|");
-	}
-	
-	if(ini->checkParam(user.name + "_ipv6", "resolver")){
-		
-		user.ipv6.resolver = Anyks::split(ini->getString(user.name + "_ipv6", "resolver"), "|");
-	}
-	
-	if(ini->checkParam(user.name + "_timeouts", "read")){
-		
-		user.timeouts.read = (size_t) Anyks::getSeconds(ini->getString(user.name + "_timeouts", "read"));
-	}
-	
-	if(ini->checkParam(user.name + "_timeouts", "write")){
-		
-		user.timeouts.write = (size_t) Anyks::getSeconds(ini->getString(user.name + "_timeouts", "write"));
-	}
-	
-	if(ini->checkParam(user.name + "_timeouts", "upgrade")){
-		
-		user.timeouts.upgrade = (size_t) Anyks::getSeconds(ini->getString(user.name + "_timeouts", "upgrade"));
-	}
-	
-	if(ini->checkParam(user.name + "_speed", "input")){
-		
-		user.buffers.read = Anyks::getSizeBuffer(ini->getString(user.name + "_speed", "input"));
-	}
-	
-	if(ini->checkParam(user.name + "_speed", "output")){
-		
-		user.buffers.write = Anyks::getSizeBuffer(ini->getString(user.name + "_speed", "output"));
-	}
-	
-	if(ini->checkParam(user.name + "_keepalive", "keepcnt")){
-		
-		user.keepalive.keepcnt = (int) ini->getNumber(user.name + "_keepalive", "keepcnt");
-	}
-	
-	if(ini->checkParam(user.name + "_keepalive", "keepidle")){
-		
-		user.keepalive.keepidle = (int) ini->getNumber(user.name + "_keepalive", "keepidle");
-	}
-	
-	if(ini->checkParam(user.name + "_keepalive", "keepintvl")){
-		
-		user.keepalive.keepintvl = (int) ini->getNumber(user.name + "_keepalive", "keepintvl");
-	}
-	
-	if(ini->checkParam(user.name + "_connects", "size")){
-		
-		user.connects.size = Anyks::getBytes(ini->getString(user.name + "_connects", "size"));
-	}
-	
-	if(ini->checkParam(user.name + "_connects", "connect")){
-		
-		user.connects.connect = (u_int) ini->getUNumber(user.name + "_connects", "connect");
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "subnet")){
-		
-		user.proxy.subnet = ini->getBoolean(user.name + "_proxy", "subnet");
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "reverse")){
-		
-		user.proxy.reverse = ini->getBoolean(user.name + "_proxy", "reverse");
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "forward")){
-		
-		user.proxy.forward = ini->getBoolean(user.name + "_proxy", "forward");
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "transfer")){
-		
-		user.proxy.transfer = ini->getBoolean(user.name + "_proxy", "transfer");
-	}
-	
-	if(ini->checkParam(user.name + "_proxy", "pipelining")){
-		
-		user.proxy.pipelining = ini->getBoolean(user.name + "_proxy", "pipelining");
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "regex")){
-		
-		user.gzip.regex = ini->getString(user.name + "_gzip", "regex");
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "vary")){
-		
-		user.gzip.vary = ini->getBoolean(user.name + "_gzip", "vary");
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "length")){
-		
-		user.gzip.length = ini->getNumber(user.name + "_gzip", "length");
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "chunk")){
-		
-		user.gzip.chunk = Anyks::getBytes(ini->getString(user.name + "_gzip", "chunk"));
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "vhttp")){
-		
-		user.gzip.vhttp = Anyks::split(ini->getString(user.name + "_gzip", "vhttp"), "|");
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "types")){
-		
-		user.gzip.types = Anyks::split(ini->getString(user.name + "_gzip", "types"), "|");
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "proxied")){
-		
-		user.gzip.proxied = Anyks::split(ini->getString(user.name + "_gzip", "proxied"), "|");
-	}
-	
-	if(ini->checkParam(user.name + "_gzip", "level")){
-		
-		u_int level = OPT_NULL;
-		
-		const string gzipLevel = ini->getString(user.name + "_gzip", "level");
-		
-		if(!gzipLevel.empty()){
-			
-			if(gzipLevel.compare("default") == 0)		level = Z_DEFAULT_COMPRESSION;
-			else if(gzipLevel.compare("best") == 0)		level = Z_BEST_COMPRESSION;
-			else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
-			else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
-		}
-		if(level != OPT_NULL) user.gzip.level = level;
-	}
-	
-	if(rmINI) delete ini;
-}
- 
- void AUsers::Users::setDataUser(AUsers::DataUser &user, INI * ini){
-	
-	switch(this->typeConfigs){
-		
-		case 0: setDataUserFromFile(user, ini); break;
-		
-		case 1: setDataUserFromLdap(user); break;
-	}
-}
- 
- const AUsers::DataUser AUsers::Users::createDefaultData(const uid_t id, const string name){
-	
-	DataUser user;
-	
-	if(id && !name.empty() && (this->groups != nullptr)){
-		
-		Groups * groups = reinterpret_cast <Groups *> (this->groups);
-		
-		auto gids = groups->getGroupIdByUser(id);
-		
-		if(!gids.empty()){
-			
-			string userName = name;
-			
-			user.id		= id;
-			user.name	= Anyks::toCase(userName);
-			
-			gid_t gid = 1000000;
-			
-			for(auto gt = gids.cbegin(); gt != gids.cend(); ++gt){
-				
-				if((* gt) < gid){
-					
-					gid = (* gt);
-					
-					auto group = groups->getDataById(gid);
-					
-					user.auth 		= group->auth;
-					user.options	= group->options;
-					user.ipv4		= {group->ipv4.ip, group->ipv4.resolver};
-					user.ipv6		= {group->ipv6.ip, group->ipv6.resolver};
-					
-					user.gzip = {
-						group->gzip.vary,
-						group->gzip.level,
-						group->gzip.length,
-						group->gzip.chunk,
-						group->gzip.regex,
-						group->gzip.vhttp,
-						group->gzip.proxied,
-						group->gzip.types
-					};
-					
-					user.proxy = {
-						group->proxy.reverse,
-						group->proxy.transfer,
-						group->proxy.forward,
-						group->proxy.subnet,
-						group->proxy.pipelining
-					};
-					
-					user.connects = {
-						group->connects.size,
-						group->connects.connect
-					};
-					
-					user.timeouts = {
-						group->timeouts.read,
-						group->timeouts.write,
-						group->timeouts.upgrade
-					};
-					
-					user.buffers = {
-						group->buffers.read,
-						group->buffers.write
-					};
-					
-					user.keepalive = {
-						group->keepalive.keepcnt,
-						group->keepalive.keepidle,
-						group->keepalive.keepintvl
-					};
-				}
-			}
-		}
-	}
-	
-	return user;
-}
- 
-const bool AUsers::Users::readUsersFromLdap(){
-	
-	bool result = false;
-	
-	ALDAP ldap(this->config, this->log);
-	
-	auto users = ldap.data(this->ldap.dnUser, "uid,sn,cn,givenName,initials,userPassword,uidNumber", this->ldap.scopeUser, this->ldap.filterUser);
-	
-	if(!users.empty()){
-		
-		for(auto it = users.cbegin(); it != users.cend(); ++it){
-			
-			uid_t uid;
-			
-			string name;
-			
-			string firstName;
-			
-			string lastName;
-			
-			string secondName;
-			
-			string description;
-			
-			string password;
-			
-			for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
-				
-				if(!dt->second.empty()){
-					
-					if(dt->first.compare("uid") == 0) name = dt->second[0];
-					
-					else if(dt->first.compare("uidNumber") == 0) uid = ::atoi(dt->second[0].c_str());
-					
-					else if(dt->first.compare("cn") == 0) description = dt->second[0];
-					
-					else if(dt->first.compare("userPassword") == 0) password = dt->second[0];
-					
-					else if(dt->first.compare("givenName") == 0) firstName = dt->second[0];
-					
-					else if(dt->first.compare("sn") == 0) lastName = dt->second[0];
-					
-					else if(dt->first.compare("initials") == 0) secondName = dt->second[0];
-				}
-			}
-			
-			DataUser user = createDefaultData(uid, name);
-			
-			user.type = 2;
-			
-			user.pass = password;
-			
-			user.desc = (!firstName.empty() ? (!lastName.empty() ? (!secondName.empty() ? firstName + string(" ") + lastName + string(" ") + secondName : firstName + string(" ") + lastName) : firstName) : !description.empty() ? description : name);
-			
-			setDataUser(user);
-			
-			this->data.insert(pair <uid_t, DataUser>(user.id, user));
-		}
-		
-		result = true;
+		result = (reinterpret_cast <Groups *> (this->groups))->getIdByName(groupName, type);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Users::readUsersFromPam(){
+const string AUsers::Users::getGroupNameByGid(const uid_t gid, const u_short type){
 	
-	bool result = false;
+	string result;
 	
-	struct passwd * pw = nullptr;
-	
-	smatch match;
-	
-	regex e("\\/(?:sh|bash)$", regex::ECMAScript | regex::icase);
-	
-	while((pw = getpwent()) != nullptr){
+	if((gid > 0) && (this->groups != nullptr)){
 		
-		if(pw->pw_uid > 0){
-			
-			string shell = pw->pw_shell;
-			
-			regex_search(shell, match, e);
-			
-			if(!match.empty()){
-				
-				DataUser user = createDefaultData(pw->pw_uid, pw->pw_name);
-				
-				user.type = 1;
-				
-				user.pass = pw->pw_passwd;
-				
-				user.desc = pw->pw_name;
-				
-				setDataUser(user);
-				
-				this->data.insert(pair <uid_t, DataUser>(user.id, user));
-				
-				result = true;
-			}
-		}
+		result = (reinterpret_cast <Groups *> (this->groups))->getNameById(gid, type);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Users::readUsersFromFile(){
-	
-	bool result = false;
-	
-	const string filename = Anyks::addToPath(this->config->proxy.dir, "users.ini");
-	
-	if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
-		
-		INI ini(filename);
-		
-		if(!ini.isError()){
-			
-			string filepass;
-			
-			auto users = ini.getParamsInSection("users");
-			
-			auto passwords = ini.getParamsInSection("passwords");
-			
-			auto descriptions = ini.getParamsInSection("descriptions");
-			
-			if(!users.empty()){
-				
-				for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
-					
-					if(Anyks::isNumber(ut->key) || Anyks::isNumber(ut->value)){
-						
-						const uid_t uid = (Anyks::isNumber(ut->key) ? ::atoi(ut->key.c_str()) : ::atoi(ut->value.c_str()));
-						
-						const string name = (Anyks::isNumber(ut->key) ? ut->value : ut->key);
-						
-						DataUser user = createDefaultData(uid, name);
-						
-						user.type = 0;
-						
-						if(!passwords.empty()){
-							
-							for(auto up = passwords.cbegin(); up != passwords.cend(); ++up){
-								
-								const string key = Anyks::toCase(up->key);
-								
-								if(key.compare("all") != 0){
-									
-									if((Anyks::isNumber(key)
-									&& (uid_t(::atoi(key.c_str())) == user.id))
-									|| (key.compare(user.name) == 0)) user.pass = getPasswordFromFile(up->value, this->log, user.id, user.name);
-								
-								} else if(filepass.empty()) filepass = up->value;
-							}
-						}
-						
-						if(!descriptions.empty()){
-							
-							for(auto ud = descriptions.cbegin(); ud != descriptions.cend(); ++ud){
-								
-								if((Anyks::isNumber(ud->key)
-								&& (uid_t(::atoi(ud->key.c_str())) == user.id))
-								|| (Anyks::toCase(ud->key).compare(user.name) == 0)) user.desc = ud->value;
-							}
-						}
-						
-						setDataUser(user, &ini);
-						
-						this->data.insert(pair <uid_t, DataUser>(user.id, user));
-						
-						result = true;
-					}
-				}
-				
-				if(!filepass.empty()) getPasswordsFromFile(filepass, this->log, this, AMING_USER);
-			}
-		}
-	}
-	
-	return result;
-}
- 
-const bool AUsers::Users::update(){
+const bool AUsers::Users::update(const u_short type){
 	
 	bool result = false;
 	
 	time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->maxUpdate) < curUpdate){
+	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+		
+		this->params.clear();
 		
 		this->lastUpdate = curUpdate;
 		
-		this->data.clear();
+		setUserParams(0, "", AMING_NULL);
+		 
+		auto setParams = [this](vector <AParams::User> users, const u_short type){
+			
+			for(auto it = users.cbegin(); it != users.cend(); ++it){
+				
+				setUserParams(it->uid, it->name, type);
+			}
+		};
 		
-		switch(this->typeSearch){
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeUser){
 			
-			case 0: readUsersFromFile(); break;
+			case AUSERS_TYPE_FILE: setParams(this->ufiles->readUsers(), AUSERS_TYPE_FILE); break;
 			
-			case 1: readUsersFromPam(); break;
+			case AUSERS_TYPE_PAM: setParams(this->upam->readUsers(), AUSERS_TYPE_PAM); break;
 			
-			case 2: readUsersFromLdap(); break;
+			case AUSERS_TYPE_LDAP: setParams(this->uldap->readUsers(), AUSERS_TYPE_LDAP); break;
 			
-			case 3: {
-				readUsersFromFile();
-				readUsersFromPam();
+			case AUSERS_TYPE_FILE_PAM: {
+				setParams(this->ufiles->readUsers(), AUSERS_TYPE_FILE);
+				setParams(this->upam->readUsers(), AUSERS_TYPE_PAM);
 			} break;
 			
-			case 4: {
-				readUsersFromFile();
-				readUsersFromLdap();
+			case AUSERS_TYPE_FILE_LDAP: {
+				setParams(this->ufiles->readUsers(), AUSERS_TYPE_FILE);
+				setParams(this->uldap->readUsers(), AUSERS_TYPE_LDAP);
 			} break;
 			
-			case 5: {
-				readUsersFromPam();
-				readUsersFromLdap();
+			case AUSERS_TYPE_PAM_LDAP: {
+				setParams(this->upam->readUsers(), AUSERS_TYPE_PAM);
+				setParams(this->uldap->readUsers(), AUSERS_TYPE_LDAP);
 			} break;
 			
-			case 6: {
-				readUsersFromFile();
-				readUsersFromPam();
-				readUsersFromLdap();
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				setParams(this->ufiles->readUsers(), AUSERS_TYPE_FILE);
+				setParams(this->upam->readUsers(), AUSERS_TYPE_PAM);
+				setParams(this->uldap->readUsers(), AUSERS_TYPE_LDAP);
 			} break;
 		}
 		
@@ -783,36 +124,174 @@ const bool AUsers::Users::update(){
 	return result;
 }
  
-const vector <const AUsers::DataUser *> AUsers::Users::getAllUsers(){
+const vector <AParams::UserData> AUsers::Users::getAllUsers(const u_short type){
 	
-	vector <const DataUser *> result;
+	vector <AParams::UserData> result;
 	
-	if(!this->data.empty()){
+	const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+	
+	switch(typeUser){
 		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+		case AUSERS_TYPE_FILE: result = this->ufiles->getAllUsers(); break;
+		
+		case AUSERS_TYPE_PAM: result = this->upam->getAllUsers(); break;
+		
+		case AUSERS_TYPE_LDAP: result = this->uldap->getAllUsers(); break;
+		
+		case AUSERS_TYPE_FILE_PAM: {
 			
-			result.push_back(&(it->second));
+			auto file = this->ufiles->getAllUsers();
+			
+			auto pam = this->upam->getAllUsers();
+			
+			copy(file.begin(), file.end(), back_inserter(result));
+			copy(pam.begin(), pam.end(), back_inserter(result));
+		} break;
+		
+		case AUSERS_TYPE_FILE_LDAP: {
+			
+			auto file = this->ufiles->getAllUsers();
+			
+			auto ldap = this->uldap->getAllUsers();
+			
+			copy(file.begin(), file.end(), back_inserter(result));
+			copy(ldap.begin(), ldap.end(), back_inserter(result));
+		} break;
+		
+		case AUSERS_TYPE_PAM_LDAP: {
+			
+			auto pam = this->upam->getAllUsers();
+			
+			auto ldap = this->uldap->getAllUsers();
+			
+			copy(pam.begin(), pam.end(), back_inserter(result));
+			copy(ldap.begin(), ldap.end(), back_inserter(result));
+		} break;
+		
+		case AUSERS_TYPE_FILE_PAM_LDAP: {
+			
+			auto file = this->ufiles->getAllUsers();
+			
+			auto pam = this->upam->getAllUsers();
+			
+			auto ldap = this->uldap->getAllUsers();
+			
+			copy(file.begin(), file.end(), back_inserter(result));
+			copy(pam.begin(), pam.end(), back_inserter(result));
+			copy(ldap.begin(), ldap.end(), back_inserter(result));
+		} break;
+	}
+	
+	return result;
+}
+ 
+const AParams::Params * AUsers::Users::getParamsById(const uid_t uid, const u_short type){
+	
+	const AParams::Params * result = nullptr;
+	
+	if((uid > 0) && !this->params.empty()){
+		 
+		auto getParams = [this](const uid_t uid, u_short type){
+			
+			const AParams::Params * result = nullptr;
+			
+			auto key = make_pair(uid, type);
+			
+			if(this->params.count(key) > 0){
+				
+				result = &(this->params.find(key)->second);
+			
+			} else if(update(type)) {
+				
+				result = getParamsById(uid, type);
+			
+			} else {
+				
+				auto key = make_pair(0, AMING_NULL);
+				
+				if(this->params.count(key) > 0){
+					
+					result = &(this->params.find(key)->second);
+				}
+			}
+			
+			return result;
+		};
+		
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeUser){
+			
+			case AUSERS_TYPE_FILE: result = getParams(uid, AUSERS_TYPE_FILE); break;
+			
+			case AUSERS_TYPE_PAM: result = getParams(uid, AUSERS_TYPE_PAM); break;
+			
+			case AUSERS_TYPE_LDAP: result = getParams(uid, AUSERS_TYPE_LDAP); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = getParams(uid, AUSERS_TYPE_FILE);
+				
+				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_PAM);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = getParams(uid, AUSERS_TYPE_FILE);
+				
+				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = getParams(uid, AUSERS_TYPE_PAM);
+				
+				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = getParams(uid, AUSERS_TYPE_FILE);
+				
+				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_PAM);
+				
+				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
+			} break;
 		}
 	}
 	
 	return result;
 }
  
-const AUsers::DataUser * AUsers::Users::getUserByConnect(const string ip, const string mac){
+const AParams::Params * AUsers::Users::getParamsByName(const string userName, const u_short type){
+	
+	if(!userName.empty() && !this->params.empty()){
+		
+		const string name = Anyks::toCase(userName);
+		
+		const uid_t uid = getIdByName(name, type);
+		
+		if(uid > 0) return getParamsById(uid, type);
+	}
+	
+	return nullptr;
+}
+ 
+const AParams::Params * AUsers::Users::getDataByConnect(const string ip, const string mac, const u_short type){
+	
+	const AParams::Params * result = nullptr;
 	
 	if(!ip.empty() || !mac.empty()){
 		
-		if(!this->data.empty()){
+		if(!this->params.empty()){
 			
 			string cmac = mac;
-			
-			const DataUser * user = nullptr;
 			
 			Network nwk;
 			
 			u_int nettype = (!ip.empty() ? nwk.checkNetworkByIp(ip) : 0);
 			
-			for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			for(auto it = this->params.cbegin(); it != this->params.cend(); ++it){
 				
 				bool _ip = false;
 				
@@ -840,176 +319,328 @@ const AUsers::DataUser * AUsers::Users::getUserByConnect(const string ip, const 
 				
 				if(_ip && _mac) return &(it->second);
 				
-				else if((_ip || _mac) && (user == nullptr)) user = &(it->second);
-			}
-			
-			return user;
-		}
-	}
-	
-	return nullptr;
-}
- 
-const AUsers::DataUser * AUsers::Users::getDataById(const uid_t uid){
-	
-	if(uid && !this->data.empty()){
-		
-		if(this->data.count(uid)){
-			
-			return &(this->data.find(uid)->second);
-		
-		} else if(update()) {
-			
-			return getDataById(uid);
-		}
-	}
-	
-	return nullptr;
-}
- 
-const AUsers::DataUser * AUsers::Users::getDataByName(const string userName){
-	
-	if(!userName.empty() && !this->data.empty()){
-		
-		string name = Anyks::toCase(userName);
-		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
-			
-			if(it->second.name.compare(name) == 0){
-				
-				return &(it->second);
+				else if((_ip || _mac) && (result == nullptr)) result = &(it->second);
 			}
 		}
-		
-		if(update()) return getDataByName(userName);
-	}
-	
-	return nullptr;
-}
- 
-const bool AUsers::Users::checkUserById(const uid_t uid){
-	
-	if(uid && !this->data.empty()){
-		
-		if(this->data.count(uid)){
-			
-			return true;
-		
-		} else if(update()) {
-			
-			return checkUserById(uid);
-		}
-	}
-	
-	return false;
-}
- 
-const bool AUsers::Users::checkUserByName(const string userName){
-	
-	return (getIdByName(userName) > -1 ? true : false);
-}
- 
-const uid_t AUsers::Users::getIdByName(const string userName){
-	
-	if(!userName.empty() && !this->data.empty()){
-		
-		string name = Anyks::toCase(userName);
-		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
-			
-			if(it->second.name.compare(name) == 0){
-				
-				return it->first;
-			}
-		}
-		
-		if(update()) return getIdByName(userName);
-	}
-	
-	return -1;
-}
- 
-const string AUsers::Users::getNameById(const uid_t uid){
-	
-	if(uid && !this->data.empty()){
-		
-		if(this->data.count(uid)){
-			
-			return this->data.find(uid)->second.name;
-		
-		} else if(update()) {
-			
-			return getNameById(uid);
-		}
-	}
-	
-	return string();
-}
- 
-const vector <uid_t> AUsers::Users::getIdAllUsers(){
-	
-	vector <uid_t> result;
-	
-	auto users = getAllUsers();
-	
-	if(!users.empty()){
-		
-		for(auto it = users.cbegin(); it != users.cend(); ++it){
-			
-			result.push_back((* it)->id);
-		}
-		
-		sort(result.begin(), result.end());
-		
-		result.resize(unique(result.begin(), result.end()) - result.begin());
 	}
 	
 	return result;
 }
  
-void AUsers::Users::setPassword(const uid_t uid, const string password){
+const AParams::UserData AUsers::Users::getDataById(const uid_t uid, const u_short type){
 	
-	if((uid > -1) && !password.empty() && !this->data.empty()){
+	AParams::UserData result;
+	
+	if(uid > 0){
 		
-		if(this->data.count(uid)){
-			
-			(this->data.find(uid)->second).pass = password;
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
 		
-		} else if(update()) {
+		switch(typeUser){
 			
-			setPassword(uid, password);
+			case AUSERS_TYPE_FILE: result = this->ufiles->getDataById(uid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->upam->getDataById(uid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->uldap->getDataById(uid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = this->ufiles->getDataById(uid);
+				
+				if(!result.name.empty()) result = this->upam->getDataById(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->ufiles->getDataById(uid);
+				
+				if(!result.name.empty()) result = this->uldap->getDataById(uid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->upam->getDataById(uid);
+				
+				if(!result.name.empty()) result = this->uldap->getDataById(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->ufiles->getDataById(uid);
+				
+				if(!result.name.empty()) result = this->upam->getDataById(uid);
+				
+				if(!result.name.empty()) result = this->uldap->getDataById(uid);
+			} break;
 		}
 	}
+	
+	return result;
+}
+ 
+const AParams::UserData AUsers::Users::getDataByName(const string userName, const u_short type){
+	
+	AParams::UserData result;
+	
+	if(!userName.empty()){
+		
+		const string name = Anyks::toCase(userName);
+		
+		const uid_t uid = getIdByName(name, type);
+		
+		if(uid > 0) result = getDataById(uid, type);
+	}
+	
+	return result;
+}
+ 
+const bool AUsers::Users::checkUserById(const uid_t uid, const u_short type){
+	
+	bool result = false;
+	
+	if(uid > 0){
+		
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeUser){
+			
+			case AUSERS_TYPE_FILE: result = this->ufiles->checkUserById(uid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->upam->checkUserById(uid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->uldap->checkUserById(uid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = this->ufiles->checkUserById(uid);
+				
+				if(!result) result = this->upam->checkUserById(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->ufiles->checkUserById(uid);
+				
+				if(!result) result = this->uldap->checkUserById(uid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->upam->checkUserById(uid);
+				
+				if(!result) result = this->uldap->checkUserById(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->ufiles->checkUserById(uid);
+				
+				if(!result) result = this->upam->checkUserById(uid);
+				
+				if(!result) result = this->uldap->checkUserById(uid);
+			} break;
+		}
+	}
+	
+	return result;
+}
+ 
+const bool AUsers::Users::checkUserByName(const string userName, const u_short type){
+	
+	return (getIdByName(userName, type) > 0 ? true : false);
+}
+ 
+const uid_t AUsers::Users::getIdByName(const string userName, const u_short type){
+	
+	uid_t result = 0;
+	
+	if(!userName.empty()){
+		
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeUser){
+			
+			case AUSERS_TYPE_FILE: result = this->ufiles->getIdByName(userName); break;
+			
+			case AUSERS_TYPE_PAM: result = this->upam->getIdByName(userName); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->uldap->getIdByName(userName); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = this->ufiles->getIdByName(userName);
+				
+				if(result < 1) result = this->upam->getIdByName(userName);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->ufiles->getIdByName(userName);
+				
+				if(result < 1) result = this->uldap->getIdByName(userName);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->upam->getIdByName(userName);
+				
+				if(result < 1) result = this->uldap->getIdByName(userName);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->ufiles->getIdByName(userName);
+				
+				if(result < 1) result = this->upam->getIdByName(userName);
+				
+				if(result < 1) result = this->uldap->getIdByName(userName);
+			} break;
+		}
+	}
+	
+	return result;
+}
+ 
+const string AUsers::Users::getNameById(const uid_t uid, const u_short type){
+	
+	string result;
+	
+	if(uid > 0){
+		
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeUser){
+			
+			case AUSERS_TYPE_FILE: result = this->ufiles->getNameById(uid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->upam->getNameById(uid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->uldap->getNameById(uid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = this->ufiles->getNameById(uid);
+				
+				if(result.empty()) result = this->upam->getNameById(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->ufiles->getNameById(uid);
+				
+				if(result.empty()) result = this->uldap->getNameById(uid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->upam->getNameById(uid);
+				
+				if(result.empty()) result = this->uldap->getNameById(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->ufiles->getNameById(uid);
+				
+				if(result.empty()) result = this->upam->getNameById(uid);
+				
+				if(result.empty()) result = this->uldap->getNameById(uid);
+			} break;
+		}
+	}
+	
+	return result;
+}
+ 
+const vector <uid_t> AUsers::Users::getIdAllUsers(const u_short type){
+	
+	vector <uid_t> result;
+	
+	const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+	
+	auto users = getAllUsers(typeUser);
+	
+	if(!users.empty()){
+		
+		for(auto it = users.cbegin(); it != users.cend(); ++it){
+			
+			result.push_back(it->uid);
+		}
+	}
+	
+	return result;
 }
  
 void AUsers::Users::setGroups(void * groups){
 	
 	this->groups = groups;
+	 
+	auto groupNameByGid = [this](const uid_t gid, const u_short type){
+		
+		return getGroupNameByGid(gid, type);
+	};
+	 
+	auto gidByGroupName = [this](const string groupName, const u_short type){
+		
+		return getGidByGroupName(groupName, type);
+	};
+	 
+	auto getParamsById = [this](const gid_t gid, const u_short type){
+		
+		const AParams::Params * result = nullptr;
+		
+		if((gid > 0) && (this->groups != nullptr)){
+			
+			result = (reinterpret_cast <Groups *> (this->groups))->getParamsById(gid, type);
+		}
+		
+		return result;
+	};
+	 
+	auto getGroupIdByUser = [this](const uid_t uid, const u_short type){
+		
+		vector <gid_t> result;
+		
+		if((uid > 0) && (this->groups != nullptr)){
+			
+			result = (reinterpret_cast <Groups *> (this->groups))->getGroupIdByUser(uid, type);
+		}
+		
+		return result;
+	};
+	
+	this->upam->setGroupsMethods(groupNameByGid, gidByGroupName);
+	this->uldap->setGroupsMethods(groupNameByGid, gidByGroupName);
+	this->ufiles->setGroupsMethods(groupNameByGid, gidByGroupName);
+	
+	this->ufiles->setPasswordMethod(AUsers::getPasswordFromFile);
+	this->ufiles->setPasswordsMethod(AUsers::getPasswordsFromFile);
+	
+	this->uldap->setParamsMethod(getParamsById);
+	this->uldap->setGidsMethod(getGroupIdByUser);
+	this->ufiles->setParamsMethod(getParamsById);
+	this->ufiles->setGidsMethod(getGroupIdByUser);
 	
 	update();
 }
  
 AUsers::Users::Users(Config * config, LogApp * log){
 	
-	if(config){
+	if(config != nullptr){
 		
 		this->log = log;
 		
 		this->config = config;
 		
-		this->typeSearch = 0;
-		
-		this->typeConfigs = 0;
-		
-		this->maxUpdate = 600;
-		
-		this->ldap = {
-			"ou=users,dc=agro24,dc=dev",
-			"ou=configs,ou=aming,dc=agro24,dc=dev",
-			"one",
-			"one",
-			"(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))",
-			"(&(amingConfigsUserId=%u)(amingConfigsType=users)(objectClass=amingConfigs))"
-		};
+		this->upam = new Upam(this->config, this->log);
+		this->uldap = new Uldap(this->config, this->log);
+		this->ufiles = new Ufiles(this->config, this->log);
 	}
+}
+ 
+AUsers::Users::~Users(){
+	
+	if(this->upam != nullptr)	delete this->upam;
+	if(this->uldap != nullptr)	delete this->uldap;
+	if(this->ufiles != nullptr)	delete this->ufiles;
 }

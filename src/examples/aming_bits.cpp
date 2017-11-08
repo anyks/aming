@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
 #include <iostream>

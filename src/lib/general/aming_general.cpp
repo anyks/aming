@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -15,6 +15,22 @@
 
 using namespace std;
 
+ 
+void Anyks::setOptions(const u_short option, u_short &options, const bool flag){
+	
+	u_short _options = options;
+	
+	if(flag) _options = _options | option;
+	
+	else {
+		
+		_options = _options ^ option;
+		
+		if(_options > options) _options = options;
+	}
+	
+	options = _options;
+}
  
 void Anyks::cpydata(const u_char * data, size_t size, size_t &it, void * result){
 	
@@ -465,6 +481,26 @@ const string Anyks::timeToStr(const time_t date){
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %X %Z", tm);
 	
 	return string(buf);
+}
+ 
+const string Anyks::strFormat(const char * format, ...){
+	
+	size_t size = 0;
+	
+	char buffer[1024 * 16];
+	
+	va_list args;
+	
+	va_start(args, format);
+	
+	if((size = vsnprintf(buffer, sizeof(buffer), format, args)) > 0){
+		
+		buffer[size] = '\0';
+	}
+	
+	va_end(args);
+	
+	return string(buffer, size + 1);
 }
  
 const long Anyks::getSizeBuffer(const string str){

@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -53,29 +53,29 @@ void AUsers::getPasswordsFromFile(const string path, LogApp * log, void * object
 										
 										case AMING_GROUP: {
 											
-											auto * groups = reinterpret_cast <const vector <const DataGroup *> *> (data);
+											auto * groups = reinterpret_cast <const vector <const AParams::GroupData> *> (data);
 											
-											const gid_t gid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : -1);
+											const gid_t gid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : 0);
 											
 											for(auto it = groups->cbegin(); it != groups->cend(); ++it){
 												
-												if(((* it)->type == 0) && (((gid > -1)
-												&& ((* it)->id == gid))
-												|| (subject.compare(Anyks::toCase((* it)->name)) == 0))) (reinterpret_cast <Groups *> (object))->setPassword(gid, match[2].str());
+												if(((* it).type == AUSERS_TYPE_FILE) && (((gid > 0)
+												&& ((* it).gid == gid))
+												|| (subject.compare(Anyks::toCase((* it).name)) == 0))) (reinterpret_cast <Gfiles *> (object))->setPassword(gid, match[2].str());
 											}
 										} break;
 										
 										case AMING_USER: {
 											
-											auto * users = reinterpret_cast <const vector <const DataUser *> *> (data);
+											auto * users = reinterpret_cast <const vector <const AParams::UserData> *> (data);
 											
-											const uid_t uid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : -1);
+											const uid_t uid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : 0);
 											
 											for(auto it = users->cbegin(); it != users->cend(); ++it){
 												
-												if(((* it)->type == 0) && (((uid > -1)
-												&& ((* it)->id == uid))
-												|| (subject.compare(Anyks::toCase((* it)->name)) == 0))) (reinterpret_cast <Users *> (object))->setPassword(uid, match[2].str());
+												if(((* it).type == AUSERS_TYPE_FILE) && (((uid > 0)
+												&& ((* it).uid == uid))
+												|| (subject.compare(Anyks::toCase((* it).name)) == 0))) (reinterpret_cast <Ufiles *> (object))->setPassword(uid, match[2].str());
 											}
 										} break;
 									}
@@ -90,14 +90,14 @@ void AUsers::getPasswordsFromFile(const string path, LogApp * log, void * object
 						
 						case AMING_GROUP: {
 							
-							auto data = (reinterpret_cast <Groups *> (object))->getAllGroups();
+							auto data = (reinterpret_cast <Gfiles *> (object))->getAllGroups();
 							
 							readData(object, &data, flag);
 						} break;
 						
 						case AMING_USER: {
 							
-							auto data = (reinterpret_cast <Users *> (object))->getAllUsers();
+							auto data = (reinterpret_cast <Ufiles *> (object))->getAllUsers();
 							
 							readData(object, &data, flag);
 						} break;
@@ -172,33 +172,38 @@ const AParams::AUser AUsers::getUser(const uid_t uid){
 	
 	if((uid > 0) && (this->users != nullptr) && (this->groups != nullptr)){
 		
-		auto * user = this->users->getDataById(uid);
+		auto user = this->users->getDataById(uid);
 		
-		if(user != nullptr){
+		if(user.uid > 0){
 			
-			auto gits = this->groups->getGroupIdByUser(uid);
+			auto gits = this->groups->getGroupIdByUser(uid, user.type);
 			
 			for(auto it = gits.cbegin(); it != gits.cend(); it++){
 				
-				auto * group = this->groups->getDataById(* it);
+				auto group = this->groups->getDataById(* it, user.type);
 				
-				if(group != nullptr){
+				if(group.gid > 0){
 					
-					result.groups.push_back({group->id, group->name, group->desc, group->pass});
+					result.groups.push_back({group.gid, group.name, group.desc, group.pass});
 				}
 			}
 			
-			result.user = {user->id, user->name, user->desc, user->pass};
+			result.user = {user.uid, user.name, user.desc, user.pass};
 			
-			result.idnt = user->idnt;
-			result.ipv4 = user->ipv4;
-			result.ipv6 = user->ipv6;
-			result.gzip = user->gzip;
-			result.proxy = user->proxy;
-			result.connects = user->connects;
-			result.timeouts = user->timeouts;
-			result.buffers = user->buffers;
-			result.keepalive = user->keepalive;
+			auto * params = this->users->getParamsById(user.uid, user.type);
+			
+			if(params != nullptr){
+				
+				result.idnt = params->idnt;
+				result.ipv4 = params->ipv4;
+				result.ipv6 = params->ipv6;
+				result.gzip = params->gzip;
+				result.proxy = params->proxy;
+				result.connects = params->connects;
+				result.timeouts = params->timeouts;
+				result.buffers = params->buffers;
+				result.keepalive = params->keepalive;
+			}
 		}
 	}
 	
@@ -211,28 +216,29 @@ const AParams::AUser AUsers::getUser(const string userName){
 	
 	if(!userName.empty()){
 		
-		const uid_t uid = (this->users != nullptr ? this->users->getIdByName(userName) : -1);
+		const uid_t uid = (this->users != nullptr ? this->users->getIdByName(userName) : 0);
 		
 		if(uid > 0) result = getUser(uid);
 	}
 	
 	return result;
 }
+
  
-const vector <const AUsers::DataGroup *> AUsers::getAllGroups(){
+const vector <AParams::GroupData> AUsers::getAllGroups(const u_short type){
 	
-	vector <const DataGroup *> result;
+	vector <AParams::GroupData> result;
 	
-	if(this->groups != nullptr) result = this->groups->getAllGroups();
+	if(this->groups != nullptr) result = this->groups->getAllGroups(type);
 	
 	return result;
 }
  
-const vector <const AUsers::DataUser *> AUsers::getAllUsers(){
+const vector <AParams::UserData> AUsers::getAllUsers(const u_short type){
 	
-	vector <const DataUser *> result;
+	vector <AParams::UserData> result;
 	
-	if(this->users != nullptr) result = this->users->getAllUsers();
+	if(this->users != nullptr) result = this->users->getAllUsers(type);
 	
 	return result;
 }
@@ -241,7 +247,7 @@ const vector <uid_t> AUsers::getIdUsersInGroup(const gid_t gid){
 	
 	vector <uid_t> result;
 	
-	if(gid && (this->groups != nullptr)){
+	if((gid > 0) && (this->groups != nullptr)){
 		
 		result = this->groups->getIdUsers(gid);
 	}
@@ -265,7 +271,7 @@ const vector <string> AUsers::getNameUsersInGroup(const gid_t gid){
 	
 	vector <string> result;
 	
-	if(gid && (this->groups != nullptr)){
+	if((gid > 0) && (this->groups != nullptr)){
 		
 		result = this->groups->getNameUsers(gid);
 	}
@@ -305,7 +311,7 @@ const string AUsers::getUserNameByUid(const uid_t uid){
  
 const gid_t AUsers::getGidByName(const string groupName){
 	
-	gid_t result = -1;
+	gid_t result = 0;
 	
 	if(this->groups != nullptr) result = this->groups->getIdByName(groupName);
 	
@@ -314,7 +320,7 @@ const gid_t AUsers::getGidByName(const string groupName){
  
 const uid_t AUsers::getUidByName(const string userName){
 	
-	uid_t result = -1;
+	uid_t result = 0;
 	
 	if(this->users != nullptr) result = this->users->getIdByName(userName);
 	
@@ -327,9 +333,9 @@ const u_short AUsers::getOptionsByUid(const uid_t uid){
 	
 	if(this->users != nullptr){
 		
-		auto * user = this->users->getDataById(uid);
+		auto * params = this->users->getParamsById(uid);
 		
-		if(user != nullptr) result = user->options;
+		if(params != nullptr) result = params->options;
 	}
 	
 	return result;
@@ -341,7 +347,7 @@ const u_short AUsers::getOptionsByUserName(const string userName){
 	
 	if(this->users != nullptr){
 		
-		auto * user = this->users->getDataByName(userName);
+		auto * user = this->users->getParamsByName(userName);
 		
 		if(user != nullptr) result = user->options;
 	}
@@ -353,7 +359,7 @@ const bool AUsers::checkUserInGroup(const gid_t gid, const uid_t uid){
 	
 	bool result = false;
 	
-	if(gid && uid && (this->groups != nullptr)){
+	if((gid > 0) && (uid > 0) && (this->groups != nullptr)){
 		
 		result = this->groups->checkUser(gid, uid);
 	}
@@ -365,7 +371,7 @@ const bool AUsers::checkUserInGroup(const gid_t gid, const string userName){
 	
 	bool result = false;
 	
-	if(gid && !userName.empty() && (this->groups != nullptr)){
+	if((gid > 0) && !userName.empty() && (this->groups != nullptr)){
 		
 		result = this->groups->checkUser(gid, userName);
 	}
@@ -377,7 +383,7 @@ const bool AUsers::checkUserInGroup(const string groupName, const uid_t uid){
 	
 	bool result = false;
 	
-	if(uid && !groupName.empty() && (this->groups != nullptr)){
+	if((uid > 0) && !groupName.empty() && (this->groups != nullptr)){
 		
 		result = this->groups->checkUser(groupName, uid);
 	}
@@ -401,7 +407,7 @@ const bool AUsers::checkGroupById(const gid_t gid){
 	
 	bool result = false;
 	
-	if(gid && (this->groups != nullptr)){
+	if((gid > 0) && (this->groups != nullptr)){
 		
 		result = this->groups->checkGroupById(gid);
 	}
@@ -413,7 +419,7 @@ const bool AUsers::checkUserById(const uid_t uid){
 	
 	bool result = false;
 	
-	if(uid && (this->users != nullptr)){
+	if((uid > 0) && (this->users != nullptr)){
 		
 		result = this->users->checkUserById(uid);
 	}
@@ -427,7 +433,7 @@ const AParams::AUser AUsers::searchUser(const string ip, const string mac){
 	
 	if(!ip.empty() && !mac.empty()){
 		
-		auto * user = this->users->getUserByConnect(ip, mac);
+		auto * user = this->users->getDataByConnect(ip, mac);
 		
 		if(user != nullptr){
 			
@@ -459,7 +465,7 @@ const AParams::AUser AUsers::authenticate(const string login, const string pass)
  
 AUsers::AUsers(Config * config, LogApp * log){
 	
-	if(config){
+	if(config != nullptr){
 		
 		this->log = log;
 		

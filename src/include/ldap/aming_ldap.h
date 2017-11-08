@@ -4,18 +4,21 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:01
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
  
 
-#ifndef _AUTH_LDAP_AMING_
-#define _AUTH_LDAP_AMING_
+#ifndef _PROXY_LDAP_AMING_
+#define _PROXY_LDAP_AMING_
 
 #include <string>
 #include <vector>
+#include <random>
+#include <ctime>
 #include <iostream>
+#include <unordered_map>
 #include <ldap.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,31 +29,37 @@
 using namespace std;
 
  
-class AuthLDAP {
+class ALDAP {
 	private:
-		
+		 
+        struct Data {
+			string dn;
+			string key;
+			unordered_map <string, vector <string>> vals;
+		};
+        
 		LogApp * log = nullptr;
 		
 		Config * config = nullptr;
 		
-		bool enabled = false;
-		
 		u_int version = LDAP_VERSION2;
 		
-		u_int scope = LDAP_SCOPE_SUBTREE;
-		
-		string server;
-		
-		string filter;
-		
-		string userdn;
+		vector <string> servers;
 		 
-		const bool authLDAP(LDAP * ld, const string dn, const string password);
+		const u_int getScope(const string scope);
+		 
+		const bool auth(LDAP * ld, const string dn, const string password);
+		 
+		const string getServer();
 	public:
 		 
-		const bool checkUser(const string user, const string password);
+		const bool checkAuth(const string dn, const string password, const string scope = "", const string filter = "(objectClass=top)");
 		 
-		AuthLDAP(Config * config = nullptr, LogApp * log = nullptr);
+		const vector <Data> data(const string dn, const string key, const string scope = "", const string filter = "(objectClass=top)");
+		 
+		void setServer(const string server);
+		 
+		ALDAP(Config * config = nullptr, LogApp * log = nullptr);
 };
 
 #endif 

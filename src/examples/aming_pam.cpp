@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
 #include <stdlib.h>
@@ -41,6 +41,40 @@
 
 
  
+
+
+#include <memory>
+#include <iostream>
+#include <string>
+#include <cstdio>
+
+
+
+using namespace std; 
+
+ 
+
+ 
+const string string_format(const char * format, ...){
+	
+	size_t size = 0;
+	
+	char buffer[1024];
+	
+	va_list args;
+	
+	va_start(args, format);
+	
+	if((size = vsnprintf(buffer, sizeof(buffer), format, args)) > 0){
+		
+		buffer[size] = '\0';
+	}
+	
+	va_end(args);
+	
+	return string(buffer, size + 1);
+}
+
 
 
 void test(void * a){
@@ -81,6 +115,8 @@ return PAM_SUCCESS;
 
 int main(int argc, char** argv)
 {
+
+  std::cout << string_format("(&%s(%s=%u))", "(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))", "gidNumber", 199) << endl;
   
   std::vector <std::string> a1 = {"hello", "hi"};
 

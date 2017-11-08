@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:01
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -177,8 +177,8 @@ class HttpData {
 		struct Dump {
 			size_t status;		
 			size_t options;		
-			size_t http;		
 			size_t auth;		
+			size_t http;		
 			size_t path;		
 			size_t host;		
 			size_t port;		
@@ -224,10 +224,11 @@ class HttpData {
 		
 		u_short options;
 		
+		u_short auth;
+		
 		vector <u_char> raw;
 		
 		string http;		
-		string auth;		
 		string path;		
 		string host;		
 		string port;		
@@ -300,6 +301,8 @@ class HttpData {
 		 
 		const u_int getStatus();
 		 
+		const u_short getAuth();
+		 
 		const float getVersion();
 		 
 		const string getHttp();
@@ -311,8 +314,6 @@ class HttpData {
 		const string getPath();
 		 
 		const string getProtocol();
-		 
-		const string getAuth();
 		 
 		const string getLogin();
 		 
@@ -370,13 +371,13 @@ class HttpData {
 		 
 		void setStatus(const u_int number);
 		 
+		void setAuth(const u_short auth);
+		 
 		void setPath(const string str);
 		 
 		void setProtocol(const string str);
 		 
 		void setVersion(const float number);
-		 
-		void setAuth(const string str);
 		 
 		void setUseragent(const string str);
 		 

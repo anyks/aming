@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -853,9 +853,17 @@ void HttpData::genDataConnect(){
 			
 			if(!match.empty()){
 				
-				this->auth = Anyks::toCase(match[1].str());
+				const string auth = Anyks::toCase(match[1].str());
 				
-				if(this->auth.compare("basic") == 0){
+				if(auth.compare("basic") == 0) this->auth = AMING_AUTH_BASIC;
+				else if(auth.compare("bearer") == 0) this->auth = AMING_AUTH_BEARER;
+				else if(auth.compare("digest") == 0) this->auth = AMING_AUTH_DIGEST;
+				else if(auth.compare("hmac") == 0) this->auth = AMING_AUTH_HMAC;
+				else if(auth.compare("hoba") == 0) this->auth = AMING_AUTH_HOBA;
+				else if(auth.compare("mutual") == 0) this->auth = AMING_AUTH_MUTUAL;
+				else if(auth.compare("aws4-hmac-sha256") == 0) this->auth = AMING_AUTH_AWS4HMACSHA256;
+				
+				if(this->auth == AMING_AUTH_BASIC){
 					
 					Base64 base64;
 					
@@ -1696,6 +1704,11 @@ const u_int HttpData::getStatus(){
 	return this->status;
 }
  
+const u_short HttpData::getAuth(){
+	
+	return this->auth;
+}
+ 
 const float HttpData::getVersion(){
 	
 	return (!this->version.empty() ? ::atof(this->version.c_str()) : 1.0);
@@ -1724,11 +1737,6 @@ const string HttpData::getPath(){
 const string HttpData::getProtocol(){
 	
 	return this->protocol;
-}
- 
-const string HttpData::getAuth(){
-	
-	return this->auth;
 }
  
 const string HttpData::getLogin(){
@@ -1902,8 +1910,8 @@ const u_char * HttpData::data(){
 		Dump sizes = {
 			sizeof(this->status),
 			sizeof(this->options),
+			sizeof(this->auth),
 			this->http.size(),
-			this->auth.size(),
 			this->path.size(),
 			this->host.size(),
 			this->port.size(),
@@ -1932,9 +1940,11 @@ const u_char * HttpData::data(){
 		
 		copy(options, options + sizes.options, back_inserter(this->raw));
 		
-		copy(this->http.begin(), this->http.end(), back_inserter(this->raw));
+		const u_char * auth = reinterpret_cast <const u_char *> (&this->auth);
 		
-		copy(this->auth.begin(), this->auth.end(), back_inserter(this->raw));
+		copy(auth, auth + sizes.auth, back_inserter(this->raw));
+		
+		copy(this->http.begin(), this->http.end(), back_inserter(this->raw));
 		
 		copy(this->path.begin(), this->path.end(), back_inserter(this->raw));
 		
@@ -1994,9 +2004,9 @@ void HttpData::set(const u_char * data, size_t size){
 						
 						case 1: Anyks::cpydata(data, size_data, size_it, &this->options); break;
 						
-						case 2: Anyks::cpydata(data, size_data, size_it, this->http); break;
+						case 2: Anyks::cpydata(data, size_data, size_it, &this->auth); break;
 						
-						case 3: Anyks::cpydata(data, size_data, size_it, this->auth); break;
+						case 3: Anyks::cpydata(data, size_data, size_it, this->http); break;
 						
 						case 4: Anyks::cpydata(data, size_data, size_it, this->path); break;
 						
@@ -2059,12 +2069,13 @@ void HttpData::set(const u_char * data, size_t size){
  
 void HttpData::clear(){
 	
+	this->auth = AMING_AUTH_BASIC;
+	
 	this->status = 0;
 	
 	this->intGzip = false;
 	this->extGzip = false;
 	this->http.clear();
-	this->auth.clear();
 	this->method.clear();
 	this->path.clear();
 	this->protocol.clear();
@@ -2219,6 +2230,11 @@ void HttpData::setStatus(const u_int number){
 	this->status = number;
 }
  
+void HttpData::setAuth(const u_short auth){
+	
+	this->auth = auth;
+}
+ 
 void HttpData::setPath(const string str){
 	
 	this->path = str;
@@ -2234,11 +2250,6 @@ void HttpData::setVersion(const float number){
 	this->version = to_string(number);
 	
 	if(this->version.length() == 1) this->version += ".0";
-}
- 
-void HttpData::setAuth(const string str){
-	
-	this->auth = str;
 }
  
 void HttpData::setUseragent(const string str){

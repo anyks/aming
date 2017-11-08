@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -27,7 +27,7 @@
 #include "nwk/nwk.h"
 #include "log/log.h"
 #include "http/http.h"
-#include "ldap2/ldap.h"
+#include "ldap/ldap.h"
 #include "ausers/ausers.h"
 #include "general/general.h"
 
@@ -43,12 +43,6 @@ class Headers2 {
 			string str;	
 		};
 		 
-		struct Ldap {
-			string dn;
-			string scope;
-			string filter;
-		};
-		 
 		struct Node {
 			u_short type;	
 			string data;	
@@ -58,7 +52,9 @@ class Headers2 {
 			string query;				
 			string userAgent;			
 			vector <uid_t> users;		
+			vector <uid_t> bsers;		
 			vector <gid_t> groups;		
+			vector <gid_t> broups;		
 			vector <Node> clients;		
 			vector <Node> servers;		
 			vector <string> paths;		
@@ -106,21 +102,15 @@ class Headers2 {
 			>
 		> rules;
 		
-		Ldap ldap;
-		
 		deque <string> names;
 		
 		LogApp * log = nullptr;
 		Config * config = nullptr;
 		AUsers * ausers = nullptr;
 		
-		u_short options = 0x00;
-		
-		time_t maxUpdate = 0;
-		
 		time_t lastUpdate = 0;
 		
-		u_short typeSearch = 0;
+		u_short options = AMING_NULL;
 		 
 		const IsNot isNot(const string str);
 		 

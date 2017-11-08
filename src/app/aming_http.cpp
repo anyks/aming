@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:47
 *  copyright:  © 2017 anyks.com
 */
  
@@ -41,7 +41,7 @@ void ConnectClients::Client::add(void * ctx){
 			return (this->connects < this->max ? this->connects : this->max);
 		};
 		
-		this->key = (http->proxy->config->connects.key ? http->client.mac : http->client.ip);
+		this->key = (http->proxy->config->connects.key == AMING_MAC ? http->client.mac : http->client.ip);
 		
 		this->max = http->proxy->config->connects.connect;
 		
@@ -76,7 +76,7 @@ void ConnectClients::add(void * ctx){
 	
 	if(http){
 		
-		string key = (http->proxy->config->connects.key ? http->client.mac : http->client.ip);
+		string key = (http->proxy->config->connects.key == AMING_MAC ? http->client.mac : http->client.ip);
 		
 		if(this->clients.count(key) < 1){
 			
@@ -392,8 +392,6 @@ void HttpProxy::create_client(const string ip, const string mac, const evutil_so
 	
 	http->client.ip = ip;
 	
-	http->ldap = this->ldap;
-	
 	this->clients.add(http);
 }
  
@@ -655,7 +653,8 @@ const bool HttpProxy::check_auth(void * ctx){
 		
 		const string password = http->httpRequest.getPassword();
 		
-		return http->ldap->checkUser(user, password);
+		
+		return ((user.compare("forman") == 0) && (password.compare("911") == 0));
 		
 		http->proxy->log->write(LOG_MESSAGE, 0, "auth client [%s] to proxy wrong!", http->client.ip.c_str());
 	}
@@ -1655,8 +1654,6 @@ HttpProxy::HttpProxy(System * proxy){
 		
 		this->server = proxy;
 		
-		this->ldap = new AuthLDAP(this->server->config, this->server->log);
-		
 		evutil_socket_t socket = create_server();
 		
 		if(socket > -1){
@@ -1693,8 +1690,6 @@ HttpProxy::HttpProxy(System * proxy){
 }
  
 HttpProxy::~HttpProxy(){
-	
-	if(this->ldap) delete this->ldap;
 	
 	if(this->pids) delete [] this->pids;
 }

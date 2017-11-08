@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:01
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -13,189 +13,40 @@
 #ifndef _USERS_PROXY_AMING_
 #define _USERS_PROXY_AMING_
 
+#include <map>
 #include <regex>
 #include <string>
-#include <random>
 #include <vector>
 #include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <unordered_map>
-#include <grp.h>
-#include <pwd.h>
-#include <ctime>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/t/y/p/e/s/./h/>/
 /#/i/n/c/l/u/d/e/ /</s/e/c/u/r/i/t/y
-#include "ini/ini.h"
-#include "nwk/nwk.h"
+#include "ausers/types.h"
 #include "system/system.h"
 #include "general/general.h"
-#include "ldap2/ldap.h"
+#include "groups/pam.h"
+#include "groups/files.h"
+#include "groups/ldap.h"
+#include "users/pam.h"
+#include "users/files.h"
+#include "users/ldap.h"
 
 
 using namespace std;
 
  
-namespace AParams {
-	 
-	struct Gzip {
-		bool vary;					
-		int level;					
-		long length;				
-		size_t chunk;				
-		string regex;				
-		vector <string> vhttp;		
-		vector <string> proxied;	
-		vector <string> types;		
-	};
-	 
-	struct IP {
-		vector <string> ip;			
-		vector <string> resolver;	
-	};
-	 
-	struct Proxy {
-		bool reverse;		
-		bool transfer;		
-		bool forward;		
-		bool subnet;		
-		bool pipelining;	
-	};
-	 
-	struct Connects {
-		size_t size;	
-		u_int connect;	
-	};
-	 
-	struct Timeouts {
-		size_t read;	
-		size_t write;	
-		size_t upgrade;	
-	};
-	 
-	struct BufferSize {
-		long read;		
-		long write;		
-	};
-	 
-	struct Keepalive {
-		int keepcnt;	
-		int keepidle;	
-		int keepintvl;	
-	};
-	 
-	struct Group {
-		gid_t gid;		
-		string name;	
-		string desc;	
-		string pass;	
-	};
-	 
-	struct User {
-		uid_t uid;		
-		string name;	
-		string desc;	
-		string pass;	
-	};
-	 
-	struct AUser {
-		bool auth = false;		
-		vector <string> idnt;	
-		vector <Group> groups;	
-		User user;				
-		IP ipv4;				
-		IP ipv6;				
-		Gzip gzip;				
-		Proxy proxy;			
-		Connects connects;		
-		Timeouts timeouts;		
-		BufferSize buffers;		
-		Keepalive keepalive;	
-	};
-	 
-	struct Client {
-		const string ip;				
-		const string mac;				
-		const string sip;				
-		const AUser * user = nullptr;	
-	};
-};
-
- 
 class AUsers {
 	private:
 		 
-		struct DataGroup {
-			gid_t id;						
-			u_short options;				
-			u_short type;					
-			string name;					
-			string pass;					
-			string auth;					
-			string desc;					
-			vector <string> idnt;			
-			AParams::IP ipv4;				
-			AParams::IP ipv6;				
-			AParams::Gzip gzip;				
-			AParams::Proxy proxy;			
-			AParams::Connects connects;		
-			AParams::Timeouts timeouts;		
-			AParams::BufferSize buffers;	
-			AParams::Keepalive keepalive;	
-			vector <uid_t> users;	
-		};
-		 
-		struct DataUser {
-			uid_t id;						
-			u_short options;				
-			u_short type;					
-			string name;					
-			string pass;					
-			string auth;					
-			string desc;					
-			vector <string> idnt;			
-			AParams::IP ipv4;				
-			AParams::IP ipv6;				
-			AParams::Gzip gzip;				
-			AParams::Proxy proxy;			
-			AParams::Connects connects;		
-			AParams::Timeouts timeouts;		
-			AParams::BufferSize buffers;	
-			AParams::Keepalive keepalive;	
-		};
-		 
 		static void getPasswordsFromFile(const string path, LogApp * log = nullptr, void * object = nullptr, const u_short flag = AMING_USER);
 		 
-		static const string getPasswordFromFile(const string path, LogApp * log = nullptr, const uid_t uid = -1, const string name = "");
+		static const string getPasswordFromFile(const string path, LogApp * log = nullptr, const uid_t uid = 0, const string name = "");
 		 
 		class Groups {
 			private:
-				 
-				struct Ldap {
-					string dnGroup;
-					string dnUser;
-					string dnConfig;
-					string scopeGroup;
-					string scopeUser;
-					string scopeConfig;
-					string filterGroup;
-					string filterUser;
-					string filterConfig;
-				};
-				
-				time_t maxUpdate = 0;
 				
 				time_t lastUpdate = 0;
-				
-				u_short typeSearch = 0;
-				
-				u_short typeConfigs = 0;
-				
-				int maxPamGroupsUser = 0;
-				
-				Ldap ldap;
 				
 				LogApp * log = nullptr;
 				
@@ -203,109 +54,76 @@ class AUsers {
 				
 				void * users = nullptr;
 				
-				unordered_map <gid_t, DataGroup> data;
+				Gpam * gpam = nullptr;
+				Gldap * gldap = nullptr;
+				Gfiles * gfiles = nullptr;
+				
+				map <pair <gid_t, u_short>, AParams::Params> params;
 				 
-				void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
+				void setGroupParams(const gid_t gid, const string name, const u_short type = AMING_NULL);
 				 
-				void setDataGroupFromLdap(DataGroup &group);
+				const uid_t getUidByUserName(const string userName, const u_short type = AMING_NULL);
 				 
-				void setDataGroupFromFile(DataGroup &group, INI * ini = nullptr);
+				const string getUserNameByUid(const uid_t uid, const u_short type = AMING_NULL);
 				 
-				void setDataGroup(DataGroup &group, INI * ini = nullptr);
-				 
-				const DataGroup createDefaultData(const gid_t id, const string name);
-				 
-				const bool readGroupsFromLdap();
-				 
-				const bool readGroupsFromPam();
-				 
-				const bool readGroupsFromFile();
-				 
-				const bool update();
+				const bool update(const u_short type = AMING_NULL);
 			public:
 				 
-				const vector <const DataGroup *> getAllGroups();
+				const vector <AParams::GroupData> getAllGroups(const u_short type = AMING_NULL);
 				 
-				const DataGroup * getDataById(const gid_t gid);
+				const AParams::Params * getParamsById(const gid_t gid, const u_short type = AMING_NULL);
 				 
-				const DataGroup * getDataByName(const string groupName);
+				const AParams::Params * getParamsByName(const string groupName, const u_short type = AMING_NULL);
 				 
-				const vector <gid_t> getGroupIdByUser(const uid_t uid);
+				const AParams::GroupData getDataById(const gid_t gid, const u_short type = AMING_NULL);
 				 
-				const vector <gid_t> getGroupIdByUser(const string userName);
+				const AParams::GroupData getDataByName(const string groupName, const u_short type = AMING_NULL);
 				 
-				const vector <string> getGroupNameByUser(const uid_t uid);
+				const vector <gid_t> getGroupIdByUser(const uid_t uid, const u_short type = AMING_NULL);
 				 
-				const vector <string> getGroupNameByUser(const string userName);
+				const vector <gid_t> getGroupIdByUser(const string userName, const u_short type = AMING_NULL);
 				 
-				const bool checkUser(const gid_t gid, const uid_t uid);
+				const vector <string> getGroupNameByUser(const uid_t uid, const u_short type = AMING_NULL);
 				 
-				const bool checkUser(const gid_t gid, const string userName);
+				const vector <string> getGroupNameByUser(const string userName, const u_short type = AMING_NULL);
 				 
-				const bool checkUser(const string groupName, const uid_t uid);
+				const bool checkUser(const gid_t gid, const uid_t uid, const u_short type = AMING_NULL);
 				 
-				const bool checkUser(const string groupName, const string userName);
+				const bool checkUser(const gid_t gid, const string userName, const u_short type = AMING_NULL);
 				 
-				const bool checkGroupById(const gid_t gid);
+				const bool checkUser(const string groupName, const uid_t uid, const u_short type = AMING_NULL);
 				 
-				const bool checkGroupByName(const string groupName);
+				const bool checkUser(const string groupName, const string userName, const u_short type = AMING_NULL);
 				 
-				const uid_t getUidByUserName(const string userName);
+				const bool checkGroupById(const gid_t gid, const u_short type = AMING_NULL);
 				 
-				const gid_t getIdByName(const string groupName);
+				const bool checkGroupByName(const string groupName, const u_short type = AMING_NULL);
 				 
-				const string getUserNameByUid(const uid_t uid);
+				const gid_t getIdByName(const string groupName, const u_short type = AMING_NULL);
 				 
-				const string getNameById(const gid_t gid);
+				const string getNameById(const gid_t gid, const u_short type = AMING_NULL);
 				 
-				const vector <string> getNameUsers(const gid_t gid);
+				const vector <string> getNameUsers(const gid_t gid, const u_short type = AMING_NULL);
 				 
-				const vector <string> getNameUsers(const string groupName);
+				const vector <string> getNameUsers(const string groupName, const u_short type = AMING_NULL);
 				 
-				const vector <uid_t> getIdAllUsers();
+				const vector <uid_t> getIdAllUsers(const u_short type = AMING_NULL);
 				 
-				const vector <uid_t> getIdUsers(const gid_t gid);
+				const vector <uid_t> getIdUsers(const gid_t gid, const u_short type = AMING_NULL);
 				 
-				const vector <uid_t> getIdUsers(const string groupName);
-				 
-				const bool addUser(const gid_t gid, const uid_t uid);
-				 
-				const bool addUser(const gid_t gid, const string userName);
-				 
-				const bool addUser(const string groupName, const uid_t uid);
-				 
-				const bool addUser(const string groupName, const string userName);
-				 
-				const bool addGroup(const gid_t gid, const string name);
-				 
-				void setPassword(const gid_t gid, const string password);
+				const vector <uid_t> getIdUsers(const string groupName, const u_short type = AMING_NULL);
 				 
 				void setUsers(void * users = nullptr);
 				 
 				Groups(Config * config = nullptr, LogApp * log = nullptr);
+				 
+				~Groups();
 		};
 		 
 		class Users {
 			private:
-				 
-				struct Ldap {
-					string dnUser;
-					string dnConfig;
-					string scopeUser;
-					string scopeConfig;
-					string filterUser;
-					string filterConfig;
-				};
-				
-				time_t maxUpdate = 0;
 				
 				time_t lastUpdate = 0;
-				
-				u_short typeSearch = 0;
-				
-				u_short typeConfigs = 0;
-				
-				Ldap ldap;
 				
 				LogApp * log = nullptr;
 				
@@ -313,50 +131,48 @@ class AUsers {
 				
 				void * groups = nullptr;
 				
-				unordered_map <uid_t, DataUser> data;
+				Upam * upam = nullptr;
+				Uldap * uldap = nullptr;
+				Ufiles * ufiles = nullptr;
+				
+				map <pair <uid_t, u_short>, AParams::Params> params;
 				 
-				void setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag = false);
+				void setUserParams(const uid_t uid, const string name, const u_short type = AMING_NULL);
 				 
-				void setDataUserFromLdap(DataUser &user);
+				const gid_t getGidByGroupName(const string groupName, const u_short type = AMING_NULL);
 				 
-				void setDataUserFromFile(DataUser &user, INI * ini = nullptr);
+				const string getGroupNameByGid(const uid_t gid, const u_short type = AMING_NULL);
 				 
-				void setDataUser(DataUser &user, INI * ini = nullptr);
-				 
-				const DataUser createDefaultData(const uid_t id, const string name);
-				 
-				const bool readUsersFromLdap();
-				 
-				const bool readUsersFromPam();
-				 
-				const bool readUsersFromFile();
-				 
-				const bool update();
+				const bool update(const u_short type = AMING_NULL);
 			public:
 				 
-				const vector <const DataUser *> getAllUsers();
+				const vector <AParams::UserData> getAllUsers(const u_short type = AMING_NULL);
 				 
-				const DataUser * getUserByConnect(const string ip = "", const string mac = "");
+				const AParams::Params * getParamsById(const uid_t uid, const u_short type = AMING_NULL);
 				 
-				const DataUser * getDataById(const uid_t uid);
+				const AParams::Params * getParamsByName(const string userName, const u_short type = AMING_NULL);
 				 
-				const DataUser * getDataByName(const string userName);
+				const AParams::Params * getDataByConnect(const string ip, const string mac, const u_short type = AMING_NULL);
 				 
-				const bool checkUserById(const uid_t uid);
+				const AParams::UserData getDataById(const uid_t uid, const u_short type = AMING_NULL);
 				 
-				const bool checkUserByName(const string userName);
+				const AParams::UserData getDataByName(const string userName, const u_short type = AMING_NULL);
 				 
-				const uid_t getIdByName(const string userName);
+				const bool checkUserById(const uid_t uid, const u_short type = AMING_NULL);
 				 
-				const string getNameById(const uid_t uid);
+				const bool checkUserByName(const string userName, const u_short type = AMING_NULL);
 				 
-				const vector <uid_t> getIdAllUsers();
+				const uid_t getIdByName(const string userName, const u_short type = AMING_NULL);
 				 
-				void setPassword(const uid_t uid, const string password);
+				const string getNameById(const uid_t uid, const u_short type = AMING_NULL);
+				 
+				const vector <uid_t> getIdAllUsers(const u_short type = AMING_NULL);
 				 
 				void setGroups(void * groups = nullptr);
 				 
 				Users(Config * config = nullptr, LogApp * log = nullptr);
+				 
+				~Users();
 		};
 		 
 		class Auth {
@@ -412,9 +228,9 @@ class AUsers {
 		const AParams::AUser getUser(const string userName);
 	public:
 		 
-		const vector <const DataGroup *> getAllGroups();
+		const vector <AParams::GroupData> getAllGroups(const u_short type = AMING_NULL);
 		 
-		const vector <const DataUser *> getAllUsers();
+		const vector <AParams::UserData> getAllUsers(const u_short type = AMING_NULL);
 		 
 		const vector <uid_t> getIdUsersInGroup(const gid_t gid);
 		 

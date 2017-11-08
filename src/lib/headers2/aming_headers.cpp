@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,23 +16,30 @@
 using namespace std;
 
  
-struct {
-	template <typename T>
-	void operator()(T &list1, T list2) const {
+template <typename T>
+const vector <T> Anyks::concatVectors(const vector <T> &v1, const vector <T> &v2){
+	
+	vector <T> result;
+	
+	if(!v1.empty() && !v2.empty()){
 		
-		for(auto it = list2.cbegin(); it != list2.cend(); ++it){
+		result.assign(v1.cbegin(), v1.cend());
+		
+		for(auto it = v2.cbegin(); it != v2.cend(); ++it){
 			
-			if(find(list1.begin(), list1.end(), * it) == list1.end()){
+			if(find(v1.begin(), v1.end(), * it) == v1.end()){
 				
-				list1.push_back(* it);
+				result.push_back(* it);
 			}
 		}
-	};
-} copyListParams;
+	}
+	
+	return result;
+};
  
 const Headers2::IsNot Headers2::isNot(const string str){
 	
-	bool result = str[0] == '!';
+	const bool result = (str[0] == '!');
 	
 	return {result, (result ? str.substr(1, str.length() - 1) : str)};
 }
@@ -41,9 +48,9 @@ void Headers2::modifyHeaders(const bool action, const vector <string> headers, H
 	
 	if(!headers.empty()){
 		
+		smatch match;
+		
 		for(auto it = headers.cbegin(); it != headers.cend(); ++it){
-			
-			smatch match;
 			
 			if(action){
 				
@@ -69,9 +76,9 @@ void Headers2::modifyHeaders(const bool action, const vector <string> headers, s
 	
 	if(!headers.empty() && !data.empty()){
 		
+		smatch match;
+		
 		for(auto it = headers.cbegin(); it != headers.cend(); ++it){
-			
-			smatch match;
 			
 			if(action){
 				
@@ -157,13 +164,17 @@ void Headers2::addParams(const map <bool, map <bool, unordered_map <string, Head
 											
 											copyListNodes(realRules->servers, rules->servers);
 											
-											copyListParams(realRules->groups, rules->groups);
+											realRules->groups = Anyks::concatVectors <gid_t> (realRules->groups, rules->groups);
 											
-											copyListParams(realRules->users, rules->users);
+											realRules->broups = Anyks::concatVectors <gid_t> (realRules->broups, rules->broups);
 											
-											copyListParams(realRules->paths, rules->paths);
+											realRules->users = Anyks::concatVectors <uid_t> (realRules->users, rules->users);
 											
-											copyListParams(realRules->headers, rules->headers);
+											realRules->bsers = Anyks::concatVectors <uid_t> (realRules->bsers, rules->bsers);
+											
+											realRules->paths = Anyks::concatVectors <string> (realRules->paths, rules->paths);
+											
+											realRules->headers = Anyks::concatVectors <string> (realRules->headers, rules->headers);
 										}
 									
 									} else realMethods->emplace(method, * rules);
@@ -180,268 +191,226 @@ void Headers2::addParams(const map <bool, map <bool, unordered_map <string, Head
 }
  
 void Headers2::createRulesList(const Headers2::Params params){
-	
-	auto dataGroups = this->ausers->getAllGroups();
-	
-	auto dataUsers = this->ausers->getAllUsers();
-	
-	if(!dataGroups.empty() && !dataUsers.empty()){
-		 
-		auto createNode = [](vector <string> list){
+	 
+	auto createNode = [](vector <string> list){
+		
+		vector <Node> nodes;
+		
+		for(auto it = list.cbegin(); it != list.cend(); ++it){
 			
-			vector <Node> nodes;
+			string str = * it;
 			
-			for(auto it = list.cbegin(); it != list.cend(); ++it){
+			Node node;
+			
+			if(str.compare("*") != 0){
 				
-				string str = * it;
+				node.type = Anyks::getTypeAmingByString(str);
 				
-				Node node;
-				
-				if(str.compare("*") != 0){
-					
-					node.type = Anyks::getTypeAmingByString(str);
-					
-					if(node.type != AMING_NULL){
-						
-						node.data = str;
-						
-						nodes.push_back(node);
-					}
-				
-				} else {
-					
-					node.type = AMING_NULL;
+				if(node.type != AMING_NULL){
 					
 					node.data = str;
 					
 					nodes.push_back(node);
 				}
-			}
-			
-			return nodes;
-		};
-		
-		vector <gid_t> groups;
-		
-		vector <uid_t> users;
-		
-		for(auto it = params.groups.cbegin(); it != params.groups.cend(); ++it){
-			
-			string group = * it;
-			
-			if(group.compare("*") != 0){
-				
-				auto check = isNot(group);
-				
-				if(!check.inv){
-					
-					gid_t gid = -1;
-					
-					if(Anyks::isNumber(check.str)) gid = ::atoi(check.str.c_str());
-					
-					else gid = this->ausers->getGidByName(check.str);
-					
-					if(this->ausers->checkGroupById(gid)) groups.push_back(gid);
-				
-				} else {
-					
-					const bool numberFlag = Anyks::isNumber(check.str);
-					
-					for(auto it = dataGroups.cbegin(); it != dataGroups.cend(); ++it){
-						
-						if((numberFlag && ((* it)->id != gid_t(::atoi(check.str.c_str()))))
-						|| (!numberFlag && (this->ausers->getGroupNameByGid((* it)->id).compare(check.str) != 0))) groups.push_back((* it)->id);
-					}
-					
-					break;
-				}
 			
 			} else {
 				
-				for(auto it = dataGroups.cbegin(); it != dataGroups.cend(); ++it){
-					
-					groups.push_back((* it)->id);
-				}
+				node.type = AMING_NULL;
 				
-				break;
+				node.data = str;
+				
+				nodes.push_back(node);
 			}
 		}
 		
-		for(auto it = params.users.cbegin(); it != params.users.cend(); ++it){
+		return nodes;
+	};
+	
+	vector <uid_t> users, bsers;
+	
+	vector <gid_t> groups, broups;
+	
+	for(auto it = params.groups.cbegin(); it != params.groups.cend(); ++it){
+		
+		string group = * it;
+		
+		if(group.compare("*") != 0){
 			
-			string user = * it;
+			gid_t gid = 0;
 			
-			if(user.compare("*") != 0){
-				
-				auto check = isNot(user);
-				
-				if(!check.inv){
-					
-					uid_t uid = -1;
-					
-					if(Anyks::isNumber(check.str)) uid = ::atoi(check.str.c_str());
-					
-					else uid = this->ausers->getUidByName(check.str);
-					
-					if(this->ausers->checkUserById(uid)) users.push_back(uid);
-				
-				} else {
-					
-					const bool numberFlag = Anyks::isNumber(check.str);
-					
-					for(auto it = dataUsers.cbegin(); it != dataUsers.cend(); ++it){
-						
-						if((numberFlag && ((* it)->id != uid_t(::atoi(check.str.c_str()))))
-						|| (!numberFlag && (this->ausers->getUserNameByUid((* it)->id).compare(check.str) != 0))) users.push_back((* it)->id);
-					}
-					
-					break;
-				}
+			auto check = isNot(group);
 			
-			} else {
+			if(Anyks::isNumber(check.str)) gid = ::atoi(check.str.c_str());
+			
+			else gid = this->ausers->getGidByName(check.str);
+			
+			if(this->ausers->checkGroupById(gid)){
 				
-				for(auto it = dataUsers.cbegin(); it != dataUsers.cend(); ++it){
-					
-					users.push_back((* it)->id);
-				}
+				if(!check.inv) groups.push_back(gid);
 				
-				break;
+				else broups.push_back(gid);
 			}
-		}
 		
-		const Rules rules = {
-			
-			params.query,
-			
-			params.userAgent,
-			
-			users, groups,
-			
-			createNode(params.clients),
-			
-			createNode(params.servers),
-			
-			params.paths,
-			
-			params.headers
-		};
+		} else break;
+	}
+	
+	for(auto it = params.users.cbegin(); it != params.users.cend(); ++it){
 		
-		unordered_map <string, Rules> methods = {
-			{"get", {}},
-			{"put", {}},
-			{"head", {}},
-			{"post", {}},
-			{"patch", {}},
-			{"trace", {}},
-			{"delete", {}},
-			{"connect", {}},
-			{"options", {}}
-		};
+		string user = * it;
 		
-		map <bool, unordered_map <string, Rules>> traffics = {{true, {}}, {false, {}}};
-		
-		map <bool, map <bool, unordered_map <string, Rules>>> actions = {{true, {}}, {false, {}}};
-		
-		for(auto it = params.methods.cbegin(); it != params.methods.cend(); ++it){
+		if(user.compare("*") != 0){
 			
-			string method = * it;
+			uid_t uid = 0;
 			
-			method = Anyks::toCase(method);
+			auto check = isNot(user);
 			
-			if(method.compare("*") != 0){
+			if(Anyks::isNumber(check.str)) uid = ::atoi(check.str.c_str());
+			
+			else uid = this->ausers->getUidByName(check.str);
+			
+			if(this->ausers->checkUserById(uid)){
 				
-				auto check = isNot(method);
+				if(!check.inv) users.push_back(uid);
 				
-				if(!check.inv) methods.at(check.str) = rules;
-				
-				else {
-					
-					for(auto mt = methods.cbegin(); mt != methods.cend(); ++mt){
-						
-						if(mt->first.compare(check.str) != 0) methods.at(mt->first) = rules;
-					}
-					
-					break;
-				}
+				else bsers.push_back(uid);
+			}
+		
+		} else break;
+	}
+	
+	const Rules rules = {
+		
+		params.query,
+		
+		params.userAgent,
+		
+		users, bsers,
+		
+		groups, broups,
+		
+		createNode(params.clients),
+		
+		createNode(params.servers),
+		
+		params.paths,
+		
+		params.headers
+	};
+	
+	unordered_map <string, Rules> methods = {
+		{"get", {}},
+		{"put", {}},
+		{"head", {}},
+		{"post", {}},
+		{"patch", {}},
+		{"trace", {}},
+		{"delete", {}},
+		{"connect", {}},
+		{"options", {}}
+	};
+	
+	map <bool, unordered_map <string, Rules>> traffics = {{true, {}}, {false, {}}};
+	
+	map <bool, map <bool, unordered_map <string, Rules>>> actions = {{true, {}}, {false, {}}};
+	
+	for(auto it = params.methods.cbegin(); it != params.methods.cend(); ++it){
+		
+		string method = * it;
+		
+		method = Anyks::toCase(method);
+		
+		if(method.compare("*") != 0){
 			
-			} else {
+			auto check = isNot(method);
+			
+			if(!check.inv) methods.at(check.str) = rules;
+			
+			else {
 				
 				for(auto mt = methods.cbegin(); mt != methods.cend(); ++mt){
 					
-					methods.at(mt->first) = rules;
+					if(mt->first.compare(check.str) != 0) methods.at(mt->first) = rules;
 				}
 				
 				break;
 			}
-		}
 		
-		for(auto it = params.traffic.cbegin(); it != params.traffic.cend(); ++it){
+		} else {
 			
-			string traffic = * it;
-			
-			traffic = Anyks::toCase(traffic);
-			
-			if(traffic.compare("*") != 0){
+			for(auto mt = methods.cbegin(); mt != methods.cend(); ++mt){
 				
-				auto check = isNot(traffic);
-				
-				if(!check.inv){
-					
-					if(check.str.compare("in") == 0) traffics.at(true) = methods;
-					
-					if(check.str.compare("out") == 0) traffics.at(false) = methods;
-				
-				} else {
-					
-					if(check.str.compare("in") == 0) traffics.at(false) = methods;
-					
-					if(check.str.compare("out") == 0) traffics.at(true) = methods;
-				}
-			
-			} else {
-				
-				traffics.at(true)	= methods;
-				traffics.at(false)	= methods;
-				
-				break;
+				methods.at(mt->first) = rules;
 			}
+			
+			break;
 		}
-		
-		for(auto it = params.actions.cbegin(); it != params.actions.cend(); ++it){
-			
-			string action = * it;
-			
-			action = Anyks::toCase(action);
-			
-			if(action.compare("*") != 0){
-				
-				auto check = isNot(action);
-				
-				if(!check.inv){
-					
-					if(check.str.compare("add") == 0) actions.at(true) = traffics;
-					
-					if(check.str.compare("rm") == 0) actions.at(false) = traffics;
-				
-				} else {
-					
-					if(check.str.compare("add") == 0) actions.at(false) = traffics;
-					
-					if(check.str.compare("rm") == 0) actions.at(true) = traffics;
-				}
-			
-			} else {
-				
-				actions.at(true)	= traffics;
-				actions.at(false)	= traffics;
-				
-				break;
-			}
-		}
-		
-		addParams(&actions);
+	}
 	
-	} else if(this->log) this->log->write(LOG_ERROR, 0, "groups not found for headers rules");
+	for(auto it = params.traffic.cbegin(); it != params.traffic.cend(); ++it){
+		
+		string traffic = * it;
+		
+		traffic = Anyks::toCase(traffic);
+		
+		if(traffic.compare("*") != 0){
+			
+			auto check = isNot(traffic);
+			
+			if(!check.inv){
+				
+				if(check.str.compare("in") == 0) traffics.at(true) = methods;
+				
+				if(check.str.compare("out") == 0) traffics.at(false) = methods;
+			
+			} else {
+				
+				if(check.str.compare("in") == 0) traffics.at(false) = methods;
+				
+				if(check.str.compare("out") == 0) traffics.at(true) = methods;
+			}
+		
+		} else {
+			
+			traffics.at(true)	= methods;
+			traffics.at(false)	= methods;
+			
+			break;
+		}
+	}
+	
+	for(auto it = params.actions.cbegin(); it != params.actions.cend(); ++it){
+		
+		string action = * it;
+		
+		action = Anyks::toCase(action);
+		
+		if(action.compare("*") != 0){
+			
+			auto check = isNot(action);
+			
+			if(!check.inv){
+				
+				if(check.str.compare("add") == 0) actions.at(true) = traffics;
+				
+				if(check.str.compare("rm") == 0) actions.at(false) = traffics;
+			
+			} else {
+				
+				if(check.str.compare("add") == 0) actions.at(false) = traffics;
+				
+				if(check.str.compare("rm") == 0) actions.at(true) = traffics;
+			}
+		
+		} else {
+			
+			actions.at(true)	= traffics;
+			actions.at(false)	= traffics;
+			
+			break;
+		}
+	}
+	
+	addParams(&actions);
 }
  
 void Headers2::readFromLDAP(){
@@ -452,7 +421,7 @@ void Headers2::readFromLDAP(){
 		
 		ALDAP ldap(this->config, this->log);
 		
-		const string dn = (string("ah=") + name + string(",") + this->ldap.dn);
+		const string dn = Anyks::strFormat("ah=%s,%s", name.c_str(), this->config->ldap.dn.headers.c_str());
 		
 		const string lParams =	"amingHeadersUser,amingHeadersGroup,amingHeadersAgent,"
 								"amingHeadersAction,amingHeadersTraffic,amingHeadersMethod,"
@@ -464,7 +433,7 @@ void Headers2::readFromLDAP(){
 								"amingHeadersServerIp4,amingHeadersServerIp6,"
 								"amingHeadersServerNetwork4,amingHeadersServerNetwork6";
 		
-		auto data = ldap.data(dn, lParams, this->ldap.scope, this->ldap.filter);
+		auto data = ldap.data(dn, lParams, this->config->ldap.scope.headers, this->config->ldap.filter.headers);
 		
 		if(!data.empty()){
 			
@@ -962,9 +931,9 @@ const vector <string> Headers2::findHeaders(Headers2::Client * request, const st
 		
 		const bool userAgentFound = checkRegexp(request->agent, rules->userAgent);
 		
-		const bool groupFound = checkGroups(&request->groups, &rules->groups);
+		const bool groupFound = (checkGroups(&request->groups, &rules->groups) && (!rules->broups.empty() ? !checkGroups(&request->groups, &rules->broups) : true));
 		
-		const bool userFound = checkUsers(request->user, &rules->users);
+		const bool userFound = (checkUsers(request->user, &rules->users) && (!rules->bsers.empty() ? !checkUsers(request->user, &rules->bsers) : true));
 		
 		const bool clientFound = (checkCIP || checkCMac);
 		
@@ -1019,9 +988,9 @@ void Headers2::add(const bool action, const bool traffic, const string method, v
 	
 	if(ctx != nullptr){
 		
-		Rules * rules = reinterpret_cast <Rules *> (ctx);
-		
 		bool exist = false;
+		
+		Rules * rules = reinterpret_cast <Rules *> (ctx);
 		
 		if(this->rules.count(action) > 0) exist = true;
 		
@@ -1095,19 +1064,19 @@ void Headers2::read(){
 	
 	time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->maxUpdate) < curUpdate){
+	if((this->lastUpdate + this->config->auth.update) < curUpdate){
 		
 		this->lastUpdate = curUpdate;
 		
 		this->rules.clear();
 		
-		switch(this->typeSearch){
+		switch(this->config->auth.services){
 			
-			case 0: readFromFile(); break;
+			case AUSERS_TYPE_FILE: readFromFile(); break;
 			
-			case 1: readFromLDAP(); break;
+			case AUSERS_TYPE_LDAP: readFromLDAP(); break;
 			
-			case 2: {
+			case AUSERS_TYPE_FILE_LDAP: {
 				readFromFile();
 				readFromLDAP();
 			} break;
@@ -1128,7 +1097,7 @@ void Headers2::addName(const string name){
  
 void Headers2::setOptions(const u_short options){
 	
-	if(options != 0x00) this->options = options;
+	if(options != AMING_NULL) this->options = options;
 }
  
 void Headers2::modify(AParams::Client client, HttpData &http){
@@ -1155,8 +1124,8 @@ void Headers2::modify(AParams::Client client, HttpData &http){
 		
 		const bool actionRm = false;
 		
-		Client requestAdd	= {actionAdd, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
-		Client requestRm	= {actionRm, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+		Client requestAdd	= {actionAdd, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+		Client requestRm	= {actionRm, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
 		 
 		auto modifyHeadersForUser = [&requestAdd, &requestRm, &actionAdd, &actionRm, this](const AParams::AUser * client, HttpData &http){
 			
@@ -1225,8 +1194,8 @@ void Headers2::modify(AParams::Client client, string &data){
 			
 			const bool actionRm = false;
 			
-			Client requestAdd	= {actionAdd, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
-			Client requestRm	= {actionRm, traffic, static_cast <uid_t> (-1), {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+			Client requestAdd	= {actionAdd, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+			Client requestRm	= {actionRm, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
 			 
 			auto modifyHeadersForUser = [&requestAdd, &requestRm, &actionAdd, &actionRm, &data, this](const AParams::AUser * client, HttpData &http){
 				
@@ -1278,21 +1247,11 @@ Headers2::Headers2(Config * config, LogApp * log, AUsers * ausers){
 		
 		this->config = config;
 		
-		this->options = this->config->options;
-		
 		this->ausers = ausers;
 		
-		this->typeSearch = 0;
+		this->options = this->config->options;
 		
-		this->maxUpdate = 600;
-		
-		this->ldap = {
-			"ou=headers,ou=aming,dc=agro24,dc=dev",
-			"one",
-			"(objectClass=amingHeaders)"
-		};
-		
-		if(this->typeSearch == 0) this->names.push_front(this->config->proxy.name);
+		this->names.push_front(this->config->proxy.name);
 		
 		read();
 	}

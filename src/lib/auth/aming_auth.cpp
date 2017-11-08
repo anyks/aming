@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -41,11 +41,11 @@ const bool AUsers::Auth::checkLdap(const uid_t uid, const string password){
 	
 	if((uid > 0) && !password.empty() && (this->users != nullptr)){
 		
-		const string login = (reinterpret_cast <Users *> (this->users))->getNameById(uid);
+		const string login = (reinterpret_cast <Users *> (this->users))->getNameById(uid, AUSERS_TYPE_LDAP);
 		
 		if(!login.empty()){
 			
-			const string dn = (this->ldap.keyUser + string("=") + Anyks::toCase(login) + string(",") + this->ldap.dnUser);
+			const string dn = Anyks::strFormat("%s=%s,%s", this->ldap.keyUser.c_str(), Anyks::toCase(login).c_str(), this->ldap.dnUser.c_str());
 			
 			ALDAP ldap(this->config, this->log);
 			
@@ -57,17 +57,17 @@ const bool AUsers::Auth::checkLdap(const uid_t uid, const string password){
 				
 				if(groups != nullptr){
 					
-					auto gids = groups->getGroupIdByUser(uid);
+					auto gids = groups->getGroupIdByUser(uid, AUSERS_TYPE_LDAP);
 					
 					if(!gids.empty()){
 						
 						for(auto gid = gids.cbegin(); gid != gids.cend(); ++gid){
 							
-							auto * group = groups->getDataById(* gid);
+							auto group = groups->getDataById(* gid, AUSERS_TYPE_LDAP);
 							
-							if(group != nullptr){
+							if(!group.name.empty()){
 								
-								const string dn = (this->ldap.keyGroup + string("=") + Anyks::toCase(group->name) + string(",") + this->ldap.dnGroup);
+								const string dn = Anyks::strFormat("%s=%s,%s", this->ldap.keyGroup.c_str(), Anyks::toCase(group.name).c_str(), this->ldap.dnGroup.c_str());
 								
 								result = ldap.checkAuth(dn, password, this->ldap.scopeGroup, this->ldap.filterGroup);
 								
@@ -89,7 +89,7 @@ const bool AUsers::Auth::checkPam(const uid_t uid, const string password){
 	
 	if((uid > 0) && !password.empty()){
 		
-		const string name = (reinterpret_cast <Users *> (this->users))->getNameById(uid);
+		const string name = (reinterpret_cast <Users *> (this->users))->getNameById(uid, AUSERS_TYPE_PAM);
 		
 		if(!name.empty()){
 			
@@ -118,9 +118,9 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 	
 	if((uid > 0) && !password.empty()){
 		
-		auto * user = (reinterpret_cast <Users *> (this->users))->getDataById(uid);
+		auto user = (reinterpret_cast <Users *> (this->users))->getDataById(uid, AUSERS_TYPE_FILE);
 		
-		if(user != nullptr){
+		if(user.uid > 0){
 			 
 			auto checkPassword = [](const string password1, const string password2){
 				
@@ -153,7 +153,7 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 				return result;
 			};
 			
-			result = checkPassword(user->pass, user->name + password);
+			result = checkPassword(user.pass, user.name + password);
 			
 			if(!result && (this->groups != nullptr)){
 				
@@ -161,17 +161,17 @@ const bool AUsers::Auth::checkFile(const uid_t uid, const string password){
 				
 				if(groups != nullptr){
 					
-					auto gids = groups->getGroupIdByUser(user->id);
+					auto gids = groups->getGroupIdByUser(user.uid, AUSERS_TYPE_FILE);
 					
 					if(!gids.empty()){
 						
 						for(auto gid = gids.cbegin(); gid != gids.cend(); ++gid){
 							
-							auto * group = groups->getDataById(* gid);
+							auto group = groups->getDataById(* gid, AUSERS_TYPE_FILE);
 							
-							if(group != nullptr){
+							if(!group.name.empty()){
 								
-								result = checkPassword(group->pass, group->name + password);
+								result = checkPassword(group.pass, group.name + password);
 								
 								if(result) break;
 							}
@@ -191,17 +191,17 @@ const bool AUsers::Auth::check(const string username, const string password){
 	
 	if(!username.empty() && !password.empty() && (this->users != nullptr) && this->config->auth.enabled){
 		
-		auto * user = (reinterpret_cast <Users *> (this->users))->getDataByName(username);
+		auto user = (reinterpret_cast <Users *> (this->users))->getDataByName(username);
 		
-		if(user != nullptr){
+		if(user.uid > 0){
 			
-			switch(user->type){
+			switch(user.type){
 				
-				case 0: result = checkFile(user->id, password);	break;
+				case 0: result = checkFile(user.uid, password);	break;
 				
-				case 1: result = checkPam(user->id, password);	break;
+				case 1: result = checkPam(user.uid, password);	break;
 				
-				case 2: result = checkLdap(user->id, password);	break;
+				case 2: result = checkLdap(user.uid, password);	break;
 			}
 		}
 	

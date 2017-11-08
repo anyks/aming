@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,857 +16,126 @@
 using namespace std;
 
  
-void AUsers::Groups::setProxyOptions(const u_short option, u_short &proxyOptions, const bool flag){
+template <typename T>
+const vector <T> Anyks::concatVectors(const vector <T> &v1, const vector <T> &v2){
 	
-	u_short options = proxyOptions;
+	vector <T> result;
 	
-	if(flag) options = options | option;
-	
-	else {
+	if(!v1.empty() && !v2.empty()){
 		
-		options = options ^ option;
+		result.assign(v1.cbegin(), v1.cend());
 		
-		if(options > proxyOptions) options = proxyOptions;
-	}
-	
-	proxyOptions = options;
-}
- 
-void AUsers::Groups::setDataGroupFromLdap(AUsers::DataGroup &group){
-	
-	const char * key = "%g";
-	
-	size_t pos = this->ldap.filterConfig.find(key);
-	
-	if(pos != string::npos){
-		
-		ALDAP ldap(this->config, this->log);
-		
-		string filter = this->ldap.filterConfig;
-		
-		filter = filter.replace(pos, strlen(key), to_string(group.id));
-		
-		const string dn = (string("ac=") + this->config->proxy.name + string(",") + this->ldap.dnConfig);
-		
-		const string params =	"amingConfigsConnectsConnect,amingConfigsConnectsSize,amingConfigsGzipChunk,"
-								"amingConfigsGzipLength,amingConfigsGzipLevel,amingConfigsGzipProxied,"
-								"amingConfigsGzipRegex,amingConfigsGzipResponse,amingConfigsGzipTransfer,"
-								"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,amingConfigsAuth,"
-								"amingConfigsIdnt,amingConfigsIpExternal4,amingConfigsIpExternal6,"
-								"amingConfigsIpResolver4,amingConfigsIpResolver6,amingConfigsKeepAliveCnt,"
-								"amingConfigsKeepAliveEnabled,amingConfigsKeepAliveIdle,amingConfigsKeepAliveIntvl,"
-								"amingConfigsProxyAgent,amingConfigsProxyConnect,amingConfigsProxyDeblock,"
-								"amingConfigsProxyForward,amingConfigsProxyPipelining,amingConfigsProxyReverse,"
-								"amingConfigsProxySkill,amingConfigsProxySubnet,amingConfigsProxyTransfer,"
-								"amingConfigsProxyUpgrade,amingConfigsSpeedInput,amingConfigsSpeedOutput,"
-								"amingConfigsTimeoutsRead,amingConfigsTimeoutsUpgrade,amingConfigsTimeoutsWrite";
-		
-		auto groups = ldap.data(dn, params, this->ldap.scopeConfig, filter);
-		
-		if(!groups.empty()){
-			 
-			auto getBoolean = [](const string value){
+		for(auto it = v2.cbegin(); it != v2.cend(); ++it){
+			
+			if(find(v1.begin(), v1.end(), * it) == v1.end()){
 				
-				bool check = false;
-				
-				string param = value;
-				
-				param = Anyks::toCase(param);
-				
-				if(param.compare("true") == 0) check = true;
-				
-				return check;
-			};
-			
-			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
-				
-				for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
-					
-					if(!dt->second.empty()){
-						
-						if(dt->first.compare("amingConfigsIdnt") == 0) group.idnt = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpExternal4") == 0) group.ipv4.ip = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpExternal6") == 0) group.ipv6.ip = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpResolver4") == 0) group.ipv4.resolver = dt->second;
-						
-						else if(dt->first.compare("amingConfigsIpResolver6") == 0) group.ipv6.resolver = dt->second;
-						
-						else if(dt->first.compare("amingConfigsAuth") == 0) group.auth = Anyks::toCase(dt->second[0]);
-						
-						else if(dt->first.compare("amingConfigsProxyConnect") == 0){
-							
-							setProxyOptions(OPT_CONNECT, group.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxyUpgrade") == 0){
-							
-							setProxyOptions(OPT_UPGRADE, group.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxyAgent") == 0){
-							
-							setProxyOptions(OPT_AGENT, group.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxyDeblock") == 0){
-							
-							setProxyOptions(OPT_DEBLOCK, group.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsGzipTransfer") == 0){
-							
-							setProxyOptions(OPT_GZIP, group.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsGzipResponse") == 0){
-							
-							setProxyOptions(OPT_PGZIP, group.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveEnabled") == 0){
-							
-							setProxyOptions(OPT_KEEPALIVE, group.options, getBoolean(dt->second[0]));
-						
-						} else if(dt->first.compare("amingConfigsProxySkill") == 0){
-							
-							const bool check = (dt->second[0].compare("smart") == 0);
-							
-							setProxyOptions(OPT_SMART, group.options, check);
-						
-						} else if(dt->first.compare("amingConfigsTimeoutsRead") == 0){
-							
-							group.timeouts.read = (size_t) Anyks::getSeconds(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsTimeoutsWrite") == 0){
-							
-							group.timeouts.write = (size_t) Anyks::getSeconds(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsTimeoutsUpgrade") == 0){
-							
-							group.timeouts.upgrade = (size_t) Anyks::getSeconds(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsSpeedInput") == 0){
-							
-							group.buffers.read = Anyks::getSizeBuffer(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsSpeedOutput") == 0){
-							
-							group.buffers.write = Anyks::getSizeBuffer(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveCnt") == 0){
-							
-							group.keepalive.keepcnt = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveIdle") == 0){
-							
-							group.keepalive.keepidle = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsKeepAliveIntvl") == 0){
-							
-							group.keepalive.keepintvl = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsConnectsSize") == 0){
-							
-							group.connects.size = Anyks::getBytes(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsConnectsConnect") == 0){
-							
-							group.connects.connect = (u_int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsProxySubnet") == 0){
-							
-							group.proxy.subnet = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyReverse") == 0){
-							
-							group.proxy.reverse = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyForward") == 0){
-							
-							group.proxy.forward = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyTransfer") == 0){
-							
-							group.proxy.transfer = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsProxyPipelining") == 0){
-							
-							group.proxy.pipelining = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsGzipRegex") == 0){
-							
-							group.gzip.regex = dt->second[0];
-						
-						} else if(dt->first.compare("amingConfigsGzipVary") == 0){
-							
-							group.gzip.vary = getBoolean(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsGzipLength") == 0){
-							
-							group.gzip.length = (int) ::atoi(dt->second[0].c_str());
-						
-						} else if(dt->first.compare("amingConfigsGzipChunk") == 0){
-							
-							group.gzip.chunk = Anyks::getBytes(dt->second[0]);
-						
-						} else if(dt->first.compare("amingConfigsGzipVhttp") == 0){
-							
-							group.gzip.vhttp = dt->second;
-						
-						} else if(dt->first.compare("amingConfigsGzipTypes") == 0){
-							
-							group.gzip.types = dt->second;
-						
-						} else if(dt->first.compare("amingConfigsGzipProxied") == 0){
-							
-							group.gzip.proxied = dt->second;
-						
-						} else if(dt->first.compare("amingConfigsGzipLevel") == 0){
-							
-							u_int level = OPT_NULL;
-							
-							const string gzipLevel = dt->second[0];
-							
-							if(!gzipLevel.empty()){
-								
-								if(gzipLevel.compare("default") == 0)		level = Z_DEFAULT_COMPRESSION;
-								else if(gzipLevel.compare("best") == 0)		level = Z_BEST_COMPRESSION;
-								else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
-								else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
-							}
-							if(level != OPT_NULL) group.gzip.level = level;
-						}
-					}
-				}
-			}
-		}
-	}
-}
- 
-void AUsers::Groups::setDataGroupFromFile(AUsers::DataGroup &group, INI * ini){
-	
-	bool rmINI = false;
-	
-	if(!ini){
-		
-		const string filename = Anyks::addToPath(this->config->proxy.dir, "groups.ini");
-		
-		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
-			
-			ini = new INI(filename);
-			
-			rmINI = true;
-		
-		} else return;
-	}
-	
-	group.idnt = Anyks::split(ini->getString("identificators", group.name), "|");
-	
-	if(ini->checkParam(group.name + "_proxy", "connect")){
-		
-		const bool check = ini->getBoolean(group.name + "_proxy", "connect");
-		
-		setProxyOptions(OPT_CONNECT, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "upgrade")){
-		
-		const bool check = ini->getBoolean(group.name + "_proxy", "upgrade");
-		
-		setProxyOptions(OPT_UPGRADE, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "agent")){
-		
-		const bool check = ini->getBoolean(group.name + "_proxy", "agent");
-		
-		setProxyOptions(OPT_AGENT, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "deblock")){
-		
-		const bool check = ini->getBoolean(group.name + "_proxy", "deblock");
-		
-		setProxyOptions(OPT_DEBLOCK, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "transfer")){
-		
-		const bool check = ini->getBoolean(group.name + "_gzip", "transfer");
-		
-		setProxyOptions(OPT_GZIP, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "response")){
-		
-		const bool check = ini->getBoolean(group.name + "_gzip", "response");
-		
-		setProxyOptions(OPT_PGZIP, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "skill")){
-		
-		const bool check = (ini->getString(group.name + "_proxy", "skill", "dumb").compare("smart") == 0);
-		
-		setProxyOptions(OPT_SMART, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_keepalive", "enabled")){
-		
-		const bool check = ini->getBoolean(group.name + "_keepalive", "enabled");
-		
-		setProxyOptions(OPT_KEEPALIVE, group.options, check);
-	}
-	
-	if(ini->checkParam(group.name + "_ipv4", "external")){
-		
-		group.ipv4.ip = Anyks::split(ini->getString(group.name + "_ipv4", "external"), "|");
-	}
-	
-	if(ini->checkParam(group.name + "_ipv6", "external")){
-		
-		group.ipv6.ip = Anyks::split(ini->getString(group.name + "_ipv6", "external"), "|");
-	}
-	
-	if(ini->checkParam(group.name + "_ipv4", "resolver")){
-		
-		group.ipv4.resolver = Anyks::split(ini->getString(group.name + "_ipv4", "resolver"), "|");
-	}
-	
-	if(ini->checkParam(group.name + "_ipv6", "resolver")){
-		
-		group.ipv6.resolver = Anyks::split(ini->getString(group.name + "_ipv6", "resolver"), "|");
-	}
-	
-	if(ini->checkParam(group.name + "_timeouts", "read")){
-		
-		group.timeouts.read = (size_t) Anyks::getSeconds(ini->getString(group.name + "_timeouts", "read"));
-	}
-	
-	if(ini->checkParam(group.name + "_timeouts", "write")){
-		
-		group.timeouts.write = (size_t) Anyks::getSeconds(ini->getString(group.name + "_timeouts", "write"));
-	}
-	
-	if(ini->checkParam(group.name + "_timeouts", "upgrade")){
-		
-		group.timeouts.upgrade = (size_t) Anyks::getSeconds(ini->getString(group.name + "_timeouts", "upgrade"));
-	}
-	
-	if(ini->checkParam(group.name + "_speed", "input")){
-		
-		group.buffers.read = Anyks::getSizeBuffer(ini->getString(group.name + "_speed", "input"));
-	}
-	
-	if(ini->checkParam(group.name + "_speed", "output")){
-		
-		group.buffers.write = Anyks::getSizeBuffer(ini->getString(group.name + "_speed", "output"));
-	}
-	
-	if(ini->checkParam(group.name + "_keepalive", "keepcnt")){
-		
-		group.keepalive.keepcnt = (int) ini->getNumber(group.name + "_keepalive", "keepcnt");
-	}
-	
-	if(ini->checkParam(group.name + "_keepalive", "keepidle")){
-		
-		group.keepalive.keepidle = (int) ini->getNumber(group.name + "_keepalive", "keepidle");
-	}
-	
-	if(ini->checkParam(group.name + "_keepalive", "keepintvl")){
-		
-		group.keepalive.keepintvl = (int) ini->getNumber(group.name + "_keepalive", "keepintvl");
-	}
-	
-	if(ini->checkParam(group.name + "_connects", "size")){
-		
-		group.connects.size = Anyks::getBytes(ini->getString(group.name + "_connects", "size"));
-	}
-	
-	if(ini->checkParam(group.name + "_connects", "connect")){
-		
-		group.connects.connect = (u_int) ini->getUNumber(group.name + "_connects", "connect");
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "subnet")){
-		
-		group.proxy.subnet = ini->getBoolean(group.name + "_proxy", "subnet");
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "reverse")){
-		
-		group.proxy.reverse = ini->getBoolean(group.name + "_proxy", "reverse");
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "forward")){
-		
-		group.proxy.forward = ini->getBoolean(group.name + "_proxy", "forward");
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "transfer")){
-		
-		group.proxy.transfer = ini->getBoolean(group.name + "_proxy", "transfer");
-	}
-	
-	if(ini->checkParam(group.name + "_proxy", "pipelining")){
-		
-		group.proxy.pipelining = ini->getBoolean(group.name + "_proxy", "pipelining");
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "regex")){
-		
-		group.gzip.regex = ini->getString(group.name + "_gzip", "regex");
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "vary")){
-		
-		group.gzip.vary = ini->getBoolean(group.name + "_gzip", "vary");
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "length")){
-		
-		group.gzip.length = ini->getNumber(group.name + "_gzip", "length");
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "chunk")){
-		
-		group.gzip.chunk = Anyks::getBytes(ini->getString(group.name + "_gzip", "chunk"));
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "vhttp")){
-		
-		group.gzip.vhttp = Anyks::split(ini->getString(group.name + "_gzip", "vhttp"), "|");
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "types")){
-		
-		group.gzip.types = Anyks::split(ini->getString(group.name + "_gzip", "types"), "|");
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "proxied")){
-		
-		group.gzip.proxied = Anyks::split(ini->getString(group.name + "_gzip", "proxied"), "|");
-	}
-	
-	if(ini->checkParam(group.name + "_gzip", "level")){
-		
-		u_int level = OPT_NULL;
-		
-		const string gzipLevel = ini->getString(group.name + "_gzip", "level");
-		
-		if(!gzipLevel.empty()){
-			
-			if(gzipLevel.compare("default") == 0)		level = Z_DEFAULT_COMPRESSION;
-			else if(gzipLevel.compare("best") == 0)		level = Z_BEST_COMPRESSION;
-			else if(gzipLevel.compare("speed") == 0)	level = Z_BEST_SPEED;
-			else if(gzipLevel.compare("no") == 0)		level = Z_NO_COMPRESSION;
-		}
-		if(level != OPT_NULL) group.gzip.level = level;
-	}
-	
-	if(rmINI) delete ini;
-}
- 
-void AUsers::Groups::setDataGroup(AUsers::DataGroup &group, INI * ini){
-	
-	switch(this->typeConfigs){
-		
-		case 0: setDataGroupFromFile(group, ini); break;
-		
-		case 1: setDataGroupFromLdap(group); break;
-	}
-}
- 
-const AUsers::DataGroup AUsers::Groups::createDefaultData(const gid_t id, const string name){
-	
-	DataGroup group;
-	
-	if(id && !name.empty()){
-		
-		string groupName = name;
-		
-		group.id		= id;
-		group.name		= Anyks::toCase(groupName);
-		group.auth		= this->config->auth.auth;
-		group.options	= this->config->options;
-		group.ipv4		= {this->config->ipv4.external, this->config->ipv4.resolver};
-		group.ipv6		= {this->config->ipv6.external, this->config->ipv6.resolver};
-		
-		group.gzip = {
-			this->config->gzip.vary,
-			this->config->gzip.level,
-			this->config->gzip.length,
-			this->config->gzip.chunk,
-			this->config->gzip.regex,
-			this->config->gzip.vhttp,
-			this->config->gzip.proxied,
-			this->config->gzip.types
-		};
-		
-		group.proxy = {
-			this->config->proxy.reverse,
-			this->config->proxy.transfer,
-			this->config->proxy.forward,
-			this->config->proxy.subnet,
-			this->config->proxy.pipelining
-		};
-		
-		group.connects = {
-			this->config->connects.size,
-			this->config->connects.connect
-		};
-		
-		group.timeouts = {
-			this->config->timeouts.read,
-			this->config->timeouts.write,
-			this->config->timeouts.upgrade
-		};
-		
-		group.buffers = {
-			this->config->buffers.read,
-			this->config->buffers.write
-		};
-		
-		group.keepalive = {
-			this->config->keepalive.keepcnt,
-			this->config->keepalive.keepidle,
-			this->config->keepalive.keepintvl
-		};
-	}
-	
-	return group;
-}
- 
-const bool AUsers::Groups::readGroupsFromLdap(){
-	
-	bool result = false;
-	
-	ALDAP ldap(this->config, this->log);
-	
-	auto users = ldap.data(this->ldap.dnUser, "gidNumber,uidNumber", this->ldap.scopeUser, this->ldap.filterUser);
-	
-	auto groups = ldap.data(this->ldap.dnGroup, "cn,description,gidNumber,Password,memberUid", this->ldap.scopeGroup, this->ldap.filterGroup);
-	
-	if(!groups.empty()){
-		
-		for(auto it = groups.cbegin(); it != groups.cend(); ++it){
-			
-			gid_t gid;
-			
-			string name;
-			
-			string description;
-			
-			string password;
-			
-			vector <uid_t> users;
-			
-			for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
-				
-				if(!dt->second.empty()){
-					
-					if(dt->first.compare("cn") == 0) name = dt->second[0];
-					
-					else if(dt->first.compare("gidNumber") == 0) gid = ::atoi(dt->second[0].c_str());
-					
-					else if(dt->first.compare("description") == 0) description = dt->second[0];
-					
-					else if(dt->first.compare("Password") == 0) password = dt->second[0];
-					
-					else if(dt->first.compare("memberUid") == 0){
-						
-						for(auto ut = dt->second.cbegin(); ut != dt->second.cend(); ++ut){
-							
-							uid_t uid = getUidByUserName(* ut);
-							
-							if(uid > -1) users.push_back(uid);
-						}
-					}
-				}
-			}
-			
-			DataGroup group = createDefaultData(gid, name);
-			
-			group.type = 2;
-			
-			group.users = users;
-			
-			group.pass = password;
-			
-			group.desc = description;
-			
-			setDataGroup(group);
-			
-			this->data.insert(pair <gid_t, DataGroup>(group.id, group));
-		}
-		
-		if(!users.empty()){
-			
-			for(auto it = users.cbegin(); it != users.cend(); ++it){
-				
-				gid_t gid;
-				
-				uid_t uid;
-				
-				for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
-					
-					if(!dt->second.empty()){
-						
-						if(dt->first.compare("gidNumber") == 0){
-							
-							gid = ::atoi(dt->second[0].c_str());
-						} else if(dt->first.compare("uidNumber") == 0) {
-							
-							uid = ::atoi(dt->second[0].c_str());
-						}
-					}
-				}
-				
-				if(this->data.count(gid)){
-					
-					bool userExist = false;
-					
-					vector <uid_t> * users = &this->data.find(gid)->second.users;
-					
-					for(auto it = users->cbegin(); it != users->cend(); ++it){
-						
-						if(uid == *it){
-							
-							userExist = true;
-							
-							break;
-						}
-					}
-					
-					if(!userExist) users->push_back(uid);
-				}
-			}
-		}
-		
-		result = true;
-	}
-	
-	return result;
-}
- 
-const bool AUsers::Groups::readGroupsFromPam(){
-	
-	bool result = false;
-	
-	struct passwd * pw = nullptr;
-	
-	smatch match;
-	
-	regex e("\\/(?:sh|bash)$", regex::ECMAScript | regex::icase);
-	
-	while((pw = getpwent()) != nullptr){
-		
-		if(pw->pw_uid > 0){
-			
-			string shell = pw->pw_shell;
-			
-			regex_search(shell, match, e);
-			
-			if(!match.empty()){
-				
-				int maxGroupsUser = this->maxPamGroupsUser;
-				
-				int * userGroups = new int[(const int) maxGroupsUser];
-				
-				struct group * gr = nullptr;
-				
-				if(getgrouplist(pw->pw_name, pw->pw_gid, userGroups, &maxGroupsUser) == -1){
-					
-					this->log->write(LOG_ERROR, 0, "groups from user = %s [%s] not found", pw->pw_name, pw->pw_gecos);
-				
-				} else {
-					
-					for(int i = 0; i < maxGroupsUser; i++){
-						
-						gr = getgrgid(userGroups[i]);
-						
-						if(gr != nullptr){
-							
-							if(this->data.count(gr->gr_gid)){
-								
-								bool userExist = false;
-								
-								vector <uid_t> * users = &this->data.find(gr->gr_gid)->second.users;
-								
-								for(auto it = users->cbegin(); it != users->cend(); ++it){
-									
-									if(pw->pw_uid == *it){
-										
-										userExist = true;
-										
-										break;
-									}
-								}
-								
-								if(!userExist) users->push_back(pw->pw_uid);
-							
-							} else {
-								
-								DataGroup group = createDefaultData(gr->gr_gid, gr->gr_name);
-								
-								group.type = 1;
-								
-								group.pass = gr->gr_passwd;
-								
-								group.users.push_back(pw->pw_uid);
-								
-								setDataGroup(group);
-								
-								this->data.insert(pair <gid_t, DataGroup>(group.id, group));
-							}
-						
-						} else this->log->write(LOG_ERROR, 0, "group [%i] from user = %s [%s] not found", userGroups[i], pw->pw_name, pw->pw_gecos);
-					}
-					
-					result = true;
-				}
-				
-				delete [] userGroups;
+				result.push_back(* it);
 			}
 		}
 	}
 	
 	return result;
+};
+ 
+void AUsers::Groups::setGroupParams(const gid_t gid, const string name, const u_short type){
+	 
+	auto setParams = [this](const gid_t gid, AParams::Params params, const u_short type){
+		
+		auto key = make_pair(gid, type);
+		
+		this->params.insert(pair <pair <gid_t, u_short>, AParams::Params> (key, params));
+	};
+	
+	switch(this->config->proxy.configs){
+		
+		case AUSERS_TYPE_FILE: setParams(gid, this->gfiles->setParams(gid, name), type); break;
+		
+		case AUSERS_TYPE_LDAP: setParams(gid, this->gldap->setParams(gid, name), type); break;
+		
+		case AUSERS_TYPE_FILE_LDAP: {
+			
+			setParams(gid, this->gfiles->setParams(gid, name), type);
+			
+			setParams(gid, this->gldap->setParams(gid, name), type);
+		} break;
+	}
 }
  
-const bool AUsers::Groups::readGroupsFromFile(){
+const uid_t AUsers::Groups::getUidByUserName(const string userName, const u_short type){
 	
-	bool result = false;
+	uid_t result = 0;
 	
-	const string filename = Anyks::addToPath(this->config->proxy.dir, "groups.ini");
-	
-	if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
+	if(!userName.empty() && (this->users != nullptr)){
 		
-		INI ini(filename);
-		
-		if(!ini.isError()){
-			
-			string filepass;
-			
-			auto users = ini.getParamsInSection("users");
-			
-			auto groups = ini.getParamsInSection("groups");
-			
-			auto passwords = ini.getParamsInSection("passwords");
-			
-			auto descriptions = ini.getParamsInSection("descriptions");
-			
-			if(!groups.empty()){
-				
-				for(auto it = groups.cbegin(); it != groups.cend(); ++it){
-					
-					if(Anyks::isNumber(it->key) || Anyks::isNumber(it->value)){
-						
-						const gid_t gid = (Anyks::isNumber(it->key) ? ::atoi(it->key.c_str()) : ::atoi(it->value.c_str()));
-						
-						const string name = (Anyks::isNumber(it->key) ? it->value : it->key);
-						
-						DataGroup group = createDefaultData(gid, name);
-						
-						group.type = 0;
-						
-						if(!users.empty()){
-							
-							for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
-								
-								if((Anyks::isNumber(ut->value)
-								&& (gid_t(::atoi(ut->value.c_str())) == group.id))
-								|| (Anyks::toCase(ut->value).compare(group.name) == 0)){
-									
-									uid_t uid = -1;
-									
-									if(Anyks::isNumber(ut->key)) uid = ::atoi(ut->key.c_str());
-									
-									else uid = getUidByUserName(ut->key);
-									
-									if(uid > -1) group.users.push_back(uid);
-								}
-							}
-						}
-						
-						if(!passwords.empty()){
-							
-							for(auto gp = passwords.cbegin(); gp != passwords.cend(); ++gp){
-								
-								const string key = Anyks::toCase(gp->key);
-								
-								if(key.compare("all") != 0){
-									
-									if((Anyks::isNumber(key)
-									&& (gid_t(::atoi(key.c_str())) == group.id))
-									|| (key.compare(group.name) == 0)) group.pass = getPasswordFromFile(gp->value, this->log, group.id, group.name);
-								
-								} else if(filepass.empty()) filepass = gp->value;
-							}
-						}
-						
-						if(!descriptions.empty()){
-							
-							for(auto gd = descriptions.cbegin(); gd != descriptions.cend(); ++gd){
-								
-								if((Anyks::isNumber(gd->key)
-								&& (gid_t(::atoi(gd->key.c_str())) == group.id))
-								|| (Anyks::toCase(gd->key).compare(group.name) == 0)) group.desc = gd->value;
-							}
-						}
-						
-						setDataGroup(group, &ini);
-						
-						this->data.insert(pair <gid_t, DataGroup>(group.id, group));
-						
-						result = true;
-					}
-				}
-				
-				if(!filepass.empty()) getPasswordsFromFile(filepass, this->log, this, AMING_GROUP);
-			}
-		}
+		result = (reinterpret_cast <Users *> (this->users))->getIdByName(userName, type);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Groups::update(){
+const string AUsers::Groups::getUserNameByUid(const uid_t uid, const u_short type){
+	
+	string result;
+	
+	if((uid > 0) && (this->users != nullptr)){
+		
+		result = (reinterpret_cast <Users *> (this->users))->getNameById(uid, type);
+	}
+	
+	return result;
+}
+ 
+const bool AUsers::Groups::update(const u_short type){
 	
 	bool result = false;
 	
 	time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->maxUpdate) < curUpdate){
+	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+		
+		this->params.clear();
 		
 		this->lastUpdate = curUpdate;
 		
-		this->data.clear();
+		setGroupParams(0, "", AMING_NULL);
+		 
+		auto setParams = [this](vector <AParams::Group> groups, const u_short type){
+			
+			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
+				
+				setGroupParams(it->gid, it->name, type);
+			}
+		};
 		
-		switch(this->typeSearch){
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeGroup){
 			
-			case 0: readGroupsFromFile(); break;
+			case AUSERS_TYPE_FILE: setParams(this->gfiles->readGroups(), AUSERS_TYPE_FILE); break;
 			
-			case 1: readGroupsFromPam(); break;
+			case AUSERS_TYPE_PAM: setParams(this->gpam->readGroups(), AUSERS_TYPE_PAM); break;
 			
-			case 2: readGroupsFromLdap(); break;
+			case AUSERS_TYPE_LDAP: setParams(this->gldap->readGroups(), AUSERS_TYPE_LDAP); break;
 			
-			case 3: {
-				readGroupsFromFile();
-				readGroupsFromPam();
+			case AUSERS_TYPE_FILE_PAM: {
+				setParams(this->gfiles->readGroups(), AUSERS_TYPE_FILE);
+				setParams(this->gpam->readGroups(), AUSERS_TYPE_PAM);
 			} break;
 			
-			case 4: {
-				readGroupsFromFile();
-				readGroupsFromLdap();
+			case AUSERS_TYPE_FILE_LDAP: {
+				setParams(this->gfiles->readGroups(), AUSERS_TYPE_FILE);
+				setParams(this->gldap->readGroups(), AUSERS_TYPE_LDAP);
 			} break;
 			
-			case 5: {
-				readGroupsFromPam();
-				readGroupsFromLdap();
+			case AUSERS_TYPE_PAM_LDAP: {
+				setParams(this->gpam->readGroups(), AUSERS_TYPE_PAM);
+				setParams(this->gldap->readGroups(), AUSERS_TYPE_LDAP);
 			} break;
 			
-			case 6: {
-				readGroupsFromFile();
-				readGroupsFromPam();
-				readGroupsFromLdap();
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				setParams(this->gfiles->readGroups(), AUSERS_TYPE_FILE);
+				setParams(this->gpam->readGroups(), AUSERS_TYPE_PAM);
+				setParams(this->gldap->readGroups(), AUSERS_TYPE_LDAP);
 			} break;
 		}
 		
@@ -876,337 +145,699 @@ const bool AUsers::Groups::update(){
 	return result;
 }
  
-const vector <const AUsers::DataGroup *> AUsers::Groups::getAllGroups(){
+const vector <AParams::GroupData> AUsers::Groups::getAllGroups(const u_short type){
 	
-	vector <const DataGroup *> result;
+	vector <AParams::GroupData> result;
 	
-	if(!this->data.empty()){
+	const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+	
+	switch(typeGroup){
 		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+		case AUSERS_TYPE_FILE: result = this->gfiles->getAllGroups(); break;
+		
+		case AUSERS_TYPE_PAM: result = this->gpam->getAllGroups(); break;
+		
+		case AUSERS_TYPE_LDAP: result = this->gldap->getAllGroups(); break;
+		
+		case AUSERS_TYPE_FILE_PAM: {
 			
-			result.push_back(&(it->second));
+			auto file = this->gfiles->getAllGroups();
+			
+			auto pam = this->gpam->getAllGroups();
+			
+			copy(file.begin(), file.end(), back_inserter(result));
+			copy(pam.begin(), pam.end(), back_inserter(result));
+		} break;
+		
+		case AUSERS_TYPE_FILE_LDAP: {
+			
+			auto file = this->gfiles->getAllGroups();
+			
+			auto ldap = this->gldap->getAllGroups();
+			
+			copy(file.begin(), file.end(), back_inserter(result));
+			copy(ldap.begin(), ldap.end(), back_inserter(result));
+		} break;
+		
+		case AUSERS_TYPE_PAM_LDAP: {
+			
+			auto pam = this->gpam->getAllGroups();
+			
+			auto ldap = this->gldap->getAllGroups();
+			
+			copy(pam.begin(), pam.end(), back_inserter(result));
+			copy(ldap.begin(), ldap.end(), back_inserter(result));
+		} break;
+		
+		case AUSERS_TYPE_FILE_PAM_LDAP: {
+			
+			auto file = this->gfiles->getAllGroups();
+			
+			auto pam = this->gpam->getAllGroups();
+			
+			auto ldap = this->gldap->getAllGroups();
+			
+			copy(file.begin(), file.end(), back_inserter(result));
+			copy(pam.begin(), pam.end(), back_inserter(result));
+			copy(ldap.begin(), ldap.end(), back_inserter(result));
+		} break;
+	}
+	
+	return result;
+}
+ 
+const AParams::Params * AUsers::Groups::getParamsById(const gid_t gid, const u_short type){
+	
+	const AParams::Params * result = nullptr;
+	
+	if((gid > 0) && !this->params.empty()){
+		 
+		auto getParams = [this](const gid_t gid, u_short type){
+			
+			const AParams::Params * result = nullptr;
+			
+			auto key = make_pair(gid, type);
+			
+			if(this->params.count(key) > 0){
+				
+				result = &(this->params.find(key)->second);
+			
+			} else if(update(type)) {
+				
+				result = getParamsById(gid, type);
+			
+			} else {
+				
+				auto key = make_pair(0, AMING_NULL);
+				
+				if(this->params.count(key) > 0){
+					
+					result = &(this->params.find(key)->second);
+				}
+			}
+			
+			return result;
+		};
+		
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeGroup){
+			
+			case AUSERS_TYPE_FILE: result = getParams(gid, AUSERS_TYPE_FILE); break;
+			
+			case AUSERS_TYPE_PAM: result = getParams(gid, AUSERS_TYPE_PAM); break;
+			
+			case AUSERS_TYPE_LDAP: result = getParams(gid, AUSERS_TYPE_LDAP); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = getParams(gid, AUSERS_TYPE_FILE);
+				
+				if(result == nullptr) result = getParams(gid, AUSERS_TYPE_PAM);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = getParams(gid, AUSERS_TYPE_FILE);
+				
+				if(result == nullptr) result = getParams(gid, AUSERS_TYPE_LDAP);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = getParams(gid, AUSERS_TYPE_PAM);
+				
+				if(result == nullptr) result = getParams(gid, AUSERS_TYPE_LDAP);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = getParams(gid, AUSERS_TYPE_FILE);
+				
+				if(result == nullptr) result = getParams(gid, AUSERS_TYPE_PAM);
+				
+				if(result == nullptr) result = getParams(gid, AUSERS_TYPE_LDAP);
+			} break;
 		}
 	}
 	
 	return result;
 }
  
-const AUsers::DataGroup * AUsers::Groups::getDataById(const gid_t gid){
+const AParams::Params * AUsers::Groups::getParamsByName(const string groupName, const u_short type){
 	
-	if(gid && !this->data.empty()){
+	if(!groupName.empty() && !this->params.empty()){
 		
-		if(this->data.count(gid)){
-			
-			return &(this->data.find(gid)->second);
+		const string name = Anyks::toCase(groupName);
 		
-		} else if(update()) {
-			
-			return getDataById(gid);
-		}
+		const gid_t gid = getIdByName(name, type);
+		
+		if(gid > 0) return getParamsById(gid, type);
 	}
 	
 	return nullptr;
 }
  
-const AUsers::DataGroup * AUsers::Groups::getDataByName(const string groupName){
+const AParams::GroupData AUsers::Groups::getDataById(const gid_t gid, u_short type){
 	
-	if(!groupName.empty() && !this->data.empty()){
+	AParams::GroupData result;
+	
+	if(gid > 0){
 		
-		string name = Anyks::toCase(groupName);
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
 		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+		switch(typeGroup){
 			
-			if(it->second.name.compare(name) == 0){
+			case AUSERS_TYPE_FILE: result = this->gfiles->getDataById(gid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->gpam->getDataById(gid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->getDataById(gid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
 				
-				return &(it->second);
-			}
-		}
-		
-		if(update()) return getDataByName(groupName);
-	}
-	
-	return nullptr;
-}
- 
-const vector <gid_t> AUsers::Groups::getGroupIdByUser(const uid_t uid){
-	
-	vector <gid_t> result;
-	
-	if(uid){
-		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
-			
-			auto users = it->second.users;
-			
-			for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
+				result = this->gfiles->getDataById(gid);
 				
-				if(uid == *ut){
-					
-					result.push_back(it->first);
-					
-					break;
-				}
-			}
+				if(!result.name.empty()) result = this->gpam->getDataById(gid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->gfiles->getDataById(gid);
+				
+				if(!result.name.empty()) result = this->gldap->getDataById(gid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->gpam->getDataById(gid);
+				
+				if(!result.name.empty()) result = this->gldap->getDataById(gid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->gfiles->getDataById(gid);
+				
+				if(!result.name.empty()) result = this->gpam->getDataById(gid);
+				
+				if(!result.name.empty()) result = this->gldap->getDataById(gid);
+			} break;
 		}
 	}
 	
 	return result;
 }
  
-const vector <gid_t> AUsers::Groups::getGroupIdByUser(const string userName){
+const AParams::GroupData AUsers::Groups::getDataByName(const string groupName, u_short type){
+	
+	AParams::GroupData result;
+	
+	if(!groupName.empty()){
+		
+		const string name = Anyks::toCase(groupName);
+		
+		const gid_t gid = getIdByName(name, type);
+		
+		if(gid > 0) result = getDataById(gid, type);
+	}
+	
+	return result;
+}
+ 
+const vector <gid_t> AUsers::Groups::getGroupIdByUser(const uid_t uid, const u_short type){
+	
+	vector <gid_t> result;
+	
+	if(uid > 0){
+		
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeGroup){
+			
+			case AUSERS_TYPE_FILE: result = this->gfiles->getGroupIdByUser(uid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->gpam->getGroupIdByUser(uid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->getGroupIdByUser(uid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = this->gfiles->getGroupIdByUser(uid);
+				
+				if(result.empty()) result = this->gpam->getGroupIdByUser(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->gfiles->getGroupIdByUser(uid);
+				
+				if(result.empty()) result = this->gldap->getGroupIdByUser(uid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->gpam->getGroupIdByUser(uid);
+				
+				if(result.empty()) result = this->gldap->getGroupIdByUser(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->gfiles->getGroupIdByUser(uid);
+				
+				if(result.empty()) result = this->gpam->getGroupIdByUser(uid);
+				
+				if(result.empty()) result = this->gldap->getGroupIdByUser(uid);
+			} break;
+		}
+	}
+	
+	return result;
+}
+ 
+const vector <gid_t> AUsers::Groups::getGroupIdByUser(const string userName, const u_short type){
 	
 	vector <gid_t> result;
 	
 	if(!userName.empty()){
 		
-		const uid_t uid = getUidByUserName(userName);
+		const uid_t uid = getUidByUserName(userName, type);
 		
-		if(uid > -1) result = getGroupIdByUser(uid);
+		if(uid > 0) result = getGroupIdByUser(uid, type);
 	}
 	
 	return result;
 }
  
-const vector <string> AUsers::Groups::getGroupNameByUser(const uid_t uid){
+const vector <string> AUsers::Groups::getGroupNameByUser(const uid_t uid, const u_short type){
 	
 	vector <string> result;
 	
-	if(uid){
+	if(uid > 0){
 		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeGroup){
 			
-			auto users = it->second.users;
+			case AUSERS_TYPE_FILE: result = this->gfiles->getGroupNameByUser(uid); break;
 			
-			for(auto ut = users.cbegin(); ut != users.cend(); ++ut){
+			case AUSERS_TYPE_PAM: result = this->gpam->getGroupNameByUser(uid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->getGroupNameByUser(uid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
 				
-				if(uid == *ut){
-					
-					result.push_back(it->second.name);
-					
-					break;
-				}
-			}
+				result = this->gfiles->getGroupNameByUser(uid);
+				
+				if(result.empty()) result = this->gpam->getGroupNameByUser(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->gfiles->getGroupNameByUser(uid);
+				
+				if(result.empty()) result = this->gldap->getGroupNameByUser(uid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->gpam->getGroupNameByUser(uid);
+				
+				if(result.empty()) result = this->gldap->getGroupNameByUser(uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->gfiles->getGroupNameByUser(uid);
+				
+				if(result.empty()) result = this->gpam->getGroupNameByUser(uid);
+				
+				if(result.empty()) result = this->gldap->getGroupNameByUser(uid);
+			} break;
 		}
 	}
 	
 	return result;
 }
  
-const vector <string> AUsers::Groups::getGroupNameByUser(const string userName){
+const vector <string> AUsers::Groups::getGroupNameByUser(const string userName, const u_short type){
 	
 	vector <string> result;
 	
 	if(!userName.empty()){
 		
-		const uid_t uid = getUidByUserName(userName);
+		const uid_t uid = getUidByUserName(userName, type);
 		
-		if(uid > -1) result = getGroupNameByUser(uid);
+		if(uid > 0) result = getGroupNameByUser(uid, type);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Groups::checkUser(const gid_t gid, const uid_t uid){
+const bool AUsers::Groups::checkUser(const gid_t gid, const uid_t uid, const u_short type){
 	
 	bool result = false;
 	
-	if(gid && uid && this->data.count(gid)){
+	if((gid > 0) && (uid > 0)){
 		
-		auto users = this->data.find(gid)->second.users;
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
 		
-		for(auto it = users.cbegin(); it != users.cend(); ++it){
+		switch(typeGroup){
 			
-			if(uid == *it){
+			case AUSERS_TYPE_FILE: result = this->gfiles->checkUser(gid, uid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->gpam->checkUser(gid, uid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->checkUser(gid, uid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
 				
-				result = true;
+				result = this->gfiles->checkUser(gid, uid);
 				
-				break;
-			}
+				if(!result) result = this->gpam->checkUser(gid, uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->gfiles->checkUser(gid, uid);
+				
+				if(!result) result = this->gldap->checkUser(gid, uid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->gpam->checkUser(gid, uid);
+				
+				if(!result) result = this->gldap->checkUser(gid, uid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->gfiles->checkUser(gid, uid);
+				
+				if(!result) result = this->gpam->checkUser(gid, uid);
+				
+				if(!result) result = this->gldap->checkUser(gid, uid);
+			} break;
 		}
-	
-	} else if(gid && uid && update()) {
-		
-		result = checkUser(gid, uid);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Groups::checkUser(const gid_t gid, const string userName){
+const bool AUsers::Groups::checkUser(const gid_t gid, const string userName, const u_short type){
 	
 	bool result = false;
 	
-	if(gid && !userName.empty()){
+	if((gid > 0) && !userName.empty()){
 		
-		const uid_t uid = getUidByUserName(userName);
+		const uid_t uid = getUidByUserName(userName, type);
 		
-		if(uid > -1) result = checkUser(gid, uid);
+		if(uid > 0) result = checkUser(gid, uid, type);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Groups::checkUser(const string groupName, const uid_t uid){
+const bool AUsers::Groups::checkUser(const string groupName, const uid_t uid, const u_short type){
 	
 	bool result = false;
 	
-	if(uid && !groupName.empty()){
+	if((uid > 0) && !groupName.empty()){
 		
-		const gid_t gid = getIdByName(groupName);
+		const gid_t gid = getIdByName(groupName, type);
 		
-		result = checkUser(gid, uid);
+		if(gid > 0) result = checkUser(gid, uid, type);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Groups::checkUser(const string groupName, const string userName){
+const bool AUsers::Groups::checkUser(const string groupName, const string userName, const u_short type){
 	
 	bool result = false;
 	
 	if(!groupName.empty() && !userName.empty()){
 		
-		const gid_t gid = getIdByName(groupName);
+		const gid_t gid = getIdByName(groupName, type);
 		
-		const uid_t uid = getUidByUserName(userName);
+		const uid_t uid = getUidByUserName(userName, type);
 		
-		if((gid > -1) && (uid > -1)) result = checkUser(gid, uid);
+		if((gid > 0) && (uid > 0)) result = checkUser(gid, uid, type);
 	}
 	
 	return result;
 }
  
-const bool AUsers::Groups::checkGroupById(const gid_t gid){
+const bool AUsers::Groups::checkGroupById(const gid_t gid, const u_short type){
 	
-	if(gid && !this->data.empty()){
+	bool result = false;
+	
+	if(gid > 0){
 		
-		if(this->data.count(gid)){
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeGroup){
 			
-			return true;
-		
-		} else if(update()) {
+			case AUSERS_TYPE_FILE: result = this->gfiles->checkGroupById(gid); break;
 			
-			return checkGroupById(gid);
-		}
-	}
-	
-	return false;
-}
- 
-const bool AUsers::Groups::checkGroupByName(const string groupName){
-	
-	return (getIdByName(groupName) > -1 ? true : false);
-}
- 
-const uid_t AUsers::Groups::getUidByUserName(const string userName){
-	
-	uid_t result = -1;
-	
-	if(!userName.empty() && (this->users != nullptr)){
-		
-		result = (reinterpret_cast <Users *> (this->users))->getIdByName(userName);
-	}
-	
-	return result;
-}
- 
-const gid_t AUsers::Groups::getIdByName(const string groupName){
-	
-	if(!groupName.empty() && !this->data.empty()){
-		
-		string name = Anyks::toCase(groupName);
-		
-		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
+			case AUSERS_TYPE_PAM: result = this->gpam->checkGroupById(gid); break;
 			
-			if(it->second.name.compare(name) == 0){
+			case AUSERS_TYPE_LDAP: result = this->gldap->checkGroupById(gid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
 				
-				return it->first;
-			}
+				result = this->gfiles->checkGroupById(gid);
+				
+				if(!result) result = this->gpam->checkGroupById(gid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->gfiles->checkGroupById(gid);
+				
+				if(!result) result = this->gldap->checkGroupById(gid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->gpam->checkGroupById(gid);
+				
+				if(!result) result = this->gldap->checkGroupById(gid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->gfiles->checkGroupById(gid);
+				
+				if(!result) result = this->gpam->checkGroupById(gid);
+				
+				if(!result) result = this->gldap->checkGroupById(gid);
+			} break;
 		}
-		
-		if(update()) return getIdByName(groupName);
 	}
 	
-	return -1;
+	return result;
 }
  
-const string AUsers::Groups::getUserNameByUid(const uid_t uid){
+const bool AUsers::Groups::checkGroupByName(const string groupName, const u_short type){
+	
+	return (getIdByName(groupName, type) > 0 ? true : false);
+}
+ 
+const gid_t AUsers::Groups::getIdByName(const string groupName, const u_short type){
+	
+	gid_t result = 0;
+	
+	if(!groupName.empty()){
+		
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeGroup){
+			
+			case AUSERS_TYPE_FILE: result = this->gfiles->getIdByName(groupName); break;
+			
+			case AUSERS_TYPE_PAM: result = this->gpam->getIdByName(groupName); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->getIdByName(groupName); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = this->gfiles->getIdByName(groupName);
+				
+				if(result < 1) result = this->gpam->getIdByName(groupName);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->gfiles->getIdByName(groupName);
+				
+				if(result < 1) result = this->gldap->getIdByName(groupName);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->gpam->getIdByName(groupName);
+				
+				if(result < 1) result = this->gldap->getIdByName(groupName);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->gfiles->getIdByName(groupName);
+				
+				if(result < 1) result = this->gpam->getIdByName(groupName);
+				
+				if(result < 1) result = this->gldap->getIdByName(groupName);
+			} break;
+		}
+	}
+	
+	return result;
+}
+ 
+const string AUsers::Groups::getNameById(const gid_t gid, const u_short type){
 	
 	string result;
 	
-	if((uid > -1) && (this->users != nullptr)){
+	if(gid > 0){
 		
-		result = (reinterpret_cast <Users *> (this->users))->getNameById(uid);
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		switch(typeGroup){
+			
+			case AUSERS_TYPE_FILE: result = this->gfiles->getNameById(gid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->gpam->getNameById(gid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->getNameById(gid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				result = this->gfiles->getNameById(gid);
+				
+				if(result.empty()) result = this->gpam->getNameById(gid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				result = this->gfiles->getNameById(gid);
+				
+				if(result.empty()) result = this->gldap->getNameById(gid);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				result = this->gpam->getNameById(gid);
+				
+				if(result.empty()) result = this->gldap->getNameById(gid);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				result = this->gfiles->getNameById(gid);
+				
+				if(result.empty()) result = this->gpam->getNameById(gid);
+				
+				if(result.empty()) result = this->gldap->getNameById(gid);
+			} break;
+		}
 	}
 	
 	return result;
 }
  
-const string AUsers::Groups::getNameById(const gid_t gid){
-	
-	if(gid && !this->data.empty()){
-		
-		if(this->data.count(gid)){
-			
-			return this->data.find(gid)->second.name;
-		
-		} else if(update()) {
-			
-			return getNameById(gid);
-		}
-	}
-	
-	return string();
-}
- 
-const vector <string> AUsers::Groups::getNameUsers(const gid_t gid){
+const vector <string> AUsers::Groups::getNameUsers(const gid_t gid, const u_short type){
 	
 	vector <string> result;
 	
-	if((gid > -1) && (users != nullptr) && this->data.count(gid)){
+	if(gid > 0){
 		
-		auto _users = this->data.find(gid)->second.users;
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
 		
-		for(auto it = _users.cbegin(); it != _users.cend(); ++it){
+		switch(typeGroup){
 			
-			const string userName = getUserNameByUid(* it);
+			case AUSERS_TYPE_FILE: result = this->gfiles->getNameUsers(gid); break;
 			
-			if(!userName.empty()) result.push_back(userName);
+			case AUSERS_TYPE_PAM: result = this->gpam->getNameUsers(gid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->getNameUsers(gid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				auto file = this->gfiles->getNameUsers(gid);
+				
+				auto pam = this->gpam->getNameUsers(gid);
+				
+				result = Anyks::concatVectors <string> (file, pam);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				auto file = this->gfiles->getNameUsers(gid);
+				
+				auto ldap = this->gldap->getNameUsers(gid);
+				
+				result = Anyks::concatVectors <string> (file, ldap);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				auto pam = this->gpam->getNameUsers(gid);
+				
+				auto ldap = this->gldap->getNameUsers(gid);
+				
+				result = Anyks::concatVectors <string> (pam, ldap);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				auto file = this->gfiles->getNameUsers(gid);
+				
+				auto pam = this->gpam->getNameUsers(gid);
+				
+				auto ldap = this->gldap->getNameUsers(gid);
+				
+				vector <string> tmp = Anyks::concatVectors <string> (file, pam);
+				
+				result = Anyks::concatVectors <string> (tmp, ldap);
+			} break;
 		}
-	
-	} else if(gid && update()) {
-		
-		result = getNameUsers(gid);
 	}
 	
 	return result;
 }
  
-const vector <string> AUsers::Groups::getNameUsers(const string groupName){
+const vector <string> AUsers::Groups::getNameUsers(const string groupName, const u_short type){
 	
 	vector <string> result;
 	
 	if((users != nullptr) && !groupName.empty()){
 		
-		const gid_t gid = getIdByName(groupName);
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
 		
-		if(gid > -1) result = getNameUsers(gid);
+		const gid_t gid = getIdByName(groupName, typeGroup);
+		
+		if(gid > 0) result = getNameUsers(gid, typeGroup);
 	}
 	
 	return result;
 }
  
-const vector <uid_t> AUsers::Groups::getIdAllUsers(){
+const vector <uid_t> AUsers::Groups::getIdAllUsers(const u_short type){
 	
 	vector <uid_t> result;
 	
-	auto groups = getAllGroups();
+	const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
+	
+	auto groups = getAllGroups(typeGroup);
 	
 	if(!groups.empty()){
 		
 		for(auto it = groups.cbegin(); it != groups.cend(); ++it){
 			
-			copy((* it)->users.cbegin(), (* it)->users.cend(), back_inserter(result));
+			copy((* it).users.cbegin(), (* it).users.cend(), back_inserter(result));
 		}
 		
 		sort(result.begin(), result.end());
@@ -1217,162 +848,122 @@ const vector <uid_t> AUsers::Groups::getIdAllUsers(){
 	return result;
 }
  
-const vector <uid_t> AUsers::Groups::getIdUsers(const gid_t gid){
+const vector <uid_t> AUsers::Groups::getIdUsers(const gid_t gid, const u_short type){
 	
 	vector <uid_t> result;
 	
-	if(gid && this->data.count(gid)){
+	if(gid > 0){
 		
-		result = this->data.find(gid)->second.users;
-	
-	} else if(gid && update()) {
+		const u_short typeGroup = (type != AMING_NULL ? type : this->config->auth.services);
 		
-		result = getIdUsers(gid);
+		switch(typeGroup){
+			
+			case AUSERS_TYPE_FILE: result = this->gfiles->getIdUsers(gid); break;
+			
+			case AUSERS_TYPE_PAM: result = this->gpam->getIdUsers(gid); break;
+			
+			case AUSERS_TYPE_LDAP: result = this->gldap->getIdUsers(gid); break;
+			
+			case AUSERS_TYPE_FILE_PAM: {
+				
+				auto file = this->gfiles->getIdUsers(gid);
+				
+				auto pam = this->gpam->getIdUsers(gid);
+				
+				result = Anyks::concatVectors <uid_t> (file, pam);
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				auto file = this->gfiles->getIdUsers(gid);
+				
+				auto ldap = this->gldap->getIdUsers(gid);
+				
+				result = Anyks::concatVectors <uid_t> (file, ldap);
+			} break;
+			
+			case AUSERS_TYPE_PAM_LDAP: {
+				
+				auto pam = this->gpam->getIdUsers(gid);
+				
+				auto ldap = this->gldap->getIdUsers(gid);
+				
+				result = Anyks::concatVectors <uid_t> (pam, ldap);
+			} break;
+			
+			case AUSERS_TYPE_FILE_PAM_LDAP: {
+				
+				auto file = this->gfiles->getIdUsers(gid);
+				
+				auto pam = this->gpam->getIdUsers(gid);
+				
+				auto ldap = this->gldap->getIdUsers(gid);
+				
+				vector <uid_t> tmp = Anyks::concatVectors <uid_t> (file, pam);
+				
+				result = Anyks::concatVectors <uid_t> (tmp, ldap);
+			} break;
+		}
 	}
 	
 	return result;
 }
  
-const vector <uid_t> AUsers::Groups::getIdUsers(const string groupName){
+const vector <uid_t> AUsers::Groups::getIdUsers(const string groupName, const u_short type){
 	
 	vector <uid_t> result;
 	
 	if(!groupName.empty()){
 		
-		const gid_t gid = getIdByName(groupName);
+		const gid_t gid = getIdByName(groupName, type);
 		
-		if(gid > -1) result = getIdUsers(gid);
+		if(gid > 0) result = getIdUsers(gid, type);
 	}
 	
 	return result;
-}
- 
-const bool AUsers::Groups::addUser(const gid_t gid, const uid_t uid){
-	
-	bool result = false;
-	
-	if(gid && uid && this->data.count(gid)){
-		
-		this->data.find(gid)->second.users.push_back(uid);
-		
-		result = true;
-	
-	} else if(gid && uid && update()) {
-		
-		result = addUser(gid, uid);
-	}
-	
-	return result;
-}
- 
-const bool AUsers::Groups::addUser(const gid_t gid, const string userName){
-	
-	bool result = false;
-	
-	if(gid && !userName.empty()){
-		
-		const uid_t uid = getUidByUserName(userName);
-		
-		if(uid > -1) result = addUser(gid, uid);
-	}
-	
-	return result;
-}
- 
-const bool AUsers::Groups::addUser(const string groupName, const uid_t uid){
-	
-	bool result = false;
-	
-	if(uid && !groupName.empty()){
-		
-		const gid_t gid = getIdByName(groupName);
-		
-		result = addUser(gid, uid);
-	}
-	
-	return result;
-}
- 
-const bool AUsers::Groups::addUser(const string groupName, const string userName){
-	
-	bool result = false;
-	
-	if(!groupName.empty() && !userName.empty()){
-		
-		const gid_t gid = getIdByName(groupName);
-		
-		const uid_t uid = getUidByUserName(userName);
-		
-		if((gid > -1) && (uid > -1)) result = addUser(gid, uid);
-	}
-	
-	return result;
-}
- 
-const bool AUsers::Groups::addGroup(const gid_t gid, const string name){
-	
-	bool result = false;
-	
-	if((gid > -1) && !name.empty()){
-		
-		DataGroup group = createDefaultData(gid, name);
-		
-		this->data.insert(pair <gid_t, DataGroup>(group.id, group));
-		
-		result = true;
-	}
-	
-	return result;
-}
- 
-void AUsers::Groups::setPassword(const gid_t gid, const string password){
-	
-	if((gid > -1) && !password.empty() && !this->data.empty()){
-		
-		if(this->data.count(gid)){
-			
-			(this->data.find(gid)->second).pass = password;
-		
-		} else if(update()) {
-			
-			setPassword(gid, password);
-		}
-	}
 }
  
 void AUsers::Groups::setUsers(void * users){
 	
 	this->users = users;
+	 
+	auto userNameByUid = [this](const uid_t uid, const u_short type){
+		
+		return getUserNameByUid(uid, type);
+	};
+	 
+	auto uidByUserName = [this](const string userName, const u_short type){
+		
+		return getUidByUserName(userName, type);
+	};
+	
+	this->gpam->setUsersMethods(userNameByUid, uidByUserName);
+	this->gldap->setUsersMethods(userNameByUid, uidByUserName);
+	this->gfiles->setUsersMethods(userNameByUid, uidByUserName);
+	
+	this->gfiles->setPasswordMethod(AUsers::getPasswordFromFile);
+	this->gfiles->setPasswordsMethod(AUsers::getPasswordsFromFile);
 	
 	update();
 }
  
 AUsers::Groups::Groups(Config * config, LogApp * log){
 	
-	if(config){
+	if(config != nullptr){
 		
 		this->log = log;
 		
 		this->config = config;
 		
-		this->typeSearch = 6;
-		
-		this->typeConfigs = 1;
-		
-		this->maxUpdate = 600;
-		
-		this->maxPamGroupsUser = 100;
-		
-		this->ldap = {
-			"ou=groups,dc=agro24,dc=dev",
-			"ou=users,dc=agro24,dc=dev",
-			"ou=configs,ou=aming,dc=agro24,dc=dev",
-			"one",
-			"one",
-			"one",
-			"(objectClass=posixGroup)",
-			"(&(!(agro24CoJpDismissed=TRUE))(objectClass=inetOrgPerson))",
-			"(&(amingConfigsGroupId=%g)(amingConfigsType=groups)(objectClass=amingConfigs))"
-		};
+		this->gpam = new Gpam(this->config, this->log);
+		this->gldap = new Gldap(this->config, this->log);
+		this->gfiles = new Gfiles(this->config, this->log);
 	}
+}
+ 
+AUsers::Groups::~Groups(){
+	
+	if(this->gpam != nullptr)	delete this->gpam;
+	if(this->gldap != nullptr)	delete this->gldap;
+	if(this->gfiles != nullptr)	delete this->gfiles;
 }

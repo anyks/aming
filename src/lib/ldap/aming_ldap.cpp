@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       10/29/2017 17:06:00
+*  date:       11/08/2017 16:52:48
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,7 +16,21 @@
 using namespace std;
 
  
-const bool AuthLDAP::authLDAP(LDAP * ld, const string dn, const string password){
+const u_int ALDAP::getScope(const string scope){
+	
+	u_int result = LDAP_SCOPE_SUBTREE;
+	
+	if(!scope.empty()){
+		
+		if(scope.compare("sub") == 0)		result = LDAP_SCOPE_SUBTREE;
+		else if(scope.compare("one") == 0)	result = LDAP_SCOPE_ONELEVEL;
+		else if(scope.compare("base") == 0)	result = LDAP_SCOPE_BASE;
+    }
+	
+	return result;
+}
+ 
+const bool ALDAP::auth(LDAP * ld, const string dn, const string password){
 	
 	int rc = ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &this->version);
 	
@@ -60,97 +74,179 @@ const bool AuthLDAP::authLDAP(LDAP * ld, const string dn, const string password)
 	return true;
 }
  
-const bool AuthLDAP::checkUser(const string user, const string password){
+const string ALDAP::getServer(){
+	
+	if(!this->servers.empty()){
+		
+		if(this->servers.size() == 1) return this->servers[0];
+		
+		else {
+			
+			srand(time(0));
+			
+			return this->servers[rand() % this->servers.size()];
+		}
+	}
+	
+	return string();
+}
+ 
+const bool ALDAP::checkAuth(const string dn, const string password, const string scope, const string filter){
 	
 	bool auth = false;
 	
-	if(this->enabled){
+	if(!dn.empty() && !password.empty() && !scope.empty() && !filter.empty()){
 		
-		const char * key = "%v";
+		LDAP * ld = nullptr, * uld = nullptr;
 		
-		size_t pos = this->filter.find(key);
+		if(ldap_initialize(&ld, getServer().c_str())){
+			
+			if(this->log) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+			
+			return auth;
+		}
 		
-		if(pos != string::npos){
+		if(this->auth(ld, this->config->ldap.binddn, this->config->ldap.bindpw)){
 			
-			char * dn = nullptr;
+			char * udn = nullptr;
 			
-			LDAP * ld = nullptr, * uld = nullptr;
+			LDAPMessage * result, * e;
 			
-			if(ldap_initialize(&ld, this->server.c_str())){
+			const u_int cscope = getScope(scope);
+			
+			int rc = ldap_search_ext_s(ld, dn.c_str(), cscope, filter.c_str(), nullptr, 0, nullptr, nullptr, nullptr, 0, &result);
+			
+			if(rc != LDAP_SUCCESS){
 				
-				if(this->log) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+				if(this->log) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
+				
+				ldap_unbind_ext(ld, nullptr, nullptr);
 				
 				return auth;
 			}
 			
-			if(authLDAP(ld, this->config->ldap.binddn, this->config->ldap.bindpw)){
+			for(e = ldap_first_entry(ld, result); e != nullptr; e = ldap_next_entry(ld, e)){
 				
-				LDAPMessage * result, * e;
-				
-				string filter = this->filter;
-				
-				filter = filter.replace(pos, strlen(key), user);
-				
-				int rc = ldap_search_ext_s(ld, this->userdn.c_str(), this->scope, filter.c_str(), nullptr, 0, nullptr, nullptr, nullptr, 0, &result);
-				
-				if(rc != LDAP_SUCCESS){
+				if((udn = ldap_get_dn(ld, e)) != nullptr){
 					
-					if(this->log) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
-					
-					ldap_unbind_ext(ld, nullptr, nullptr);
-					
-					return auth;
-				}
-				
-				for(e = ldap_first_entry(ld, result); e != nullptr; e = ldap_next_entry(ld, e)){
-					
-					if((dn = ldap_get_dn(ld, e)) != nullptr){
+					if(ldap_initialize(&uld, getServer().c_str())){
 						
-						if(ldap_initialize(&uld, this->server.c_str())){
-							
-							if(this->log) this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
-							
-							ldap_unbind_ext(ld, nullptr, nullptr);
-							
-							return auth;
-						}
+						if(this->log) this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
 						
-						auth = authLDAP(uld, dn, password);
+						ldap_unbind_ext(ld, nullptr, nullptr);
 						
-						ldap_unbind_ext(uld, nullptr, nullptr);
-						
-						ldap_memfree(dn);
-						
-						if(auth) break;
+						return auth;
 					}
+					
+					auth = this->auth(uld, udn, password);
+					
+					ldap_unbind_ext(uld, nullptr, nullptr);
+					
+					ldap_memfree(udn);
+					
+					if(auth) break;
 				}
-				
-				if(result) ldap_msgfree(result);
 			}
 			
-			ldap_unbind_ext(ld, nullptr, nullptr);
+			if(result) ldap_msgfree(result);
 		}
+		
+		ldap_unbind_ext(ld, nullptr, nullptr);
 	}
 	
 	return auth;
 }
  
-AuthLDAP::AuthLDAP(Config * config, LogApp * log){
+const vector <ALDAP::Data> ALDAP::data(const string dn, const string key, const string scope, const string filter){
 	
-	if(config && config->ldap.enabled
-	&& !config->ldap.server.empty()){
+	vector <Data> data;
+	
+	if(!dn.empty() && !filter.empty() && !scope.empty() && !key.empty()){
+		
+		LDAP * ld = nullptr;
+		
+		if(ldap_initialize(&ld, getServer().c_str())){
+			
+			if(this->log) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+			
+			return data;
+		}
+		
+		if(auth(ld, this->config->ldap.binddn, this->config->ldap.bindpw)){
+			
+			LDAPMessage * result, * e;
+			
+			const u_int cscope = getScope(scope);
+			
+			int rc = ldap_search_ext_s(ld, dn.c_str(), cscope, filter.c_str(), nullptr, 0, nullptr, nullptr, nullptr, 0, &result);
+			
+			if(rc != LDAP_SUCCESS){
+				
+				if(this->log) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
+				
+				ldap_unbind_ext(ld, nullptr, nullptr);
+				
+				return data;
+			}
+			
+			char * cdn = nullptr;
+			
+			for(e = ldap_first_entry(ld, result); e != nullptr; e = ldap_next_entry(ld, e)){
+				
+				if((cdn = ldap_get_dn(ld, e)) != nullptr){
+					
+					unordered_map <string, vector <string>> vals;
+					
+					vector <string> keys = Anyks::split(key, ",");
+					
+					for(auto it = keys.cbegin(); it != keys.cend(); ++it){
+						
+						const string key = * it;
+						
+						if(!key.empty()){
+							
+							char ** params = ldap_get_values(ld, e, key.c_str());
+							
+							for(u_int i = 0; i < ldap_count_values(params); i++){
+								
+								if(vals.count(key)){
+									
+									vals.find(key)->second.push_back(params[i]);
+								
+								} else vals.insert(pair <string, vector <string>>(key, {params[i]}));
+							}
+						}
+					}
+					
+					data.push_back({cdn, key, vals});
+					
+					ldap_memfree(cdn);
+				}
+			}
+			
+			if(result) ldap_msgfree(result);
+		}
+		
+		ldap_unbind_ext(ld, nullptr, nullptr);
+	}
+	
+	return data;
+}
+ 
+void ALDAP::setServer(const string server){
+	
+	if(!server.empty()) this->servers.push_back(server);
+}
+ 
+ALDAP::ALDAP(Config * config, LogApp * log){
+	
+	if((config != nullptr) && !config->ldap.servers.empty()){
 		
 		this->log = log;
 		
 		this->config = config;
 		
-		this->server = this->config->ldap.server;
-		
-		this->userdn = this->config->ldap.userdn;
-		
-		this->filter = this->config->ldap.filter;
-		
-		this->enabled = this->config->ldap.enabled;
+		this->servers.assign(this->config->ldap.servers.cbegin(), this->config->ldap.servers.cend());
 		
 		switch(this->config->ldap.version){
 			
@@ -159,23 +255,18 @@ AuthLDAP::AuthLDAP(Config * config, LogApp * log){
 			default: this->version = LDAP_VERSION2;
 		}
 		
-		if(this->config->ldap.scope.compare("sub") == 0)		this->scope = LDAP_SCOPE_SUBTREE;
-		else if(this->config->ldap.scope.compare("one") == 0)	this->scope = LDAP_SCOPE_ONELEVEL;
-		else if(this->config->ldap.scope.compare("base") == 0)	this->scope = LDAP_SCOPE_BASE;
-		
 		LDAP * ld = nullptr;
 		
-		if(ldap_initialize(&ld, this->server.c_str())){
-			
-			this->enabled = false;
+		if(ldap_initialize(&ld, getServer().c_str())){
 			
 			if(this->log) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
 		
 		} else {
 			
-			this->enabled = authLDAP(ld, this->config->ldap.binddn, this->config->ldap.bindpw);
-			
-			ldap_unbind_ext(ld, nullptr, nullptr);
+			if(auth(ld, this->config->ldap.binddn, this->config->ldap.bindpw)){
+				
+				ldap_unbind_ext(ld, nullptr, nullptr);
+			}
 		}
 	}
 }
