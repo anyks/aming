@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,13 +16,32 @@
 using namespace std;
 
  
+int Upam::pamconv(int num_msg, const struct pam_message ** msg, struct pam_response ** resp, void * appdata_ptr){
+	
+	if(num_msg <= 0 || (appdata_ptr == nullptr)) return PAM_CONV_ERR;
+	
+	struct pam_response * reply = new struct pam_response;
+	
+	if(reply == nullptr) return PAM_CONV_ERR;
+	
+	reply[0].resp_retcode = 0;
+	
+	reply[0].resp = strdup(reinterpret_cast <const char *> (appdata_ptr));
+	
+	* resp = reply;
+	
+	reply = nullptr;
+	
+	return PAM_SUCCESS;
+}
+ 
 const vector <AParams::User> Upam::readUsers(){
 	
 	vector <AParams::User> result = {{0, "", "", ""}};
 	
 	const time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		smatch match;
 		
@@ -61,6 +80,8 @@ const vector <AParams::User> Upam::readUsers(){
 				}
 			}
 		}
+		
+		endpwent();
 	
 	} else if(!this->cache.empty()) {
 		
@@ -79,7 +100,7 @@ const vector <AParams::UserData> Upam::getAllUsers(){
 	
 	const time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		smatch match;
 		
@@ -111,6 +132,8 @@ const vector <AParams::UserData> Upam::getAllUsers(){
 				}
 			}
 		}
+		
+		endpwent();
 		
 		this->cache.assign(result.cbegin(), result.cend());
 	
@@ -149,6 +172,35 @@ const bool Upam::checkUserById(const uid_t uid){
 const bool Upam::checkUserByName(const string userName){
 	
 	return (getIdByName(userName) > 0 ? true : false);
+}
+ 
+const bool Upam::auth(const uid_t uid, const string password){
+	
+	bool result = false;
+	
+	if((uid > 0) && !password.empty()){
+		
+		const string name = getNameById(uid);
+		
+		if(!name.empty()){
+			
+			const struct pam_conv conv = {
+				&pamconv,
+				strdup(password.c_str())
+			};
+			
+			pam_handle_t * pamh = nullptr;
+			
+			if(pam_start("su", name.c_str(), &conv, &pamh) == PAM_SUCCESS){
+				
+				if(pam_authenticate(pamh, 0) == PAM_SUCCESS) result = true;
+				
+				pam_end(pamh, PAM_SUCCESS);
+			}
+		}
+	}
+	
+	return result;
 }
  
 const uid_t Upam::getIdByName(const string userName){

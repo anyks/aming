@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
 
@@ -33,6 +33,15 @@
 #define OPT_DEBLOCK 0x100	
 
 
+#define PARSER_OPTIONS_DEFAULT OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG
+
+
+#define MOD_GZIP_ZLIB_WINDOWSIZE	15
+#define MOD_GZIP_ZLIB_CFACTOR		9
+#define MOD_GZIP_ZLIB_BSIZE			8096
+#define MOD_GZIP_ZLIB_CHUNK			1024
+
+
 #define AMING_EMPTY ""				
 #define AMING_CLEAR {}				
 #define AMING_NULL 0x00				
@@ -41,17 +50,20 @@
 #define AMING_IPV4 0x03				
 #define AMING_IPV6 0x04				
 #define AMING_DOMAIN 0x05			
-#define AMING_ADDRESS 0x06			
-#define AMING_MAC 0x07				
-#define AMING_USER 0x08				
-#define AMING_GROUP 0x09			
-#define AMING_HTTP_ACTION 0x10		
-#define AMING_HTTP_METHOD 0x11		
-#define AMING_HTTP_TRAFFIC 0x12		
+#define AMING_HTTP_ADDRESS 0x06		
+#define AMING_ADDRESS 0x07			
+#define AMING_MAC 0x08				
+#define AMING_USER 0x09				
+#define AMING_GROUP 0x10			
+#define AMING_HTTP_ACTION 0x11		
+#define AMING_HTTP_METHOD 0x12		
+#define AMING_HTTP_TRAFFIC 0x13		
 
-#define AMING_TYPE_HTTP 0x01		
-#define AMING_TYPE_SOCKS 0x02		
-#define AMING_TYPE_REDIRECT 0x04	
+#define AMING_TYPE_HTTP 0x01												
+#define AMING_TYPE_SOCKS5 0x02												
+#define AMING_TYPE_REDIRECT 0x04											
+#define AMING_TYPE_HTTP_REDIRECT AMING_TYPE_HTTP | AMING_TYPE_REDIRECT		
+#define AMING_TYPE_SOCKS5_REDIRECT AMING_TYPE_SOCKS5 | AMING_TYPE_REDIRECT	
 
 #define AMING_AUTH_BASIC 0x01
 #define AMING_AUTH_BEARER 0x02
@@ -62,16 +74,15 @@
 #define AMING_AUTH_AWS4HMACSHA256 0x40
 
 
-#define AUSERS_TYPE_FILE 0x01								
-#define AUSERS_TYPE_PAM 0x02								
-#define AUSERS_TYPE_LDAP 0x04								
-#define AUSERS_TYPE_FILE_PAM (0x01 | 0x02)					
-#define AUSERS_TYPE_FILE_LDAP (0x01 | 0x04)					
-#define AUSERS_TYPE_PAM_LDAP (0x02 | 0x04)					
-#define AUSERS_TYPE_FILE_PAM_LDAP (0x01 | 0x02 | 0x04)		
+#define AUSERS_TYPE_FILE 0x01															
+#define AUSERS_TYPE_PAM 0x02															
+#define AUSERS_TYPE_LDAP 0x04															
+#define AUSERS_TYPE_FILE_PAM AUSERS_TYPE_FILE | AUSERS_TYPE_PAM							
+#define AUSERS_TYPE_FILE_LDAP AUSERS_TYPE_FILE | AUSERS_TYPE_LDAP						
+#define AUSERS_TYPE_PAM_LDAP AUSERS_TYPE_PAM | AUSERS_TYPE_LDAP							
+#define AUSERS_TYPE_FILE_PAM_LDAP AUSERS_TYPE_FILE | AUSERS_TYPE_PAM | AUSERS_TYPE_LDAP	
 
 
-#define PROXY_TYPE "http"
 #define PROXY_USER "nobody"
 #define PROXY_GROUP "nogroup"
 #define PROXY_NAME "anyks"
@@ -86,9 +97,9 @@
 #define PROXY_SUBNET false
 #define PROXY_PIPELINING true
 #define PROXY_IPV "4 -> 4"
+#define PROXY_CONFTIME "10m"
 #define PROXY_HTTP_PORT 8080
 #define PROXY_SOCKS5_PORT 1080
-#define PROXY_REDIRECT_PORT 1180
 #define PROXY_HTTP_METHODS "OPTIONS|GET|HEAD|POST|PUT|PATCH|DELETE|TRACE|CONNECT"
 
 
@@ -171,7 +182,6 @@
 
 
 #define AUTH_GROUP_MAX_PAM 100
-#define AUTH_UPDATE "10m"
 #define AUTH_ENABLED false
 
 

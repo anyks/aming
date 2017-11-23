@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,13 +16,13 @@
 using namespace std;
 
  
-const AParams::Params Uldap::createDefaultParams(const uid_t uid){
+const AParams::Params Uldap::createDefaultParams(const uid_t uid, const u_short type){
 	
 	AParams::Params result;
 	
 	if(uid > 0){
 		
-		auto groups = this->getGroupIdByUser(uid, AUSERS_TYPE_FILE);
+		auto groups = this->getGroupIdByUser(uid, type);
 		
 		if(!groups.empty()){
 			
@@ -33,7 +33,7 @@ const AParams::Params Uldap::createDefaultParams(const uid_t uid){
 				if((* it) < gid) gid = (* it);
 			}
 			
-			auto * params = this->getParamsByGid(gid, AUSERS_TYPE_FILE);
+			auto * params = this->getParamsByGid(gid, AUSERS_TYPE_LDAP);
 			
 			if(params != nullptr){
 				
@@ -59,7 +59,8 @@ const AParams::Params Uldap::createDefaultParams(const uid_t uid){
 					params->proxy.transfer,
 					params->proxy.forward,
 					params->proxy.subnet,
-					params->proxy.pipelining
+					params->proxy.pipelining,
+					params->proxy.redirect
 				};
 				
 				result.connects = {
@@ -87,7 +88,53 @@ const AParams::Params Uldap::createDefaultParams(const uid_t uid){
 				result.idnt.assign(params->idnt.cbegin(), params->idnt.cend());
 			}
 		}
-	}
+	
+	} else result = {
+		
+		uid,
+		
+		this->config->options, {},
+		
+		{this->config->ipv4.external, this->config->ipv4.resolver},
+		
+		{this->config->ipv6.external, this->config->ipv6.resolver},{
+		
+			this->config->gzip.vary,
+			this->config->gzip.level,
+			this->config->gzip.length,
+			this->config->gzip.chunk,
+			this->config->gzip.regex,
+			this->config->gzip.vhttp,
+			this->config->gzip.proxied,
+			this->config->gzip.types
+		
+		},{
+			this->config->proxy.reverse,
+			this->config->proxy.transfer,
+			this->config->proxy.forward,
+			this->config->proxy.subnet,
+			this->config->proxy.pipelining,
+			this->config->proxy.redirect
+		
+		},{
+			this->config->connects.size,
+			this->config->connects.connect
+		},{
+		
+			this->config->timeouts.read,
+			this->config->timeouts.write,
+			this->config->timeouts.upgrade
+		
+		},{
+			this->config->buffers.read,
+			this->config->buffers.write
+		
+		},{
+			this->config->keepalive.keepcnt,
+			this->config->keepalive.keepidle,
+			this->config->keepalive.keepintvl
+		}
+	};
 	
 	return result;
 }
@@ -102,13 +149,13 @@ const AParams::Params Uldap::setParams(const uid_t uid, const string name){
 		
 		const string dn = Anyks::strFormat("ac=%s,%s", name.c_str(), this->config->ldap.dn.configs.c_str());
 		
-		const string filter = Anyks::strFormat("(&%s(amingConfigsType=users)(%s=%u))", this->config->ldap.filter.configs.c_str(), "amingConfigsUserId", uid);
+		const string filter = Anyks::strFormat("(&(objectClass=amingConfigs)(amingConfigsType=users)(%s=%u))", "amingConfigsUserId", uid);
 		
 		const string keys = "amingConfigsConnectsConnect,amingConfigsConnectsSize,amingConfigsGzipChunk,"
 							"amingConfigsGzipLength,amingConfigsGzipLevel,amingConfigsGzipProxied,"
 							"amingConfigsGzipRegex,amingConfigsGzipResponse,amingConfigsGzipTransfer,"
 							"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,amingConfigsAuth,"
-							"amingConfigsIdnt,amingConfigsIpExternal4,amingConfigsIpExternal6,"
+							"amingConfigsIdnt,amingConfigsIpExternal4,amingConfigsIpExternal6,amingConfigsRedirect,"
 							"amingConfigsIpResolver4,amingConfigsIpResolver6,amingConfigsKeepAliveCnt,"
 							"amingConfigsKeepAliveEnabled,amingConfigsKeepAliveIdle,amingConfigsKeepAliveIntvl,"
 							"amingConfigsProxyAgent,amingConfigsProxyConnect,amingConfigsProxyDeblock,"
@@ -117,7 +164,7 @@ const AParams::Params Uldap::setParams(const uid_t uid, const string name){
 							"amingConfigsProxyUpgrade,amingConfigsSpeedInput,amingConfigsSpeedOutput,"
 							"amingConfigsTimeoutsRead,amingConfigsTimeoutsUpgrade,amingConfigsTimeoutsWrite";
 		
-		auto users = ldap.data(dn, keys, this->config->ldap.scope.configs, filter);
+		auto users = ldap.data(dn, keys, "base", filter);
 		
 		if(!users.empty()){
 			 
@@ -149,6 +196,8 @@ const AParams::Params Uldap::setParams(const uid_t uid, const string name){
 						else if(dt->first.compare("amingConfigsIpResolver4") == 0) params.ipv4.resolver = dt->second;
 						
 						else if(dt->first.compare("amingConfigsIpResolver6") == 0) params.ipv6.resolver = dt->second;
+						
+						else if(dt->first.compare("amingConfigsRedirect") == 0) params.proxy.redirect = dt->second;
 						
 						else if(dt->first.compare("amingConfigsProxyConnect") == 0){
 							
@@ -488,6 +537,44 @@ const bool Uldap::checkUserByName(const string userName){
 	return (getIdByName(userName) > 0 ? true : false);
 }
  
+const bool Uldap::auth(const uid_t uid, const string password){
+	
+	bool result = false;
+	
+	if((uid > 0) && !password.empty()){
+		
+		const string filter = Anyks::strFormat("(&%s(%s=%u))", this->config->ldap.filter.users.c_str(), this->config->ldap.keys.users.uid.c_str(), uid);
+		
+		ALDAP ldap(this->config, this->log);
+		
+		result = ldap.checkAuth(this->config->ldap.dn.users, password, this->config->ldap.scope.users, filter);
+		
+		if(!result){
+			
+			auto gids = this->getGroupIdByUser(uid, AUSERS_TYPE_LDAP);
+			
+			if(!gids.empty()){
+				
+				for(auto gid = gids.cbegin(); gid != gids.cend(); ++gid){
+					
+					auto group = this->getDataByGid(* gid, AUSERS_TYPE_LDAP);
+					
+					if(!group.name.empty()){
+						
+						const string dn = Anyks::strFormat("%s=%s,%s", this->config->ldap.keys.groups.login.c_str(), Anyks::toCase(group.name).c_str(), this->config->ldap.dn.groups.c_str());
+						
+						result = ldap.checkAuth(dn, password, "base", this->config->ldap.filter.groups);
+						
+						if(result) break;
+					}
+				}
+			}
+		}
+	}
+	
+	return result;
+}
+ 
 const uid_t Uldap::getIdByName(const string userName){
 	
 	uid_t result = 0;
@@ -498,7 +585,7 @@ const uid_t Uldap::getIdByName(const string userName){
 		
 		const string dn = Anyks::strFormat("%s=%s,%s", this->config->ldap.keys.users.login.c_str(), userName.c_str(), this->config->ldap.dn.users.c_str());
 		
-		auto users = ldap.data(dn, this->config->ldap.keys.users.uid, this->config->ldap.scope.users, this->config->ldap.filter.users);
+		auto users = ldap.data(dn, this->config->ldap.keys.users.uid, "base", this->config->ldap.filter.users);
 		
 		if(!users.empty()){
 			
@@ -560,6 +647,11 @@ void Uldap::setParamsMethod(function <const AParams::Params * (const gid_t gid, 
 void Uldap::setGidsMethod(function <const vector <gid_t> (const uid_t uid, const u_short type)> method){
 	
 	this->getGroupIdByUser = method;
+}
+ 
+void Uldap::setGroupDataMethod(function <const AParams::GroupData (const gid_t gid, const u_short type)> method){
+	
+	this->getDataByGid = method;
 }
  
 Uldap::Uldap(Config * config, LogApp * log){

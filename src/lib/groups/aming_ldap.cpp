@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -26,13 +26,13 @@ const AParams::Params Gldap::setParams(const gid_t gid, const string name){
 		
 		const string dn = Anyks::strFormat("ac=%s,%s", name.c_str(), this->config->ldap.dn.configs.c_str());
 		
-		const string filter = Anyks::strFormat("(&%s(amingConfigsType=groups)(%s=%u))", this->config->ldap.filter.configs.c_str(), "amingConfigsGroupId", gid);
+		const string filter = Anyks::strFormat("(&(objectClass=amingConfigs)(amingConfigsType=groups)(%s=%u))", "amingConfigsGroupId", gid);
 		
 		const string keys =	"amingConfigsConnectsConnect,amingConfigsConnectsSize,amingConfigsGzipChunk,"
 							"amingConfigsGzipLength,amingConfigsGzipLevel,amingConfigsGzipProxied,"
 							"amingConfigsGzipRegex,amingConfigsGzipResponse,amingConfigsGzipTransfer,"
 							"amingConfigsGzipTypes,amingConfigsGzipVary,amingConfigsGzipVhttp,amingConfigsAuth,"
-							"amingConfigsIdnt,amingConfigsIpExternal4,amingConfigsIpExternal6,"
+							"amingConfigsIdnt,amingConfigsIpExternal4,amingConfigsIpExternal6,amingConfigsRedirect,"
 							"amingConfigsIpResolver4,amingConfigsIpResolver6,amingConfigsKeepAliveCnt,"
 							"amingConfigsKeepAliveEnabled,amingConfigsKeepAliveIdle,amingConfigsKeepAliveIntvl,"
 							"amingConfigsProxyAgent,amingConfigsProxyConnect,amingConfigsProxyDeblock,"
@@ -41,7 +41,7 @@ const AParams::Params Gldap::setParams(const gid_t gid, const string name){
 							"amingConfigsProxyUpgrade,amingConfigsSpeedInput,amingConfigsSpeedOutput,"
 							"amingConfigsTimeoutsRead,amingConfigsTimeoutsUpgrade,amingConfigsTimeoutsWrite";
 		
-		auto groups = ldap.data(dn, keys, this->config->ldap.scope.configs, filter);
+		auto groups = ldap.data(dn, keys, "base", filter);
 		
 		if(!groups.empty()){
 			 
@@ -73,6 +73,8 @@ const AParams::Params Gldap::setParams(const gid_t gid, const string name){
 						else if(dt->first.compare("amingConfigsIpResolver4") == 0) params.ipv4.resolver = dt->second;
 						
 						else if(dt->first.compare("amingConfigsIpResolver6") == 0) params.ipv6.resolver = dt->second;
+						
+						else if(dt->first.compare("amingConfigsRedirect") == 0) params.proxy.redirect = dt->second;
 						
 						else if(dt->first.compare("amingConfigsProxyConnect") == 0){
 							
@@ -243,7 +245,8 @@ const AParams::Params Gldap::createDefaultParams(const gid_t gid){
 			this->config->proxy.transfer,
 			this->config->proxy.forward,
 			this->config->proxy.subnet,
-			this->config->proxy.pipelining
+			this->config->proxy.pipelining,
+			this->config->proxy.redirect
 		
 		},{
 			this->config->connects.size,
@@ -340,7 +343,11 @@ const vector <AParams::GroupData> Gldap::getAllGroups(){
 			
 			for(auto dt = it->vals.cbegin(); dt != it->vals.cend(); ++dt){
 				
+				string key = dt->first;
+				
 				if(!dt->second.empty()){
+					
+					key = Anyks::trim(key);
 					
 					if(dt->first.compare(this->config->ldap.keys.groups.login) == 0) _name = Anyks::toCase(dt->second[0]);
 					
@@ -416,7 +423,9 @@ const vector <AParams::GroupData> Gldap::getAllGroups(){
 						Anyks::concatVectors <uid_t> (group->users, _users)
 					};
 					
-					result.emplace(group, _group);
+					result.erase(group);
+					
+					result.push_back(_group);
 					
 					break;
 				}
@@ -740,7 +749,7 @@ const gid_t Gldap::getIdByName(const string groupName){
 			this->config->ldap.dn.groups.c_str()
 		);
 		
-		auto groups = ldap.data(dn, this->config->ldap.keys.groups.gid, this->config->ldap.scope.groups, this->config->ldap.filter.groups);
+		auto groups = ldap.data(dn, this->config->ldap.keys.groups.gid, "base", this->config->ldap.filter.groups);
 		
 		if(!groups.empty()){
 			

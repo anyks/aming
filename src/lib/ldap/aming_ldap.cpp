@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -36,7 +36,7 @@ const bool ALDAP::auth(LDAP * ld, const string dn, const string password){
 	
 	if(rc != LDAP_SUCCESS){
 		
-		if(this->log) this->log->write(LOG_ERROR, 0, "set version ldap filed: %s", ldap_err2string(rc));
+		if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "set version ldap filed: %s", ldap_err2string(rc));
 		
 		return false;
 	}
@@ -66,7 +66,7 @@ const bool ALDAP::auth(LDAP * ld, const string dn, const string password){
 	
 	if(rc != LDAP_SUCCESS){
 		
-		if(this->log) this->log->write(LOG_ERROR, 0, "ldap auth filed: %s", ldap_err2string(rc));
+		if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "ldap auth filed: %s", ldap_err2string(rc));
 		
 		return false;
 	}
@@ -101,7 +101,7 @@ const bool ALDAP::checkAuth(const string dn, const string password, const string
 		
 		if(ldap_initialize(&ld, getServer().c_str())){
 			
-			if(this->log) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+			if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
 			
 			return auth;
 		}
@@ -118,7 +118,7 @@ const bool ALDAP::checkAuth(const string dn, const string password, const string
 			
 			if(rc != LDAP_SUCCESS){
 				
-				if(this->log) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
+				if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
 				
 				ldap_unbind_ext(ld, nullptr, nullptr);
 				
@@ -131,7 +131,7 @@ const bool ALDAP::checkAuth(const string dn, const string password, const string
 					
 					if(ldap_initialize(&uld, getServer().c_str())){
 						
-						if(this->log) this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
+						if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "ldap user initialize filed");
 						
 						ldap_unbind_ext(ld, nullptr, nullptr);
 						
@@ -167,7 +167,7 @@ const vector <ALDAP::Data> ALDAP::data(const string dn, const string key, const 
 		
 		if(ldap_initialize(&ld, getServer().c_str())){
 			
-			if(this->log) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+			if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
 			
 			return data;
 		}
@@ -182,7 +182,7 @@ const vector <ALDAP::Data> ALDAP::data(const string dn, const string key, const 
 			
 			if(rc != LDAP_SUCCESS){
 				
-				if(this->log) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
+				if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "ldap search filed: %s", ldap_err2string(rc));
 				
 				ldap_unbind_ext(ld, nullptr, nullptr);
 				
@@ -259,7 +259,7 @@ ALDAP::ALDAP(Config * config, LogApp * log){
 		
 		if(ldap_initialize(&ld, getServer().c_str())){
 			
-			if(this->log) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
+			if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "ldap initialize filed");
 		
 		} else {
 			

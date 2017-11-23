@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,13 +16,36 @@
 using namespace std;
 
  
-const AParams::Params Ufiles::createDefaultParams(const uid_t uid){
+template <typename T>
+const vector <T> Anyks::concatVectors(const vector <T> &v1, const vector <T> &v2){
+	
+	vector <T> result;
+	
+	if(!v1.empty() && !v2.empty()){
+		
+		result.assign(v1.cbegin(), v1.cend());
+		
+		for(auto it = v2.cbegin(); it != v2.cend(); ++it){
+			
+			if(find(v1.begin(), v1.end(), * it) == v1.end()){
+				
+				result.push_back(* it);
+			}
+		}
+	
+	} else if(!v1.empty()) result.assign(v1.cbegin(), v1.cend());
+	else if(!v2.empty()) result.assign(v2.cbegin(), v2.cend());
+	
+	return result;
+};
+ 
+const AParams::Params Ufiles::createDefaultParams(const uid_t uid, const u_short type){
 	
 	AParams::Params result;
 	
 	if(uid > 0){
 		
-		auto groups = this->getGroupIdByUser(uid, AUSERS_TYPE_FILE);
+		auto groups = this->getGroupIdByUser(uid, type);
 		
 		if(!groups.empty()){
 			
@@ -59,7 +82,8 @@ const AParams::Params Ufiles::createDefaultParams(const uid_t uid){
 					params->proxy.transfer,
 					params->proxy.forward,
 					params->proxy.subnet,
-					params->proxy.pipelining
+					params->proxy.pipelining,
+					params->proxy.redirect
 				};
 				
 				result.connects = {
@@ -87,7 +111,53 @@ const AParams::Params Ufiles::createDefaultParams(const uid_t uid){
 				result.idnt.assign(params->idnt.cbegin(), params->idnt.cend());
 			}
 		}
-	}
+	
+	} else result = {
+		
+		uid,
+		
+		this->config->options, {},
+		
+		{this->config->ipv4.external, this->config->ipv4.resolver},
+		
+		{this->config->ipv6.external, this->config->ipv6.resolver},{
+		
+			this->config->gzip.vary,
+			this->config->gzip.level,
+			this->config->gzip.length,
+			this->config->gzip.chunk,
+			this->config->gzip.regex,
+			this->config->gzip.vhttp,
+			this->config->gzip.proxied,
+			this->config->gzip.types
+		
+		},{
+			this->config->proxy.reverse,
+			this->config->proxy.transfer,
+			this->config->proxy.forward,
+			this->config->proxy.subnet,
+			this->config->proxy.pipelining,
+			this->config->proxy.redirect
+		
+		},{
+			this->config->connects.size,
+			this->config->connects.connect
+		},{
+		
+			this->config->timeouts.read,
+			this->config->timeouts.write,
+			this->config->timeouts.upgrade
+		
+		},{
+			this->config->buffers.read,
+			this->config->buffers.write
+		
+		},{
+			this->config->keepalive.keepcnt,
+			this->config->keepalive.keepidle,
+			this->config->keepalive.keepintvl
+		}
+	};
 	
 	return result;
 }
@@ -102,9 +172,11 @@ const AParams::Params Ufiles::setParams(const uid_t uid, const string name){
 		
 		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			
-			INI * ini = new INI(filename);
+			INI ini = INI(filename);
 			
-			params.idnt = Anyks::split(ini->getString("identificators", name), "|");
+			auto idnt = Anyks::split(ini.getString("identificators", name), "|");
+			
+			params.idnt = Anyks::concatVectors <string> (params.idnt, idnt);
 			
 			const string nGzip		= (name + "_gzip");
 			const string nIPv4		= (name + "_ipv4");
@@ -124,161 +196,161 @@ const AParams::Params Ufiles::setParams(const uid_t uid, const string name){
 			const string uConnects	= Anyks::strFormat("%u_%s", uid, "_connects");
 			const string uKeepAlive	= Anyks::strFormat("%u_%s", uid, "_keepalive");
 			 
-			auto setList = [ini, this](const string name, const string uname, const string param, vector <string> &list){
+			auto setList = [&ini, this](const string name, const string uname, const string param, vector <string> &list){
 				
 				vector <string> data;
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					data = Anyks::split(ini->getString(name, param), "|");
+					data = Anyks::split(ini.getString(name, param), "|");
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					data = Anyks::split(ini->getString(uname, param), "|");
+					data = Anyks::split(ini.getString(uname, param), "|");
 				}
 				
 				list.assign(data.cbegin(), data.cend());
 			};
 			 
-			auto setSeconds = [ini, this](const string name, const string uname, const string param, size_t &seconds){
+			auto setSeconds = [&ini, this](const string name, const string uname, const string param, size_t &seconds){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					seconds = (size_t) Anyks::getSeconds(ini->getString(name, param));
+					seconds = (size_t) Anyks::getSeconds(ini.getString(name, param));
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					seconds = (size_t) Anyks::getSeconds(ini->getString(uname, param));
+					seconds = (size_t) Anyks::getSeconds(ini.getString(uname, param));
 				}
 			};
 			 
-			auto setBuffers = [ini, this](const string name, const string uname, const string param, long &buffer){
+			auto setBuffers = [&ini, this](const string name, const string uname, const string param, long &buffer){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					buffer = Anyks::getSizeBuffer(ini->getString(name, param));
+					buffer = Anyks::getSizeBuffer(ini.getString(name, param));
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					buffer = Anyks::getSizeBuffer(ini->getString(uname, param));
+					buffer = Anyks::getSizeBuffer(ini.getString(uname, param));
 				}
 			};
 			 
-			auto setBytes = [ini, this](const string name, const string uname, const string param, size_t &value){
+			auto setBytes = [&ini, this](const string name, const string uname, const string param, size_t &value){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					value = Anyks::getBytes(ini->getString(name, param));
+					value = Anyks::getBytes(ini.getString(name, param));
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					value = Anyks::getBytes(ini->getString(uname, param));
+					value = Anyks::getBytes(ini.getString(uname, param));
 				}
 			};
 			 
-			auto setNumbers = [ini, this](const string name, const string uname, const string param, int &number){
+			auto setNumbers = [&ini, this](const string name, const string uname, const string param, int &number){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					number = (int) ini->getNumber(name, param);
+					number = (int) ini.getNumber(name, param);
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					number = (int) ini->getNumber(uname, param);
+					number = (int) ini.getNumber(uname, param);
 				}
 			};
 			 
-			auto setUNumbers = [ini, this](const string name, const string uname, const string param, u_int &number){
+			auto setUNumbers = [&ini, this](const string name, const string uname, const string param, u_int &number){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					number = (u_int) ini->getUNumber(name, param);
+					number = (u_int) ini.getUNumber(name, param);
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					number = (u_int) ini->getUNumber(uname, param);
+					number = (u_int) ini.getUNumber(uname, param);
 				}
 			};
 			 
-			auto setLNumbers = [ini, this](const string name, const string uname, const string param, long &number){
+			auto setLNumbers = [&ini, this](const string name, const string uname, const string param, long &number){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					number = ini->getNumber(name, param);
+					number = ini.getNumber(name, param);
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					number = ini->getNumber(uname, param);
+					number = ini.getNumber(uname, param);
 				}
 			};
 			 
-			auto setBool = [ini, this](const string name, const string uname, const string param, bool &value){
+			auto setBool = [&ini, this](const string name, const string uname, const string param, bool &value){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					value = ini->getBoolean(name, param);
+					value = ini.getBoolean(name, param);
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					value = ini->getBoolean(uname, param);
+					value = ini.getBoolean(uname, param);
 				}
 			};
 			 
-			auto setString = [ini, this](const string name, const string uname, const string param, string &str){
+			auto setString = [&ini, this](const string name, const string uname, const string param, string &str){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					str = ini->getString(name, param);
+					str = ini.getString(name, param);
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					str = ini->getString(uname, param);
+					str = ini.getString(uname, param);
 				}
 			};
 			 
-			auto setOptions = [&params, ini, this](const string name, const string uname, const string param, const u_short flag){
+			auto setOptions = [&params, &ini, this](const string name, const string uname, const string param, const u_short flag){
 				
 				short result = -1;
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					result = (ini->getBoolean(name, param) ? 1 : 0);
+					result = (ini.getBoolean(name, param) ? 1 : 0);
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					result = (ini->getBoolean(uname, param) ? 1 : 0);
+					result = (ini.getBoolean(uname, param) ? 1 : 0);
 				}
 				
 				if(result > -1) Anyks::setOptions(flag, params.options, bool(result));
 			};
 			 
-			auto setOptionsByParam = [&params, ini, this](const string name, const string uname, const string param, const string defstr, const string findstr, const u_short flag){
+			auto setOptionsByParam = [&params, &ini, this](const string name, const string uname, const string param, const string defstr, const string findstr, const u_short flag){
 				
 				short result = -1;
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					result = (ini->getString(name, param, defstr).compare(findstr) == 0 ? 1 : 0);
+					result = (ini.getString(name, param, defstr).compare(findstr) == 0 ? 1 : 0);
 				
-				} else if(ini->checkParam(uname, param)){
+				} else if(ini.checkParam(uname, param)){
 					
-					result = (ini->getString(uname, param, defstr).compare(findstr) == 0 ? 1 : 0);
+					result = (ini.getString(uname, param, defstr).compare(findstr) == 0 ? 1 : 0);
 				}
 				
 				if(result > -1) Anyks::setOptions(flag, params.options, bool(result));
 			};
 			 
-			auto setLevel = [ini, this](const string name, const string uname, int &level){
+			auto setLevel = [&ini, this](const string name, const string uname, int &level){
 				
 				string gzipLevel;
 				
-				if(ini->checkParam(name, "level")){
+				if(ini.checkParam(name, "level")){
 					
-					gzipLevel = ini->getString(name, "level");
+					gzipLevel = ini.getString(name, "level");
 				
-				} else if(ini->checkParam(uname, "level")){
+				} else if(ini.checkParam(uname, "level")){
 					
-					gzipLevel = ini->getString(uname, "level");
+					gzipLevel = ini.getString(uname, "level");
 				}
 				
 				if(!gzipLevel.empty()){
@@ -305,6 +377,7 @@ const AParams::Params Ufiles::setParams(const uid_t uid, const string name){
 			setList(nGzip, uGzip, "vhttp", params.gzip.vhttp);
 			setList(nGzip, uGzip, "types", params.gzip.types);
 			setList(nGzip, uGzip, "proxied", params.gzip.proxied);
+			setList(nProxy, uProxy, "redirect", params.proxy.redirect);
 			setLNumbers(nGzip, uGzip, "length", params.gzip.length);
 			setNumbers(nKeepAlive, uKeepAlive, "keepcnt", params.keepalive.keepcnt);
 			setNumbers(nKeepAlive, uKeepAlive, "keepidle", params.keepalive.keepidle);
@@ -325,8 +398,6 @@ const AParams::Params Ufiles::setParams(const uid_t uid, const string name){
 			setBytes(nConnects, uConnects, "size", params.connects.size);
 			setString(nGzip, uGzip, "regex", params.gzip.regex);
 			setLevel(nGzip, uGzip, params.gzip.level);
-			
-			delete ini;
 		}
 	}
 	
@@ -339,7 +410,7 @@ const vector <AParams::User> Ufiles::readUsers(){
 	
 	time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		this->lastUpdate = curUpdate;
 		
@@ -444,13 +515,16 @@ const AParams::UserData Ufiles::getDataById(const uid_t uid){
 	
 	AParams::UserData result;
 	
-	if((uid > 0) && (this->users.count(uid) > 0)){
+	if(uid > 0){
 		
-		result = this->users.find(uid)->second;
-	
-	} else if((uid > 0) && !(readUsers()).empty()) {
+		if(!this->users.empty() && (this->users.count(uid) > 0)){
+			
+			result = this->users.find(uid)->second;
 		
-		if(this->users.count(uid) > 0) result = this->users.find(uid)->second;
+		} else if(!(readUsers()).empty()) {
+			
+			if(this->users.count(uid) > 0) result = this->users.find(uid)->second;
+		}
 	}
 	
 	return result;
@@ -466,23 +540,94 @@ const bool Ufiles::checkUserByName(const string userName){
 	return (getIdByName(userName) > 0 ? true : false);
 }
  
+const bool Ufiles::auth(const uid_t uid, const string password){
+	
+	bool result = false;
+	
+	if((uid > 0) && !password.empty()){
+		
+		auto user = getDataById(uid);
+		
+		if(user.uid > 0){
+			 
+			auto checkPassword = [](const string name, const string password1, const string password2){
+				
+				bool result = false;
+				
+				smatch match;
+				
+				
+				
+				
+				
+				
+				regex e("(?:(CL)\\:(.+)|(MD5)\\:(\\w{32})|(SHA1)\\:(\\w{40})|(SHA256)\\:(\\w{64})|(SHA512)\\:(\\w{128}))", regex::ECMAScript | regex::icase);
+				
+				regex_search(password1, match, e);
+				
+				if(!match.empty()){
+					
+					if(!match[1].str().empty()) result = (password2.compare(match[2].str()) == 0);
+					
+					else if(!match[3].str().empty()) result = (Anyks::md5(name + password2).compare(match[4].str()) == 0);
+					
+					else if(!match[5].str().empty()) result = (Anyks::sha1(name + password2).compare(match[6].str()) == 0);
+					
+					else if(!match[7].str().empty()) result = (Anyks::sha256(name + password2).compare(match[8].str()) == 0);
+					
+					else if(!match[9].str().empty()) result = (Anyks::sha512(name + password2).compare(match[10].str()) == 0);
+				}
+				
+				return result;
+			};
+			
+			result = checkPassword(user.name, user.pass, password);
+			
+			if(!result){
+				
+				auto gids = this->getGroupIdByUser(user.uid, AUSERS_TYPE_FILE);
+				
+				if(!gids.empty()){
+					
+					for(auto gid = gids.cbegin(); gid != gids.cend(); ++gid){
+						
+						auto group = this->getDataByGid(* gid, AUSERS_TYPE_FILE);
+						
+						if(!group.name.empty()){
+							
+							result = checkPassword(group.name, group.pass, password);
+							
+							if(result) break;
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return result;
+}
+ 
 const uid_t Ufiles::getIdByName(const string userName){
 	
 	uid_t result = 0;
 	
-	if(!userName.empty() && !this->users.empty()){
+	if(!userName.empty()){
 		
 		readUsers();
 		
-		string name = Anyks::toCase(userName);
-		
-		for(auto it = this->users.cbegin(); it != this->users.cend(); ++it){
+		if(!this->users.empty()){
 			
-			if(it->second.name.compare(name) == 0){
+			string name = Anyks::toCase(userName);
+			
+			for(auto it = this->users.cbegin(); it != this->users.cend(); ++it){
 				
-				result = it->second.uid;
-				
-				break;
+				if(it->second.name.compare(name) == 0){
+					
+					result = it->second.uid;
+					
+					break;
+				}
 			}
 		}
 	}
@@ -494,13 +639,13 @@ const string Ufiles::getNameById(const uid_t uid){
 	
 	string result;
 	
-	if((uid > 0) && !this->users.empty()){
+	if(uid > 0){
 		
-		if(this->users.count(uid) > 0){
+		if(!this->users.empty() && (this->users.count(uid) > 0)){
 			
 			result = this->users.find(uid)->second.name;
 		
-		} else if((uid > 0) && !(readUsers()).empty()) {
+		} else if(!(readUsers()).empty()) {
 			
 			if(this->users.count(uid) > 0) result = this->users.find(uid)->second.name;
 		}
@@ -511,13 +656,13 @@ const string Ufiles::getNameById(const uid_t uid){
  
 void Ufiles::setPassword(const uid_t uid, const string password){
 	
-	if((uid > 0) && !password.empty() && !this->users.empty()){
+	if((uid > 0) && !password.empty()){
 		
-		if(this->users.count(uid) > 0){
+		if(!this->users.empty() && (this->users.count(uid) > 0)){
 			
 			(this->users.find(uid)->second).pass = password;
 		
-		} else if((uid > 0) && !(readUsers()).empty()) {
+		} else if(!(readUsers()).empty()) {
 			
 			if(this->users.count(uid) > 0) (this->users.find(uid)->second).pass = password;
 		}
@@ -549,6 +694,11 @@ void Ufiles::setParamsMethod(function <const AParams::Params * (const gid_t gid,
 void Ufiles::setGidsMethod(function <const vector <gid_t> (const uid_t uid, const u_short type)> method){
 	
 	this->getGroupIdByUser = method;
+}
+ 
+void Ufiles::setGroupDataMethod(function <const AParams::GroupData (const gid_t gid, const u_short type)> method){
+	
+	this->getDataByGid = method;
 }
  
 Ufiles::Ufiles(Config * config, LogApp * log){

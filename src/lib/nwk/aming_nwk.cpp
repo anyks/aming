@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -273,10 +273,28 @@ const bool Network::compareIP6(const string ip1, const string ip2){
 		const string _ip1 = Anyks::toCase(setLowIp6(ip1));
 		const string _ip2 = Anyks::toCase(setLowIp6(ip2));
 		
-		if(_ip1.compare(_ip2) == 0) compare = true;
+		compare = (_ip1.compare(_ip2) == 0);
 	}
 	
 	return compare;
+}
+ 
+const bool Network::isV4ToV6(const string ip){
+	
+	bool result = false;
+	
+	if(!ip.empty()){
+		
+		smatch match;
+		
+		regex e("^\\:\\:ffff\\:\\d{1,3}(?:\\.\\d{1,3}){3}$", regex::ECMAScript | regex::icase);
+		
+		regex_search(ip, match, e);
+		
+		result = !match.empty();
+	}
+	
+	return result;
 }
  
 IPdata Network::imposeMask(IPdata ip, IPdata mask){
@@ -433,7 +451,8 @@ const string Network::getLow1Ip6(const string ip){
 			
 			if(i < (len - 1)) ipv6.append(":");
 		}
-	}
+	
+	} else ipv6 = ip;
 	
 	return ipv6;
 }
@@ -503,7 +522,8 @@ const string Network::getLow2Ip6(const string ip){
 			ipv6 = regex_replace(ip, e, "::");
 		
 		} else ipv6 = str;
-	}
+	
+	} else ipv6 = ip;
 	
 	return ipv6;
 }
@@ -569,7 +589,8 @@ const string Network::setLow1Ip6(const string ip){
 			
 			if(i < (len - 1)) ipv6.append(":");
 		}
-	}
+	
+	} else ipv6 = ip;
 	
 	return ipv6;
 }
@@ -626,7 +647,8 @@ const string Network::setLow2Ip6(const string ip){
 			
 			ipv6 = regex_replace(ipv6, e, "");
 		}
-	}
+	
+	} else ipv6 = ip;
 	
 	return ipv6;
 }

@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:47
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -22,7 +22,7 @@ void ConnectClients::Client::add(void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		http->frze = &this->freeze;
 		
@@ -43,7 +43,7 @@ void ConnectClients::Client::add(void * ctx){
 		
 		this->key = (http->proxy->config->connects.key == AMING_MAC ? http->client.mac : http->client.ip);
 		
-		this->max = http->proxy->config->connects.connect;
+		this->max = http->auser.connects.connect;
 		
 		std::thread thr(&HttpProxy::connection, http);
 		
@@ -74,7 +74,7 @@ void ConnectClients::add(void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		string key = (http->proxy->config->connects.key == AMING_MAC ? http->client.mac : http->client.ip);
 		
@@ -112,7 +112,7 @@ void ConnectClients::rm(const string key){
  
 void BufferHttpProxy::free_socket(evutil_socket_t * fd){
 	
-	if(* fd > -1){
+	if((* fd) > -1){
 		
 		shutdown(* fd, SHUT_RDWR);
 		
@@ -124,9 +124,9 @@ void BufferHttpProxy::free_socket(evutil_socket_t * fd){
  
 void BufferHttpProxy::free_event(struct bufferevent ** event){
 	
-	if(* event != nullptr){
+	if((* event) != nullptr){
 		
-		bufferevent_free(*event);
+		bufferevent_free(* event);
 		
 		* event = nullptr;
 	}
@@ -184,7 +184,7 @@ void BufferHttpProxy::checkUpgrade(){
 	if(this->httpResponse.isUpgrade()
 	&& (this->httpResponse.getStatus() == 101)){
 		
-		if(this->proxy->config->options & OPT_UPGRADE){
+		if(this->auser.options & OPT_UPGRADE){
 			
 			
 			this->client.connect = true;
@@ -218,11 +218,40 @@ void BufferHttpProxy::checkClose(){
 	} else close();
 }
  
+void BufferHttpProxy::auserUpdate(AParams::AUser auser){
+	
+	if(auser.auth){
+		
+		this->mtx.lock();
+		
+		this->auser = auser;
+		
+		this->parser.create(this->auser.options, this->proxy->config, this->proxy->log);
+		
+		this->readTimeout = this->auser.timeouts.read;
+		
+		this->writeTimeout = this->auser.timeouts.write;
+		
+		vector <string> resolver;
+		
+		switch(this->proxy->config->proxy.extIPv){
+			
+			case 4: resolver = this->auser.ipv4.resolver; break;
+			
+			case 6: resolver = this->auser.ipv6.resolver; break;
+		}
+		
+		if(this->dns != nullptr) this->dns->replaceServers(resolver);
+		
+		this->mtx.unlock();
+	}
+}
+ 
 void BufferHttpProxy::sleep(const size_t size, const bool type){
 	
 	int seconds = 0;
 	
-	float max = float(type ? this->proxy->config->buffers.read : this->proxy->config->buffers.write);
+	float max = float(type ? this->auser.buffers.read : this->auser.buffers.write);
 	
 	if(max > 0){
 		
@@ -280,14 +309,19 @@ void BufferHttpProxy::sendClient(){
 	
 	this->httpResponse.setProtocol(this->httpRequest.getProtocol());
 	
-	this->proxy->headers->modify(this->client.ip, this->client.mac, this->server.ip, this->httpResponse);
+	this->proxy->headers->modify({
+		this->client.ip,
+		this->client.mac,
+		this->server.ip,
+		&this->auser
+	}, this->httpResponse);
 	 
 	
 	const string response = this->httpResponse.getResponseData(!this->httpResponse.isClose() && (this->httpResponse.getVersion() > 1));
 	
 	if(this->server.upgrade){
 		
-		this->readTimeout = this->proxy->config->timeouts.upgrade;
+		this->readTimeout = this->auser.timeouts.upgrade;
 		
 		this->setTimeout(TM_CLIENT | TM_SERVER, true, true);
 	
@@ -308,7 +342,12 @@ void BufferHttpProxy::sendClient(){
  
 void BufferHttpProxy::sendServer(){
 	
-	this->proxy->headers->modify(this->client.ip, this->client.mac, this->server.ip, this->httpRequest);
+	this->proxy->headers->modify({
+		this->client.ip,
+		this->client.mac,
+		this->server.ip,
+		&this->auser
+	}, this->httpRequest);
 	
 	this->client.request = this->httpRequest.getRequestData();
 	
@@ -328,48 +367,64 @@ void BufferHttpProxy::next(){
 		this->parser.httpData.erase(this->parser.httpData.begin());
 	}
 	
-	if(this->proxy->config->proxy.pipelining){
+	if(this->auser.proxy.pipelining){
 		
 		if(!this->parser.httpData.empty()
 		&& !this->httpResponse.isClose()) HttpProxy::do_request(this);
 	}
 }
  
-BufferHttpProxy::BufferHttpProxy(System * proxy){
+BufferHttpProxy::BufferHttpProxy(const string ip, const string mac, System * proxy){
 	
-	this->mtx.lock();
-	
-	this->proxy = proxy;
-	
-	this->base = event_base_new();
-	
-	this->parser.create(this->proxy->config->proxy.name, this->proxy->config->options);
-	
-	this->readTimeout = this->proxy->config->timeouts.read;
-	
-	this->writeTimeout = this->proxy->config->timeouts.write;
-	
-	vector <string> resolver;
-	
-	switch(this->proxy->config->proxy.extIPv){
+	if((proxy != nullptr) && !ip.empty() && !mac.empty()){
 		
-		case 4: resolver = this->proxy->config->ipv4.resolver; break;
+		this->mtx.lock();
+		try {
+			
+			this->proxy = proxy;
+			
+			this->base = event_base_new();
+			
+			this->client.ip = ip;
+			
+			this->client.mac = mac;
+			
+			this->auser = this->proxy->ausers->searchUser(this->client.ip, this->client.mac);
+			
+			this->auth = this->auser.auth;
+			
+			this->httpResponse = HttpData(this->auser.options, this->proxy->config, this->proxy->log);
+			
+			this->parser.create(this->auser.options, this->proxy->config, this->proxy->log);
+			
+			this->readTimeout = this->auser.timeouts.read;
+			
+			this->writeTimeout = this->auser.timeouts.write;
+			
+			vector <string> resolver;
+			
+			switch(this->proxy->config->proxy.extIPv){
+				
+				case 4: resolver = this->auser.ipv4.resolver; break;
+				
+				case 6: resolver = this->auser.ipv6.resolver; break;
+			}
+			
+			this->dns = new DNSResolver(this->proxy->log, this->proxy->cache, this->base, resolver);
 		
-		case 6: resolver = this->proxy->config->ipv6.resolver; break;
+		} catch(const bad_alloc&) {}
+		
+		this->mtx.unlock();
 	}
-	
-	this->dns = new DNSResolver(this->proxy->log, this->proxy->cache, this->base, resolver);
-	
-	this->mtx.unlock();
 }
  
 BufferHttpProxy::~BufferHttpProxy(){
 	
 	this->mtx.lock();
 	
-	if(this->dns) delete this->dns;
+	if(this->dns != nullptr) delete this->dns;
 	
-	event_base_free(this->base);
+	if(this->base != nullptr) event_base_free(this->base);
 	
 	this->mtx.unlock();
 }
@@ -384,13 +439,9 @@ void HttpProxy::create_client(const string ip, const string mac, const evutil_so
 	
 	this->server->log->write(LOG_ACCESS, 0, "client connect to proxy server, host = %s, mac = %s, socket = %d", ip.c_str(), mac.c_str(), fd);
 	
-	BufferHttpProxy * http = new BufferHttpProxy(this->server);
+	BufferHttpProxy * http = new BufferHttpProxy(ip, mac, this->server);
 	
 	http->sockets.client = fd;
-	
-	http->client.mac = mac;
-	
-	http->client.ip = ip;
 	
 	this->clients.add(http);
 }
@@ -647,14 +698,17 @@ const bool HttpProxy::check_auth(void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
-		const string user = http->httpRequest.getLogin();
+		const string login = http->httpRequest.getLogin();
 		
 		const string password = http->httpRequest.getPassword();
 		
+		auto auser = http->proxy->ausers->authenticate(login, password);
 		
-		return ((user.compare("forman") == 0) && (password.compare("911") == 0));
+		http->auserUpdate(auser);
+		
+		return auser.auth;
 		
 		http->proxy->log->write(LOG_MESSAGE, 0, "auth client [%s] to proxy wrong!", http->client.ip.c_str());
 	}
@@ -666,7 +720,7 @@ const bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		Network nwk;
 		
@@ -674,7 +728,7 @@ const bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
 		
 		u_int nettype = http->proxy->config->proxy.extIPv;
 		
-		if(http->proxy->config->proxy.subnet){
+		if(http->auser.proxy.subnet){
 			
 			nettype = nwk.checkNetworkByIp(ip);
 		}
@@ -690,9 +744,9 @@ const bool HttpProxy::isallow_remote_connect(const string ip, void * ctx){
 			
 			case -1: return false;
 			
-			case 0: return http->proxy->config->proxy.reverse;
+			case 0: return http->auser.proxy.reverse;
 			
-			case 1: return http->proxy->config->proxy.forward;
+			case 1: return http->auser.proxy.forward;
 		}
 	}
 	
@@ -703,7 +757,7 @@ const int HttpProxy::connect_server(void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		if(http->events.server == nullptr){
 			
@@ -719,7 +773,7 @@ const int HttpProxy::connect_server(void * ctx){
 			
 			u_int nettype = http->proxy->config->proxy.extIPv;
 			
-			if(http->proxy->config->proxy.subnet){
+			if(http->auser.proxy.subnet){
 				
 				Network nwk;
 				
@@ -753,7 +807,7 @@ const int HttpProxy::connect_server(void * ctx){
 					
 					server4_addr.sin_port = htons(http->server.port);
 					
-					client4_addr.sin_addr.s_addr = * ((unsigned long *) client->h_addr);
+					client4_addr.sin_addr.s_addr = * ((u_long *) client->h_addr);
 					
 					server4_addr.sin_addr.s_addr = inet_addr(http->server.ip.c_str());
 					
@@ -851,9 +905,9 @@ const int HttpProxy::connect_server(void * ctx){
 				socket_keepalive(
 					http->sockets.server,
 					http->proxy->log,
-					http->proxy->config->keepalive.keepcnt,
-					http->proxy->config->keepalive.keepidle,
-					http->proxy->config->keepalive.keepintvl
+					http->auser.keepalive.keepcnt,
+					http->auser.keepalive.keepidle,
+					http->auser.keepalive.keepintvl
 				);
 			}
 			
@@ -930,7 +984,7 @@ void HttpProxy::event_cb(struct bufferevent * bev, const short events, void * ct
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		const evutil_socket_t current_fd = bufferevent_getfd(bev);
 		
@@ -1001,7 +1055,7 @@ void HttpProxy::send_http_data(void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
@@ -1016,7 +1070,7 @@ void HttpProxy::send_http_data(void * ctx){
 			
 			size_t size = http->httpResponse.setEntitybody(buffer, len);
 			
-			if(http->httpResponse.getRawBodySize() > http->proxy->config->connects.size){
+			if(http->httpResponse.getRawBodySize() > http->auser.connects.size){
 				
 				http->closeServer();
 				
@@ -1072,7 +1126,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		struct evbuffer * input		= bufferevent_get_input(http->events.server);
 		struct evbuffer * output	= bufferevent_get_output(http->events.client);
@@ -1083,7 +1137,9 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 		
 		http->setTimeout(TM_CLIENT | TM_SERVER, true, true);
 		
-		if(http->client.connect) evbuffer_add_buffer(output, input);
+		const bool redirect = (http->proxy->config->proxy.type & AMING_TYPE_REDIRECT);
+		
+		if(redirect || http->client.connect) evbuffer_add_buffer(output, input);
 		
 		else if(http->httpResponse.isEndHeaders()) send_http_data(http);
 		
@@ -1102,7 +1158,7 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 				
 				const u_int status = http->httpResponse.getStatus();
 				
-				http->httpResponse.setGzipParams(&http->proxy->config->gzip);
+				http->httpResponse.setGzipParams(&http->auser.gzip);
 				
 				if((status == 304) && !http->cache.empty()){
 					
@@ -1111,9 +1167,14 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					http->httpResponse.set(http->cache.data(), http->cache.size());
 					
 					if(!age.empty()) http->httpResponse.setHeader("Age", age);
-
-					cout << " ===========2 " << endl;
-
+					
+					http->sendClient();
+					
+					http->next();
+					
+					return;
+				
+				} else if(http->httpResponse.isRedirect()){
 					
 					http->sendClient();
 					
@@ -1122,9 +1183,9 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 					return;
 				}
 				
-				string cl = http->httpResponse.getHeader("content-length");
+				const string cl = http->httpResponse.getHeader("content-length");
 				
-				if(!cl.empty() && (::atoi(cl.c_str()) > http->proxy->config->connects.size)){
+				if(!cl.empty() && (::atoi(cl.c_str()) > http->auser.connects.size)){
 					
 					http->closeServer();
 					
@@ -1157,19 +1218,77 @@ void HttpProxy::read_server_cb(struct bufferevent * bev, void * ctx){
 	return;
 }
  
+void HttpProxy::rresolve_cb(const string ip, void * ctx){
+	
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
+	
+	if(http != nullptr){
+		
+		if(!ip.empty()){
+			
+			http->server.ip = ip;
+			
+			const int connect = connect_server(http);
+			
+			if(connect > 0){
+				
+				http->setTimeout(TM_SERVER | TM_CLIENT, true, true);
+				
+				struct evbuffer * input		= bufferevent_get_input(http->events.client);
+				struct evbuffer * output	= bufferevent_get_output(http->events.server);
+				
+				evbuffer_add_buffer(output, input);
+			
+			} else if(connect == 0){
+				
+				http->httpResponse.faultConnect();
+				
+				socket_tcpcork(http->sockets.client, http->proxy->log);
+				
+				http->sendClient();
+			
+			} else {
+				
+				http->close();
+				
+				return;
+			}
+		
+		} else {
+			
+			http->proxy->log->write(
+				LOG_ERROR, 0,
+				"host server for redirect = %s is not found, port = %d, client = %s, socket = %d",
+				http->server.ip.c_str(),
+				http->server.port,
+				http->client.ip.c_str(),
+				http->sockets.client
+			);
+			
+			http->httpResponse.pageNotFound();
+			
+			socket_tcpcork(http->sockets.client, http->proxy->log);
+			
+			http->sendClient();
+		}
+	}
+	
+	return;
+}
+ 
 void HttpProxy::resolve_cb(const string ip, void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		if(!ip.empty()){
 			
 			if(isallow_remote_connect(ip, http)){
 				
-				const bool conn_enabled = (http->proxy->config->options & OPT_CONNECT);
+				const bool conn_enabled = (http->auser.options & OPT_CONNECT);
 				
-				const bool upge_enabled = (http->proxy->config->options & OPT_UPGRADE);
+				const bool upge_enabled = (http->auser.options & OPT_UPGRADE);
 				
 				if(!http->auth) http->auth = check_auth(http);
 				
@@ -1186,7 +1305,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					
 					const u_int port = http->httpRequest.getPort();
 					
-					if(http->events.server
+					if((http->events.server != nullptr)
 					&& ((http->server.ip.compare(ip) != 0)
 					|| (http->server.port != port))) http->closeServer();
 					
@@ -1207,18 +1326,11 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 							
 							if(!cache.valid){
 								
-								http->httpResponse.setGzipParams(&http->proxy->config->gzip);
+								http->httpResponse.setGzipParams(&http->auser.gzip);
 								
 								http->httpResponse.set(cache.http.data(), cache.http.size());
 								
 								if(cache.age) http->httpResponse.setHeader("Age", to_string(cache.age));
-								
-
-								
-								
-								cout << " ===========1 " << endl;
-								
-
 								
 								http->sendClient();
 								
@@ -1249,7 +1361,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 					
 					else {
 						
-						int connect = connect_server(http);
+						const int connect = connect_server(http);
 						
 						if(connect > 0){
 							
@@ -1281,7 +1393,7 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 			
 			http->proxy->log->write(
 				LOG_ERROR, 0,
-				"host server = %s not found, port = %d, client = %s, socket = %d",
+				"host server = %s is not found, port = %d, client = %s, socket = %d",
 				http->httpRequest.getHost().c_str(),
 				http->httpRequest.getPort(),
 				http->client.ip.c_str(),
@@ -1299,38 +1411,94 @@ void HttpProxy::resolve_cb(const string ip, void * ctx){
 	return;
 }
  
+void HttpProxy::do_redirect(void * ctx){
+	
+	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
+	
+	if(http != nullptr){
+		
+		if(!http->auser.proxy.redirect.empty()){
+			
+			string host;
+			
+			http->setTimeout(TM_CLIENT, true);
+			
+			if(http->auser.proxy.redirect.size() > 1){
+				
+				srand(time(0));
+				
+				host = http->auser.proxy.redirect[rand() % http->auser.proxy.redirect.size()];
+			
+			} else host = http->auser.proxy.redirect[0];
+			
+			if(!host.empty()){
+				
+				auto server = Anyks::split(host, ":");
+				
+				http->server.ip = server[0];
+				
+				const u_int port = http->proxy->config->proxy.port;
+				
+				http->server.port = (server.size() > 1 ? (Anyks::isNumber(server[1]) ? ::atoi(server[1].c_str()) : port) : port);
+				
+				if(http->dns != nullptr){
+					
+					if(!http->auser.proxy.subnet){
+						
+						switch(http->proxy->config->proxy.extIPv){
+							
+							case 4: http->dns->resolve(http->server.ip, AF_INET, &HttpProxy::rresolve_cb, http); break;
+							
+							case 6: http->dns->resolve(http->server.ip, AF_INET6, &HttpProxy::rresolve_cb, http); break;
+						}
+					
+					} else http->dns->resolve(http->server.ip, AF_UNSPEC, &HttpProxy::rresolve_cb, http);
+				
+				} else http->close();
+			
+			} else http->close();
+		
+		} else http->close();
+	}
+	
+	return;
+}
+ 
 void HttpProxy::do_request(void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		http->setTimeout(TM_CLIENT, true);
 		
 		if(!http->parser.httpData.empty()
 		&& http->httpRequest.isEmpty()){
 			
-			http->httpResponse.clear();
-			
 			http->httpResponse.create(
-				http->proxy->config->proxy.name,
-				http->proxy->config->options
+				http->auser.options,
+				http->proxy->config,
+				http->proxy->log
 			);
 			
 			auto httpData = http->parser.httpData.begin();
 			
 			http->httpRequest = * httpData;
 			
-			if(!http->proxy->config->proxy.subnet){
+			if(http->dns != nullptr){
 				
-				switch(http->proxy->config->proxy.extIPv){
+				if(!http->auser.proxy.subnet){
 					
-					case 4: http->dns->resolve(http->httpRequest.getHost(), AF_INET, &HttpProxy::resolve_cb, http); break;
-					
-					case 6: http->dns->resolve(http->httpRequest.getHost(), AF_INET6, &HttpProxy::resolve_cb, http); break;
-				}
+					switch(http->proxy->config->proxy.extIPv){
+						
+						case 4: http->dns->resolve(http->httpRequest.getHost(), AF_INET, &HttpProxy::resolve_cb, http); break;
+						
+						case 6: http->dns->resolve(http->httpRequest.getHost(), AF_INET6, &HttpProxy::resolve_cb, http); break;
+					}
+				
+				} else http->dns->resolve(http->httpRequest.getHost(), AF_UNSPEC, &HttpProxy::resolve_cb, http);
 			
-			} else http->dns->resolve(http->httpRequest.getHost(), AF_UNSPEC, &HttpProxy::resolve_cb, http);
+			} else http->close();
 		}
 	}
 	
@@ -1341,13 +1509,13 @@ void HttpProxy::write_client_cb(struct bufferevent * bev, void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		struct evbuffer * output = bufferevent_get_output(http->events.client);
 		
 		const size_t len = evbuffer_get_length(output);
 		
-		if(!len && http->httpResponse.isClose()) http->close();
+		if(!len && (http->httpResponse.isClose() || http->httpResponse.isRedirect())) http->close();
 	}
 	
 	return;
@@ -1357,37 +1525,40 @@ void HttpProxy::read_client_cb(struct bufferevent * bev, void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
-		bool conn_enabled = (http->proxy->config->options & OPT_CONNECT);
+		if(http->proxy->config->proxy.type & AMING_TYPE_REDIRECT) do_redirect(http);
 		
-		struct evbuffer * input = bufferevent_get_input(bev);
-		
-		size_t len = evbuffer_get_length(input);
-		
-		http->sleep(len, true);
-		
-		if(http->client.connect && (conn_enabled || http->client.https)){
+		else {
 			
-			http->setTimeout(TM_SERVER | TM_CLIENT, true, true);
+			struct evbuffer * input = bufferevent_get_input(bev);
 			
-			struct evbuffer * output = bufferevent_get_output(http->events.server);
+			const size_t len = evbuffer_get_length(input);
 			
-			evbuffer_add_buffer(output, input);
-		
-		} else if(!http->client.connect) {
+			http->sleep(len, true);
 			
-			char * buffer = new char[len];
+			if(http->client.connect && ((http->auser.options & OPT_CONNECT) || http->client.https)){
+				
+				http->setTimeout(TM_SERVER | TM_CLIENT, true, true);
+				
+				struct evbuffer * output = bufferevent_get_output(http->events.server);
+				
+				evbuffer_add_buffer(output, input);
 			
-			evbuffer_copyout(input, buffer, len);
+			} else if(!http->client.connect) {
+				
+				char * buffer = new char[len];
+				
+				evbuffer_copyout(input, buffer, len);
+				
+				evbuffer_drain(input, http->parser.parse(buffer, len));
+				
+				delete [] buffer;
+				
+				do_request(http);
 			
-			evbuffer_drain(input, http->parser.parse(buffer, len));
-			
-			delete [] buffer;
-			
-			do_request(http);
-		
-		} else http->close();
+			} else http->close();
+		}
 	}
 	
 	return;
@@ -1397,7 +1568,7 @@ void HttpProxy::connection(void * ctx){
 	
 	BufferHttpProxy * http = reinterpret_cast <BufferHttpProxy *> (ctx);
 	
-	if(http){
+	if(http != nullptr){
 		
 		function <void (void)> remove = http->remove;
 		
@@ -1432,7 +1603,7 @@ void HttpProxy::accept_cb(const evutil_socket_t fd, const short event, void * ct
 	
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	
-	if(proxy){
+	if(proxy != nullptr){
 		
 		string ip, mac;
 		
@@ -1497,7 +1668,7 @@ const evutil_socket_t HttpProxy::create_server(){
 			
 			server4_addr.sin_family = AF_INET;
 			
-			server4_addr.sin_addr.s_addr = * ((unsigned long *) bindhost->h_addr);
+			server4_addr.sin_addr.s_addr = * ((u_long *) bindhost->h_addr);
 			
 			server4_addr.sin_port = htons(this->server->config->proxy.port);
 			
@@ -1577,10 +1748,7 @@ void HttpProxy::run_server(const evutil_socket_t fd, void * ctx){
 	
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	
-	if(proxy){
-		
-		 
-		
+	if(proxy != nullptr){
 		
 		this_thread::sleep_for(chrono::milliseconds(500));
 		
@@ -1610,7 +1778,7 @@ void HttpProxy::run_works(pid_t * pids, const evutil_socket_t fd, const size_t c
 	
 	HttpProxy * proxy = reinterpret_cast <HttpProxy *> (ctx);
 	
-	if(pids && proxy && (fd > -1) && max){
+	if((pids != nullptr) && (proxy != nullptr) && (fd > -1) && (max > 0)){
 		
 		if(cur < max){
 			
@@ -1650,7 +1818,7 @@ void HttpProxy::run_works(pid_t * pids, const evutil_socket_t fd, const size_t c
  
 HttpProxy::HttpProxy(System * proxy){
 	
-	if(proxy){
+	if(proxy != nullptr){
 		
 		this->server = proxy;
 		

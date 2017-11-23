@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -20,7 +20,7 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 	
 	DomainData * domainData = reinterpret_cast <DomainData *> (ctx);
 	
-	if(domainData){
+	if(domainData != nullptr){
 		
 		string ip;
 		
@@ -28,7 +28,7 @@ void DNSResolver::callback(int errcode, struct evutil_addrinfo * addr, void * ct
 		
 		if(errcode){
 			
-			if(domainData->log) domainData->log->write(LOG_ERROR, 0, "%s %s", domainData->domain.c_str(), evutil_gai_strerror(errcode));
+			if(domainData->log != nullptr) domainData->log->write(LOG_ERROR, 0, "%s %s", domainData->domain.c_str(), evutil_gai_strerror(errcode));
 		} else {
 			
 			struct evutil_addrinfo * ai;
@@ -130,7 +130,7 @@ void DNSResolver::resolve(const string domain, const int family, handler fn, voi
 				
 				struct evdns_getaddrinfo_request * req = evdns_getaddrinfo(this->dnsbase, domain.c_str(), nullptr, &hints, &DNSResolver::callback, domainData);
 				
-				if((req == nullptr) && this->log) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
+				if((req == nullptr) && (this->log != nullptr)) this->log->write(LOG_ERROR, 0, "request for %s returned immediately", domain.c_str());
 			}
 		
 		} else fn(match[1].str(), ctx);
@@ -141,13 +141,13 @@ void DNSResolver::resolve(const string domain, const int family, handler fn, voi
  
 void DNSResolver::createDNSBase(){
 	
-	if(this->base){
+	if(this->base != nullptr){
 		
-		if(this->dnsbase) evdns_base_free(this->dnsbase, 0);
+		if(this->dnsbase != nullptr) evdns_base_free(this->dnsbase, 0);
 		
 		this->dnsbase = evdns_base_new(this->base, 0);
 		
-		if(!this->dnsbase && this->log){
+		if((this->dnsbase == nullptr) && (this->log != nullptr)){
 			
 			this->log->write(LOG_ERROR, 0, "dns base does not created!");
 		}
@@ -158,7 +158,7 @@ void DNSResolver::createDNSBase(){
  
 void DNSResolver::setLog(LogApp * log){
 	
-	if(log) this->log = log;
+	if(log != nullptr) this->log = log;
 }
  
 void DNSResolver::setBase(struct event_base * base){
@@ -170,11 +170,11 @@ void DNSResolver::setBase(struct event_base * base){
  
 void DNSResolver::setNameServer(const string server){
 	
-	if(!server.empty() && this->dnsbase){
+	if(!server.empty() && (this->dnsbase != nullptr)){
 		
 		if(evdns_base_nameserver_ip_add(this->dnsbase, server.c_str()) != 0){
 			
-			if(this->log) this->log->write(LOG_ERROR, 0, "name server [%s] does not add!", server.c_str());
+			if(this->log != nullptr) this->log->write(LOG_ERROR, 0, "name server [%s] does not add!", server.c_str());
 		}
 	}
 }
@@ -185,10 +185,18 @@ void DNSResolver::setNameServers(vector <string> servers){
 		
 		this->servers = servers;
 		
-		for(u_int i = 0; i < this->servers.size(); i++){
+		for(auto it = this->servers.cbegin(); it != this->servers.cend(); ++it){
 			
-			setNameServer(this->servers[i]);
+			setNameServer(* it);
 		}
+	}
+}
+ 
+void DNSResolver::replaceServers(vector <string> servers){
+	
+	if(!servers.empty()){
+		
+		if(evdns_base_clear_nameservers_and_suspend(this->dnsbase)) setNameServers(servers);
 	}
 }
  
@@ -209,7 +217,7 @@ DNSResolver::~DNSResolver(){
 	
 	this->mtx.lock();
 	
-	if(this->dnsbase){
+	if(this->dnsbase != nullptr){
 		
 		evdns_base_free(this->dnsbase, 0);
 		

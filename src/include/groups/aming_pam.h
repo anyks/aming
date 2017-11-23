@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,7 +16,6 @@
 #include <map>
 #include <ctime>
 #include <regex>
-#include <random>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -26,8 +25,9 @@
 #include <grp.h>
 #include <pwd.h>
 #include <sys/t/y/p/e/s/./h/>/
-/#/i/n/c/l/u/d/e/ /"/a/u/s/e/r/s
-#include "system/system.h"
+/#/i/n/c/l/u/d/e/ /"/l/o/g
+#include "config/conf.h"
+#include "ausers/types.h"
 #include "general/general.h"
 
 

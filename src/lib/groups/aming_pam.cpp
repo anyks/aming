@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -22,7 +22,7 @@ const vector <AParams::Group> Gpam::readGroups(){
 	
 	const time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		smatch match;
 		
@@ -98,6 +98,8 @@ const vector <AParams::Group> Gpam::readGroups(){
 			}
 		}
 		
+		endpwent();
+		
 		for(auto it = groups.cbegin(); it != groups.cend(); ++it) this->cache.push_back(it->second);
 	
 	} else if(!this->cache.empty()) {
@@ -117,7 +119,7 @@ const vector <AParams::GroupData> Gpam::getAllGroups(){
 	
 	const time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		this->cache.clear();
 		
@@ -183,6 +185,8 @@ const vector <AParams::GroupData> Gpam::getAllGroups(){
 				}
 			}
 		}
+		
+		endpwent();
 		
 		for(auto it = groups.cbegin(); it != groups.cend(); ++it) result.push_back(it->second);
 		

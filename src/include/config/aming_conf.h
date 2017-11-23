@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -13,6 +13,7 @@
 #ifndef _CONFIG_AMING_
 #define _CONFIG_AMING_
 
+#include <map>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -74,11 +75,10 @@ class Config {
 		};
 		 
 		struct Authorization {
-			u_short auth;				
-			u_short services;			
-			u_int gmaxpam;				
-			time_t update;				
-			bool enabled;				
+			u_short auth;		
+			u_short services;	
+			u_int gmaxpam;		
+			bool enabled;		
 		};
 		 
 		struct Firewall {
@@ -123,17 +123,13 @@ class Config {
 				};
 				 
 				struct Scope {
-					string groups;		
-					string users;		
-					string configs;		
-					string headers;		
+					string groups;	
+					string users;	
 				};
 				 
 				struct Filter {
-					string groups;		
-					string users;		
-					string configs;		
-					string headers;		
+					string groups;	
+					string users;	
 				};
 				 
 				struct Keys {
@@ -172,26 +168,29 @@ class Config {
 		};
 		 
 		struct Proxy {
-			u_short type;		
-			u_short configs;	
-			u_int intIPv;		
-			u_int extIPv;		
-			u_int port;			
-			u_int workers;		
-			bool debug;			
-			bool daemon;		
-			bool reverse;		
-			bool transfer;		
-			bool forward;		
-			bool ipv6only;		
-			bool subnet;		
-			bool optimos;		
-			bool pipelining;	
-			string user;		
-			string group;		
-			string name;		
-			string piddir;		
-			string dir;			
+			u_short type;				
+			u_short configs;			
+			u_int intIPv;				
+			u_int extIPv;				
+			u_int port;					
+			u_int workers;				
+			time_t conftime;			
+			bool debug;					
+			bool daemon;				
+			bool reverse;				
+			bool transfer;				
+			bool forward;				
+			bool ipv6only;				
+			bool subnet;				
+			bool optimos;				
+			bool pipelining;			
+			string user;				
+			string group;				
+			string name;				
+			string piddir;				
+			string dir;					
+			vector <string> redirect;	
+			map <u_int, string> atemp;	
 		};
 		
 		string filename;

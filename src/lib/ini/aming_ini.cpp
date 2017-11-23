@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -53,7 +53,7 @@ const string INI::getSection(const string str){
 		
 		regex_search(str, match, e);
 		
-		if(!match.empty()) result = match[1].str();
+		if(!match.empty()) result = Anyks::toCase(match[1].str());
 	}
 	
 	return result;
@@ -65,15 +65,17 @@ const string INI::get(const string section, const string key){
 	
 	if(!section.empty() && !key.empty()){
 		
-		if(this->data.count(section)){
+		const string _section = Anyks::toCase(section);
+		
+		if(this->data.count(_section) > 0){
 			
-			auto params = this->data.find(section)->second;
+			auto params = this->data.find(_section)->second;
 			
 			for(auto it = params.cbegin(); it != params.cend(); ++it){
 				
-				string key1 = key;
+				const string key1 = key;
 				
-				string key2 = it->key;
+				const string key2 = it->key;
 				
 				if(Anyks::toCase(key1).compare(Anyks::toCase(key2)) == 0) return it->value;
 			}
@@ -91,7 +93,7 @@ const vector <string> INI::getSections(){
 		
 		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
 			
-			result.push_back(it->first);
+			result.push_back(Anyks::toCase(it->first));
 		}
 	}
 	
@@ -106,9 +108,9 @@ const vector <INI::Params> INI::getParamsInSection(const string section){
 		
 		for(auto it = this->data.cbegin(); it != this->data.cend(); ++it){
 			
-			string section1 = section;
+			const string section1 = Anyks::toCase(section);
 			
-			string section2 = it->first;
+			const string section2 = Anyks::toCase(it->first);
 			
 			if(Anyks::toCase(section1).compare(Anyks::toCase(section2)) == 0){
 				
@@ -279,9 +281,11 @@ const bool INI::checkParam(const string section, const string key){
 	
 	bool result = false;
 	
-	if(!section.empty() && !key.empty() && this->data.count(section)){
+	if(!section.empty() && !key.empty() && (this->data.count(section) > 0)){
 		
-		auto params = this->data.find(section)->second;
+		const string _section = Anyks::toCase(section);
+		
+		auto params = this->data.find(_section)->second;
 		
 		for(auto it = params.cbegin(); it != params.cend(); ++it){
 			
@@ -305,7 +309,9 @@ const bool INI::checkSection(const string name){
 	
 	bool result = false;
 	
-	if(!name.empty() && this->data.count(name)) result = true;
+	const string section = Anyks::toCase(name);
+	
+	if(!name.empty() && (this->data.count(section) > 0)) result = true;
 	
 	return result;
 }
@@ -320,13 +326,15 @@ const bool INI::addData(const string section, const string key, const string val
 		
 		Params params = {key, value};
 		
-		if(this->data.count(section)){
+		const string _section = Anyks::toCase(section);
+		
+		if(this->data.count(_section) > 0){
 			
-			this->data.find(section)->second.push_back(params);
+			this->data.find(_section)->second.push_back(params);
 		
 		} else {
 			
-			this->data.insert(pair <string, vector <Params>>(section, {params}));
+			this->data.insert(pair <string, vector <Params>>(_section, {params}));
 		}
 	}
 	
@@ -339,9 +347,11 @@ const bool INI::delData(const string section, const string key){
 	
 	if(!section.empty() && !key.empty()){
 		
-		if(this->data.count(section)){
+		const string _section = Anyks::toCase(section);
+		
+		if(this->data.count(_section) > 0){
 			
-			auto params = this->data.find(section)->second;
+			auto params = this->data.find(_section)->second;
 			
 			for(auto it = params.cbegin(); it != params.cend(); ++it){
 				
@@ -355,9 +365,9 @@ const bool INI::delData(const string section, const string key){
 					
 					params.erase(it);
 					
-					this->data.erase(section);
+					this->data.erase(_section);
 					
-					this->data.insert(pair <string, vector <Params>>(section, params));
+					this->data.insert(pair <string, vector <Params>>(_section, params));
 					
 					break;
 				}
@@ -372,11 +382,13 @@ const bool INI::addSection(const string name){
 	
 	bool result = false;
 	
-	if(!name.empty() && !this->data.count(name)){
+	const string section = Anyks::toCase(name);
+	
+	if(!section.empty() && (this->data.count(section) < 1)){
 		
 		result = true;
 		
-		this->data.insert(pair <string, vector <Params>>(name, {{}}));
+		this->data.insert(pair <string, vector <Params>>(section, {{}}));
 	}
 	
 	return result;
@@ -386,11 +398,13 @@ const bool INI::delSection(const string name){
 	
 	bool result = false;
 	
-	if(!name.empty() && this->data.count(name)){
+	const string section = Anyks::toCase(name);
+	
+	if(!section.empty() && (this->data.count(section) > 0)){
 		
 		result = true;
 		
-		this->data.erase(name);
+		this->data.erase(section);
 	}
 	
 	return result;
@@ -409,6 +423,8 @@ void INI::read(const string filename){
 		
 		if(config.is_open()){
 			
+			string tmpsec;
+			
 			string filedata;
 			
 			while(config.good()){
@@ -419,19 +435,17 @@ void INI::read(const string filename){
 				
 				const Params params = getParams(filedata);
 				
-				if(!section.empty()) this->section = section;
+				if(!section.empty()) tmpsec = section;
 				
 				else if(!params.key.empty()){
 					
-					if(!this->data.count(this->section))
+					if(this->data.count(tmpsec) < 1)
 						
-						this->data.insert(pair <string, vector <Params>>(this->section, {params}));
+						this->data.insert(pair <string, vector <Params>>(tmpsec, {params}));
 					
-					else this->data.find(this->section)->second.push_back(params);
+					else this->data.find(tmpsec)->second.push_back(params);
 				}
 			}
-			
-			this->section.clear();
 			
 			config.close();
 		}

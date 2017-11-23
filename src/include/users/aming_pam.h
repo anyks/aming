@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,18 +16,18 @@
 #include <map>
 #include <ctime>
 #include <regex>
-#include <random>
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <stdlib.h>
 #include <unistd.h>
 #include <functional>
-#include <grp.h>
 #include <pwd.h>
 #include <sys/t/y/p/e/s/./h/>/
-/#/i/n/c/l/u/d/e/ /"/a/u/s/e/r/s
-#include "system/system.h"
+/#/i/n/c/l/u/d/e/ /</s/e/c/u/r/i/t/y
+#include "log/log.h"
+#include "config/conf.h"
+#include "ausers/types.h"
 #include "general/general.h"
 
 
@@ -48,6 +48,8 @@ class Upam {
 		function <string (gid_t, u_short)> getGroupNameByGid;
 		
 		function <gid_t (string, u_short)> getGidByGroupName;
+		 
+		static int pamconv(int num_msg = 0, const struct pam_message ** msg = nullptr, struct pam_response ** resp = nullptr, void * appdata_ptr = nullptr);
 	public:
 		 
 		const vector <AParams::User> readUsers();
@@ -59,6 +61,8 @@ class Upam {
 		const bool checkUserById(const uid_t uid);
 		 
 		const bool checkUserByName(const string userName);
+		 
+		const bool auth(const uid_t uid, const string password);
 		 
 		const uid_t getIdByName(const string userName);
 		 

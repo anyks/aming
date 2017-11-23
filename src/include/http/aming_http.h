@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -24,17 +24,10 @@
 #include <stdlib.h>
 #include <sys/t/y/p/e/s/./h/>/
 /#/i/n/c/l/u/d/e/ /"/b/a/s/e/6/4
+#include "log/log.h"
 #include "config/conf.h"
+#include "acodes/acodes.h"
 #include "general/general.h"
-
-
-#define MOD_GZIP_ZLIB_WINDOWSIZE	15
-#define MOD_GZIP_ZLIB_CFACTOR		9
-#define MOD_GZIP_ZLIB_BSIZE			8096
-#define MOD_GZIP_ZLIB_CHUNK			1024
-
-
-#define PARSER_OPTIONS_DEFAULT OPT_AGENT | OPT_GZIP | OPT_KEEPALIVE | OPT_LOG
 
 
 using namespace std;
@@ -194,6 +187,7 @@ class HttpData {
 		};
 		 
 		struct Http {
+			u_short code;	
 			string text;	
 			string headers;	
 			string body;	
@@ -244,6 +238,9 @@ class HttpData {
 		
 		HttpHeaders headers;
 		
+		LogApp * log = nullptr;
+		Config * config = nullptr;
+		
 		Gzip * gzipParams = nullptr;
 		
 		unordered_map <u_short, Http> response;
@@ -264,6 +261,8 @@ class HttpData {
 		const bool isExtGzip();
 		 
 		const bool isUpgrade();
+		 
+		const bool isRedirect();
 		 
 		const bool isConnect();
 		 
@@ -287,7 +286,7 @@ class HttpData {
 		 
 		const bool setRedirect(HttpData &response);
 		 
-		const size_t parse(const char * buffer, const size_t size, const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
+		const size_t parse(const char * buffer, const size_t size, const u_short options = PARSER_OPTIONS_DEFAULT, Config * config = nullptr, LogApp * log = nullptr);
 		 
 		const size_t getBodySize();
 		 
@@ -320,6 +319,8 @@ class HttpData {
 		const string getPassword();
 		 
 		const string getUseragent();
+		 
+		const string getLocation();
 		 
 		const string getHeader(const string key);
 		 
@@ -399,9 +400,9 @@ class HttpData {
 		 
 		void authSuccess();
 		 
-		void create(const string name, const u_short options);
+		void create(const u_short options, Config * config = nullptr, LogApp * log = nullptr);
 		 
-		HttpData(const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
+		HttpData(const u_short options = PARSER_OPTIONS_DEFAULT, Config * config = nullptr, LogApp * log = nullptr);
 		 
 		~HttpData();
 };
@@ -414,9 +415,12 @@ class Http {
 			size_t	begin = 0, end = 0;
 		};
 		
+		LogApp * log = nullptr;
+		Config * config = nullptr;
+		
 		u_short options;
 		
-		string name, version;
+		string version;
 	public:
 		
 		vector <HttpData> httpData;
@@ -429,9 +433,9 @@ class Http {
 		 
 		void clear();
 		 
-		void create(const string name, const u_short options);
+		void create(const u_short options, Config * config = nullptr, LogApp * log = nullptr);
 		 
-		Http(const string name = APP_NAME, const u_short options = PARSER_OPTIONS_DEFAULT);
+		Http(const u_short options = PARSER_OPTIONS_DEFAULT, Config * config = nullptr, LogApp * log = nullptr);
 		 
 		~Http();
 };

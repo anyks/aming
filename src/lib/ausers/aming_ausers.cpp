@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -55,7 +55,7 @@ void AUsers::getPasswordsFromFile(const string path, LogApp * log, void * object
 											
 											auto * groups = reinterpret_cast <const vector <const AParams::GroupData> *> (data);
 											
-											const gid_t gid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : 0);
+											const gid_t gid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : (reinterpret_cast <Gfiles *> (object))->getIdByName(subject));
 											
 											for(auto it = groups->cbegin(); it != groups->cend(); ++it){
 												
@@ -69,7 +69,7 @@ void AUsers::getPasswordsFromFile(const string path, LogApp * log, void * object
 											
 											auto * users = reinterpret_cast <const vector <const AParams::UserData> *> (data);
 											
-											const uid_t uid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : 0);
+											const uid_t uid = (Anyks::isNumber(subject) ? ::atoi(subject.c_str()) : (reinterpret_cast <Ufiles *> (object))->getIdByName(subject));
 											
 											for(auto it = users->cbegin(); it != users->cend(); ++it){
 												
@@ -122,11 +122,11 @@ const string AUsers::getPasswordFromFile(const string path, LogApp * log, const 
 			
 			if(Anyks::isFileExist(path.c_str())){
 				
-				string filedata;
-				
 				ifstream file(path.c_str());
 				
 				if(file.is_open()){
+					
+					string filedata;
 					
 					while(file.good()){
 						
@@ -170,27 +170,11 @@ const AParams::AUser AUsers::getUser(const uid_t uid){
 	
 	AParams::AUser result;
 	
-	if((uid > 0) && (this->users != nullptr) && (this->groups != nullptr)){
-		
-		auto user = this->users->getDataById(uid);
-		
-		if(user.uid > 0){
+	if((this->users != nullptr) && (this->groups != nullptr)){
+		 
+		auto setParams = [&result, this](const uid_t uid, const u_short type){
 			
-			auto gits = this->groups->getGroupIdByUser(uid, user.type);
-			
-			for(auto it = gits.cbegin(); it != gits.cend(); it++){
-				
-				auto group = this->groups->getDataById(* it, user.type);
-				
-				if(group.gid > 0){
-					
-					result.groups.push_back({group.gid, group.name, group.desc, group.pass});
-				}
-			}
-			
-			result.user = {user.uid, user.name, user.desc, user.pass};
-			
-			auto * params = this->users->getParamsById(user.uid, user.type);
+			auto * params = this->users->getParamsById(uid, type);
 			
 			if(params != nullptr){
 				
@@ -199,12 +183,38 @@ const AParams::AUser AUsers::getUser(const uid_t uid){
 				result.ipv6 = params->ipv6;
 				result.gzip = params->gzip;
 				result.proxy = params->proxy;
+				result.options = params->options;
 				result.connects = params->connects;
 				result.timeouts = params->timeouts;
 				result.buffers = params->buffers;
 				result.keepalive = params->keepalive;
 			}
-		}
+		};
+		
+		if(uid > 0){
+			
+			auto user = this->users->getDataById(uid);
+			
+			if(user.uid > 0){
+				
+				auto gits = this->groups->getGroupIdByUser(uid, user.type);
+				
+				for(auto it = gits.cbegin(); it != gits.cend(); it++){
+					
+					auto group = this->groups->getDataById(* it, user.type);
+					
+					if(group.gid > 0){
+						
+						result.groups.push_back({group.gid, group.name, group.desc, group.pass});
+					}
+				}
+				
+				result.user = {user.uid, user.name, user.desc, user.pass};
+				
+				setParams(user.uid, user.type);
+			}
+		
+		} else setParams(0, AMING_NULL);
 	}
 	
 	return result;
@@ -431,16 +441,17 @@ const AParams::AUser AUsers::searchUser(const string ip, const string mac){
 	
 	AParams::AUser result;
 	
-	if(!ip.empty() && !mac.empty()){
+	if((!ip.empty() || !mac.empty()) && (this->users != nullptr)){
 		
 		auto * user = this->users->getDataByConnect(ip, mac);
 		
-		if(user != nullptr){
+		if((user != nullptr) && (user->id > 0)){
 			
 			result = getUser(user->id);
 			
 			result.auth = true;
-		}
+		
+		} else result = getUser(0);
 	}
 	
 	return result;
@@ -450,14 +461,15 @@ const AParams::AUser AUsers::authenticate(const string login, const string pass)
 	
 	AParams::AUser result;
 	
-	if(!login.empty() && !pass.empty() && (this->auth != nullptr)){
+	if(!login.empty() && !pass.empty() && (this->users != nullptr)){
 		
-		if(this->auth->check(login, pass)){
+		if(this->users->auth(login, pass)){
 			
 			result = getUser(login);
 			
 			result.auth = true;
-		}
+		
+		} else result = getUser(0);
 	}
 	
 	return result;
@@ -481,14 +493,15 @@ AUsers::AUsers(Config * config, LogApp * log){
 			
 			this->users->setGroups(this->groups);
 			
-			this->auth = new Auth(this->config, this->log, this->groups, this->users);
+			this->groups->run();
+			
+			this->users->run();
 		}
 	}
 }
  
 AUsers::~AUsers(){
 	
-	if(this->auth != nullptr)	delete this->auth;
 	if(this->users != nullptr)	delete this->users;
 	if(this->groups != nullptr)	delete this->groups;
 }

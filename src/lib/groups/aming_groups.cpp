@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -32,7 +32,9 @@ const vector <T> Anyks::concatVectors(const vector <T> &v1, const vector <T> &v2
 				result.push_back(* it);
 			}
 		}
-	}
+	
+	} else if(!v1.empty()) result.assign(v1.cbegin(), v1.cend());
+	else if(!v2.empty()) result.assign(v2.cbegin(), v2.cend());
 	
 	return result;
 };
@@ -91,7 +93,7 @@ const bool AUsers::Groups::update(const u_short type){
 	
 	time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		this->params.clear();
 		
@@ -318,30 +320,30 @@ const AParams::GroupData AUsers::Groups::getDataById(const gid_t gid, u_short ty
 				
 				result = this->gfiles->getDataById(gid);
 				
-				if(!result.name.empty()) result = this->gpam->getDataById(gid);
+				if(result.name.empty()) result = this->gpam->getDataById(gid);
 			} break;
 			
 			case AUSERS_TYPE_FILE_LDAP: {
 				
 				result = this->gfiles->getDataById(gid);
 				
-				if(!result.name.empty()) result = this->gldap->getDataById(gid);
+				if(result.name.empty()) result = this->gldap->getDataById(gid);
 			} break;
 			
 			case AUSERS_TYPE_PAM_LDAP: {
 				
 				result = this->gpam->getDataById(gid);
 				
-				if(!result.name.empty()) result = this->gldap->getDataById(gid);
+				if(result.name.empty()) result = this->gldap->getDataById(gid);
 			} break;
 			
 			case AUSERS_TYPE_FILE_PAM_LDAP: {
 				
 				result = this->gfiles->getDataById(gid);
 				
-				if(!result.name.empty()) result = this->gpam->getDataById(gid);
+				if(result.name.empty()) result = this->gpam->getDataById(gid);
 				
-				if(!result.name.empty()) result = this->gldap->getDataById(gid);
+				if(result.name.empty()) result = this->gldap->getDataById(gid);
 			} break;
 		}
 	}
@@ -925,26 +927,32 @@ const vector <uid_t> AUsers::Groups::getIdUsers(const string groupName, const u_
  
 void AUsers::Groups::setUsers(void * users){
 	
-	this->users = users;
-	 
-	auto userNameByUid = [this](const uid_t uid, const u_short type){
+	if(users != nullptr){
 		
-		return getUserNameByUid(uid, type);
-	};
-	 
-	auto uidByUserName = [this](const string userName, const u_short type){
+		this->users = users;
+		 
+		auto userNameByUid = [this](const uid_t uid, const u_short type){
+			
+			return getUserNameByUid(uid, type);
+		};
+		 
+		auto uidByUserName = [this](const string userName, const u_short type){
+			
+			return getUidByUserName(userName, type);
+		};
 		
-		return getUidByUserName(userName, type);
-	};
+		this->gpam->setUsersMethods(userNameByUid, uidByUserName);
+		this->gldap->setUsersMethods(userNameByUid, uidByUserName);
+		this->gfiles->setUsersMethods(userNameByUid, uidByUserName);
+		
+		this->gfiles->setPasswordMethod(AUsers::getPasswordFromFile);
+		this->gfiles->setPasswordsMethod(AUsers::getPasswordsFromFile);
+	}
+}
+ 
+void AUsers::Groups::run(){
 	
-	this->gpam->setUsersMethods(userNameByUid, uidByUserName);
-	this->gldap->setUsersMethods(userNameByUid, uidByUserName);
-	this->gfiles->setUsersMethods(userNameByUid, uidByUserName);
-	
-	this->gfiles->setPasswordMethod(AUsers::getPasswordFromFile);
-	this->gfiles->setPasswordsMethod(AUsers::getPasswordsFromFile);
-	
-	update();
+	if((this->users != nullptr) && this->params.empty()) update();
 }
  
 AUsers::Groups::Groups(Config * config, LogApp * log){

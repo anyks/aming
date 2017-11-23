@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -39,11 +39,12 @@ namespace AParams {
 	};
 	 
 	struct Proxy {
-		bool reverse;		
-		bool transfer;		
-		bool forward;		
-		bool subnet;		
-		bool pipelining;	
+		bool reverse;				
+		bool transfer;				
+		bool forward;				
+		bool subnet;				
+		bool pipelining;			
+		vector <string> redirect;	
 	};
 	 
 	struct Connects {
@@ -101,6 +102,7 @@ namespace AParams {
 	 
 	struct AUser {
 		bool auth = false;		
+		u_short options;		
 		vector <string> idnt;	
 		vector <Group> groups;	
 		User user;				
@@ -129,10 +131,10 @@ namespace AParams {
 	};
 	 
 	struct Client {
-		string ip;				
-		string mac;				
-		string sip;				
-		AUser * user = nullptr;	
+		string ip;		
+		string mac;		
+		string sip;		
+		AUser * auser;	
 	};
 };
 

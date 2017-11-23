@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -16,623 +16,756 @@
 using namespace std;
 
  
-vector <Headers::Params> Headers::get(const string client, bool addGeneral){
+template <typename T>
+const vector <T> Anyks::concatVectors(const vector <T> &v1, const vector <T> &v2){
 	
-	vector <Params> rules;
+	vector <T> result;
 	
-	if(!client.empty()){
+	if(!v1.empty() && !v2.empty()){
 		
-		Network nwk;
+		result.assign(v1.cbegin(), v1.cend());
 		
-		auto check = isNot(client);
-		
-		string userId = Anyks::toCase(check.str);
-		
-		u_short utype = checkTypeId(userId);
-		
-		
-		if(utype == 1)		userId	= nwk.setLowIp(userId);		
-		else if(utype == 2)	userId	= nwk.setLowIp6(userId);	
-		
-		if(!check.inv && (this->rules.count(userId) > 0)){
+		for(auto it = v2.cbegin(); it != v2.cend(); ++it){
 			
-			auto user = this->rules[userId];
-			
-			rules.assign(user.begin(), user.end());
-		
-		} else if(check.inv) {
-			
-			for(auto it = this->rules.begin(); it != this->rules.end(); ++it){
+			if(find(v1.begin(), v1.end(), * it) == v1.end()){
 				
-				if(it->first.compare("*") != 0) copy(it->second.begin(), it->second.end(), back_inserter(rules));
+				result.push_back(* it);
 			}
 		}
-		
-		if(addGeneral && (this->rules.count("*") > 0)){
-			
-			auto general = this->rules["*"];
-			
-			copy(general.begin(), general.end(), back_inserter(rules));
-		}
-	}
 	
-	return rules;
-}
- 
-void Headers::add(const string client, Headers::Params params){
+	} else if(!v1.empty()) result.assign(v1.cbegin(), v1.cend());
+	else if(!v2.empty()) result.assign(v2.cbegin(), v2.cend());
 	
-	if(!client.empty()){
-		
-		Network nwk;
-		
-		string userId = Anyks::toCase(client);
-		
-		u_short utype = checkTypeId(userId);
-		
-		
-		if(utype == 1)		userId	= nwk.setLowIp(userId);		
-		else if(utype == 2)	userId	= nwk.setLowIp6(userId);	
-		
-		if(this->rules.count(userId) > 0){
-			
-			this->rules[userId].push_back(params);
-		
-		} else {
-			
-			vector <Params> rules = {params};
-			
-			this->rules.insert(pair <const string, vector <Params>> (userId, rules));
-		}
-	}
-}
- 
-void Headers::rm(const string client){
-	
-	if(!client.empty()){
-		
-		Network nwk;
-		
-		string userId = Anyks::toCase(client);
-		
-		u_short utype = checkTypeId(userId);
-		
-		
-		if(utype == 1)		userId	= nwk.setLowIp(userId);		
-		else if(utype == 2)	userId	= nwk.setLowIp6(userId);	
-		
-		if(this->rules.count(userId) > 0) this->rules.erase(userId);
-	}
-}
- 
-void Headers::read(){
-	
-	if(this->config){
-		
-		const string name = getName();
-		
-		const string dir = this->config->proxy.dir;
-		
-		const string filename = Anyks::addToPath(dir, name + ".headers");
-		
-		if(!filename.empty()
-		
-		&& Anyks::isDirExist(dir.c_str())
-		
-		&& Anyks::isFileExist(filename.c_str())){
-			
-			Anyks::setOwner(filename.c_str(), this->config->proxy.user, this->config->proxy.group);
-			
-			string filedata;
-			
-			ifstream file(filename.c_str());
-			
-			if(file.is_open()){
-				
-				while(file.good()){
-					
-					getline(file, filedata);
-					
-					size_t pos = filedata.find("#");
-					
-					if(pos != string::npos) filedata = filedata.replace(pos, filedata.length() - pos, "");
-					
-					if(!filedata.empty()){
-						
-						smatch match;
-						
-						regex e(
-							
-							"(ADD|RM|\\*)(?:\\s+|\\t+)"
-							
-							"(IN|OUT|\\*)(?:\\s+|\\t+)"
-							
-							"([\\w\\.\\-\\@\\:\\!]+|\\*)(?:\\s+|\\t+)"
-							
-							"([A-Za-z\\s\\|\\!]+|\\*)(?:\\s+|\\t+)"
-							
-							"([^\\s\\r\\n\\t]+)(?:\\s+|\\t+)"
-							
-							"([\\w\\.\\-\\@\\:\\!]+|\\*)(?:\\s+|\\t+)"
-							
-							"([^\\s\\r\\n\\t]+|\\*)(?:\\s+|\\t+)"
-							
-							"([^\\r\\n\\t]+)",
-							regex::ECMAScript | regex::icase
-						);
-						
-						regex_search(filedata, match, e);
-						
-						if(!match.empty()){
-							
-							Network nwk;
-							
-							string userId = Anyks::toCase(match[3].str());
-							
-							string serverId = Anyks::toCase(match[6].str());
-							
-							u_short utype = checkTypeId(userId);
-							u_short stype = checkTypeId(serverId);
-							
-							
-							if(utype == 1)		userId		= nwk.setLowIp(userId);		
-							else if(utype == 2)	userId		= nwk.setLowIp6(userId);	
-							
-							if(stype == 1)		serverId	= nwk.setLowIp(serverId);	
-							else if(stype == 2)	serverId	= nwk.setLowIp6(serverId);	
-							
-							Params params = {
-								
-								utype,
-								
-								stype,
-								
-								Anyks::toCase(match[1].str()),
-								
-								Anyks::toCase(match[2].str()),
-								
-								Anyks::toCase(serverId),
-								
-								match[5].str(),
-								
-								match[7].str(),
-								
-								Anyks::split(Anyks::toCase(match[4].str()), "|"),
-								
-								Anyks::split(match[8].str(), "|")
-							};
-							
-							add(userId, params);
-						}
-					}
-				}
-				
-				file.close();
-			}
-		
-		} else if(!filename.empty() && this->log){
-			
-			this->log->write(LOG_WARNING, 0, "headers file (%s) is not found", filename.c_str());
-		}
-	}
-}
- 
-void Headers::modifyHeaders(const string server, vector <Headers::Params> rules, HttpData &http){
-	
-	if(!server.empty() && !rules.empty()){
-		
-		bool routeIn = false, routeAll = false, action = false;
-		
-		const string method = http.getMethod();
-		
-		const u_int status = http.getStatus();
-		
-		for(u_int i = 0; i < rules.size(); i++){
-			
-			bool result = false;
-			
-			if(rules[i].route.compare("*") == 0) routeAll = true;
-			else routeAll = false;
-			
-			if(rules[i].route.compare("in") == 0)		routeIn = true;
-			else if(rules[i].route.compare("out") == 0)	routeIn = false;
-			
-			if(routeAll || ((!status && !routeIn) || (status && routeIn))) result = true;
-			
-			if(result){
-				
-				for(u_int j = 0; j < rules[i].methods.size(); j++){
-					
-					auto check = isNot(rules[i].methods[j]);
-					
-					if(check.inv){
-						
-						if(check.str.compare(method) == 0){
-							
-							result = false;
-							
-							break;
-						
-						} else result = true;
-					
-					} else {
-						
-						if((check.str.compare("*") == 0)
-						|| (check.str.compare(method) == 0)){
-							
-							result = true;
-							
-							break;
-						
-						} else result = false;
-					}
-				}
-				
-				if(result){
-					
-					if(rules[i].server.compare("*") != 0){
-						
-						auto check = isNot(rules[i].server);
-						
-						if(check.inv){
-							
-							switch(rules[i].stype){
-								
-								case 1:
-								case 2: if(check.str.compare(server) == 0) result = false; break;
-								
-								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) == 0) result = false; break;
-								
-								default: result = false;
-							}
-						
-						} else {
-							
-							switch(rules[i].stype){
-								
-								case 1:
-								case 2: if(check.str.compare(server) != 0) result = false; break;
-								
-								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) != 0) result = false; break;
-								
-								default: result = false;
-							}
-						}
-					}
-					
-					if(result){
-						
-						if(rules[i].path.compare("*") != 0){
-							
-							auto check = isNot(rules[i].path);
-							
-							if(check.inv){
-								
-								if(Anyks::toCase(check.str)
-								.compare(Anyks::toCase(http.getPath())) == 0) result = false;
-							
-							} else {
-								
-								if(Anyks::toCase(check.str)
-								.compare(Anyks::toCase(http.getPath())) != 0) result = false;
-							}
-						}
-						
-						if(result && (rules[i].regex.compare("*") != 0)){
-							
-							
-							smatch match;
-							
-							regex e(rules[i].regex, regex::ECMAScript | regex::icase);
-							
-							const string userAgent = http.getUseragent();
-							
-							regex_search(userAgent, match, e);
-							
-							result = !match.empty();
-						}
-					}
-				}
-			}
-			
-			if(result){
-				
-				if(rules[i].action.compare("add") == 0)		action = true;
-				else if(rules[i].action.compare("rm") == 0)	action = false;
-				
-				for(u_int j = 0; j < rules[i].headers.size(); j++){
-					
-					smatch match;
-					
-					const string header = rules[i].headers[j];
-					
-					if(action){
-						
-						regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
-						
-						regex_search(header, match, e);
-						
-						if(!match.empty()) http.setHeader(match[1].str(), match[2].str());
-					
-					} else {
-						
-						regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
-						
-						regex_search(header, match, e);
-						
-						if(!match.empty()) http.rmHeader(match[1].str());
-					}
-				}
-			}
-		}
-	}
-}
- 
-void Headers::modifyHeaders(const string server, vector <Headers::Params> rules, string &data, HttpData &http){
-	
-	if(!server.empty() && !rules.empty() && !data.empty()){
-		
-		bool routeIn = false, routeAll = false, action = false;
-		
-		const string method = http.getMethod();
-		
-		const u_int status = http.getStatus();
-		
-		for(u_int i = 0; i < rules.size(); i++){
-			
-			bool result = false;
-			
-			if(rules[i].route.compare("*") == 0) routeAll = true;
-			else routeAll = false;
-			
-			if(rules[i].route.compare("in") == 0)		routeIn = true;
-			else if(rules[i].route.compare("out") == 0)	routeIn = false;
-			
-			if(routeAll || ((!status && !routeIn) || (status && routeIn))) result = true;
-			
-			if(result){
-				
-				for(u_int j = 0; j < rules[i].methods.size(); j++){
-					
-					auto check = isNot(rules[i].methods[j]);
-					
-					if(check.inv){
-						
-						if(check.str.compare(method) == 0){
-							
-							result = false;
-							
-							break;
-						
-						} else result = true;
-					
-					} else {
-						
-						if((check.str.compare("*") == 0)
-						|| (check.str.compare(method) == 0)){
-							
-							result = true;
-							
-							break;
-						
-						} else result = false;
-					}
-				}
-				
-				if(result){
-					
-					if(rules[i].server.compare("*") != 0){
-						
-						auto check = isNot(rules[i].server);
-						
-						if(check.inv){
-							
-							switch(rules[i].stype){
-								
-								case 1:
-								case 2: if(check.str.compare(server) == 0) result = false; break;
-								
-								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) == 0) result = false; break;
-								
-								default: result = false;
-							}
-						
-						} else {
-							
-							switch(rules[i].stype){
-								
-								case 1:
-								case 2: if(check.str.compare(server) != 0) result = false; break;
-								
-								case 4: if(Anyks::toCase(check.str).compare(Anyks::toCase(http.getHost())) != 0) result = false; break;
-								
-								default: result = false;
-							}
-						}
-					}
-					
-					if(result){
-						
-						if(rules[i].path.compare("*") != 0){
-							
-							auto check = isNot(rules[i].path);
-							
-							if(check.inv){
-								
-								if(Anyks::toCase(check.str)
-								.compare(Anyks::toCase(http.getPath())) == 0) result = false;
-							
-							} else {
-								
-								if(Anyks::toCase(check.str)
-								.compare(Anyks::toCase(http.getPath())) != 0) result = false;
-							}
-						}
-						
-						if(result && (rules[i].regex.compare("*") != 0)){
-							
-							
-							smatch match;
-							
-							regex e(rules[i].regex, regex::ECMAScript | regex::icase);
-							
-							const string userAgent = http.getUseragent();
-							
-							regex_search(userAgent, match, e);
-							
-							result = !match.empty();
-						}
-					}
-				}
-			}
-			
-			if(result){
-				
-				if(rules[i].action.compare("add") == 0)		action = true;
-				else if(rules[i].action.compare("rm") == 0)	action = false;
-				
-				for(u_int j = 0; j < rules[i].headers.size(); j++){
-					
-					smatch match;
-					
-					const string header = rules[i].headers[j];
-					
-					if(action){
-						
-						regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
-						
-						regex_search(header, match, e);
-						
-						if(!match.empty()) http.addHeaderToString(match[1].str(), match[2].str(), data);
-					
-					} else {
-						
-						regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
-						
-						regex_search(header, match, e);
-						
-						if(!match.empty()) http.rmHeaderInString(match[1].str(), data);
-					}
-				}
-			}
-		}
-	}
-}
+	return result;
+};
  
 const Headers::IsNot Headers::isNot(const string str){
 	
-	bool result = str[0] == '!';
+	const bool result = (str[0] == '!');
 	
 	return {result, (result ? str.substr(1, str.length() - 1) : str)};
 }
  
-const u_short Headers::checkTypeId(const string str){
+void Headers::modifyHeaders(const bool action, const vector <string> headers, HttpData &http){
 	
-	Network nwk;
-	
-	u_short type = 0;
-	
-	if(isIpV4(nwk.setLowIp(str))) type = 1;
-	
-	else if(isIpV6(nwk.setLowIp6(str))) type = 2;
-	
-	else if(isMac(str)) type = 3;
-	
-	else if(isDomain(str)) type = 4;
-	
-	return type;
-}
- 
-const bool Headers::isIpV4(const string ip){
-	
-	smatch match;
-	
-	regex e("\\d{1,3}(?:\\.\\d{1,3}){3}", regex::ECMAScript | regex::icase);
-	
-	regex_search(ip, match, e);
-	
-	return !match.empty();
-}
- 
-const bool Headers::isIpV6(const string ip){
-	
-	smatch match;
-	
-	regex e("[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7}", regex::ECMAScript | regex::icase);
-	
-	regex_search(ip, match, e);
-	
-	return !match.empty();
-}
- 
-const bool Headers::isIp(const string ip){
-	
-	smatch match;
-	
-	regex e(
-		"(?:\\d{1,3}(?:\\.\\d{1,3}){3}|"
-		"[A-Fa-f\\d]{4}(?:\\:[A-Fa-f\\d]{4}){7})",
-		regex::ECMAScript | regex::icase
-	);
-	
-	regex_search(ip, match, e);
-	
-	return !match.empty();
-}
- 
-const bool Headers::isMac(const string mac){
-	
-	smatch match;
-	
-	regex e("[A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5}", regex::ECMAScript | regex::icase);
-	
-	regex_search(mac, match, e);
-	
-	return !match.empty();
-}
- 
-const bool Headers::isDomain(const string domain){
-	
-	smatch match;
-	
-	regex e("[\\w\\-\\.]+\\.[\\w\\-]+", regex::ECMAScript | regex::icase);
-	
-	regex_search(domain, match, e);
-	
-	return !match.empty();
-}
- 
-const bool Headers::isLogin(const string login){
-	
-	return !Anyks::isAddress(login);
-}
- 
-const bool Headers::checkAvailable(const string name){
-	
-	bool result = false;
-	
-	if(!name.empty()){
+	if(!headers.empty()){
 		
-		const string dir = this->config->proxy.dir;
+		smatch match;
 		
-		const string filename = Anyks::addToPath(dir, name + ".headers");
+		for(auto it = headers.cbegin(); it != headers.cend(); ++it){
+			
+			if(action){
+				
+				regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
+				
+				regex_search(* it, match, e);
+				
+				if(!match.empty()) http.setHeader(match[1].str(), match[2].str());
+			
+			} else {
+				
+				regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
+				
+				regex_search(* it, match, e);
+				
+				if(!match.empty()) http.rmHeader(match[1].str());
+			}
+		}
+	}
+}
+ 
+void Headers::modifyHeaders(const bool action, const vector <string> headers, string &data, HttpData &http){
+	
+	if(!headers.empty() && !data.empty()){
 		
-		if(Anyks::isDirExist(dir.c_str()) && Anyks::isFileExist(filename.c_str())) result = true;
+		smatch match;
+		
+		for(auto it = headers.cbegin(); it != headers.cend(); ++it){
+			
+			if(action){
+				
+				regex e("^([\\w\\-]+)\\s*\\:\\s*([^\\r\\n\\t\\s]+)$", regex::ECMAScript | regex::icase);
+				
+				regex_search(* it, match, e);
+				
+				if(!match.empty()) http.addHeaderToString(match[1].str(), match[2].str(), data);
+			
+			} else {
+				
+				regex e("^([\\w\\-]+)\\s*\\:?", regex::ECMAScript | regex::icase);
+				
+				regex_search(* it, match, e);
+				
+				if(!match.empty()) http.rmHeaderInString(match[1].str(), data);
+			}
+		}
+	}
+}
+ 
+void Headers::addParams(const map <bool, map <bool, unordered_map <string, Headers::Rules>>> * params){
+	
+	if((params != nullptr) && !params->empty()){
+		 
+		auto copyListNodes = [](vector <Node> &node1, vector <Node> node2){
+			
+			for(auto it1 = node2.cbegin(); it1 != node2.cend(); ++it1){
+				
+				bool result = false;
+				
+				for(auto it2 = node1.cbegin(); it2 != node1.cend(); ++it2){
+					
+					if((it1->type != it2->type)
+					|| (it1->data.compare(it2->data) != 0)) result = true;
+				}
+				
+				if(!result) node1.push_back(* it1);
+			}
+		};
+		
+		for(auto it = params->cbegin(); it != params->cend(); ++it){
+			
+			const bool action = it->first;
+			
+			const auto * traffics = &it->second;
+			
+			if(this->rules.count(action) > 0){
+				
+				auto * realTraffics = &this->rules.find(action)->second;
+				
+				if(!traffics->empty()){
+					
+					for(auto it = traffics->cbegin(); it != traffics->cend(); ++it){
+						
+						const bool traffic = it->first;
+						
+						const auto * methods = &it->second;
+						
+						if(realTraffics->count(traffic) > 0){
+							
+							auto * realMethods = &realTraffics->find(traffic)->second;
+							
+							if(!methods->empty()){
+								
+								for(auto it = methods->cbegin(); it != methods->cend(); ++it){
+									
+									const string method = it->first;
+									
+									const auto * rules = &it->second;
+									
+									if(realMethods->count(method) > 0){
+										
+										auto * realRules = &realMethods->find(method)->second;
+										
+										if(rules != nullptr){
+											
+											realRules->query = rules->query;
+											
+											realRules->userAgent = rules->userAgent;
+											
+											copyListNodes(realRules->clients, rules->clients);
+											
+											copyListNodes(realRules->servers, rules->servers);
+											
+											realRules->groups = Anyks::concatVectors <gid_t> (realRules->groups, rules->groups);
+											
+											realRules->broups = Anyks::concatVectors <gid_t> (realRules->broups, rules->broups);
+											
+											realRules->users = Anyks::concatVectors <uid_t> (realRules->users, rules->users);
+											
+											realRules->bsers = Anyks::concatVectors <uid_t> (realRules->bsers, rules->bsers);
+											
+											realRules->paths = Anyks::concatVectors <string> (realRules->paths, rules->paths);
+											
+											realRules->headers = Anyks::concatVectors <string> (realRules->headers, rules->headers);
+										}
+									
+									} else realMethods->emplace(method, * rules);
+								}
+							}
+						
+						} else realTraffics->emplace(traffic, * methods);
+					}
+				}
+			
+			} else this->rules.emplace(action, * traffics);
+		}
+	}
+}
+ 
+void Headers::createRulesList(void * ctx){
+	
+	Headers::Params * params = reinterpret_cast <Headers::Params *> (ctx);
+	
+	if(params != nullptr){
+		 
+		auto createNode = [this](vector <string> list){
+			
+			vector <Node> nodes;
+			
+			for(auto it = list.cbegin(); it != list.cend(); ++it){
+				
+				string str = * it;
+				
+				Node node;
+				
+				if(str.compare("*") != 0){
+					
+					auto check = isNot(str);
+					
+					node.type = Anyks::getTypeAmingByString(check.str);
+					
+					if((node.type == AMING_DOMAIN)
+					|| (node.type == AMING_MAC)
+					|| (node.type == AMING_IPV4)
+					|| (node.type == AMING_IPV6)
+					|| (node.type == AMING_NETWORK)){
+						
+						node.data = str;
+						
+						nodes.push_back(node);
+					}
+				
+				} else {
+					
+					node.type = AMING_NULL;
+					
+					node.data = str;
+					
+					nodes.push_back(node);
+				}
+			}
+			
+			return nodes;
+		};
+		
+		vector <uid_t> users, bsers;
+		
+		vector <gid_t> groups, broups;
+		
+		for(auto it = params->groups.cbegin(); it != params->groups.cend(); ++it){
+			
+			string group = * it;
+			
+			if(group.compare("*") != 0){
+				
+				gid_t gid = 0;
+				
+				auto check = isNot(group);
+				
+				if(Anyks::isNumber(check.str)) gid = ::atoi(check.str.c_str());
+				
+				else gid = this->ausers->getGidByName(check.str);
+				
+				if(this->ausers->checkGroupById(gid)){
+					
+					if(!check.inv) groups.push_back(gid);
+					
+					else broups.push_back(gid);
+				}
+			
+			} else break;
+		}
+		
+		for(auto it = params->users.cbegin(); it != params->users.cend(); ++it){
+			
+			string user = * it;
+			
+			if(user.compare("*") != 0){
+				
+				uid_t uid = 0;
+				
+				auto check = isNot(user);
+				
+				if(Anyks::isNumber(check.str)) uid = ::atoi(check.str.c_str());
+				
+				else uid = this->ausers->getUidByName(check.str);
+				
+				if(this->ausers->checkUserById(uid)){
+					
+					if(!check.inv) users.push_back(uid);
+					
+					else bsers.push_back(uid);
+				}
+			
+			} else break;
+		}
+		
+		const Rules rules = {
+			
+			params->query,
+			
+			params->userAgent,
+			
+			users, bsers,
+			
+			groups, broups,
+			
+			createNode(params->clients),
+			
+			createNode(params->servers),
+			
+			params->paths,
+			
+			params->headers
+		};
+		
+		unordered_map <string, Rules> methods;
+		
+		vector <string> nameMethods = Anyks::split(PROXY_HTTP_METHODS, "|");
+		
+		for(auto it = nameMethods.cbegin(); it != nameMethods.cend(); ++it){
+			
+			methods.insert(pair <string, Rules> (Anyks::toCase(* it), {}));
+		}
+		
+		map <bool, unordered_map <string, Rules>> traffics = {{true, {}}, {false, {}}};
+		
+		map <bool, map <bool, unordered_map <string, Rules>>> actions = {{true, {}}, {false, {}}};
+		
+		for(auto it = params->methods.cbegin(); it != params->methods.cend(); ++it){
+			
+			string method = * it;
+			
+			method = Anyks::toCase(method);
+			
+			if(method.compare("*") != 0){
+				
+				auto check = isNot(method);
+				
+				if(!check.inv) methods.at(check.str) = rules;
+				
+				else {
+					
+					for(auto mt = methods.cbegin(); mt != methods.cend(); ++mt){
+						
+						if(mt->first.compare(check.str) != 0) methods.at(mt->first) = rules;
+					}
+					
+					break;
+				}
+			
+			} else {
+				
+				for(auto mt = methods.cbegin(); mt != methods.cend(); ++mt){
+					
+					methods.at(mt->first) = rules;
+				}
+				
+				break;
+			}
+		}
+		
+		for(auto it = params->traffic.cbegin(); it != params->traffic.cend(); ++it){
+			
+			string traffic = * it;
+			
+			traffic = Anyks::toCase(traffic);
+			
+			if(traffic.compare("*") != 0){
+				
+				auto check = isNot(traffic);
+				
+				if(!check.inv){
+					
+					if(check.str.compare("in") == 0) traffics.at(true) = methods;
+					
+					if(check.str.compare("out") == 0) traffics.at(false) = methods;
+				
+				} else {
+					
+					if(check.str.compare("in") == 0) traffics.at(false) = methods;
+					
+					if(check.str.compare("out") == 0) traffics.at(true) = methods;
+				}
+			
+			} else {
+				
+				traffics.at(true)	= methods;
+				traffics.at(false)	= methods;
+				
+				break;
+			}
+		}
+		
+		for(auto it = params->actions.cbegin(); it != params->actions.cend(); ++it){
+			
+			string action = * it;
+			
+			action = Anyks::toCase(action);
+			
+			if(action.compare("*") != 0){
+				
+				auto check = isNot(action);
+				
+				if(!check.inv){
+					
+					if(check.str.compare("add") == 0) actions.at(true) = traffics;
+					
+					if(check.str.compare("rm") == 0) actions.at(false) = traffics;
+				
+				} else {
+					
+					if(check.str.compare("add") == 0) actions.at(false) = traffics;
+					
+					if(check.str.compare("rm") == 0) actions.at(true) = traffics;
+				}
+			
+			} else {
+				
+				actions.at(true)	= traffics;
+				actions.at(false)	= traffics;
+				
+				break;
+			}
+		}
+		
+		addParams(&actions);
+	}
+}
+ 
+void Headers::read(const u_short type){
+	
+	time_t curUpdate = time(nullptr);
+	
+	if(((this->lastUpdate + this->config->proxy.conftime) < curUpdate) || (type != AMING_NULL)){
+		
+		this->lastUpdate = curUpdate;
+		
+		if(type == AMING_NULL) this->rules.clear();
+		
+		const u_short service = (type != AMING_NULL ? type : this->config->proxy.configs);
+		
+		switch(service){
+			
+			case AUSERS_TYPE_FILE: {
+				
+				HFiles files(this->config, this->log, &this->names);
+				
+				auto params = files.getParams();
+				
+				for(auto it = params.cbegin(); it != params.cend(); ++it){
+					
+					auto param = (* it);
+					
+					createRulesList(&param);
+				}
+			} break;
+			
+			case AUSERS_TYPE_LDAP: {
+				
+				HLdap ldap(this->config, this->log, &this->names);
+				
+				auto params = ldap.getParams();
+				
+				for(auto it = params.cbegin(); it != params.cend(); ++it){
+					
+					auto param = (* it);
+					
+					createRulesList(&param);
+				}
+			} break;
+			
+			case AUSERS_TYPE_FILE_LDAP: {
+				
+				read(AUSERS_TYPE_FILE);
+				
+				read(AUSERS_TYPE_LDAP);
+			} break;
+		}
+	}
+}
+ 
+const vector <string> Headers::findHeaders(Headers::Client * request, const string method, const Rules * rules){
+	
+	vector <string> result;
+	
+	if((request != nullptr) && (rules != nullptr)){
+		 
+		auto checkData = [this](const string data, const vector <Node> * nodes){
+			
+			bool result = false;
+			
+			if(!data.empty() && !nodes->empty()){
+				
+				const string tmpData = Anyks::toCase(data);
+				
+				const u_short type = Anyks::getTypeAmingByString(tmpData);
+				
+				for(auto it = nodes->cbegin(); it != nodes->cend(); ++it){
+					
+					if(it->data.compare("*") != 0){
+						
+						if(type == it->type){
+							
+							auto check = isNot(Anyks::toCase(it->data));
+							
+							switch(type){
+								
+								case AMING_IPV4: {
+									
+									if(!check.inv){
+										
+										result = (check.str.compare(tmpData) == 0);
+										
+										if(result) goto stop;
+									
+									} else {
+										
+										result = (check.str.compare(tmpData) != 0);
+										
+										if(!result) goto stop;
+									}
+								} break;
+								
+								case AMING_IPV6: {
+									
+									Network nwk;
+									
+									if(!check.inv){
+										
+										result = nwk.compareIP6(check.str, tmpData);
+										
+										if(result) goto stop;
+									
+									} else {
+										
+										result = !nwk.compareIP6(check.str, tmpData);
+										
+										if(!result) goto stop;
+									}
+								} break;
+								
+								case AMING_MAC: {
+									
+									if(!check.inv){
+										
+										result = (check.str.compare(tmpData) == 0);
+										
+										if(result) goto stop;
+									
+									} else {
+										
+										result = (check.str.compare(tmpData) != 0);
+										
+										if(!result) goto stop;
+									}
+								} break;
+								
+								case AMING_DOMAIN: {
+									
+									if(!check.inv){
+										
+										result = Anyks::checkDomainByMask(tmpData, check.str);
+										
+										if(result) goto stop;
+									
+									} else {
+										
+										result = !Anyks::checkDomainByMask(tmpData, check.str);
+										
+										if(!result) goto stop;
+									}
+								} break;
+							}
+						
+						} else if((it->type == AMING_NETWORK) && ((type == AMING_IPV4) || (type == AMING_IPV6))){
+							
+							Network nwk;
+							
+							auto check = isNot(Anyks::toCase(it->data));
+							
+							const string ip = nwk.getIPByNetwork(check.str);
+							
+							if(type == Anyks::getTypeAmingByString(ip)){
+								
+								if(!check.inv){
+									
+									result = (type == AMING_IPV4 ? nwk.checkIPByNetwork(tmpData, check.str) : nwk.checkIPByNetwork6(tmpData, check.str));
+									
+									if(result) goto stop;
+								
+								} else {
+									
+									result = (type == AMING_IPV4 ? !nwk.checkIPByNetwork(tmpData, check.str) : !nwk.checkIPByNetwork6(tmpData, check.str));
+									
+									if(!result) goto stop;
+								}
+							}
+						}
+					
+					} else {
+						
+						result = true;
+						
+						break;
+					}
+				}
+			}
+			
+			stop:
+			
+			return result;
+		};
+		 
+		auto checkPath = [this](const string data, const vector <string> * list){
+			
+			bool result = false;
+			
+			if(!data.empty() && !list->empty()){
+				
+				const string tmp = Anyks::toCase(data);
+				
+				for(auto it = list->cbegin(); it != list->cend(); ++it){
+					
+					if(it->compare("*") != 0){
+						
+						auto check = isNot(Anyks::toCase(* it));
+						
+						const string path = Anyks::getPathByString(check.str);
+						
+						if(!check.inv){
+							
+							result = (path.compare(tmp) == 0);
+							
+							if(result) break;
+						
+						} else {
+							
+							result = (path.compare(tmp) != 0);
+							
+							if(!result) break;
+						}
+					
+					} else {
+						
+						result = true;
+						
+						break;
+					}
+				}
+			}
+			
+			return result;
+		};
+		 
+		auto checkRegexp = [](const string data, const string reg){
+			
+			bool result = false;
+			
+			if(!reg.empty() && (reg.compare("*") != 0)){
+				
+				string str = reg;
+				
+				const string broken = "\\_";
+				
+				const size_t pos = str.find(broken);
+				
+				if(pos != string::npos) str = str.replace(pos, broken.length(), "");
+				
+				regex e(str, regex::ECMAScript | regex::icase);
+				
+				result = regex_match(data, e);
+			
+			} else result = true;
+			
+			return result;
+		};
+		 
+		auto checkGroups = [](const vector <gid_t> * list1, const vector <gid_t> * list2){
+			
+			bool result = false;
+			
+			if(list2->empty()) result = true;
+			
+			else {
+				
+				for(auto it = list1->cbegin(); it != list1->cend(); ++it){
+					
+					if(find(list2->begin(), list2->end(), * it) != list2->end()){
+						
+						result = true;
+						
+						break;
+					}
+				}
+			}
+			
+			return result;
+		};
+		 
+		auto checkUsers = [](const uid_t uid, const vector <uid_t> * list){
+			
+			bool result = false;
+			
+			if(list->empty()) result = true;
+			
+			else result = (find(list->begin(), list->end(), uid) != list->end());
+			
+			return result;
+		};
+		
+		const bool checkCIP = checkData(request->ip, &rules->clients);
+		
+		const bool checkCMac = (!checkCIP ? checkData(request->mac, &rules->clients) : checkCIP);
+		
+		const bool checkSIP = checkData(request->sip, &rules->servers);
+		
+		const bool checkSDM = (!checkSIP ? checkData(request->domain, &rules->servers) : checkSIP);
+		
+		const bool pathFound = checkPath(request->path, &rules->paths);
+		
+		const bool queryFound = checkRegexp(request->query, rules->query);
+		
+		const bool userAgentFound = checkRegexp(request->agent, rules->userAgent);
+		
+		const bool groupFound = (checkGroups(&request->groups, &rules->groups) && (!rules->broups.empty() ? !checkGroups(&request->groups, &rules->broups) : true));
+		
+		const bool userFound = (checkUsers(request->user, &rules->users) && (!rules->bsers.empty() ? !checkUsers(request->user, &rules->bsers) : true));
+		
+		const bool clientFound = (checkCIP || checkCMac);
+		
+		const bool serverFound = (checkSIP || checkSDM);
+		
+		if(clientFound && serverFound && queryFound && userAgentFound && pathFound && groupFound && userFound){
+			
+			for(auto it = rules->headers.cbegin(); it != rules->headers.cend(); ++it){
+				
+				if(find(result.begin(), result.end(), * it) == result.end()){
+					
+					result.push_back(* it);
+				}
+			}
+		}
 	}
 	
 	return result;
 }
  
-const string Headers::getName(){
+const vector <string> Headers::get(Headers::Client * request){
 	
-	string result;
+	vector <string> result;
 	
-	for(auto it = this->names.cbegin(); it != this->names.cend(); ++it){
+	if((request != nullptr) && !request->ip.empty() && !request->mac.empty() && !request->sip.empty() && !this->rules.empty()){
 		
-		if(checkAvailable(* it)){
+		if(this->rules.count(request->action) > 0){
 			
-			result = * it;
+			auto methods = this->rules.find(request->action)->second.find(request->traffic)->second;
 			
-			break;
+			const string tmpMethod = Anyks::toCase(request->method);
+			
+			if(tmpMethod.compare("*") == 0){
+				
+				for(auto it = methods.cbegin(); it != methods.cend(); ++it){
+					
+					result = findHeaders(request, it->first, &it->second);
+				}
+			
+			} else if(methods.count(tmpMethod) > 0){
+				
+				auto rules = methods.find(tmpMethod)->second;
+				
+				result = findHeaders(request, tmpMethod, &rules);
+			}
 		}
 	}
 	
@@ -645,6 +778,79 @@ void Headers::clear(){
 	this->names.clear();
 }
  
+void Headers::rm(const bool action, const bool traffic){
+	
+	if(this->rules.count(action) > 0){
+		
+		auto traffics = this->rules.find(action)->second;
+		
+		if(!traffics.empty() && (traffics.count(traffic) > 0)) traffics.find(traffic)->second.clear();
+	}
+}
+ 
+void Headers::add(const bool action, const bool traffic, const string method, void * ctx){
+	
+	if(ctx != nullptr){
+		
+		bool exist = false;
+		
+		Rules * rules = reinterpret_cast <Rules *> (ctx);
+		
+		if(this->rules.count(action) > 0) exist = true;
+		
+		if(!exist){
+			
+			bool exist = true;
+			
+			unordered_map <string, Rules> methods;
+			
+			vector <string> nameMethods = Anyks::split(PROXY_HTTP_METHODS, "|");
+			
+			for(auto it = nameMethods.cbegin(); it != nameMethods.cend(); ++it){
+				
+				methods.insert(pair <string, Rules> (Anyks::toCase(* it), {}));
+			}
+			
+			map <bool, unordered_map <string, Rules>> traffics = {{true, {}}, {false, {}}};
+			
+			const string tmpMethod = Anyks::toCase(method);
+			
+			if(tmpMethod.compare("*") == 0){
+				
+				for(auto it = methods.cbegin(); it != methods.cend(); ++it){
+					
+					methods.at(it->first) = * rules;
+				}
+			
+			} else if(methods.count(tmpMethod) > 0) methods.at(tmpMethod) = * rules;
+			
+			else exist = false;
+			
+			if(exist){
+				
+				traffics.at(traffic) = methods;
+				
+				this->rules.emplace(action, traffics);
+			}
+		
+		} else {
+			
+			const string tmpMethod = Anyks::toCase(method);
+			
+			auto * methods = &this->rules.find(action)->second.find(traffic)->second;
+			
+			if(tmpMethod.compare("*") == 0){
+				
+				for(auto it = methods->cbegin(); it != methods->cend(); ++it){
+					
+					methods->at(it->first) = * rules;
+				}
+			
+			} else if(methods->count(tmpMethod) > 0) methods->at(tmpMethod) = * rules;
+		}
+	}
+}
+ 
 void Headers::addName(const string name){
 	
 	if(!name.empty()) this->names.push_front(name);
@@ -652,77 +858,157 @@ void Headers::addName(const string name){
  
 void Headers::setOptions(const u_short options){
 	
-	if(options != 0x00) this->options = options;
+	if(options != AMING_NULL) this->options = options;
 }
  
-void Headers::modify(const string ip, const string mac, const string server, HttpData &http){
+void Headers::modify(AParams::Client client, HttpData &http){
 	
-	if(!ip.empty() && !mac.empty() && !server.empty()){
+	if(!client.ip.empty() && !client.mac.empty() && !client.sip.empty()){
 		
-		Network nwk;
+		const string method = http.getMethod();
 		
-		string serverId = Anyks::toCase(server);
+		const string agent = http.getUseragent();
 		
-		u_short stype = checkTypeId(serverId);
+		const string host = http.getHost();
 		
+		string path = Anyks::toCase(http.getPath());
 		
-		if(stype == 1)		serverId	= nwk.setLowIp(serverId);	
-		else if(stype == 2)	serverId	= nwk.setLowIp6(serverId);	
+		string query = path;
 		
-		auto rules1 = get(ip, false);
+		path = Anyks::getPathByString(path);
 		
-		auto rules2 = get(mac, false);
+		query = Anyks::getQueryByString(query);
 		
-		auto rules3 = get("*", false);
+		const bool traffic = (http.getStatus() != 0);
 		
-		modifyHeaders(serverId, rules1, http);
-		modifyHeaders(serverId, rules2, http);
-		modifyHeaders(serverId, rules3, http);
-	}
-}
- 
-void Headers::modify(const string ip, const string mac, const string server, string &data){
-	
-	if(!ip.empty() && !mac.empty() && !server.empty() && !data.empty()){
+		const bool actionAdd = true;
 		
-		HttpData http;
+		const bool actionRm = false;
 		
-		if(http.parse(data.c_str(), data.size(), this->config->proxy.name, this->options)){
+		Client requestAdd	= {actionAdd, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+		Client requestRm	= {actionRm, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+		 
+		auto modifyHeadersForUser = [&requestAdd, &requestRm, &actionAdd, &actionRm, this](const AParams::AUser * client, HttpData &http){
 			
-			Network nwk;
+			if(client != nullptr){
+				
+				requestAdd.user	= client->user.uid;
+				requestRm.user	= client->user.uid;
+				
+				for(auto it = client->groups.cbegin(); it != client->groups.cend(); ++it){
+					
+					requestAdd.groups.push_back(it->gid);
+					requestRm.groups.push_back(it->gid);
+				}
+				
+				auto headersAdd = get(&requestAdd);
+				auto headersRm = get(&requestRm);
+				
+				modifyHeaders(actionAdd, headersAdd, http);
+				
+				modifyHeaders(actionRm, headersRm, http);
+			}
+		};
+		
+		if(client.auser != nullptr){
 			
-			string serverId = Anyks::toCase(server);
+			modifyHeadersForUser(client.auser, http);
+		
+		} else {
 			
-			u_short stype = checkTypeId(serverId);
+			auto user = this->ausers->searchUser(client.ip, client.mac);
 			
+			if(user.auth) modifyHeadersForUser(&user, http);
 			
-			if(stype == 1)		serverId	= nwk.setLowIp(serverId);	
-			else if(stype == 2)	serverId	= nwk.setLowIp6(serverId);	
-			
-			auto rules1 = get(ip, false);
-			
-			auto rules2 = get(mac, false);
-			
-			auto rules3 = get("*", false);
-			
-			modifyHeaders(serverId, rules1, data, http);
-			modifyHeaders(serverId, rules2, data, http);
-			modifyHeaders(serverId, rules3, data, http);
-			
-			data = http.modifyHeaderString(data);
+			else modifyHeadersForUser(nullptr, http);
 		}
 	}
 }
  
-Headers::Headers(Config * config, LogApp * log){
+void Headers::modify(AParams::Client client, string &data){
 	
-	if(config){
+	if(!client.ip.empty() && !client.mac.empty() && !client.sip.empty()){
+		
+		HttpData http;
+		
+		const u_short options = ((client.auser != nullptr) && (this->ausers != nullptr) ? this->ausers->getOptionsByUid(client.auser->user.uid) : this->options);
+		
+		if(http.parse(data.c_str(), data.size(), options, this->config, this->log)){
+			
+			const string method = http.getMethod();
+			
+			const string agent = http.getUseragent();
+			
+			const string host = http.getHost();
+			
+			string path = Anyks::toCase(http.getPath());
+			
+			string query = path;
+			
+			path = Anyks::getPathByString(path);
+			
+			query = Anyks::getQueryByString(query);
+			
+			const bool traffic = (http.getStatus() != 0);
+			
+			const bool actionAdd = true;
+			
+			const bool actionRm = false;
+			
+			Client requestAdd	= {actionAdd, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+			Client requestRm	= {actionRm, traffic, 0, {}, client.ip, client.mac, client.sip, host, agent, path, query, method};
+			 
+			auto modifyHeadersForUser = [&requestAdd, &requestRm, &actionAdd, &actionRm, &data, this](const AParams::AUser * client, HttpData &http){
+				
+				if(client != nullptr){
+					
+					requestAdd.user	= client->user.uid;
+					requestRm.user	= client->user.uid;
+					
+					for(auto it = client->groups.cbegin(); it != client->groups.cend(); ++it){
+						
+						requestAdd.groups.push_back(it->gid);
+						requestRm.groups.push_back(it->gid);
+					}
+					
+					auto headersAdd = get(&requestAdd);
+					auto headersRm = get(&requestRm);
+					
+					modifyHeaders(actionAdd, headersAdd, data, http);
+					
+					modifyHeaders(actionRm, headersRm, data, http);
+					
+					data = http.modifyHeaderString(data);
+				}
+			};
+			
+			if(client.auser != nullptr){
+				
+				modifyHeadersForUser(client.auser, http);
+			
+			} else {
+				
+				auto user = this->ausers->searchUser(client.ip, client.mac);
+				
+				if(user.auth) modifyHeadersForUser(&user, http);
+				
+				else modifyHeadersForUser(nullptr, http);
+			}
+		}
+	}
+}
+ 
+Headers::Headers(Config * config, LogApp * log, AUsers * ausers){
+	
+	if((config != nullptr) && (ausers != nullptr)){
 		
 		clear();
 		
 		this->log = log;
 		
 		this->config = config;
+		
+		this->ausers = ausers;
 		
 		this->options = this->config->options;
 		

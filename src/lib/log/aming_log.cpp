@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -250,55 +250,66 @@ void LogApp::write(u_short type, u_int sec, const char * message, ...){
  
 void LogApp::welcome(){
 	
-	if(this->enabled){
+	auto * config = (* this->config);
+	
+	if(this->enabled && (config != nullptr)){
 		
-		const char * _gzipt = (OPT_GZIP & (* this->config)->options ? "yes" : "no");
-		const char * _gzipr = (OPT_PGZIP & (* this->config)->options ? "yes" : "no");
-		const char * _keepalive = (OPT_KEEPALIVE & (* this->config)->options ? "yes" : "no");
-		const char * _connect = (OPT_CONNECT & (* this->config)->options ? "yes" : "no");
-		const char * _hideagent = (OPT_AGENT & (* this->config)->options ? "yes" : "no");
-		const char * _deblock = (OPT_DEBLOCK & (* this->config)->options ? "yes" : "no");
-		const char * _debug = ((* this->config)->proxy.debug ? "yes" : "no");
-		const char * _daemon = ((* this->config)->proxy.daemon ? "yes" : "no");
-		const char * _reverse = ((* this->config)->proxy.reverse ? "yes" : "no");
-		const char * _forward = ((* this->config)->proxy.forward ? "yes" : "no");
-		const char * _transfer = ((* this->config)->proxy.transfer ? "yes" : "no");
-		const char * _optimos = ((* this->config)->proxy.optimos ? "yes" : "no");
-		const char * _bandlimin = ((* this->config)->firewall.bandlimin ? "yes" : "no");
-		const char * _cache = ((* this->config)->cache.dat ? "yes" : "no");
-		const char * _totalcon = ((* this->config)->connects.total > 0 ? to_string((* this->config)->connects.total).c_str() : "auto");
-		
-		string proxyname = APP_NAME, proxyver = APP_VERSION, proxytype, proxyskill;
+		string appname = APP_NAME, apptype, appskill;
 		
 		string internal, external;
 		
-		string	author = APP_AUTHOR,
-				site = APP_SITE,
-				email = APP_EMAIL,
-				support = APP_SUPPORT,
-				copyright = APP_COPYRIGHT;
+		string copyright = APP_COPYRIGHT;
 		
-		switch((* this->config)->proxy.type){
-			case 1: proxytype = "http";		break;
-			case 2: proxytype = "socks5";	break;
-			case 3: proxytype = "redirect";	break;
-		}
+		string authtype = "none", authservices = "none", proxyconfigs = "none";
 		
-		if(OPT_SMART & (* this->config)->options)
-			proxyskill = "smart";
-		else proxyskill = "dumb";
+		if(OPT_SMART & config->options)
+			appskill = "smart";
+		else appskill = "dumb";
 		
-		switch((* this->config)->proxy.intIPv){
+		switch(config->proxy.intIPv){
 			
 			case 4: {
-				internal = (* this->config)->ipv4.internal;
-				external = (* this->config)->ipv4.external[0];
+				internal = config->ipv4.internal;
+				external = config->ipv4.external[0];
 			} break;
 			
 			case 6: {
-				internal = (* this->config)->ipv6.internal;
-				external = (* this->config)->ipv6.external[0];
+				internal = config->ipv6.internal;
+				external = config->ipv6.external[0];
 			} break;
+		}
+		
+		switch(config->proxy.type){
+			case AMING_TYPE_HTTP:				apptype = "http";				break;
+			case AMING_TYPE_SOCKS5:				apptype = "socks5";				break;
+			case AMING_TYPE_HTTP_REDIRECT:		apptype = "http -> redirect";	break;
+			case AMING_TYPE_SOCKS5_REDIRECT:	apptype = "socks5 -> redirect";	break;
+		}
+		
+		switch(config->auth.auth){
+			case AMING_AUTH_BASIC:			authtype = "basic";				break;
+			case AMING_AUTH_BEARER:			authtype = "bearer";			break;
+			case AMING_AUTH_DIGEST:			authtype = "digest";			break;
+			case AMING_AUTH_HMAC:			authtype = "hmac";				break;
+			case AMING_AUTH_HOBA:			authtype = "hoba";				break;
+			case AMING_AUTH_MUTUAL:			authtype = "mutual";			break;
+			case AMING_AUTH_AWS4HMACSHA256:	authtype = "aws4-hmac-sha256";	break;
+		}
+		
+		switch(config->auth.services){
+			case AUSERS_TYPE_FILE:			authservices = "files";					break;
+			case AUSERS_TYPE_PAM:			authservices = "pam";					break;
+			case AUSERS_TYPE_LDAP:			authservices = "ldap";					break;
+			case AUSERS_TYPE_FILE_PAM:		authservices = "files | pam";			break;
+			case AUSERS_TYPE_FILE_LDAP:		authservices = "files | ldap";			break;
+			case AUSERS_TYPE_PAM_LDAP:		authservices = "pam | ldap";			break;
+			case AUSERS_TYPE_FILE_PAM_LDAP:	authservices = "files | pam | ldap";	break;
+		}
+		
+		switch(config->proxy.configs){
+			case AUSERS_TYPE_FILE:		proxyconfigs = "files";			break;
+			case AUSERS_TYPE_LDAP:		proxyconfigs = "ldap";			break;
+			case AUSERS_TYPE_FILE_LDAP:	proxyconfigs = "files | ldap";	break;
 		}
 		
 		char year[5], date[80];
@@ -323,56 +334,132 @@ void LogApp::welcome(){
 		
 		copyright = (copyright + string(" ") + cpyear);
 		
-		transform(proxyname.begin(), proxyname.end(), proxyname.begin(), ::toupper);
+		transform(appname.begin(), appname.end(), appname.begin(), ::toupper);
 		transform(copyright.begin(), copyright.end(), copyright.begin(), ::toupper);
+		
+		const string total = (config->connects.total > 0 ? to_string(config->connects.total) : "auto");
+		
+		const char * _gzipt = (OPT_GZIP & config->options ? "yes" : "no");
+		const char * _gzipr = (OPT_PGZIP & config->options ? "yes" : "no");
+		const char * _keepalive = (OPT_KEEPALIVE & config->options ? "yes" : "no");
+		const char * _connect = (OPT_CONNECT & config->options ? "yes" : "no");
+		const char * _hideagent = (OPT_AGENT & config->options ? "yes" : "no");
+		const char * _deblock = (OPT_DEBLOCK & config->options ? "yes" : "no");
+		const char * _upgrade = (OPT_UPGRADE & config->options ? "yes" : "no");
+		const char * _pipelining = (config->proxy.pipelining ? "yes" : "no");
+		const char * _ipv6only = (config->proxy.ipv6only ? "yes" : "no");
+		const char * _subnet = (config->proxy.subnet ? "yes" : "no");
+		const char * _debug = (config->proxy.debug ? "yes" : "no");
+		const char * _daemon = (config->proxy.daemon ? "yes" : "no");
+		const char * _reverse = (config->proxy.reverse ? "yes" : "no");
+		const char * _forward = (config->proxy.forward ? "yes" : "no");
+		const char * _transfer = (config->proxy.transfer ? "yes" : "no");
+		const char * _optimos = (config->proxy.optimos ? "yes" : "no");
+		const char * _bandlimin = (config->firewall.bandlimin ? "yes" : "no");
+		const char * _cache = (config->cache.dat ? "yes" : "no");
+		const char * _auth = (config->auth.enabled ? "yes" : "no");
+		const char * _authtype = authtype.c_str();
+		const char * _authservices = authservices.c_str();
+		const char * _proxyconfigs = proxyconfigs.c_str();
+		const char * _totalcon =  total.c_str();
+		const char * _appname = appname.c_str();
+		const char * _appver = APP_VERSION;
+		const char * _apptype = apptype.c_str();
+		const char * _appskill = appskill.c_str();
+		const char * _proxyname = config->proxy.name.c_str();
+		const char * _proxyuser = config->proxy.user.c_str();
+		const char * _proxygroup = config->proxy.group.c_str();
+		const char * _proxyinternal = internal.c_str();
+		const char * _proxyexternal = external.c_str();
+		const char * _systemname = config->os.name.c_str();
+		const char * _systemcpuname = config->os.cpu.c_str();
+		const char * _infocopyright = copyright.c_str();
+		const char * _infosite = APP_SITE;
+		const char * _infoemail = APP_EMAIL;
+		const char * _infosupport = APP_SUPPORT;
+		const char * _infoauthor = APP_AUTHOR;
+		const u_int _proxyconnect = config->connects.connect;
+		const u_int _proxyintipv = config->proxy.intIPv;
+		const u_int _proxyextipv = config->proxy.extIPv;
+		const u_int _proxyport = config->proxy.port;
+		const u_int _systemcpu = config->os.ncpu;
 		
 		char buffer[1024 * 16];
 		
-		const char * format = "\n*\n"
-		"*   WELCOME TO %s PROXY\n*\n*   Parameters proxy:\n"
-		"*   name:                 %s\n*   version:              %s\n"
-		"*   user:                 %s\n*   group:                %s\n"
-		"*   daemon:               %s\n*   debug:                %s\n"
-		"*   gzip transfer:        %s\n*   gzip response:        %s\n"
-		"*   all connects:         %s\n*   max connect:          %i\n"
-		"*   max sockets:          %i\n*   cache:                %s\n"
-		"*   hide agent:           %s\n*   bandlimin:            %s\n"
-		"*   deblock:              %s\n*   optimos:              %s\n"
-		"*   keep-alive:           %s\n*   reverse:              %s\n"
-		"*   forward:              %s\n*   transfer:             %s\n"
-		"*   connect:              %s\n*   type:                 %s\n"
-		"*   internet protocol:    IPv%i -> IPv%i\n*   skill:                %s\n"
-		"*   internal ip:          %s\n*   external ip:          %s\n"
-		"*   port:                 %i\n*   cpu cores:            %i\n"
-		"*   cpu name:             %s\n*   operating system:     %s\n"
-		"*   date start proxy:     %s\n*\n*   Contact Developer:\n"
-		"*   copyright:            %s\n*   site:                 %s\n"
-		"*   e-mail:               %s\n*   support:              %s\n"
-		"*   author:               @%s\n*\n";
+		const char * format = "\r\n*\r\n"
+		"*   WELCOME TO %s PROXY\r\n*\r\n"
+		"*   Information:\r\n"
+		"*   name:                 %s\r\n"
+		"*   version:              %s\r\n"
+		"*   type:                 %s\r\n"
+		"*   user:                 %s\r\n"
+		"*   group:                %s\r\n"
+		"*   skill:                %s\r\n"
+		"*   all connects:         %s\r\n"
+		"*   max connect:          %u\r\n"
+		"*   internet protocol:    IPv%u -> IPv%u\r\n"
+		"*   internal ip:          %s\r\n"
+		"*   external ip:          %s\r\n"
+		"*   port:                 %u\r\n"
+		"*\r\n"
+		"*   Parameters proxy:\r\n"
+		"*   daemon:               %s\r\n"
+		"*   debug:                %s\r\n"
+		"*   cache:                %s\r\n"
+		"*   hide agent:           %s\r\n"
+		"*   bandlimin:            %s\r\n"
+		"*   deblock:              %s\r\n"
+		"*   optimos:              %s\r\n"
+		"*   reverse:              %s\r\n"
+		"*   forward:              %s\r\n"
+		"*   transfer:             %s\r\n"
+		"*   keep-alive:           %s\r\n"
+		"*   pipelining:           %s\r\n"
+		"*   connect:              %s\r\n"
+		"*   upgrade:              %s\r\n"
+		"*   subnet:               %s\r\n"
+		"*   gzip transfer:        %s\r\n"
+		"*   gzip response:        %s\r\n"
+		"*   ipv6 only:            %s\r\n"
+		"*   auth:                 %s\r\n"
+		"*   auth type:            %s\r\n"
+		"*   auth serivces:        %s\r\n"
+		"*   configs:              %s\r\n"
+		"*\r\n"
+		"*   Server information:\r\n"
+		"*   cpu cores:            %u\r\n"
+		"*   cpu name:             %s\r\n"
+		"*   operating system:     %s\r\n"
+		"*   date start proxy:     %s\r\n"
+		"*\r\n"
+		"*   Contact Developer:\r\n"
+		"*   copyright:            %s\r\n"
+		"*   site:                 %s\r\n"
+		"*   e-mail:               %s\r\n"
+		"*   support:              %s\r\n"
+		"*   author:               %s\r\n"
+		"*\r\n";
 		
 		len = sprintf(
-			buffer, format, proxyname.c_str(),
-			(* this->config)->proxy.name.c_str(),
-			proxyver.c_str(),
-			(* this->config)->proxy.user.c_str(),
-			(* this->config)->proxy.group.c_str(),
-			_daemon, _debug, _gzipt, _gzipr,
-			_totalcon, (* this->config)->connects.connect,
-			(* this->config)->connects.fds, _cache,
-			_hideagent, _bandlimin, _deblock,
-			_optimos, _keepalive, _reverse,
-			_forward, _transfer, _connect,
-			proxytype.c_str(),
-			(* this->config)->proxy.intIPv,
-			(* this->config)->proxy.extIPv,
-			proxyskill.c_str(), internal.c_str(),
-			external.c_str(), (* this->config)->proxy.port,
-			(* this->config)->os.ncpu, (* this->config)->os.cpu.c_str(),
-			(* this->config)->os.name.c_str(), date, copyright.c_str(),
-			site.c_str(), email.c_str(), support.c_str(), author.c_str()
+			buffer, format, _appname,
+			_proxyname, _appver, _apptype,
+			_proxyuser, _proxygroup, _appskill,
+			_totalcon, _proxyconnect, _proxyintipv,
+			_proxyextipv, _proxyinternal,
+			_proxyexternal, _proxyport,
+			_daemon, _debug, _cache, _hideagent,
+			_bandlimin, _deblock, _optimos,
+			_reverse, _forward, _transfer,
+			_keepalive, _pipelining, _connect,
+			_upgrade, _subnet, _gzipt, _gzipr,
+			_ipv6only, _auth, _authtype,
+			_authservices, _proxyconfigs, _systemcpu,
+			_systemcpuname, _systemname, date,
+			_infocopyright, _infosite, _infoemail,
+			_infosupport, _infoauthor
 		);
 		
-		printf("%s\n", buffer);
+		printf("%s\r\n", buffer);
 		
 		write_to_file(LOG_MESSAGE, buffer, this);
 	}
@@ -380,7 +467,7 @@ void LogApp::welcome(){
  
 LogApp::LogApp(Config ** config, u_short type){
 	
-	if(* config){
+	if((config != nullptr) && ((* config) != nullptr)){
 		
 		this->config = config;
 		

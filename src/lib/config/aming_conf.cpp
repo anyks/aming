@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -53,6 +53,8 @@ Config::Config(const string filename){
 			
 			MAX_WORKERS,
 			
+			(time_t) Anyks::getSeconds(PROXY_CONFTIME),
+			
 			PROXY_DEBUG,
 			
 			PROXY_DAEMON,
@@ -79,7 +81,23 @@ Config::Config(const string filename){
 			
 			PID_DIR,
 			
-			CONFIG_DIR
+			CONFIG_DIR,
+			
+			AMING_CLEAR,
+			
+			{
+				{100, AMING_EMPTY},
+				{200, AMING_EMPTY},
+				{400, AMING_EMPTY},
+				{403, AMING_EMPTY},
+				{404, AMING_EMPTY},
+				{407, AMING_EMPTY},
+				{500, AMING_EMPTY},
+				{502, AMING_EMPTY},
+				{503, AMING_EMPTY},
+				{509, AMING_EMPTY},
+				{510, AMING_EMPTY}
+			}
 		};
 		
 		this->cache = {
@@ -136,8 +154,6 @@ Config::Config(const string filename){
 			AUSERS_TYPE_PAM,
 			
 			AUTH_GROUP_MAX_PAM,
-			
-			(time_t) Anyks::getSeconds(AUTH_UPDATE),
 			
 			AUTH_ENABLED
 		};
@@ -204,13 +220,9 @@ Config::Config(const string filename){
 			
 			},{
 				LDAP_SCOPE,
-				LDAP_SCOPE,
-				LDAP_SCOPE,
 				LDAP_SCOPE
 			
 			},{
-				AMING_EMPTY,
-				AMING_EMPTY,
 				AMING_EMPTY,
 				AMING_EMPTY
 			
@@ -230,7 +242,7 @@ Config::Config(const string filename){
 					LDAP_GROUP_PASSWORD,
 					LDAP_GROUP_MEMBER
 				}
-			},			
+			},
 			
 			AMING_CLEAR
 		};
@@ -293,32 +305,40 @@ Config::Config(const string filename){
 			else if(config.compare("ldap") == 0) configProxy = (configProxy | AUSERS_TYPE_LDAP);
 		}
 		
-		u_short authServices = AUSERS_TYPE_PAM;
+		u_short authServices = AMING_NULL;
 		
 		auto services = Anyks::split(ini.getString("authorization", "services"), "|");
 		
-		for(auto it = services.cbegin(); it != services.cend(); ++it){
+		if(!services.empty()){
 			
-			const string service = Anyks::toCase(* it);
-			
-			if(service.compare("files") == 0) authServices = (authServices | AUSERS_TYPE_FILE);
-			
-			else if(service.compare("pam") == 0) authServices = (authServices | AUSERS_TYPE_PAM);
-			
-			else if(service.compare("ldap") == 0) authServices = (authServices | AUSERS_TYPE_LDAP);
-		}
+			for(auto it = services.cbegin(); it != services.cend(); ++it){
+				
+				const string service = Anyks::toCase(* it);
+				
+				if(service.compare("files") == 0) authServices = (authServices | AUSERS_TYPE_FILE);
+				
+				else if(service.compare("pam") == 0) authServices = (authServices | AUSERS_TYPE_PAM);
+				
+				else if(service.compare("ldap") == 0) authServices = (authServices | AUSERS_TYPE_LDAP);
+			}
 		
-		u_short authType = AMING_AUTH_BASIC;
+		} else authServices = AUSERS_TYPE_PAM;
+		
+		u_short authType = AMING_NULL;
 		
 		const string auth = Anyks::toCase(ini.getString("authorization", "auth"));
 		
-		if(auth.compare("basic") == 0) authType = AMING_AUTH_BASIC;
-		else if(auth.compare("bearer") == 0) authType = AMING_AUTH_BEARER;
-		else if(auth.compare("digest") == 0) authType = AMING_AUTH_DIGEST;
-		else if(auth.compare("hmac") == 0) authType = AMING_AUTH_HMAC;
-		else if(auth.compare("hoba") == 0) authType = AMING_AUTH_HOBA;
-		else if(auth.compare("mutual") == 0) authType = AMING_AUTH_MUTUAL;
-		else if(auth.compare("aws4-hmac-sha256") == 0) authType = AMING_AUTH_AWS4HMACSHA256;
+		if(!auth.empty()){
+			
+			if(auth.compare("basic") == 0) authType = AMING_AUTH_BASIC;
+			else if(auth.compare("bearer") == 0) authType = AMING_AUTH_BEARER;
+			else if(auth.compare("digest") == 0) authType = AMING_AUTH_DIGEST;
+			else if(auth.compare("hmac") == 0) authType = AMING_AUTH_HMAC;
+			else if(auth.compare("hoba") == 0) authType = AMING_AUTH_HOBA;
+			else if(auth.compare("mutual") == 0) authType = AMING_AUTH_MUTUAL;
+			else if(auth.compare("aws4-hmac-sha256") == 0) authType = AMING_AUTH_AWS4HMACSHA256;
+		
+		} else authType = AMING_AUTH_BASIC;
 		
 		int glevel = Z_DEFAULT_COMPRESSION;
 		
@@ -334,24 +354,39 @@ Config::Config(const string filename){
 		
 		const u_short connectKey = (Anyks::toCase(ini.getString("connects", "key")).compare("mac") == 0 ? AMING_MAC : AMING_IP);
 		
-		u_short proxyType = AMING_TYPE_HTTP;
+		u_short proxyType = AMING_NULL;
 		
-		u_int proxyPort = PROXY_HTTP_PORT;
+		auto proxyTypes = Anyks::split(ini.getString("proxy", "type"), "->");
 		
-		const string type = ini.getString("proxy", "type", PROXY_TYPE);
-		
-		if(type.compare("http") == 0) proxyType = AMING_TYPE_HTTP;
-		else if(type.compare("socks5") == 0) proxyType = AMING_TYPE_SOCKS;
-		else if(type.compare("redirect") == 0) proxyType = AMING_TYPE_REDIRECT;
-		
-		switch(proxyType){
+		if(!proxyTypes.empty()){
 			
-			case 1: proxyPort = PROXY_HTTP_PORT;		break;
+			bool http = false;
 			
-			case 2: proxyPort = PROXY_SOCKS5_PORT;		break;
+			bool socks5 = false;
 			
-			case 3: proxyPort = PROXY_REDIRECT_PORT;	break;
-		}
+			bool redirect = false;
+			
+			for(auto it = proxyTypes.cbegin(); it != proxyTypes.cend(); ++it){
+				
+				
+				if(it->compare("http") == 0) http = true;
+				
+				else if(it->compare("socks5") == 0) socks5 = true;
+				
+				else if(it->compare("redirect") == 0) redirect = true;
+			}
+			
+			if((redirect && http) || (redirect && !http && !socks5)) proxyType = (AMING_TYPE_HTTP | AMING_TYPE_REDIRECT);
+			
+			else if(redirect && socks5) proxyType = (AMING_TYPE_SOCKS5 | AMING_TYPE_REDIRECT);
+			
+			else if(socks5) proxyType = AMING_TYPE_SOCKS5;
+			
+			else proxyType = AMING_TYPE_HTTP;
+		
+		} else proxyType = AMING_TYPE_HTTP;
+		
+		const u_int proxyPort = (proxyType & AMING_TYPE_SOCKS5 ? PROXY_SOCKS5_PORT : PROXY_HTTP_PORT);
 		
 		bool proxySubnet = ini.getBoolean("proxy", "subnet", PROXY_SUBNET);
 		
@@ -403,6 +438,8 @@ Config::Config(const string filename){
 			
 			(u_int) ini.getUNumber("proxy", "workers", MAX_WORKERS),
 			
+			(time_t) Anyks::getSeconds(ini.getString("proxy", "conftime", PROXY_CONFTIME)),
+			
 			ini.getBoolean("proxy", "debug", PROXY_DEBUG),
 			
 			ini.getBoolean("proxy", "daemon", PROXY_DAEMON),
@@ -429,7 +466,23 @@ Config::Config(const string filename){
 			
 			ini.getString("proxy", "piddir", PID_DIR),
 			
-			ini.getString("proxy", "dir", CONFIG_DIR)
+			ini.getString("proxy", "dir", CONFIG_DIR),
+			
+			Anyks::split(ini.getString("proxy", "redirect"), "|"),
+			
+			{
+				{100, ini.getString("atemplates", "100")},
+				{200, ini.getString("atemplates", "200")},
+				{400, ini.getString("atemplates", "400")},
+				{403, ini.getString("atemplates", "403")},
+				{404, ini.getString("atemplates", "404")},
+				{407, ini.getString("atemplates", "407")},
+				{500, ini.getString("atemplates", "500")},
+				{502, ini.getString("atemplates", "502")},
+				{503, ini.getString("atemplates", "503")},
+				{509, ini.getString("atemplates", "509")},
+				{510, ini.getString("atemplates", "510")}
+			}
 		};
 		
 		this->gzip = {
@@ -486,8 +539,6 @@ Config::Config(const string filename){
 			authServices,
 			
 			(u_int) ini.getUNumber("authorization", "gmaxpam", AUTH_GROUP_MAX_PAM),
-			
-			(time_t) Anyks::getSeconds(ini.getString("authorization", "update", AUTH_UPDATE)),
 			
 			ini.getBoolean("authorization", "enabled", AUTH_ENABLED)
 		};
@@ -547,40 +598,36 @@ Config::Config(const string filename){
 			ini.getString("ldap", "bindpw"),
 			
 			{
-				ini.getString("ldap", "gdn"),
-				ini.getString("ldap", "udn"),
-				ini.getString("ldap", "cdn"),
-				ini.getString("ldap", "hdn")
+				ini.getString("ldap", "groupdn"),
+				ini.getString("ldap", "userdn"),
+				ini.getString("ldap", "configdn"),
+				ini.getString("ldap", "headerdn")
 			
 			},{
-				ini.getString("ldap", "gscope", LDAP_SCOPE),
-				ini.getString("ldap", "uscope", LDAP_SCOPE),
-				ini.getString("ldap", "cscope", LDAP_SCOPE),
-				ini.getString("ldap", "hscope", LDAP_SCOPE)
+				ini.getString("ldap", "groupscope", LDAP_SCOPE),
+				ini.getString("ldap", "userscope", LDAP_SCOPE)
 			
 			},{
-				ini.getString("ldap", "gfilter"),
-				ini.getString("ldap", "ufilter"),
-				ini.getString("ldap", "cfilter"),
-				ini.getString("ldap", "hfilter")
+				ini.getString("ldap", "groupfilter"),
+				ini.getString("ldap", "userfilter")
 			
 			},{
 				{
-					ini.getString("ldap", "kuid", LDAP_USER_UID),
-					ini.getString("ldap", "kulogin", LDAP_USER_LOGIN),
-					ini.getString("ldap", "kufname", LDAP_USER_FIRST_NAME),
-					ini.getString("ldap", "kulname", LDAP_USER_LAST_NAME),
-					ini.getString("ldap", "kusname", LDAP_USER_SECOND_NAME),
-					ini.getString("ldap", "kudesc", LDAP_USER_DESCRIPTION),
-					ini.getString("ldap", "kupass", LDAP_USER_PASSWORD)
+					ini.getString("ldap", "keyuserid", LDAP_USER_UID),
+					ini.getString("ldap", "keyuserlogin", LDAP_USER_LOGIN),
+					ini.getString("ldap", "keyuserfname", LDAP_USER_FIRST_NAME),
+					ini.getString("ldap", "keyuserlname", LDAP_USER_LAST_NAME),
+					ini.getString("ldap", "keyusersname", LDAP_USER_SECOND_NAME),
+					ini.getString("ldap", "keyuserdesc", LDAP_USER_DESCRIPTION),
+					ini.getString("ldap", "keyuserpass", LDAP_USER_PASSWORD)
 				},{
-					ini.getString("ldap", "kgid", LDAP_GROUP_GID),
-					ini.getString("ldap", "kglogin", LDAP_GROUP_LOGIN),
-					ini.getString("ldap", "kgdesc", LDAP_GROUP_DESCRIPTION),
-					ini.getString("ldap", "kgpass", LDAP_GROUP_PASSWORD),
-					ini.getString("ldap", "kgmember", LDAP_GROUP_MEMBER)
+					ini.getString("ldap", "keygroupid", LDAP_GROUP_GID),
+					ini.getString("ldap", "keygrouplogin", LDAP_GROUP_LOGIN),
+					ini.getString("ldap", "keygroupdesc", LDAP_GROUP_DESCRIPTION),
+					ini.getString("ldap", "keygrouppass", LDAP_GROUP_PASSWORD),
+					ini.getString("ldap", "keygroupmember", LDAP_GROUP_MEMBER)
 				}
-			},			
+			},
 			
 			Anyks::split(ini.getString("ldap", "server"), "|")
 		};

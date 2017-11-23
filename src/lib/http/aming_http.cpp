@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -888,7 +888,7 @@ void HttpData::genDataConnect(){
  
 void HttpData::createRequest(const u_short code){
 	
-	if(this->response.count(code)){
+	if(this->response.count(code) > 0){
 		
 		setStatus(code);
 		
@@ -896,24 +896,19 @@ void HttpData::createRequest(const u_short code){
 		
 		this->version = "1.1";
 		
-		this->http = (
-			string("HTTP/") + this->version + string(" ") + to_string(code)
-			+ string(" ") + this->response[code].text
-		);
+		const auto temp = this->response[code];
+		
+		this->http = Anyks::strFormat("HTTP/%s %u %s", this->version.c_str(), temp.code, temp.text.c_str());
 		
 		string headers = (this->http + "\r\n");
 		
-		headers.append(this->response[code].headers);
+		headers.append(temp.headers);
 		
 		this->headers.create(headers.c_str());
 		
-		if(!this->response[code].body.empty()){
+		if(!temp.body.empty()){
 			
-			this->body.addData(
-				this->response[code].body.c_str(),
-				this->response[code].body.size(),
-				this->response[code].body.size()
-			);
+			this->body.addData(temp.body.c_str(), temp.body.size(), temp.body.size());
 		}
 	}
 }
@@ -1205,6 +1200,13 @@ const bool HttpData::isUpgrade(){
 	
 	return (!getHeader("upgrade").empty()
 	&& (Anyks::toCase(getHeader("connection")).find("upgrade") != string::npos));
+}
+ 
+const bool HttpData::isRedirect(){
+	
+	const u_int status = getStatus();
+	
+	return (((status > 299) && (status < 400)) && !getLocation().empty());
 }
  
 const bool HttpData::isConnect(){
@@ -1543,7 +1545,7 @@ const bool HttpData::setRedirect(HttpData &response){
 		
 		const u_int status = response.getStatus();
 		
-		const string request = response.getHeader("location");
+		const string request = response.getLocation();
 		
 		if(((status > 299) && (status < 400)) && !request.empty()){
 			
@@ -1594,11 +1596,11 @@ const bool HttpData::setRedirect(HttpData &response){
 	return result;
 }
  
-const size_t HttpData::parse(const char * buffer, const size_t size, const string name, const u_short options){
+const size_t HttpData::parse(const char * buffer, const size_t size, const u_short options, Config * config, LogApp * log){
 	
 	size_t maxsize = 0;
 	
-	if(size){
+	if(size && (config != nullptr)){
 		
 		smatch match;
 		
@@ -1624,7 +1626,7 @@ const size_t HttpData::parse(const char * buffer, const size_t size, const strin
 			
 			maxsize += headers.size();
 			
-			create(name, options);
+			create(options, config, log);
 			
 			setData(headers.c_str(), headers.size());
 			
@@ -1752,6 +1754,11 @@ const string HttpData::getPassword(){
 const string HttpData::getUseragent(){
 	
 	return getHeader("user-agent");
+}
+ 
+const string HttpData::getLocation(){
+	
+	return getHeader("location");
 }
  
 const string HttpData::getHeader(const string key){
@@ -2346,107 +2353,90 @@ void HttpData::authSuccess(){
 	createRequest(200);
 }
  
-void HttpData::create(const string name, const u_short options){
+void HttpData::create(const u_short options, Config * config, LogApp * log){
 	
-	clear();
-	
-	this->appName = name;
-	
-	this->options = options;
-	
-	this->appVersion = APP_VERSION;
+	if(config != nullptr){
+		
+		clear();
+		
+		this->log = log;
+		
+		this->config = config;
+		
+		this->appName = this->config->proxy.name;
+		
+		this->options = options;
+		
+		this->appVersion = APP_VERSION;
+	}
 }
  
-HttpData::HttpData(const string name, const u_short options){
+HttpData::HttpData(const u_short options, Config * config, LogApp * log){
 	
-	this->response.insert(pair <u_short, Http> (100, {"Continue", "\r\n", ""}));
-	this->response.insert(pair <u_short, Http> (200, {"Connection established", "\r\n", "Ok"}));
-	this->response.insert(pair <u_short, Http> (400, {
-		"Bad Request",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>400 Bad Request</title></head>\r\n"
-		"<body><h2>400 Bad Request</h2></body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (403, {
-		"Forbidden",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>403 Access Denied</title></head>\r\n"
-		"<body><h2>403 Access Denied</h2><h3>Access control list denies you to access this resource</body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (404, {
-		"Not Found",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>404 Not Found</title></head>\r\n"
-		"<body><h2>404 Not Found</h2><h3>Page not found</body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (407, {
-		"Proxy Authentication Required",
-		"Proxy-Authenticate: Basic realm=\"proxy\"\r\n"
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>407 Proxy Authentication Required</title></head>\r\n"
-		"<body><h2>407 Proxy Authentication Required</h2>\r\n"
-		"<h3>Access to requested resource disallowed by administrator or you need valid username/password to use this resource</h3>\r\n"
-		"</body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (500, {
-		"Internal Error",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>500 Internal Error</title></head>\r\n"
-		"<body><h2>500 Internal Error</h2><h3>Internal proxy error during processing your request</h3></body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (502, {
-		"Bad Gateway",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>502 Bad Gateway</title></head>\r\n"
-		"<body><h2>502 Bad Gateway</h2><h3>Failed to connect server</h3></body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (503, {
-		"Service Unavailable",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>503 Service Unavailable</title></head>\r\n"
-		"<body><h2>503 Service Unavailable</h2><h3>Recursion detected</h3></body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (509, {
-		"Bandwidth Limit Exceeded",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>509 Bandwidth Limit Exceeded</title></head>\r\n"
-		"<body><h2>509 Bandwidth Limit Exceeded</h2><h3>Data or File too large size</h3></body></html>\r\n"
-	}));
-	this->response.insert(pair <u_short, Http> (510, {
-		"Not Extended",
-		"Proxy-Connection: close\r\n"
-		"Connection: close\r\n"
-		"Content-type: text/html; charset=utf-8\r\n"
-		"\r\n",
-		"<html><head><title>510 Not Extended</title></head>\r\n"
-		"<body><h2>510 Not Extended</h2><h3>Required action is not extended by proxy server</h3></body></html>\r\n"
-	}));
-	
-	create(name, options);
+	if(config != nullptr){
+		 
+		auto redirect = [this](const u_short code, const string url){
+			
+			const string headers = Anyks::strFormat(
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"Location: %s\r\n\r\n",
+				url.c_str()
+			);
+			
+			pair <u_short, Http> result = {code, {301, "Moved Permanently", headers, ""}};
+			
+			return result;
+		};
+		 
+		auto htemplate = [this](const u_short code, const string message, const string body, const string header = ""){
+			
+			const string headers = Anyks::strFormat(
+				"Proxy-Connection: close\r\n"
+				"Connection: close\r\n"
+				"Content-type: text/html; charset=utf-8\r\n"
+				"%s%s\r\n",
+				header.c_str(),
+				(!header.empty() ? "\r\n" : "")
+			);
+			
+			pair <u_short, Http> result = {code, {code, message, headers, body + "\r\n"}};
+			
+			return result;
+		};
+		
+		ACodes templates(config, log);
+		
+		auto t400 = templates.get(400);
+		auto t403 = templates.get(403);
+		auto t404 = templates.get(404);
+		auto t407 = templates.get(407);
+		auto t500 = templates.get(500);
+		auto t502 = templates.get(502);
+		auto t503 = templates.get(503);
+		auto t509 = templates.get(509);
+		auto t510 = templates.get(510);
+		
+		this->response = {
+			{100, {100, "Continue", "\r\n", ""}},
+			{200, {200, "Connection established", "\r\n", "OK"}}
+		};
+		
+		const string authMessage = Anyks::strFormat("Proxy-Authenticate: Basic realm=\"%s: Please enter your password\"", config->proxy.name.c_str());
+		
+		this->response.insert(t400.type == AMING_HTTP_ADDRESS ? redirect(t400.code, t400.data) : htemplate(t400.code, "Bad Request", t400.data));
+		this->response.insert(t403.type == AMING_HTTP_ADDRESS ? redirect(t403.code, t403.data) : htemplate(t403.code, "Forbidden", t403.data));
+		this->response.insert(t404.type == AMING_HTTP_ADDRESS ? redirect(t404.code, t404.data) : htemplate(t404.code, "Not Found", t404.data));
+		this->response.insert(t407.type == AMING_HTTP_ADDRESS ? redirect(t407.code, t407.data) : htemplate(t407.code, "Proxy Authentication Required", t407.data, authMessage));
+		this->response.insert(t500.type == AMING_HTTP_ADDRESS ? redirect(t500.code, t500.data) : htemplate(t500.code, "Internal Error", t500.data));
+		this->response.insert(t502.type == AMING_HTTP_ADDRESS ? redirect(t502.code, t502.data) : htemplate(t502.code, "Bad Gateway", t502.data));
+		this->response.insert(t503.type == AMING_HTTP_ADDRESS ? redirect(t503.code, t503.data) : htemplate(t503.code, "Service Unavailable", t503.data));
+		this->response.insert(t509.type == AMING_HTTP_ADDRESS ? redirect(t509.code, t509.data) : htemplate(t509.code, "Bandwidth Limit Exceeded", t509.data));
+		this->response.insert(t510.type == AMING_HTTP_ADDRESS ? redirect(t510.code, t510.data) : htemplate(t510.code, "Not Extended", t510.data));
+		
+		create(options, config, log);
+	}
 }
  
 HttpData::~HttpData(){
@@ -2478,7 +2468,7 @@ const size_t Http::parse(const char * buffer, const size_t size){
 	
 	HttpData httpData;
 	
-	size_t bytes = httpData.parse(buffer, size, this->name, this->options);
+	size_t bytes = httpData.parse(buffer, size, this->options, this->config, this->log);
 	
 	if(bytes) this->httpData.push_back(httpData);
 	
@@ -2491,7 +2481,7 @@ void Http::modify(vector <char> &data){
 	
 	HttpData httpData;
 	
-	httpData.create(this->name, this->options);
+	httpData.create(this->options, this->config, this->log);
 	
 	httpData.setData(headers, data.size());
 	
@@ -2514,18 +2504,23 @@ void Http::clear(){
 	this->httpData.clear();
 }
  
-void Http::create(const string name, const u_short options){
+void Http::create(const u_short options, Config * config, LogApp * log){
 	
-	this->name = name;
-	
-	this->options = options;
-	
-	this->version = APP_VERSION;
+	if(config != nullptr){
+		
+		this->log = log;
+		
+		this->config = config;
+		
+		this->options = options;
+		
+		this->version = APP_VERSION;
+	}
 }
  
-Http::Http(const string name, const u_short options){
+Http::Http(const u_short options, Config * config, LogApp * log){
 	
-	create(name, options);
+	if(config != nullptr) create(options, config, log);
 }
  
 Http::~Http(){

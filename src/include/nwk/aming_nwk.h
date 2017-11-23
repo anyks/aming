@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -190,6 +190,8 @@ class Network {
 		const bool checkIPByNetwork6(const string ip, const string nwk);
 		 
 		const bool compareIP6(const string ip1, const string ip2);
+		 
+		const bool isV4ToV6(const string ip);
 		 
 		IPdata imposeMask(IPdata ip, IPdata mask);
 		 

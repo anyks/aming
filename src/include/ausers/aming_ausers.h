@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -21,9 +21,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/t/y/p/e/s/./h/>/
-/#/i/n/c/l/u/d/e/ /</s/e/c/u/r/i/t/y
+/#/i/n/c/l/u/d/e/ /"/n/w/k
 #include "ausers/types.h"
-#include "system/system.h"
 #include "general/general.h"
 #include "groups/pam.h"
 #include "groups/files.h"
@@ -115,6 +114,8 @@ class AUsers {
 				 
 				void setUsers(void * users = nullptr);
 				 
+				void run();
+				 
 				Groups(Config * config = nullptr, LogApp * log = nullptr);
 				 
 				~Groups();
@@ -162,6 +163,8 @@ class AUsers {
 				 
 				const bool checkUserByName(const string userName, const u_short type = AMING_NULL);
 				 
+				const bool auth(const string username, const string password, const u_short type = AMING_NULL);
+				 
 				const uid_t getIdByName(const string userName, const u_short type = AMING_NULL);
 				 
 				const string getNameById(const uid_t uid, const u_short type = AMING_NULL);
@@ -170,47 +173,11 @@ class AUsers {
 				 
 				void setGroups(void * groups = nullptr);
 				 
+				void run();
+				 
 				Users(Config * config = nullptr, LogApp * log = nullptr);
 				 
 				~Users();
-		};
-		 
-		class Auth {
-			private:
-				 
-				struct Ldap {
-					string keyUser;
-					string keyGroup;
-					string dnUser;
-					string dnGroup;
-					string scopeUser;
-					string scopeGroup;
-					string filterUser;
-					string filterGroup;
-				};
-				
-				Ldap ldap;
-				
-				LogApp * log = nullptr;
-				
-				Config * config = nullptr;
-				
-				void * groups = nullptr;
-				
-				void * users = nullptr;
-				 
-				static int pamconv(int num_msg = 0, const struct pam_message ** msg = nullptr, struct pam_response ** resp = nullptr, void * appdata_ptr = nullptr);
-				 
-				const bool checkLdap(const uid_t uid, const string password);
-				 
-				const bool checkPam(const uid_t uid, const string password);
-				 
-				const bool checkFile(const uid_t uid, const string password);
-			public:
-				 
-				const bool check(const string username = "", const string password = "");
-				 
-				Auth(Config * config = nullptr, LogApp * log = nullptr, void * groups = nullptr, void * users = nullptr);
 		};
 		
 		LogApp * log = nullptr;
@@ -220,8 +187,6 @@ class AUsers {
 		Groups * groups = nullptr;
 		
 		Users * users = nullptr;
-		
-		Auth * auth = nullptr;
 		 
 		const AParams::AUser getUser(const uid_t uid);
 		 

@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -39,7 +39,6 @@
 #include "http/http.h"
 #include "system/system.h"
 #include "general/general.h"
-#include "ausers/ausers.h"
 
 
 using namespace std;
@@ -159,6 +158,8 @@ class BufferHttpProxy {
 		
 		HttpData httpRequest;
 		
+		AParams::AUser auser;
+		
 		System * proxy = nullptr;
 		
 		DNSResolver * dns = nullptr;
@@ -187,6 +188,8 @@ class BufferHttpProxy {
 		 
 		void checkClose();
 		 
+		void auserUpdate(AParams::AUser auser);
+		 
 		void sleep(const size_t size, const bool type);
 		 
 		void setTimeout(const u_short type, const bool read = false, const bool write = false);
@@ -195,7 +198,7 @@ class BufferHttpProxy {
 		 
 		void sendServer();
 		 
-		BufferHttpProxy(System * proxy);
+		BufferHttpProxy(const string ip, const string mac, System * proxy = nullptr);
 		 
 		~BufferHttpProxy();
 };
@@ -247,7 +250,11 @@ class HttpProxy {
 		 
 		static void send_http_data(void * ctx);
 		 
+		static void rresolve_cb(const string ip, void * ctx);
+		 
 		static void resolve_cb(const string ip, void * ctx);
+		 
+		static void do_redirect(void * ctx);
 		 
 		static void event_cb(struct bufferevent * bev, const short events, void * ctx);
 		 

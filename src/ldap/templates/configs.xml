@@ -398,5 +398,12 @@
 			<order>5</order>
 			<page>5</page>
 		</attribute>
+
+		<attribute id="amingConfigsRedirect">
+			<display>Адрес сервера для редиректа ip4/ip6/domain, например, [2001:0db8:11a3::]:8080</display>
+			<icon>ldap-o.png</icon>
+			<order>6</order>
+			<page>5</page>
+		</attribute>
 	</attributes>
 </template>

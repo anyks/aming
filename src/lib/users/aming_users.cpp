@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -70,7 +70,7 @@ const bool AUsers::Users::update(const u_short type){
 	
 	time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		this->params.clear();
 		
@@ -189,74 +189,86 @@ const AParams::Params * AUsers::Users::getParamsById(const uid_t uid, const u_sh
 	
 	const AParams::Params * result = nullptr;
 	
-	if((uid > 0) && !this->params.empty()){
-		 
-		auto getParams = [this](const uid_t uid, u_short type){
-			
-			const AParams::Params * result = nullptr;
-			
-			auto key = make_pair(uid, type);
-			
-			if(this->params.count(key) > 0){
+	if(!this->params.empty()){
+		
+		if(uid > 0){
+			 
+			auto getParams = [this](const uid_t uid, u_short type){
 				
-				result = &(this->params.find(key)->second);
-			
-			} else if(update(type)) {
+				const AParams::Params * result = nullptr;
 				
-				result = getParamsById(uid, type);
-			
-			} else {
-				
-				auto key = make_pair(0, AMING_NULL);
+				auto key = make_pair(uid, type);
 				
 				if(this->params.count(key) > 0){
 					
 					result = &(this->params.find(key)->second);
+				
+				} else if(update(type)) {
+					
+					result = getParamsById(uid, type);
+				
+				} else {
+					
+					auto key = make_pair(0, AMING_NULL);
+					
+					if(this->params.count(key) > 0){
+						
+						result = &(this->params.find(key)->second);
+					}
 				}
+				
+				return result;
+			};
+			
+			const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+			
+			switch(typeUser){
+				
+				case AUSERS_TYPE_FILE: result = getParams(uid, AUSERS_TYPE_FILE); break;
+				
+				case AUSERS_TYPE_PAM: result = getParams(uid, AUSERS_TYPE_PAM); break;
+				
+				case AUSERS_TYPE_LDAP: result = getParams(uid, AUSERS_TYPE_LDAP); break;
+				
+				case AUSERS_TYPE_FILE_PAM: {
+					
+					result = getParams(uid, AUSERS_TYPE_FILE);
+					
+					if(result == nullptr) result = getParams(uid, AUSERS_TYPE_PAM);
+				} break;
+				
+				case AUSERS_TYPE_FILE_LDAP: {
+					
+					result = getParams(uid, AUSERS_TYPE_FILE);
+					
+					if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
+				} break;
+				
+				case AUSERS_TYPE_PAM_LDAP: {
+					
+					result = getParams(uid, AUSERS_TYPE_PAM);
+					
+					if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
+				} break;
+				
+				case AUSERS_TYPE_FILE_PAM_LDAP: {
+					
+					result = getParams(uid, AUSERS_TYPE_FILE);
+					
+					if(result == nullptr) result = getParams(uid, AUSERS_TYPE_PAM);
+					
+					if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
+				} break;
 			}
-			
-			return result;
-		};
 		
-		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
-		
-		switch(typeUser){
+		} else {
 			
-			case AUSERS_TYPE_FILE: result = getParams(uid, AUSERS_TYPE_FILE); break;
+			auto key = make_pair(0, AMING_NULL);
 			
-			case AUSERS_TYPE_PAM: result = getParams(uid, AUSERS_TYPE_PAM); break;
-			
-			case AUSERS_TYPE_LDAP: result = getParams(uid, AUSERS_TYPE_LDAP); break;
-			
-			case AUSERS_TYPE_FILE_PAM: {
+			if(this->params.count(key) > 0){
 				
-				result = getParams(uid, AUSERS_TYPE_FILE);
-				
-				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_PAM);
-			} break;
-			
-			case AUSERS_TYPE_FILE_LDAP: {
-				
-				result = getParams(uid, AUSERS_TYPE_FILE);
-				
-				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
-			} break;
-			
-			case AUSERS_TYPE_PAM_LDAP: {
-				
-				result = getParams(uid, AUSERS_TYPE_PAM);
-				
-				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
-			} break;
-			
-			case AUSERS_TYPE_FILE_PAM_LDAP: {
-				
-				result = getParams(uid, AUSERS_TYPE_FILE);
-				
-				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_PAM);
-				
-				if(result == nullptr) result = getParams(uid, AUSERS_TYPE_LDAP);
-			} break;
+				result = &(this->params.find(key)->second);
+			}
 		}
 	}
 	
@@ -279,48 +291,52 @@ const AParams::Params * AUsers::Users::getParamsByName(const string userName, co
  
 const AParams::Params * AUsers::Users::getDataByConnect(const string ip, const string mac, const u_short type){
 	
-	const AParams::Params * result = nullptr;
+	const AParams::Params * result = getParamsById(0, type);
 	
-	if(!ip.empty() || !mac.empty()){
+	if((!ip.empty() || !mac.empty()) && !this->params.empty()){
 		
-		if(!this->params.empty()){
+		Network nwk;
+		
+		u_int nettype = (!ip.empty() ? nwk.checkNetworkByIp(ip) : 0);
+		
+		for(auto it = this->params.cbegin(); it != this->params.cend(); ++it){
 			
-			string cmac = mac;
+			bool _ip = false;
 			
-			Network nwk;
+			bool _mac = false;
 			
-			u_int nettype = (!ip.empty() ? nwk.checkNetworkByIp(ip) : 0);
-			
-			for(auto it = this->params.cbegin(); it != this->params.cend(); ++it){
+			for(auto iit = it->second.idnt.cbegin(); iit != it->second.idnt.cend(); ++iit){
 				
-				bool _ip = false;
+				const string id = Anyks::toCase(* iit);
 				
-				bool _mac = false;
+				const u_int idnt = Anyks::getTypeAmingByString(id);
 				
-				for(auto iit = it->second.idnt.cbegin(); iit != it->second.idnt.cend(); ++iit){
-					
-					const u_int idnt = Anyks::getTypeAmingByString(* iit);
-					
-					switch(idnt){
-						case AMING_IPV4: {
-							
-							if((nettype == 4) && (ip.compare(* iit) == 0)) _ip = true;
-						} break;
-						case AMING_IPV6: {
-							
-							if((nettype == 6) && nwk.compareIP6(ip, * iit)) _ip = true;
-						} break;
-						case AMING_MAC: {
-							
-							if(!cmac.empty() && (Anyks::toCase(* iit).compare(Anyks::toCase(cmac)) == 0)) _mac = true;
-						} break;
-					}
+				switch(idnt){
+					case AMING_IPV4: {
+						
+						if((nettype == 4) && (ip.compare(id) == 0)) _ip = true;
+					} break;
+					case AMING_IPV6: {
+						
+						if(((nettype == 6) && nwk.compareIP6(ip, id))
+						|| (nwk.isV4ToV6(ip) && (Anyks::toCase(ip).compare(id) == 0))) _ip = true;
+					} break;
+					case AMING_NETWORK: {
+						
+						if((nettype == 4) && nwk.checkIPByNetwork(ip, id)) _ip = true;
+						
+						else if((nettype == 6) && nwk.checkIPByNetwork6(ip, id)) _ip = true;
+					} break;
+					case AMING_MAC: {
+						
+						if(!mac.empty() && (id.compare(Anyks::toCase(mac)) == 0)) _mac = true;
+					} break;
 				}
-				
-				if(_ip && _mac) return &(it->second);
-				
-				else if((_ip || _mac) && (result == nullptr)) result = &(it->second);
 			}
+			
+			if(_ip && _mac) return &(it->second);
+			
+			else if((_ip || _mac) && (result == nullptr)) result = &(it->second);
 		}
 	}
 	
@@ -347,30 +363,30 @@ const AParams::UserData AUsers::Users::getDataById(const uid_t uid, const u_shor
 				
 				result = this->ufiles->getDataById(uid);
 				
-				if(!result.name.empty()) result = this->upam->getDataById(uid);
+				if(result.name.empty()) result = this->upam->getDataById(uid);
 			} break;
 			
 			case AUSERS_TYPE_FILE_LDAP: {
 				
 				result = this->ufiles->getDataById(uid);
 				
-				if(!result.name.empty()) result = this->uldap->getDataById(uid);
+				if(result.name.empty()) result = this->uldap->getDataById(uid);
 			} break;
 			
 			case AUSERS_TYPE_PAM_LDAP: {
 				
 				result = this->upam->getDataById(uid);
 				
-				if(!result.name.empty()) result = this->uldap->getDataById(uid);
+				if(result.name.empty()) result = this->uldap->getDataById(uid);
 			} break;
 			
 			case AUSERS_TYPE_FILE_PAM_LDAP: {
 				
 				result = this->ufiles->getDataById(uid);
 				
-				if(!result.name.empty()) result = this->upam->getDataById(uid);
+				if(result.name.empty()) result = this->upam->getDataById(uid);
 				
-				if(!result.name.empty()) result = this->uldap->getDataById(uid);
+				if(result.name.empty()) result = this->uldap->getDataById(uid);
 			} break;
 		}
 	}
@@ -448,6 +464,38 @@ const bool AUsers::Users::checkUserById(const uid_t uid, const u_short type){
 const bool AUsers::Users::checkUserByName(const string userName, const u_short type){
 	
 	return (getIdByName(userName, type) > 0 ? true : false);
+}
+ 
+const bool AUsers::Users::auth(const string username, const string password, const u_short type){
+	
+	bool result = false;
+	
+	if(!username.empty() && !password.empty() && this->config->auth.enabled){
+		
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		auto user = getDataByName(username, typeUser);
+		
+		if(user.uid > 0){
+			
+			switch(user.type){
+				
+				case AUSERS_TYPE_FILE: result = this->ufiles->auth(user.uid, password);	break;
+				
+				case AUSERS_TYPE_PAM: result = this->upam->auth(user.uid, password);	break;
+				
+				case AUSERS_TYPE_LDAP: result = this->uldap->auth(user.uid, password);	break;
+			}
+		}
+	
+	} else if(!this->config->auth.enabled){
+		
+		const u_short typeUser = (type != AMING_NULL ? type : this->config->auth.services);
+		
+		result = checkUserByName(username, typeUser);
+	}
+	
+	return result;
 }
  
 const uid_t AUsers::Users::getIdByName(const string userName, const u_short type){
@@ -573,55 +621,75 @@ const vector <uid_t> AUsers::Users::getIdAllUsers(const u_short type){
  
 void AUsers::Users::setGroups(void * groups){
 	
-	this->groups = groups;
-	 
-	auto groupNameByGid = [this](const uid_t gid, const u_short type){
+	if(groups != nullptr){
 		
-		return getGroupNameByGid(gid, type);
-	};
-	 
-	auto gidByGroupName = [this](const string groupName, const u_short type){
-		
-		return getGidByGroupName(groupName, type);
-	};
-	 
-	auto getParamsById = [this](const gid_t gid, const u_short type){
-		
-		const AParams::Params * result = nullptr;
-		
-		if((gid > 0) && (this->groups != nullptr)){
+		this->groups = groups;
+		 
+		auto groupNameByGid = [this](const uid_t gid, const u_short type){
 			
-			result = (reinterpret_cast <Groups *> (this->groups))->getParamsById(gid, type);
-		}
-		
-		return result;
-	};
-	 
-	auto getGroupIdByUser = [this](const uid_t uid, const u_short type){
-		
-		vector <gid_t> result;
-		
-		if((uid > 0) && (this->groups != nullptr)){
+			return getGroupNameByGid(gid, type);
+		};
+		 
+		auto gidByGroupName = [this](const string groupName, const u_short type){
 			
-			result = (reinterpret_cast <Groups *> (this->groups))->getGroupIdByUser(uid, type);
-		}
+			return getGidByGroupName(groupName, type);
+		};
+		 
+		auto getParamsById = [this](const gid_t gid, const u_short type){
+			
+			const AParams::Params * result = nullptr;
+			
+			if((gid > 0) && (this->groups != nullptr)){
+				
+				result = (reinterpret_cast <Groups *> (this->groups))->getParamsById(gid, type);
+			}
+			
+			return result;
+		};
+		 
+		auto getGroupIdByUser = [this](const uid_t uid, const u_short type){
+			
+			vector <gid_t> result;
+			
+			if((uid > 0) && (this->groups != nullptr)){
+				
+				result = (reinterpret_cast <Groups *> (this->groups))->getGroupIdByUser(uid, type);
+			}
+			
+			return result;
+		};
+		 
+		auto getDataByGid = [this](const gid_t gid, const u_short type){
+			
+			AParams::GroupData result;
+			
+			if((gid > 0) && (this->groups != nullptr)){
+				
+				result = (reinterpret_cast <Groups *> (this->groups))->getDataById(gid, type);
+			}
+			
+			return result;
+		};
 		
-		return result;
-	};
+		this->upam->setGroupsMethods(groupNameByGid, gidByGroupName);
+		this->uldap->setGroupsMethods(groupNameByGid, gidByGroupName);
+		this->ufiles->setGroupsMethods(groupNameByGid, gidByGroupName);
+		
+		this->ufiles->setPasswordMethod(AUsers::getPasswordFromFile);
+		this->ufiles->setPasswordsMethod(AUsers::getPasswordsFromFile);
+		
+		this->uldap->setParamsMethod(getParamsById);
+		this->uldap->setGidsMethod(getGroupIdByUser);
+		this->uldap->setGroupDataMethod(getDataByGid);
+		this->ufiles->setParamsMethod(getParamsById);
+		this->ufiles->setGidsMethod(getGroupIdByUser);
+		this->ufiles->setGroupDataMethod(getDataByGid);
+	}
+}
+ 
+void AUsers::Users::run(){
 	
-	this->upam->setGroupsMethods(groupNameByGid, gidByGroupName);
-	this->uldap->setGroupsMethods(groupNameByGid, gidByGroupName);
-	this->ufiles->setGroupsMethods(groupNameByGid, gidByGroupName);
-	
-	this->ufiles->setPasswordMethod(AUsers::getPasswordFromFile);
-	this->ufiles->setPasswordsMethod(AUsers::getPasswordsFromFile);
-	
-	this->uldap->setParamsMethod(getParamsById);
-	this->uldap->setGidsMethod(getGroupIdByUser);
-	this->ufiles->setParamsMethod(getParamsById);
-	this->ufiles->setGidsMethod(getGroupIdByUser);
-	
-	update();
+	if((this->groups != nullptr) && this->params.empty()) update();
 }
  
 AUsers::Users::Users(Config * config, LogApp * log){

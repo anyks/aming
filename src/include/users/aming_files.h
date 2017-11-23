@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -15,6 +15,7 @@
 
 #include <map>
 #include <ctime>
+#include <regex>
 #include <string>
 #include <vector>
 #include <stdlib.h>
@@ -22,8 +23,9 @@
 #include <functional>
 #include <sys/t/y/p/e/s/./h/>/
 /#/i/n/c/l/u/d/e/ /"/i/n/i
+#include "log/log.h"
+#include "config/conf.h"
 #include "ausers/types.h"
-#include "system/system.h"
 #include "general/general.h"
 
 
@@ -52,8 +54,10 @@ class Ufiles {
 		function <const AParams::Params * (const gid_t gid, const u_short type)> getParamsByGid;
 		
 		function <const vector <gid_t> (const uid_t uid, const u_short type)> getGroupIdByUser;
+		
+		function <const AParams::GroupData (const gid_t gid, const u_short type)> getDataByGid;
 		 
-		const AParams::Params createDefaultParams(const uid_t uid);
+		const AParams::Params createDefaultParams(const uid_t uid, const u_short type = AMING_NULL);
 	public:
 		 
 		const AParams::Params setParams(const uid_t uid, const string name = "");
@@ -67,6 +71,8 @@ class Ufiles {
 		const bool checkUserById(const uid_t uid);
 		 
 		const bool checkUserByName(const string userName);
+		 
+		const bool auth(const uid_t uid, const string password);
 		 
 		const uid_t getIdByName(const string userName);
 		 
@@ -83,6 +89,8 @@ class Ufiles {
 		void setParamsMethod(function <const AParams::Params * (const gid_t gid, const u_short type)> method);
 		 
 		void setGidsMethod(function <const vector <gid_t> (const uid_t uid, const u_short type)> method);
+		 
+		void setGroupDataMethod(function <const AParams::GroupData (const gid_t gid, const u_short type)> method);
 		 
 		Ufiles(Config * config = nullptr, LogApp * log = nullptr);
 };

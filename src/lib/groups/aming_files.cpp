@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -26,9 +26,9 @@ const AParams::Params Gfiles::setParams(const gid_t gid, const string name){
 		
 		if(!filename.empty() && Anyks::isFileExist(filename.c_str())){
 			
-			INI * ini = new INI(filename);
+			INI ini = INI(filename);
 			
-			params.idnt = Anyks::split(ini->getString("identificators", name), "|");
+			params.idnt = Anyks::split(ini.getString("identificators", name), "|");
 			
 			const string nGzip		= (name + "_gzip");
 			const string nIPv4		= (name + "_ipv4");
@@ -48,161 +48,161 @@ const AParams::Params Gfiles::setParams(const gid_t gid, const string name){
 			const string gConnects	= Anyks::strFormat("%u_%s", gid, "_connects");
 			const string gKeepAlive	= Anyks::strFormat("%u_%s", gid, "_keepalive");
 			 
-			auto setList = [ini, this](const string name, const string gname, const string param, vector <string> &list){
+			auto setList = [&ini, this](const string name, const string gname, const string param, vector <string> &list){
 				
 				vector <string> data;
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					data = Anyks::split(ini->getString(name, param), "|");
+					data = Anyks::split(ini.getString(name, param), "|");
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					data = Anyks::split(ini->getString(gname, param), "|");
+					data = Anyks::split(ini.getString(gname, param), "|");
 				}
 				
 				list.assign(data.cbegin(), data.cend());
 			};
 			 
-			auto setSeconds = [ini, this](const string name, const string gname, const string param, size_t &seconds){
+			auto setSeconds = [&ini, this](const string name, const string gname, const string param, size_t &seconds){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					seconds = (size_t) Anyks::getSeconds(ini->getString(name, param));
+					seconds = (size_t) Anyks::getSeconds(ini.getString(name, param));
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					seconds = (size_t) Anyks::getSeconds(ini->getString(gname, param));
+					seconds = (size_t) Anyks::getSeconds(ini.getString(gname, param));
 				}
 			};
 			 
-			auto setBuffers = [ini, this](const string name, const string gname, const string param, long &buffer){
+			auto setBuffers = [&ini, this](const string name, const string gname, const string param, long &buffer){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					buffer = Anyks::getSizeBuffer(ini->getString(name, param));
+					buffer = Anyks::getSizeBuffer(ini.getString(name, param));
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					buffer = Anyks::getSizeBuffer(ini->getString(gname, param));
+					buffer = Anyks::getSizeBuffer(ini.getString(gname, param));
 				}
 			};
 			 
-			auto setBytes = [ini, this](const string name, const string gname, const string param, size_t &value){
+			auto setBytes = [&ini, this](const string name, const string gname, const string param, size_t &value){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					value = Anyks::getBytes(ini->getString(name, param));
+					value = Anyks::getBytes(ini.getString(name, param));
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					value = Anyks::getBytes(ini->getString(gname, param));
+					value = Anyks::getBytes(ini.getString(gname, param));
 				}
 			};
 			 
-			auto setNumbers = [ini, this](const string name, const string gname, const string param, int &number){
+			auto setNumbers = [&ini, this](const string name, const string gname, const string param, int &number){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					number = (int) ini->getNumber(name, param);
+					number = (int) ini.getNumber(name, param);
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					number = (int) ini->getNumber(gname, param);
+					number = (int) ini.getNumber(gname, param);
 				}
 			};
 			 
-			auto setUNumbers = [ini, this](const string name, const string gname, const string param, u_int &number){
+			auto setUNumbers = [&ini, this](const string name, const string gname, const string param, u_int &number){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					number = (u_int) ini->getUNumber(name, param);
+					number = (u_int) ini.getUNumber(name, param);
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					number = (u_int) ini->getUNumber(gname, param);
+					number = (u_int) ini.getUNumber(gname, param);
 				}
 			};
 			 
-			auto setLNumbers = [ini, this](const string name, const string gname, const string param, long &number){
+			auto setLNumbers = [&ini, this](const string name, const string gname, const string param, long &number){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					number = ini->getNumber(name, param);
+					number = ini.getNumber(name, param);
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					number = ini->getNumber(gname, param);
+					number = ini.getNumber(gname, param);
 				}
 			};
 			 
-			auto setBool = [ini, this](const string name, const string gname, const string param, bool &value){
+			auto setBool = [&ini, this](const string name, const string gname, const string param, bool &value){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					value = ini->getBoolean(name, param);
+					value = ini.getBoolean(name, param);
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					value = ini->getBoolean(gname, param);
+					value = ini.getBoolean(gname, param);
 				}
 			};
 			 
-			auto setString = [ini, this](const string name, const string gname, const string param, string &str){
+			auto setString = [&ini, this](const string name, const string gname, const string param, string &str){
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					str = ini->getString(name, param);
+					str = ini.getString(name, param);
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					str = ini->getString(gname, param);
+					str = ini.getString(gname, param);
 				}
 			};
 			 
-			auto setOptions = [&params, ini, this](const string name, const string gname, const string param, const u_short flag){
+			auto setOptions = [&params, &ini, this](const string name, const string gname, const string param, const u_short flag){
 				
 				short result = -1;
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					result = (ini->getBoolean(name, param) ? 1 : 0);
+					result = (ini.getBoolean(name, param) ? 1 : 0);
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					result = (ini->getBoolean(gname, param) ? 1 : 0);
+					result = (ini.getBoolean(gname, param) ? 1 : 0);
 				}
 				
 				if(result > -1) Anyks::setOptions(flag, params.options, bool(result));
 			};
 			 
-			auto setOptionsByParam = [&params, ini, this](const string name, const string gname, const string param, const string defstr, const string findstr, const u_short flag){
+			auto setOptionsByParam = [&params, &ini, this](const string name, const string gname, const string param, const string defstr, const string findstr, const u_short flag){
 				
 				short result = -1;
 				
-				if(ini->checkParam(name, param)){
+				if(ini.checkParam(name, param)){
 					
-					result = (ini->getString(name, param, defstr).compare(findstr) == 0 ? 1 : 0);
+					result = (ini.getString(name, param, defstr).compare(findstr) == 0 ? 1 : 0);
 				
-				} else if(ini->checkParam(gname, param)){
+				} else if(ini.checkParam(gname, param)){
 					
-					result = (ini->getString(gname, param, defstr).compare(findstr) == 0 ? 1 : 0);
+					result = (ini.getString(gname, param, defstr).compare(findstr) == 0 ? 1 : 0);
 				}
 				
 				if(result > -1) Anyks::setOptions(flag, params.options, bool(result));
 			};
 			 
-			auto setLevel = [ini, this](const string name, const string gname, int &level){
+			auto setLevel = [&ini, this](const string name, const string gname, int &level){
 				
 				string gzipLevel;
 				
-				if(ini->checkParam(name, "level")){
+				if(ini.checkParam(name, "level")){
 					
-					gzipLevel = ini->getString(name, "level");
+					gzipLevel = ini.getString(name, "level");
 				
-				} else if(ini->checkParam(gname, "level")){
+				} else if(ini.checkParam(gname, "level")){
 					
-					gzipLevel = ini->getString(gname, "level");
+					gzipLevel = ini.getString(gname, "level");
 				}
 				
 				if(!gzipLevel.empty()){
@@ -229,6 +229,7 @@ const AParams::Params Gfiles::setParams(const gid_t gid, const string name){
 			setList(nGzip, gGzip, "vhttp", params.gzip.vhttp);
 			setList(nGzip, gGzip, "types", params.gzip.types);
 			setList(nGzip, gGzip, "proxied", params.gzip.proxied);
+			setList(nProxy, gProxy, "redirect", params.proxy.redirect);
 			setLNumbers(nGzip, gGzip, "length", params.gzip.length);
 			setNumbers(nKeepAlive, gKeepAlive, "keepcnt", params.keepalive.keepcnt);
 			setNumbers(nKeepAlive, gKeepAlive, "keepidle", params.keepalive.keepidle);
@@ -249,8 +250,6 @@ const AParams::Params Gfiles::setParams(const gid_t gid, const string name){
 			setBytes(nConnects, gConnects, "size", params.connects.size);
 			setString(nGzip, gGzip, "regex", params.gzip.regex);
 			setLevel(nGzip, gGzip, params.gzip.level);
-			
-			delete ini;
 		}
 	}
 	
@@ -283,7 +282,8 @@ const AParams::Params Gfiles::createDefaultParams(const gid_t gid){
 			this->config->proxy.transfer,
 			this->config->proxy.forward,
 			this->config->proxy.subnet,
-			this->config->proxy.pipelining
+			this->config->proxy.pipelining,
+			this->config->proxy.redirect
 		
 		},{
 			this->config->connects.size,
@@ -312,7 +312,7 @@ const vector <AParams::Group> Gfiles::readGroups(){
 	
 	time_t curUpdate = time(nullptr);
 	
-	if((this->lastUpdate + this->config->auth.update) < curUpdate){
+	if((this->lastUpdate + this->config->proxy.conftime) < curUpdate){
 		
 		this->lastUpdate = curUpdate;
 		
@@ -443,13 +443,16 @@ const AParams::GroupData Gfiles::getDataById(const gid_t gid){
 	
 	AParams::GroupData result;
 	
-	if((gid > 0) && (this->groups.count(gid) > 0)){
+	if(gid > 0){
 		
-		result = this->groups.find(gid)->second;
-	
-	} else if((gid > 0) && !(readGroups()).empty()) {
+		if(!this->groups.empty() && (this->groups.count(gid) > 0)){
+			
+			result = this->groups.find(gid)->second;
 		
-		if(this->groups.count(gid) > 0) result = this->groups.find(gid)->second;
+		} else if(!(readGroups()).empty()) {
+			
+			if(this->groups.count(gid) > 0) result = this->groups.find(gid)->second;
+		}
 	}
 	
 	return result;
@@ -463,13 +466,16 @@ const vector <gid_t> Gfiles::getGroupIdByUser(const uid_t uid){
 		
 		auto groups = getAllGroups();
 		
-		for(auto it = groups.cbegin(); it != groups.cend(); ++it){
+		if(!groups.empty()){
 			
-			auto users = it->users;
-			
-			if(find(users.begin(), users.end(), uid) != users.end()){
+			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
 				
-				result.push_back(it->gid);
+				auto users = it->users;
+				
+				if(find(users.begin(), users.end(), uid) != users.end()){
+					
+					result.push_back(it->gid);
+				}
 			}
 		}
 	}
@@ -485,13 +491,16 @@ const vector <string> Gfiles::getGroupNameByUser(const uid_t uid){
 		
 		auto groups = getAllGroups();
 		
-		for(auto it = groups.cbegin(); it != groups.cend(); ++it){
+		if(!groups.empty()){
 			
-			auto users = it->users;
-			
-			if(find(users.begin(), users.end(), uid) != users.end()){
+			for(auto it = groups.cbegin(); it != groups.cend(); ++it){
 				
-				result.push_back(it->name);
+				auto users = it->users;
+				
+				if(find(users.begin(), users.end(), uid) != users.end()){
+					
+					result.push_back(it->name);
+				}
 			}
 		}
 	}
@@ -541,19 +550,22 @@ const gid_t Gfiles::getIdByName(const string groupName){
 	
 	gid_t result = 0;
 	
-	if(!groupName.empty() && !this->groups.empty()){
+	if(!groupName.empty()){
 		
 		readGroups();
 		
-		string name = Anyks::toCase(groupName);
-		
-		for(auto it = this->groups.cbegin(); it != this->groups.cend(); ++it){
+		if(!this->groups.empty()){
 			
-			if(it->second.name.compare(name) == 0){
+			string name = Anyks::toCase(groupName);
+			
+			for(auto it = this->groups.cbegin(); it != this->groups.cend(); ++it){
 				
-				result = it->second.gid;
-				
-				break;
+				if(it->second.name.compare(name) == 0){
+					
+					result = it->second.gid;
+					
+					break;
+				}
 			}
 		}
 	}
@@ -565,13 +577,13 @@ const string Gfiles::getNameById(const gid_t gid){
 	
 	string result;
 	
-	if((gid > 0) && !this->groups.empty()){
+	if(gid > 0){
 		
-		if(this->groups.count(gid) > 0){
+		if(!this->groups.empty() && (this->groups.count(gid) > 0)){
 			
 			result = this->groups.find(gid)->second.name;
 		
-		} else if((gid > 0) && !(readGroups()).empty()) {
+		} else if(!(readGroups()).empty()) {
 			
 			if(this->groups.count(gid) > 0) result = this->groups.find(gid)->second.name;
 		}
@@ -588,11 +600,14 @@ const vector <string> Gfiles::getNameUsers(const gid_t gid){
 		
 		auto users = getIdUsers(gid);
 		
-		for(auto it = users.cbegin(); it != users.cend(); ++it){
+		if(!users.empty()){
 			
-			const string userName = this->getUserNameByUid(* it, AUSERS_TYPE_FILE);
-			
-			if(!userName.empty()) result.push_back(userName);
+			for(auto it = users.cbegin(); it != users.cend(); ++it){
+				
+				const string userName = this->getUserNameByUid(* it, AUSERS_TYPE_FILE);
+				
+				if(!userName.empty()) result.push_back(userName);
+			}
 		}
 	}
 	
@@ -603,13 +618,16 @@ const vector <uid_t> Gfiles::getIdUsers(const gid_t gid){
 	
 	vector <uid_t> result;
 	
-	if((gid > 0) && (this->groups.count(gid) > 0)){
+	if(gid > 0){
 		
-		result = this->groups.find(gid)->second.users;
-	
-	} else if((gid > 0) && !(readGroups()).empty()) {
+		if(!this->groups.empty() && (this->groups.count(gid) > 0)){
+			
+			result = this->groups.find(gid)->second.users;
 		
-		if(this->groups.count(gid) > 0) result = this->groups.find(gid)->second.users;
+		} else if(!(readGroups()).empty()) {
+			
+			if(this->groups.count(gid) > 0) result = this->groups.find(gid)->second.users;
+		}
 	}
 	
 	return result;
@@ -617,13 +635,13 @@ const vector <uid_t> Gfiles::getIdUsers(const gid_t gid){
  
 void Gfiles::setPassword(const gid_t gid, const string password){
 	
-	if((gid > 0) && !password.empty() && !this->groups.empty()){
+	if((gid > 0) && !password.empty()){
 		
-		if(this->groups.count(gid) > 0){
+		if(!this->groups.empty() && (this->groups.count(gid) > 0)){
 			
 			(this->groups.find(gid)->second).pass = password;
 		
-		} else if((gid > 0) && !(readGroups()).empty()) {
+		} else if(!(readGroups()).empty()) {
 			
 			if(this->groups.count(gid) > 0) (this->groups.find(gid)->second).pass = password;
 		}

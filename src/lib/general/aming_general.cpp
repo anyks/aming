@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -500,7 +500,7 @@ const string Anyks::strFormat(const char * format, ...){
 	
 	va_end(args);
 	
-	return string(buffer, size + 1);
+	return string(buffer, size);
 }
  
 const long Anyks::getSizeBuffer(const string str){
@@ -620,13 +620,13 @@ const bool Anyks::isAddress(const string address){
 	
 	regex e(
 		
-		"(?:[\\w\\-\\.]+\\.[\\w\\-]+|"
+		"(?:[\\w\\-\\.]+\\.[A-Za-z]+|"
 		
 		"[A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5}|"
 		
 		"\\d{1,3}(?:\\.\\d{1,3}){3}|"
 		
-		"(?:\\:\\:ffff\\:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:)))",
+		"(?:\\[?(?:\\:\\:ffff\\:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))\\]?))",
 		regex::ECMAScript | regex::icase
 	);
 	
@@ -645,15 +645,17 @@ const u_int Anyks::getTypeAmingByString(const string str){
 		
 		regex e(
 			
-			"^(?:((?:\\*\\.)?[\\w\\-\\.]+\\.[\\w\\-]+)|"
+			"^(?:((?:\\*\\.)?[\\w\\-\\.\\*]+\\.[A-Za-z]+)|"
 			
 			"([A-Fa-f\\d]{2}(?:\\:[A-Fa-f\\d]{2}){5})|"
 			
 			"(\\d{1,3}(?:\\.\\d{1,3}){3})|"
 			
-			"(\\:\\:ffff\\:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))|"
+			"(?:\\[?(\\:\\:ffff\\:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))\\]?)|"
 			
 			"((?:\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Fa-f\\d]{1,4}(?:(?:\\:[A-Fa-f\\d]{1,4}){7}|(?:\\:[A-Fa-f\\d]{1,4}){1,6}\\:\\:|\\:\\:)|\\:\\:))\\/(?:\\d{1,3}(?:\\.\\d{1,3}){3}|\\d+))|"
+			
+			"(https?\\:\\/\\/[\\w\\-\\.]+\\.[A-Za-z]+\\/[^\\r\\n\\t\\s]+)|"
 			
 			"(\\/[\\w\\.]+(?:\\/[\\w\\.]+)*)|"
 			
@@ -674,10 +676,11 @@ const u_int Anyks::getTypeAmingByString(const string str){
 			const string ip4 = match[3].str();
 			const string ip6 = match[4].str();
 			const string network = match[5].str();
-			const string address = match[6].str();
-			const string action = match[7].str();
-			const string method = match[8].str();
-			const string traffic = match[9].str();
+			const string httpaddr = match[6].str();
+			const string address = match[7].str();
+			const string action = match[8].str();
+			const string method = match[9].str();
+			const string traffic = match[10].str();
 			
 			if(!domain.empty())			result = AMING_DOMAIN;
 			else if(!mac.empty())		result = AMING_MAC;
@@ -685,6 +688,7 @@ const u_int Anyks::getTypeAmingByString(const string str){
 			else if(!ip6.empty())		result = AMING_IPV6;
 			else if(!network.empty())	result = AMING_NETWORK;
 			else if(!address.empty())	result = AMING_ADDRESS;
+			else if(!httpaddr.empty())	result = AMING_HTTP_ADDRESS;
 			else if(!action.empty())	result = AMING_HTTP_ACTION;
 			else if(!method.empty())	result = AMING_HTTP_METHOD;
 			else if(!traffic.empty())	result = AMING_HTTP_TRAFFIC;

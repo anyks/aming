@@ -4,7 +4,7 @@
 *  phone:      +7(910)983-95-90
 *  telegram:   @forman
 *  email:      info@anyks.com
-*  date:       11/08/2017 16:52:48
+*  date:       11/23/2017 17:50:05
 *  copyright:  © 2017 anyks.com
 */
  
@@ -23,6 +23,7 @@
 #include "log/log.h"
 #include "config/conf.h"
 #include "cache/cache.h"
+#include "ausers/ausers.h"
 #include "headers/headers.h"
 
 
@@ -55,6 +56,8 @@ class System {
 		Cache * cache = nullptr;
 		
 		Headers * headers = nullptr;
+		
+		AUsers * ausers = nullptr;
 		 
 		void clearMsgPids();
 		 
